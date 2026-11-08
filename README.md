@@ -1,4 +1,4 @@
-# Double Out
+# TOPS
 
 Darts career game. Play it at https://hdnkelly-max.github.io/double-out/
 
