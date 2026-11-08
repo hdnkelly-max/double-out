@@ -4915,7 +4915,7 @@ function persist(){try{localStorage.setItem('doubleout2',JSON.stringify(save));}
 function sponsor(){return save.sponsor?SPONSORS.find(s=>s.id===save.sponsor):null;}
 function price(p){const s=sponsor();return Math.round(p*(s?1-s.disc:1));}
 function gearCount(id){return (save.gear&&save.gear[id])||0;}
-function armMult(){let m=1+1.3*(1-save.arm/10);m*=1+SK().spread;return m;}
+function armMult(){let m=1+.6*(1-save.arm/10);m*=1+SK().spread;return m;}
 function jitter(){const nv=S?effNerves():0;return (.09+.04*nv)*(1-.03*lvOf('cn'));}
 function targetMult(){if(!S)return 1;const tgt=scoreAt(S.aim.x,S.aim.y);const lbl=tgt.label;let m=1;const e=SK();if(tgt.dbl){m*=1+e.dbl;if(S.lastMissDbl)m*=1+e.cover;}else{m*=1+e.score;if(S.dart>1&&S.lastAim===lbl)m*=1+e.groove;}return m;}
 function swayMult(){let m=(gearCount('case')?.92:1)*setupSwayMult();m*=1+SK().sway;return m;}
@@ -5531,7 +5531,7 @@ const V=(function(){try{return (()=>{
   // opponent
   if(opp){opp.visible=!previewOn&&!idleOn&&(state.p[state.cur].ai||state.mateTurn)&&!state.done;}if(opp&&opp.visible){const oa=state.oppArm;poseOpp(oa);if(O.dt)O.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');opp.position.y=Math.sin(t*.9)*.004;opp.rotation.z=Math.sin(t*.7)*.006;opp.rotation.y=1.0+Math.sin(t*.23)*.03;opp.position.x=-.06+Math.sin(t*.31)*.012;}
   // reticle
-  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(reticle.userData.xh)reticle.userData.xh.visible=splitOn;rr.material.color.set(splitOn?0xffd34a:0xffffff);if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.0025,state.sigma*2.0/1000);reticle.scale.set(r,r,1);if(reticle.userData.xh)reticle.userData.xh.scale.setScalar(.011/r);if(state.over)rr.material.color.set(0xff5a50);}
+  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(reticle.userData.xh)reticle.userData.xh.visible=splitOn;rr.material.color.set(splitOn?0xffd34a:0xffffff);if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.0025,state.sigma*1.6/1000);reticle.scale.set(r,r,1);if(reticle.userData.xh)reticle.userData.xh.scale.setScalar(.011/r);if(state.over)rr.material.color.set(0xff5a50);}
   stepFlights(now);stepMarks(now);stepPuffs(now);wobble(now);crowdBob(t);extrasIdle(t);if(ledWall){ledWall.material.map.offset.x=(t*.004)%1;ledWall.material.map.wrapS=T.RepeatWrapping;}const useSplit=splitOn&&!previewOn&&!idleOn&&!cine&&state&&!state.done&&!(state.reader);
   if(useSplit){const _sz=renderer.getSize(new T.Vector2());const W=_sz.x,Hh=_sz.y;const vert=Hh>W*1.1;const aimW=mmToWorld(state.aim.x+state.sway.x*.3,state.aim.y+state.sway.y*.3);
    // left/top: board close-up that follows the aim
@@ -5578,7 +5578,7 @@ function addAdrenaline(h,dartNo){const rarity=[1.6,1.3,1,.7,.5,.35,.3][ui.tier]*
  if(h.label==='T20'||(h.m===3&&h.n>=19)){S.adren+=dartNo===1?.9*rarity:1.6*rarity;}else if(h.m===3)S.adren+=.4*rarity;else S.adren*=.5;}
 function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
 // Aim model: the circle always collapses to a dot at the sweet spot. Skill and gear shrink the circle's size (Smax); the window in which it is small is narrow (~180 ms) and narrower under nerves. Skill does not widen the window, it makes the curve gentler.
-function currentSigma(){const b=S.barrel;const nv=spreadNerves();const dt=Math.abs(S.pull-SWEET)*PULL_MS/1000;const win=.18*b.tol*tolMult()*(1+.008*lvOf('cn'))/(1+nv*.3);const core=Math.min(1,dt/win);const ex=.55+.1*(save.arm/10)-.1*Math.min(1,nv/3);const Smax=26*Math.pow(b.base/5.6,.45)*setupBaseMult()*armMult()*targetMult()*(1+(S.myForm||0));let s=Smax*(.05+.95*Math.pow(core,ex))+nv*.3*(.1+core);if(S.over)s=60;return s;}
+function currentSigma(){const b=S.barrel;const nv=spreadNerves();const sk=save.arm/10;const dt=Math.abs(S.pull-SWEET)*PULL_MS/1000;const win=(.08+.05*sk)*b.tol*tolMult()*(1+.008*lvOf('cn'))/(1+nv*.3);const core=Math.min(1,dt/win);const ex=.45+.2*sk-.1*Math.min(1,nv/3);const Smax=18*Math.pow(b.base/5.6,.45)*setupBaseMult()*armMult()*targetMult()*(1+(S.myForm||0));let s=Smax*(.05+.95*Math.pow(core,ex))+nv*.3*(.1+core);if(S.over)s=60;return s;}
 
 // ===== INPUT =====
 function setAim(x,y){const d=Math.hypot(x,y);if(d>180){x*=180/d;y*=180/d;}S.aim={x,y};}
