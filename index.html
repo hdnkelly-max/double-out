@@ -5004,6 +5004,7 @@ const V=(()=>{
  // lights (rebuilt per venue)
  const lights=new T.Group();scene.add(lights);
  // --- dart model
+ const FLT={};function flightTex(color,brand){const key=String(color)+brand;if(FLT[key])return FLT[key];const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const col=new T.Color(color);x.fillStyle='#'+col.getHexString();x.fillRect(0,0,256,256);const dk=col.clone().multiplyScalar(.55);x.fillStyle='#'+dk.getHexString();x.beginPath();x.moveTo(0,256);x.lineTo(256,0);x.lineTo(256,70);x.lineTo(70,256);x.closePath();x.fill();x.fillStyle='rgba(255,255,255,.18)';x.fillRect(0,0,256,26);x.fillStyle='rgba(0,0,0,.55)';x.font='800 54px "Saira Condensed","Arial Narrow",Arial,sans-serif';x.textAlign='center';x.save();x.translate(150,150);x.rotate(-Math.PI/4);x.fillText(brand.toUpperCase(),0,0);x.restore();const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(1/.032,1/.032);t.offset.set(0,.1);FLT[key]=t;return t;}
  function makeDart(color,setup){setup=setup||{};const sh=setup.shaft||SHAFTS[1],fl=setup.fl||FSHAPES[0],pt=setup.pt||POINTS[0],br=setup.barrel||BARRELS[1];
   const g=new T.Group();const metal=new T.MeshStandardMaterial({color:pt.col||0xcfd4d9,metalness:.85,roughness:.3});
   const bl={assassin:.05,neutron:.048,corexl:.05,supergrip:.052,razor:.05,vapor8:.054,zen:.05,mvg:.05,asp:.048,ga:.052,littler:.05,power:.051}[br.id]||.05,brad={assassin:.0042,neutron:.0042,corexl:.0038,supergrip:.0036,razor:.0038,vapor8:.0032,zen:.0036,mvg:.0036,asp:.0038,ga:.0035,littler:.0036,power:.0038}[br.id]||.0038;
@@ -5012,7 +5013,7 @@ const V=(()=>{
   const barrel=new T.Mesh(new T.CylinderGeometry(brad,brad*.9,bl,16),bmat);barrel.rotation.x=Math.PI/2;barrel.position.z=0;g.add(barrel);
   const rings={assassin:3,neutron:5,corexl:6,supergrip:10,razor:8,vapor8:9,zen:6,mvg:7,asp:4,ga:0,littler:12,power:11}[br.id]||5;for(let k=0;k<rings;k++){const r=new T.Mesh(new T.TorusGeometry(brad*1.02,.0006,6,16),new T.MeshStandardMaterial({color:br.id==='littler'?0xd9b45a:(br.id==='mvg'?0x3a9a4a:0x33373c),metalness:.9,roughness:.4}));r.position.z=z0+bl*(k+.5)/rings;g.add(r);}
   const shaft=new T.Mesh(new T.CylinderGeometry(.0021,.0023,sh.len,8),new T.MeshStandardMaterial({color:sh.col||0x202428,roughness:.5}));shaft.rotation.x=Math.PI/2;shaft.position.z=bl/2+sh.len/2;g.add(shaft);
-  const fm=new T.MeshStandardMaterial({color,side:T.DoubleSide,roughness:.4});const s=new T.Shape();
+  const fm=new T.MeshStandardMaterial({map:flightTex(color,br.brand||'TOPS'),side:T.DoubleSide,roughness:.45});const s=new T.Shape();
   if(fl.id==='slim'){s.moveTo(0,0);s.lineTo(.022,.011);s.lineTo(.03,.0105);s.lineTo(.031,-.002);s.lineTo(.02,-.004);}
   else if(fl.id==='kite'){s.moveTo(0,0);s.lineTo(.012,.017);s.lineTo(.028,.016);s.lineTo(.031,-.003);s.lineTo(.016,-.005);}
   else if(fl.id==='pear'){s.moveTo(0,0);s.quadraticCurveTo(.012,.016,.028,.015);s.lineTo(.031,-.003);s.lineTo(.018,-.005);}
@@ -5293,7 +5294,7 @@ const V=(()=>{
  function clearGroup(g){while(g.children.length){const c=g.children[0];g.remove(c);}}
  function box(w,h,d,mat,x,y,z){const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.receiveShadow=true;m.castShadow=h<1.5&&w<3;venue.add(m);return m;}
  function plane(w,h,mat,x,y,z,ry=0){const m=new T.Mesh(new T.PlaneGeometry(w,h),mat);m.position.set(x,y,z);m.rotation.y=ry;venue.add(m);return m;}
- function banner(txt,bg,fg,w,y,z=.02){plane(w,w*.11,new T.MeshBasicMaterial({map:textTexture(txt,bg,fg,2048,226,140)}),0,y,z);}
+ function banner(txt,bg,fg,w,y,z=.02){const tex=patternTexture((x,W,H)=>{x.fillStyle=bg;x.fillRect(0,0,W,H);const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(255,255,255,.10)');gr.addColorStop(1,'rgba(0,0,0,.18)');x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle='#e8382c';x.fillRect(0,0,230,H);x.fillStyle='#fff';x.font='800 120px "Saira Condensed","Arial Narrow",Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('TOPS',115,H/2+4);x.fillStyle=fg;let size=140;x.font=`800 ${size}px "Saira Condensed","Arial Narrow",Arial,sans-serif`;let tw=x.measureText(txt).width;if(tw>(W-300)*.94){size=Math.floor(size*(W-300)*.94/tw);x.font=`800 ${size}px "Saira Condensed","Arial Narrow",Arial,sans-serif`;}x.fillText(txt,230+(W-230)/2,H/2+6);},2048,226);plane(w,w*.11,new T.MeshBasicMaterial({map:tex}),0,y,z);}
  function addLight(L){lights.add(L);return L;}
  // --- extras: standing people (chalker, caller, other players)
  const extras=[];
@@ -5317,7 +5318,7 @@ const V=(()=>{
  // --- venue builder
  let lastTier=-1;
  function cone(x,y,z,color,h=3,r=.9,op=.07){const g=new T.ConeGeometry(r,h,24,1,true);const m=new T.Mesh(g,new T.MeshBasicMaterial({color,transparent:true,opacity:op,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide}));m.position.set(x,y-h/2,z);venue.add(m);return m;}
- function buildVenue(t){lastTier=t;ledWall=null;clearGroup(venue);clearGroup(lights);extras.length=0;let spots=[];renderer.toneMappingExposure=[1.05,1.15,1.1,1.0,1.0,1.2,.95][t]||1.1;document.body.dataset.tier=t;scene.fog=t>=2?new T.FogExp2([0,0,0x0a0c18,0x04101e,0x04101e,0x0a1d3a,0x0a0414][t],t===5?.03:.045):null;
+ function buildVenue(t){lastTier=t;ledWall=null;clearGroup(venue);clearGroup(lights);extras.length=0;let spots=[];renderer.toneMappingExposure=[1.05,.78,1.05,1.0,1.0,1.1,.95][t]||1.05;document.body.dataset.tier=t;scene.fog=t>=2?new T.FogExp2([0,0,0x0a0c18,0x04101e,0x04101e,0x0a1d3a,0x0a0414][t],t===5?.03:.045):null;
   const pool=addLight(new T.SpotLight(0xfff0d8,.9,6,.5,.7,1.2));pool.position.set(.3,3.2,OCHE_Z+.3);const pt=new T.Object3D();pt.position.set(.1,0,OCHE_Z);lights.add(pt);pool.target=pt;
   const amb=addLight(new T.AmbientLight(0xffffff,.3));addLight(new T.HemisphereLight(0xdfe6ff,0x3a2a1a,.35));addLight(new T.PointLight(0xfff0e0,.45,8)).position.set(-.6,2.4,OCHE_Z+1.6);
   const key=addLight(new T.SpotLight(0xfff2dc,1.9,12,.55,.5,1));key.position.set(0,3.4,2.2);key.target=board;lights.add(key.target);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.bias=-.0005;
@@ -5473,7 +5474,7 @@ const V=(()=>{
   fpArm.visible=!fpFig&&!cine&&!previewOn&&!idleOn&&((camK<.5&&!state.p[state.cur].ai&&wk>=1)||state.done);
   if(fpArm.visible){let p=state.pulling?state.pull:0,tk=0;if(state.anim&&state.anim.kind==='throw'){tk=Math.min(1,(now-state.anim.t0)/state.anim.dur);}if(state.anim&&state.anim.kind==='pump'){const k=Math.min(1,(now-state.anim.t0)/state.anim.dur);poseArm(0,0,k);}else poseArm(p,tk);fpDart.visible=!(state.anim&&state.anim.kind==='throw'&&tk>.6)&&!state.flyingOwn;}
   // opponent
-  if(opp){opp.visible=!previewOn&&!idleOn&&(state.p[state.cur].ai||state.mateTurn)&&!state.done;}if(opp&&opp.visible){const oa=state.oppArm;poseOpp(oa);if(O.dt)O.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');opp.position.y=Math.sin(t*.9)*.004;opp.rotation.z=Math.sin(t*.7)*.006;}
+  if(opp){opp.visible=!previewOn&&!idleOn&&(state.p[state.cur].ai||state.mateTurn)&&!state.done;}if(opp&&opp.visible){const oa=state.oppArm;poseOpp(oa);if(O.dt)O.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');opp.position.y=Math.sin(t*.9)*.004;opp.rotation.z=Math.sin(t*.7)*.006;opp.rotation.y=1.0+Math.sin(t*.23)*.03;opp.position.x=-.06+Math.sin(t*.31)*.012;}
   // reticle
   const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.0025,state.sigma*2.0/1000);reticle.scale.set(r,r,1);rr.material.color.set(state.over?0xff5a50:0xffffff);}
   stepFlights(now);stepMarks(now);stepPuffs(now);wobble(now);crowdBob(t);extrasIdle(t);if(ledWall){ledWall.material.map.offset.x=(t*.004)%1;ledWall.material.map.wrapS=T.RepeatWrapping;}renderer.autoClear=true;renderer.render(scene,camera);if(fpArm.visible){renderer.autoClear=false;renderer.clearDepth();renderer.render(armScene,armCam);}}
@@ -5491,7 +5492,7 @@ const V=(()=>{
   for(let y=0;y<PR;y++){const src=(PR-1-y)*PR*4,dst=y*PR*4;for(let i=0;i<PR*4;i+=4){id.data[dst+i]=g[buf[src+i]];id.data[dst+i+1]=g[buf[src+i+1]];id.data[dst+i+2]=g[buf[src+i+2]];id.data[dst+i+3]=255;}}
   x.putImageData(id,0,0);const url=c.toDataURL('image/jpeg',.85);portraitCache[key]=url;return url;}
  const dScene=new T.Scene();dScene.background=new T.Color(0x12161c);dScene.add(new T.HemisphereLight(0xffffff,0x202428,.8));const dKey=new T.DirectionalLight(0xffffff,1.4);dKey.position.set(1,2,1.5);dScene.add(dKey);const dRim=new T.DirectionalLight(0xe8382c,.8);dRim.position.set(-1,-.5,-1);dScene.add(dRim);
- const dCam=new T.OrthographicCamera(-.095,.095,.03,-.03,.01,5);dCam.position.set(0,.25,1);dCam.lookAt(0,0,0);const DW=768,DH=240;const dRT=new T.WebGLRenderTarget(DW,DH);const dartCache={};
+ const dCam=new T.OrthographicCamera(-.082,.082,.0256,-.0256,.01,5);dCam.position.set(0,.25,1);dCam.lookAt(0,0,0);const DW=768,DH=240;const dRT=new T.WebGLRenderTarget(DW,DH);const dartCache={};
  function dartShot(color,setup){const key=JSON.stringify([color,setup.shaft.id,setup.fl.id,setup.pt.id,setup.barrel.id]);if(dartCache[key])return dartCache[key];const d=makeDart(color,setup);d.rotation.y=Math.PI/2;d.rotation.z=-.08;d.rotation.x=.35;d.position.x=.004;dScene.add(d);renderer.setRenderTarget(dRT);renderer.render(dScene,dCam);const buf=new Uint8Array(DW*DH*4);renderer.readRenderTargetPixels(dRT,0,0,DW,DH,buf);renderer.setRenderTarget(null);dScene.remove(d);
   const c=document.createElement('canvas');c.width=DW;c.height=DH;const x=c.getContext('2d');const id=x.createImageData(DW,DH);const g=new Uint8Array(256);for(let i=0;i<256;i++)g[i]=Math.round(Math.pow(i/255,1/2.2)*255);for(let y=0;y<DH;y++){const src=(DH-1-y)*DW*4,dst=y*DW*4;for(let i=0;i<DW*4;i+=4){id.data[dst+i]=g[buf[src+i]];id.data[dst+i+1]=g[buf[src+i+1]];id.data[dst+i+2]=g[buf[src+i+2]];id.data[dst+i+3]=255;}}x.putImageData(id,0,0);const url=c.toDataURL('image/jpeg',.88);dartCache[key]=url;return url;}
  function oppScreen(){if(!opp||!opp.visible)return null;const B=opp.userData.B;let w;if(B&&B.Head){w=boneW(B.Head);}else{w=opp.position.clone();w.y+=1.65;}const v=w.clone().project(camera);if(v.z>1)return null;return {x:(v.x+1)/2*innerWidth,y:(1-v.y)/2*innerHeight};}
