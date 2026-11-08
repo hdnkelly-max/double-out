@@ -4544,6 +4544,10 @@ body.split .pulse{position:fixed;left:max(12px,env(safe-area-inset-left,0px));ri
 body.split .sb{grid-template-columns:1fr auto 1fr}
 @media (max-width:700px){body.split .sb{grid-template-columns:1fr 1fr}body.split .pl.r{border-top:0;border-left:1px solid var(--line)}body.split .visit{grid-column:1/-1;padding:4px 10px}body.split .pl{padding:4px 10px}body.split .pl .sc{font-size:30px}body.split .pl .nm{font-size:15px}body.split .pl .nm small{display:none}body.split .chip{font-size:14px;min-width:34px;padding:2px 5px}body.split .visit .tot{font-size:11px}}
 </style>
+<style>
+.ghost.menu{display:none;min-width:40px;font-size:16px;padding:6px 10px}
+@media (max-width:700px){.ghost.menu{display:inline-block}.tr:not(.open) .ghost:not(.menu){display:none}.tr{flex-direction:column;align-items:flex-end;gap:6px}.tr.open .ghost{width:120px;text-align:center}}
+</style>
 <canvas id="scene" aria-label="First-person view of the oche. Drag on the board to aim. Press and hold below the board to pull back, release to throw."></canvas>
 <div id="grade"></div><div id="grain"></div>
 <div id="nerve"></div>
@@ -4554,7 +4558,7 @@ body.split .sb{grid-template-columns:1fr auto 1fr}
   <div class="top">
     <span class="wm" aria-label="TOPS">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</span>
     <div class="event"><span id="eventTier">Pub league</span><b id="eventName">Henderson Thursday</b></div>
-    <div class="tr"><button class="ghost" id="btnView" type="button">View: POV</button><button class="ghost" id="btnSound" type="button" aria-pressed="true">Sound</button><button class="ghost" id="btnCaller" type="button" aria-pressed="true">Caller</button><button class="ghost" id="btnQuit" type="button">Quit</button></div>
+    <div class="tr" id="hudTr"><button class="ghost menu" id="btnMenu" type="button" aria-label="Menu">☰</button><button class="ghost" id="btnView" type="button">View: POV</button><button class="ghost" id="btnSound" type="button" aria-pressed="true">Sound</button><button class="ghost" id="btnCaller" type="button" aria-pressed="true">Caller</button><button class="ghost" id="btnQuit" type="button">Quit</button></div>
   </div>
   <div class="mid"><div class="callout" id="callout"></div></div>
   <div class="bottom">
@@ -5033,7 +5037,7 @@ const V=(function(){try{return (()=>{
  const lring=new T.Mesh(new T.RingGeometry(.228,.236,96),new T.MeshBasicMaterial({color:0xfff2dc,transparent:true,opacity:.65}));lring.position.set(0,BOARD_H,BOARD_Z+.0015);scene.add(lring);
  // aim plane + reticle
  const aimPlane=new T.Mesh(new T.PlaneGeometry(1.2,1.2),new T.MeshBasicMaterial({visible:false}));aimPlane.position.set(0,BOARD_H,BOARD_Z);scene.add(aimPlane);
- const reticle=new T.Group();const rr=new T.Mesh(new T.RingGeometry(.9,1,48),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthTest:false}));reticle.add(rr);const rc=new T.Mesh(new T.CircleGeometry(.08,12),new T.MeshBasicMaterial({color:0xffffff,depthTest:false}));reticle.add(rc);const xh=new T.Group();[0,Math.PI/2].forEach(a=>{const m=new T.Mesh(new T.PlaneGeometry(2.6,.08),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthTest:false}));m.rotation.z=a;xh.add(m);});xh.visible=false;reticle.add(xh);reticle.userData.xh=xh;reticle.position.z=BOARD_Z+.002;reticle.renderOrder=5;scene.add(reticle);
+ const reticle=new T.Group();const rr=new T.Mesh(new T.RingGeometry(.9,1,48),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthTest:false}));reticle.add(rr);const rc=new T.Mesh(new T.CircleGeometry(.03,10),new T.MeshBasicMaterial({color:0xffffff,depthTest:false}));reticle.add(rc);const xh=new T.Group();[0,Math.PI/2].forEach(a=>{const m=new T.Mesh(new T.PlaneGeometry(2.6,.08),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthTest:false}));m.rotation.z=a;xh.add(m);});xh.visible=false;reticle.add(xh);reticle.userData.xh=xh;reticle.position.z=BOARD_Z+.002;reticle.renderOrder=5;scene.add(reticle);
  // lights (rebuilt per venue)
  const lights=new T.Group();scene.add(lights);
  // --- dart model
@@ -5243,14 +5247,15 @@ const V=(function(){try{return (()=>{
   E=S.clone().addScaledVector(dirU,L1);dirF=new T.Vector3().addScaledVector(up,Math.cos(tp.phi*rad)).addScaledVector(fwd,Math.sin(tp.phi*rad)).addScaledVector(right,inf).normalize();
   H=E.clone().addScaledVector(dirF,L2);
   // hand frame in the throwing plane: fingers = forearm rotated by the wrist angle; palm faces the board/down (pronated rear grip), thumb under the barrel
-  const fa=(tp.phi+(tp.wrist||0)+26)*rad;handDir=tp.celebrate?up.clone():tp.shush?new T.Vector3().addScaledVector(fwd,-.4).add(up).normalize():new T.Vector3().addScaledVector(up,Math.cos(fa)).addScaledVector(fwd,Math.sin(fa)).addScaledVector(right,-.08).normalize();
-  palmN=new T.Vector3().addScaledVector(fwd,Math.cos(fa)).addScaledVector(up,-Math.sin(fa)).addScaledVector(right,-.3).normalize();
-  const foreN=new T.Vector3().addScaledVector(fwd,Math.cos(tp.phi*rad)).addScaledVector(up,-Math.sin(tp.phi*rad)).addScaledVector(right,-.5).normalize();
+  // address: palm to the ceiling, fingers pointing at the board and slightly up with the dart lying on them; backswing cocks the wrist (fingers rise); after release the hand pronates and points at the target
+  const el=(24+(tp.wrist||0)*.9)*rad;handDir=tp.celebrate?up.clone():tp.shush?new T.Vector3().addScaledVector(fwd,-.4).add(up).normalize():new T.Vector3().addScaledVector(fwd,Math.cos(el)).addScaledVector(up,Math.sin(el)).addScaledVector(right,-.06).normalize();
+  const pron=Math.max(0,Math.min(1,(tp.phi-45)/40));const palmUp=new T.Vector3().addScaledVector(up,Math.cos(el)).addScaledVector(fwd,-Math.sin(el)).addScaledVector(right,-.28);const palmDown=new T.Vector3().addScaledVector(up,-.6).addScaledVector(right,-.5).addScaledVector(fwd,.2);palmN=palmUp.lerp(palmDown,pron).normalize();
+  const foreN=new T.Vector3().addScaledVector(right,-.75).addScaledVector(up,.35*(1-pron)).addScaledVector(fwd,.25).normalize();
   aimBone(B.RightArm,B.RightForeArm,dirU,0);aimFrame(B.RightForeArm,B.RightHand,dirF,foreN);
   if(tp.celebrate)aimBone(B.RightHand,B.RightHandMiddle1,handDir,0);else aimFrame(B.RightHand,B.RightHandMiddle1,handDir,palmN);
   if(!tp.celebrate&&!tp.shush){const da=(tp.dart||0)*rad;dartDir=new T.Vector3().addScaledVector(fwd,Math.cos(da)).addScaledVector(up,Math.sin(da)).normalize();}}
-  {const open=Math.max(0,Math.min(1,(tp.phi-40)/46));const c0=fpv?[.7,.75,1.1,1.3,.8]:[.5,.55,.95,1.15,.7];curl(B,'Right',tp.celebrate?[1.4,1.4,1.4,1.4,.9]:c0.map((v,i)=>i<4?v*(1-open*.7):v*(1-open*.4)));}
-  if(fig.userData.dt){const dt=fig.userData.dt;const ip=boneW(fpv?B.RightHandIndex2:B.RightHandIndex3),tpos=boneW(B.RightHandThumb4);const mid=ip.clone().lerp(tpos,.5);if(fpv&&dartDir)mid.addScaledVector(up,.055).addScaledVector(dartDir,-.06).addScaledVector(right,-.02);const dd=dartDir||handDir;const w=mid.clone().addScaledVector(dd,fpv?.012:.034);fig.worldToLocal(w);dt.position.copy(w);const m=new T.Matrix4().lookAt(mid.clone().add(dd),mid,up);const fq=fig.getWorldQuaternion(new T.Quaternion()).invert();dt.quaternion.copy(fq.multiply(new T.Quaternion().setFromRotationMatrix(m)));dt.rotateY(Math.PI);dt.scale.set(1/fig.scale.x,1/fig.scale.y,1/fig.scale.z);}
+  {const open=Math.max(0,Math.min(1,(tp.phi-40)/46));const c0=fpv?[.7,.75,1.1,1.3,.8]:[.75,.7,1.2,1.4,.75];curl(B,'Right',tp.celebrate?[1.4,1.4,1.4,1.4,.9]:c0.map((v,i)=>i<4?v*(1-open*.7):v*(1-open*.4)));}
+  if(fig.userData.dt){const dt=fig.userData.dt;const ip=boneW(fpv?B.RightHandIndex2:B.RightHandIndex2),tpos=boneW(fpv?B.RightHandThumb4:B.RightHandThumb3);const mid=ip.clone().lerp(tpos,.5);if(fpv&&dartDir)mid.addScaledVector(up,.055).addScaledVector(dartDir,-.06).addScaledVector(right,-.02);else if(dartDir)mid.addScaledVector(palmN,.012);const dd=dartDir||handDir;const w=mid.clone().addScaledVector(dd,fpv?.012:.02);fig.worldToLocal(w);dt.position.copy(w);const m=new T.Matrix4().lookAt(mid.clone().add(dd),mid,up);const fq=fig.getWorldQuaternion(new T.Quaternion()).invert();dt.quaternion.copy(fq.multiply(new T.Quaternion().setFromRotationMatrix(m)));dt.rotateY(Math.PI);dt.scale.set(1/fig.scale.x,1/fig.scale.y,1/fig.scale.z);}
   // left arm: spares at the sternum
   const LS=boneW(B.LeftArm);const chest=fig.localToWorld(new T.Vector3(fpv?.24:.2,fpv?.9:.88,fpv?.02:.03));const d=Math.min(L1+L2-.01,LS.distanceTo(chest));const u=new T.Vector3().subVectors(chest,LS).normalize();const pole=new T.Vector3().addScaledVector(right,-.6).add(new T.Vector3(0,-1,0));pole.addScaledVector(u,-pole.dot(u)).normalize();
   const cosA=(L1*L1+d*d-L2*L2)/(2*L1*d);const A=Math.acos(Math.max(-1,Math.min(1,cosA)));const LE=LS.clone().addScaledVector(u,Math.cos(A)*L1).addScaledVector(pole,Math.sin(A)*L1);
@@ -5531,11 +5536,11 @@ const V=(function(){try{return (()=>{
   // opponent
   if(opp){opp.visible=!previewOn&&!idleOn&&(state.p[state.cur].ai||state.mateTurn)&&!state.done;}if(opp&&opp.visible){const oa=state.oppArm;poseOpp(oa);if(O.dt)O.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');opp.position.y=Math.sin(t*.9)*.004;opp.rotation.z=Math.sin(t*.7)*.006;opp.rotation.y=1.0+Math.sin(t*.23)*.03;opp.position.x=-.06+Math.sin(t*.31)*.012;}
   // reticle
-  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(reticle.userData.xh)reticle.userData.xh.visible=splitOn;rr.material.color.set(0xffffff);if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.002,state.sigma*1.1/1000);reticle.scale.set(r,r,1);if(reticle.userData.xh)reticle.userData.xh.scale.setScalar(.011/r);if(state.over)rr.material.color.set(0xff5a50);}
+  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(reticle.userData.xh)reticle.userData.xh.visible=splitOn;rr.material.color.set(0xffffff);if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.002,state.sigma*1.1/1000);reticle.scale.set(r,r,1);if(reticle.userData.xh)reticle.userData.xh.scale.setScalar(.009/r);if(rc)rc.visible=!splitOn;if(state.over)rr.material.color.set(0xff5a50);}
   stepFlights(now);stepMarks(now);stepPuffs(now);wobble(now);crowdBob(t);extrasIdle(t);if(ledWall){ledWall.material.map.offset.x=(t*.004)%1;ledWall.material.map.wrapS=T.RepeatWrapping;}const useSplit=splitOn&&!previewOn&&!idleOn&&!cine&&state&&!state.done&&!(state.reader);
   if(useSplit){const _sz=renderer.getSize(new T.Vector2());const W=_sz.x,Hh=_sz.y;const vert=Hh>W*1.1;const aimW=mmToWorld(state.aim.x+state.sway.x*.3,state.aim.y+state.sway.y*.3);
    // left/top: board close-up that follows the aim
-   const bx=aimW.x*.8,by=BOARD_H+(aimW.y-BOARD_H)*.8;boardCam.position.set(bx,by,BOARD_Z+1.0);boardCam.lookAt(bx,by,BOARD_Z);boardCam.fov=vert?14:11;
+   if(!boardCam.userData.f){boardCam.userData.f=new T.Vector2(aimW.x,aimW.y);}const bf=boardCam.userData.f;const ddx=aimW.x-bf.x,ddy=aimW.y-bf.y;if(Math.hypot(ddx,ddy)>.006){bf.x+=ddx*.18;bf.y+=ddy*.18;}const bx=bf.x,by=bf.y;boardCam.position.set(bx,by,BOARD_Z+1.0);boardCam.lookAt(bx,by,BOARD_Z);boardCam.fov=vert?13:10;
    // right/bottom: whoever is throwing, from the board side
    const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;}
    const tz=(thrower&&thrower.position)?thrower.position.z:OCHE_Z;faceCam.position.set(hx-2.3,hy-.05,tz+.1);faceCam.lookAt(hx+.1,hy-(vert?.42:.22),tz+.02);faceCam.fov=vert?38:30;
@@ -5840,7 +5845,7 @@ function updateUI(){S.p.forEach((p,i)=>{const se=$('score'+i);if(se.textContent!
  {const vt=$('visitTot');const txt=(S.done?'Match over':'Dart '+Math.min(3,S.dart)+' of 3')+(S.visit.length?' · '+S.visit.reduce((a,v)=>a+(v.bust?0:v.v),0):'');if(vt.textContent!==txt){vt.textContent=txt;if(S.visit.length){vt.classList.remove('pop');void vt.offsetWidth;vt.classList.add('pop');}}}
  $('visit').innerHTML=[0,1,2].map(i=>{const v=S.visit[i];if(!v)return '<span class="chip empty">–</span>';return `<span class="chip${(v.label[0]==='T'||v.label==='BULL')&&!v.bust?' gold':''}">${v.bust?'BUST':v.label}</span>`;}).join('');}
 $('btnQuit').onclick=()=>{const b=$('btnQuit');const comp=S&&!S.done&&ui.mode==='career'&&!S.practice&&!S.local&&!S_money&&!S.intro;if(comp&&b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Forfeit?';clearTimeout(b._t);b._t=setTimeout(()=>{b.dataset.armed='';b.textContent='Quit';},2500);return;}b.dataset.armed='';b.textContent='Quit';if(S&&!S.done){S.done=true;if(comp&&career()){career().losses++;career().next=null;career().streak=0;persist();}}S=null;showTitle();};
-$('btnView').onclick=()=>{save.split=!save.split;persist();V.setSplit(save.split);$('btnView').textContent=save.split?'View: Split':'View: POV';};$('btnView').textContent=save.split?'View: Split':'View: POV';V.setSplit(!!save.split);
+$('btnMenu').onclick=()=>{$('hudTr').classList.toggle('open');};$('btnView').onclick=()=>{save.split=!save.split;persist();V.setSplit(save.split);$('btnView').textContent=save.split?'View: Split':'View: POV';};$('btnView').textContent=save.split?'View: Split':'View: POV';V.setSplit(!!save.split);
 $('btnSound').onclick=()=>{AU.on=!AU.on;$('btnSound').setAttribute('aria-pressed',AU.on);audioInit();if(AU.master)AU.master.gain.setTargetAtTime(AU.on?1:0,AU.ctx.currentTime,.05);persistAudio();};
 $('btnCaller').onclick=()=>{AU.caller=!AU.caller;$('btnCaller').setAttribute('aria-pressed',AU.caller);persistAudio();};
 $('btnSound').setAttribute('aria-pressed',AU.on);$('btnCaller').setAttribute('aria-pressed',AU.caller);
