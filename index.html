@@ -5273,7 +5273,7 @@ const V=(function(){try{return (()=>{
   // backswing rotates the whole hand back with the dart tilt; after release the hand pronates and the fingers point at the target.
   const tilt=((tp.dart||14)-14)*rad;const rotR=(v)=>{const c=Math.cos(tilt),sn=Math.sin(tilt);const vf=v.dot(fwd),vu=v.dot(up),vr=v.dot(right);return new T.Vector3().addScaledVector(fwd,vf*c-vu*sn).addScaledVector(up,vf*sn+vu*c).addScaledVector(right,vr);};
   const pron=Math.max(0,Math.min(1,(tp.phi-45)/40));
-  const h0=rotR(new T.Vector3().addScaledVector(right,-.9).addScaledVector(fwd,-.2).addScaledVector(up,.3).normalize()),n0=rotR(new T.Vector3().addScaledVector(up,.92).addScaledVector(fwd,-.3).addScaledVector(right,-.1).normalize());
+  const h0=rotR(new T.Vector3().addScaledVector(right,-.92).addScaledVector(fwd,-.15).addScaledVector(up,.12).normalize()),n0=rotR(new T.Vector3().addScaledVector(up,.95).addScaledVector(fwd,-.22).addScaledVector(right,-.08).normalize());
   const h1=new T.Vector3().copy(fwd).addScaledVector(up,-.15).normalize(),n1=new T.Vector3().addScaledVector(right,-.7).addScaledVector(up,-.5).normalize();
   handDir=tp.celebrate?up.clone():tp.shush?new T.Vector3().addScaledVector(fwd,-.4).add(up).normalize():h0.lerp(h1,pron).normalize();
   palmN=n0.lerp(n1,pron).normalize();
@@ -5319,7 +5319,7 @@ const V=(function(){try{return (()=>{
   // Acceleration: elbow extends and rises; dart flattens, release ~35 deg forward of vertical with the dart just above horizontal.
   // Follow-through: arm straight and raised, hand pointing at the target. Dart stays tangent to the arc, never points down before release.
   const ph=oa.phase||'idle',k=oa.k||0,p=oa.pull||0;const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
-  const SET={phi:-16,lift:-6,wrist:14,dart:14,lean:0},BACK={phi:-48,lift:-8,wrist:36,dart:38,lean:0},REL={phi:36,lift:8,wrist:6,dart:6,lean:.02},END={phi:86,lift:14,wrist:-34,dart:-14,lean:.03};
+  const SET={phi:-16,lift:-6,wrist:14,dart:9,lean:0},BACK={phi:-48,lift:-8,wrist:36,dart:38,lean:0},REL={phi:36,lift:8,wrist:6,dart:6,lean:.02},END={phi:86,lift:14,wrist:-34,dart:-14,lean:.03};
   const mix=(A,B,e)=>({phi:A.phi+(B.phi-A.phi)*e,lift:A.lift+(B.lift-A.lift)*e,wrist:A.wrist+(B.wrist-A.wrist)*e,dart:A.dart+(B.dart-A.dart)*e,lean:A.lean+(B.lean-A.lean)*e});
   if(ph==='pull')return mix(SET,BACK,1-Math.pow(1-Math.min(1,p),1.7));
   if(ph==='throw'){const e=1-Math.pow(1-Math.min(1,k),2.2);return mix(BACK,REL,e);}
@@ -5466,7 +5466,7 @@ const V=(function(){try{return (()=>{
    banner('AUCKLAND SUPER LEAGUE','#0f3d2e','#dfe7df',3,2.75);screen(-2.3,1.9,-.02,1.2,.75);screen(2.3,1.9,-.02,1.2,.75);
    truss(3.1,1.2,5,5,0xcfe3ff,0xcfe3ff);amb.intensity=.22;key.intensity=1.6;[-1.5,0,1.5].forEach(x=>cone(x,3.05,1.2,0xcfe3ff,3,.7,.05));
    box(1.1,.04,.5,new T.MeshStandardMaterial({color:0x1a1a22}),1.7,.74,1.0);box(1.1,.7,.5,new T.MeshStandardMaterial({color:0x0f3d2e}),1.7,.36,1.0);box(.3,.02,.2,new T.MeshStandardMaterial({color:0x222}),1.6,.77,.95);
-   addExtra('Caller',1.7,1.55,0,'mic',2);addExtra('Marker',-2.0,1.3,-.4,'stand',2);
+   addExtra('Caller',2.3,1.2,0,'mic',2);addExtra('Marker',-2.0,1.3,-.4,'stand',2);
    chairs(3,10,-4.2,4.2,.42,.6,0x1a1a26);chairs(3,10,.6,4.2,.42,.6,0x1a1a26);
    for(let r=0;r<3;r++)for(let i=0;i<10;i++){if(Math.random()<.25)continue;spots.push([-4.2+i*.42,-1.0,4.2+r*.6]);spots.push([.6+i*.42,-1.0,4.2+r*.6]);}
   }else if(t===3||t===4){ // national / trans-tasman: broadcast stage
@@ -5479,7 +5479,7 @@ const V=(function(){try{return (()=>{
    if(t===4){plane(.7,.42,new T.MeshBasicMaterial({map:textTexture('NZ','#101c3a','#ffffff',512,300,200)}),-1.4,2.3,.02);plane(.7,.42,new T.MeshBasicMaterial({map:textTexture('AUS','#0d3a2a','#f3d35a',512,300,200)}),1.4,2.3,.02);}
    truss(3.3,1.4,6,6,0x9ab8ff,0xffffff);[-2,-.7,.7,2].forEach((x,i)=>cone(x,3.25,1.4,i%2?0xffffff:0x9ab8ff,3.2,.75,.06));addLight(new T.PointLight(0x5aa0ff,.5,10)).position.set(-3,3,2);addLight(new T.PointLight(0x5aa0ff,.5,10)).position.set(3,3,2);amb.intensity=.28;key.intensity=1.8;
    box(1.2,.04,.5,new T.MeshStandardMaterial({color:0x101418}),1.8,.74,1.0);box(1.2,.7,.5,new T.MeshStandardMaterial({color:0x061a36}),1.8,.36,1.0);box(.32,.02,.22,new T.MeshStandardMaterial({color:0x222}),1.7,.77,.95);
-   addExtra('Caller',1.8,1.55,0,'mic',t);addExtra('Ref',-2.1,1.4,-.5,'stand',t,{shirt:'#1c1c1c'});
+   addExtra('Caller',2.4,1.2,0,'mic',t);addExtra('Ref',-2.1,1.4,-.5,'stand',t,{shirt:'#1c1c1c'});
    chairs(4,22,-4.3,4.5,.41,.62,0x14141c);
    for(let r=0;r<4;r++)for(let i=0;i<22;i++){if(Math.random()<.15)continue;const x=-4.3+i*.41;spots.push([x,-1.05,4.5+r*.62]);}
   }else if(t===5){ // pro tour floor: rows of boards, no crowd
@@ -5506,7 +5506,7 @@ const V=(function(){try{return (()=>{
    // trophy plinth + caller desk
    box(.5,.9,.5,new T.MeshStandardMaterial({color:0x1a1020}),-2.2,.45,.6);box(.16,.3,.16,new T.MeshStandardMaterial({color:0xd9b45a,metalness:.9,roughness:.2}),-2.2,1.05,.6);const cup=new T.Mesh(new T.CylinderGeometry(.14,.07,.22,16,1,true),new T.MeshStandardMaterial({color:0xe3c56a,metalness:.9,roughness:.2,side:T.DoubleSide}));cup.position.set(-2.2,1.3,.6);venue.add(cup);
    box(1.3,.04,.5,new T.MeshStandardMaterial({color:0x101418}),2.0,.74,1.0);box(1.3,.7,.5,new T.MeshStandardMaterial({color:0x2a0d0d}),2.0,.36,1.0);
-   addExtra('Caller',2.0,1.55,0,'mic',6,{shirt:'#1c1c1c'});addExtra('Ref',-2.3,1.5,-.5,'stand',6,{shirt:'#1c1c1c'});
+   addExtra('Caller',2.5,1.2,0,'mic',6,{shirt:'#1c1c1c'});addExtra('Ref',-2.3,1.5,-.5,'stand',6,{shirt:'#1c1c1c'});
    for(let r=0;r<6;r++)for(let i=0;i<34;i++){const x=-7+i*.43+(r%2)*.2;if(Math.abs(x)<2.2&&r<2)continue;spots.push([x,-1.15+r*.28,4.6+r*.7]);}
    for(let r=0;r<3;r++)for(let i=0;i<8;i++){spots.push([-7.5+r*.5,-1.1+r*.3,-.5+i*.6]);spots.push([7.5-r*.5,-1.1+r*.3,-.5+i*.6]);}
   }
