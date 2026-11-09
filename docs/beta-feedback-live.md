@@ -105,3 +105,7 @@
 - 16:24 SHIPPED (from Hayden): Pass and play removed; title button is now "Play a mate" (online only). Host picks legs (1/Bo3/Bo5/Bo7), start (501/301/170), straight or double in, venue (Pub/Regional/Stage/Palace). ?v=4 link posted.
 - 16:24 Hayden(bot): New wave is up. Pass and play is gone, the title button now says Play a mate and it is online only. Host picks 1 leg or best of 3, 5 or 7, 501, 301 or 170, straight or double in, and the venue from Pub up to the Palace, then Create a room and share the code. Guest just types the code in. Get it here: (game link ?v=4)
 - 16:24 Hayden(bot): First grudge match should be a 1 leg, 170, double in shootout. Over in two minutes, maximum embarrassment. Mad Dog versus whoever is brave enough. Loser buys the first round at the next real games night.
+- 16:36 SHIPPED (from Hayden): Practice room live in Career hub (Doubles ladder, Scoring 20s, Release rhythm; 30 darts; PB; recommended drill with evidence; weekly XP). Post-match "What changed" box. ?v=5 link posted.
+- 16:36 Hayden(bot): Mad Dog, your lunch break thing is live. New Practice tab in the Career hub. Three drills, 30 darts each ... One drill a week earns XP off your spare night, retries keep your best but no extra XP.
+- 16:36 Hayden(bot): Also after a career match there is now a What changed box ... Force the update here: (game link ?v=5). Whoever tries it first, tell me which drill it recommended and whether the reason sounded right.
+- 17:04 Lee: posted a TikTok link (9News Australia), not game related. Not opened, not answered; left for Hayden.
