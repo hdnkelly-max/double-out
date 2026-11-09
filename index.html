@@ -5392,6 +5392,28 @@ body.lk-match.feel-phone .hint{display:none!important}
 @media (max-width:700px){.mpb{top:calc(var(--lk-hdr,40px) + 6px);left:6px;width:min(220px,58vw)}.mpb-row{padding:4px 8px}.mpb-row strong{font-size:16px}}
 .mpx #mpMode button{font-size:12px}
 </style>
+<style id="zoom-css">
+.zoom-btn{display:none;position:fixed;z-index:32;font-family:var(--display);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#e9e4d8;background:rgba(13,16,20,.85);border:1px solid #343a43;border-radius:4px;padding:6px 10px;cursor:pointer}
+body.lk-match .zoom-btn{display:block;top:calc(var(--lk-hdr,48px) + 10px);left:calc(var(--lk-bw,58vw) - 128px)}
+body.lk-phone.lk-match .zoom-btn{top:calc(var(--lk-hdr,40px) + 8px);left:auto;right:10px}
+body:not(.lk-match) .zoom-btn{display:none}
+</style>
+<style id="split-back">
+/* phone: give the player strip back. HR and route bar sit on the bottom edge of the board pane */
+body.lk-phone.lk-match .pulse{position:fixed!important;left:8px!important;right:auto!important;top:calc(var(--lk-hdr) + var(--lk-bh) - 40px)!important;bottom:auto!important;width:calc(50% - 12px)!important;height:32px!important;z-index:31}
+body.lk-phone.lk-match .pulse .hr{height:32px!important;padding:0 6px!important;gap:6px!important}
+body.lk-phone.lk-match .hr canvas{width:40px!important;height:22px!important}
+body.lk-phone.lk-match .hr small{display:none!important}
+body.lk-phone.lk-match .hr .settle{height:26px!important;min-width:0!important;padding:0 8px!important;font-size:11px!important}
+body.lk-phone.lk-match .routes{bottom:auto!important;top:calc(var(--lk-hdr) + var(--lk-bh) - 40px)!important;left:50%!important;right:8px!important;width:auto!important}
+body.lk-phone.lk-match .rt-bar{height:32px!important;padding:0 8px!important;gap:6px!important}
+body.lk-phone.lk-match .rt-bar .rt-rem{font-size:18px!important}
+body.lk-phone.lk-match .rt-bar .rc{font-size:12px!important;padding:1px 5px!important;min-width:0!important}
+body.lk-phone.lk-match .rt-bar .rt-tog{height:24px!important;padding:0 6px!important;font-size:10px!important}
+body.lk-phone.lk-match .routes.lk-open .rt-list{position:absolute;top:36px;left:0;right:0}
+</style>
+
+
 
 
 
@@ -5435,6 +5457,7 @@ body.lk-match.feel-phone .hint{display:none!important}
 </div>
 
 <div class="mpb" id="mpBoard" hidden></div>
+<button class="zoom-btn" id="btnZoom" type="button" aria-pressed="true">Whole board</button>
 <!-- TITLE -->
 <img id="sceneBg" class="scene-bg" alt="" hidden>
 <div class="screen lgn" id="login" hidden>
@@ -6704,6 +6727,7 @@ const V=(function(){try{return (()=>{
   if(useSplit){const _sz=renderer.getSize(new T.Vector2());const W=_sz.x,Hh=_sz.y;const LR=lkRects();const BP=LR.board,PP=LR.player;const vert=LR.phone;
    // LOOK: board pane = whole numbered board + ~20 mm surround from a fixed camera (no follow, no zoom); only the earned push moves it, and never while pulling
    const pk=state.pulling?0:lkPushK(now);let cx=boardC.x,cy=boardC.y;const vis=.451*BP.h/Math.max(1,LR.diam);let bfov=18;const dist=(vis/2)/Math.tan(bfov/2*Math.PI/180);
+   {/* zoomed board: frames the aim point, glides between darts, frozen while pulling or a dart is in the air */const Z=window.__lkZ||(window.__lkZ={k:0,cx:boardC.x,cy:boardC.y,tx:boardC.x,ty:boardC.y});const zOn=window.__zoomOn!==false&&!state.done;const zdt=Math.min(.1,Math.max(.001,(now-(Z.t||now))/1000));Z.t=now;Z.k+=((zOn?1:0)-Z.k)*Math.min(1,zdt*8);const lockZ=state.pulling||state.anim||state.flyingOwn;if(!lockZ){const ai=(state.p[state.cur].ai||state.mateTurn)&&state.aiAim;const a=ai?state.aiAim:state.aim;if(a){const w=mmToWorld(Math.max(-150,Math.min(150,a.x)),Math.max(-150,Math.min(150,a.y)));Z.tx=w.x;Z.ty=w.y;}Z.cx+=(Z.tx-Z.cx)*Math.min(1,zdt*7);Z.cy+=(Z.ty-Z.cy)*Math.min(1,zdt*7);}cx+=(Z.cx-cx)*Z.k*.9;cy+=(Z.cy-cy)*Z.k*.9;bfov=bfov/(1+1.5*Z.k);}
    if(pk>0&&lkPushS){const w=mmToWorld(lkPushS.x,lkPushS.y);cx+=(w.x-cx)*.074*pk;cy+=(w.y-cy)*.074*pk;bfov=bfov/(1+.08*pk);}
    boardCam.position.set(cx,cy,BOARD_Z+dist);boardCam.lookAt(cx,cy,BOARD_Z);boardCam.fov=bfov;
    // player pane: stable three-quarter thrower; the head target is frozen while pulling/throwing so the shot never moves during a pull
@@ -7288,9 +7312,10 @@ if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if
  PAD.addEventListener('contextmenu',e=>e.preventDefault());}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelPull();breatheEnd();}});
 addEventListener('blur',()=>{cancelPull();breatheEnd();});
+function zoomSync(){window.__zoomOn=save.boardZoom!==false;const b=$('btnZoom');if(b){b.textContent=window.__zoomOn?'Whole board':'Zoom in';b.setAttribute('aria-pressed',window.__zoomOn);}}
 function feelLayoutClass(){const ph=feelPhone();document.body.classList.toggle('feel-phone',ph);document.body.classList.toggle('feel-desk',!ph);}
 addEventListener('resize',()=>{feelLayoutClass();paWinKey='';});
-function feelMatchStart(){S.perfStreak=0;S.ghostQ=[];V.ghostsClear();feelLayoutClass();if(PA){PA.hidden=false;paState='';paWinKey='';}}
+function feelMatchStart(){zoomSync();S.perfStreak=0;S.ghostQ=[];V.ghostsClear();feelLayoutClass();if(PA){PA.hidden=false;paState='';paWinKey='';}}
 // honest window on the track: track spans pull 0..1.3, sweet at SWEET, half-width perfectWin() seconds
 function feelPadWindow(){if(!PA)return;const w=perfectWin();const key=w.toFixed(4)+'|'+PA.offsetWidth;if(key===paWinKey)return;paWinKey=key;const W=PA.offsetWidth||366;if(w<=0){PA.classList.remove('haswin');return;}PA.classList.add('haswin');const half=w*1000/PULL_MS/1.3;const c=SWEET/1.3;let l=(c-half)*W,r=(c+half)*W;if(r-l<2){const m=(l+r)/2;l=m-1;r=m+1;}PAWIN.style.left=l+'px';PAWIN.style.width=(r-l)+'px';const t=PA.querySelectorAll('.pa-tick');t[0].style.left=t[2].style.left=l+'px';t[1].style.left=t[3].style.left=r+'px';}
 function feelPadSet(st,label){if(paState!==st){paState=st;PA.className='pa '+st+(PA.classList.contains('haswin')?' haswin':'');}if(PAL.textContent!==label)PAL.textContent=label;}
@@ -7412,6 +7437,7 @@ document.addEventListener('pointerdown',e=>{const tr=$('hudTr');if(tr.classList.
  if(S&&!S.done&&LOOK.bandUntil&&performance.now()<LOOK.bandUntil&&!e.target.closest('button'))LOOK.skip();},true);
 LOOK.syncMenu();
 
+{const zb=$('btnZoom');if(zb)zb.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();save.boardZoom=!(save.boardZoom!==false);persist();zoomSync();});}zoomSync();
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
 let lastBeat=0;
