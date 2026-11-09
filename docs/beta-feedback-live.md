@@ -32,3 +32,6 @@
 - ACTION: Opponent turns need a fast-forward / skip (second mention from Lee). Pacing is the main complaint about match length.
 - 14:47 Hayden(bot): Fair. Opponent throws will get a fast forward. Noted.
 - 14:47 Hayden(bot): The darts upgrade making you worse is interesting and should not happen. I will check it. What exactly did you upgrade, and was it right after that your ring got bigger, or did your HR strip also go up at the same time?
+- 14:50 Lee: Asked whether there is a database to check his gear instead of asking him. (Note: he did not say what he upgraded yet.)
+- ACTION: Cloud saves should include gear/upgrade state and per-match ring/spread stats so bug reports like "upgrade made me worse" can be checked without asking the player.
+- 14:51 Hayden(bot): No, Mad Dog, your career lives in your browser, that is the whole reason you cannot swap devices yet. Only thing that reaches me is the leaderboard line after a match. Once cloud saves land today I can see your gear and your ring size and stop bugging you. Until then you are the database.
