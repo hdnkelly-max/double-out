@@ -5007,6 +5007,15 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 .on-row .big small{display:block;font-family:var(--body);font-weight:500;font-size:12px;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:2px}
 .tl-note a{color:#e8382c;text-decoration:underline}
 </style>
+<style id="mp-css">
+.mp-opts{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+.mp-opts .seg{flex-wrap:wrap}
+.mp-opts .seg button{flex:1 1 auto;min-width:64px}
+.on-fmt{display:block;color:#adb0b5;font-size:12px;margin-top:4px;letter-spacing:.04em}
+#mpOpts.locked{opacity:.45;pointer-events:none}
+#mpStart button,#mpIn button{flex:1 1 0;min-width:0}
+</style>
+
 
 <div id="loading"><span class="wm">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</span><small>Setting up the oche</small><i></i></div>
 <canvas id="scene" aria-label="First-person view of the oche. Drag on the board to aim. Press and hold below the board to pull back, release to throw."></canvas>
@@ -5064,7 +5073,7 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
       <button class="big" id="btnNewCareer" type="button">New career</button>
       <button class="tl-run" id="btnRun" type="button"><b>The Run</b><small>Three lives. Draft a card after every match. Climb the ladder.</small></button>
       <button class="ghost wide" id="btnNewRun" type="button" hidden>New run<small>Abandons the current run</small></button>
-      <div class="tl-row"><button class="tl-sec" id="btnThrow" type="button"><b>Have a throw</b><small>Quick practice</small></button><button class="tl-sec" id="btnFriends" type="button"><b>Pass and play</b><small>Two players, one screen</small></button></div>
+      <div class="tl-row"><button class="tl-sec" id="btnThrow" type="button"><b>Have a throw</b><small>Quick practice</small></button><button class="tl-sec" id="btnFriends" type="button"><b>Play a mate</b><small>Live online match</small></button></div>
     </div>
     <p class="tl-note" id="tlAuth">Progress saves on this device. Sound starts after your first tap.</p>
   </div>
@@ -5173,23 +5182,21 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 
 <!-- FRIENDS -->
 <div class="screen side" id="friends" hidden>
-  <div class="panel">
-    <div class="label">Online · live match</div>
+  <div class="panel mp">
+    <div class="label">Play a mate · live online</div>
+    <div class="mp-opts" id="mpOpts">
+      <div class="field"><span class="label">Legs</span><div class="seg" id="mpLegs"><button type="button" data-v="1">1 leg</button><button type="button" data-v="3" aria-pressed="true">Best of 3</button><button type="button" data-v="5">Best of 5</button><button type="button" data-v="7">Best of 7</button></div></div>
+      <div class="field"><span class="label">Game</span><div class="seg" id="mpStart"><button type="button" data-v="501" aria-pressed="true">501</button><button type="button" data-v="301">301</button><button type="button" data-v="170">170</button></div></div>
+      <div class="field"><span class="label">Start</span><div class="seg" id="mpIn"><button type="button" data-v="0" aria-pressed="true">Straight in</button><button type="button" data-v="1">Double in</button></div></div>
+      <div class="field"><span class="label">Venue</span><div class="seg" id="mpVenue"><button type="button" data-v="0" aria-pressed="true">Pub</button><button type="button" data-v="2">Regional</button><button type="button" data-v="4">Stage</button><button type="button" data-v="6">Palace</button></div></div>
+    </div>
     <div class="on-box" id="onBox">
-      <div class="on-row"><button class="big" id="btnOnHost" type="button">Create a room<small>Get a 4-letter code for your mate</small></button></div>
+      <div class="on-row"><button class="big" id="btnOnHost" type="button">Create a room<small>You pick the format · your mate joins with a 4-letter code</small></button></div>
       <div class="on-row on-join"><input type="text" id="onCodeIn" placeholder="CODE" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="ghost" id="btnOnJoin" type="button">Join</button></div>
-      <div class="on-lobby" id="onLobby" hidden><div class="on-code" id="onCode">----</div><button class="ghost" id="btnOnLeave" type="button">Leave</button></div>
-      <p class="help" id="onStatus"></p>
+      <div class="on-lobby" id="onLobby" hidden><div><div class="on-code" id="onCode">----</div><small class="on-fmt" id="onFmt"></small></div><button class="ghost" id="btnOnLeave" type="button">Leave</button></div>
+      <p class="help" id="onStatus">Both players throw with their own player and darts. Nerves still apply.</p>
     </div>
-    <div class="label" style="margin-top:14px">Friends · pass and play</div>
-    <div class="fields">
-      <div class="field"><label class="label" for="f0">Player 1</label><input type="text" id="f0" value="Hayden" maxlength="14"></div>
-      <div class="field"><label class="label" for="f1">Player 2</label><input type="text" id="f1" value="Mate" maxlength="14"></div>
-    </div>
-    <div class="field"><span class="label">Format</span><div class="seg" id="fmt"><button type="button" data-legs="3" aria-pressed="false">Best of 3</button><button type="button" data-legs="5" aria-pressed="true">Best of 5</button></div></div>
-    <div class="field"><span class="label">Venue</span><div class="seg" id="fVenue"><button type="button" data-v="0" aria-pressed="true">Pub</button><button type="button" data-v="6" aria-pressed="false">Ally Pally</button></div></div>
-    <p class="help">Both players throw with the same arm and barrels. Nerves still apply.</p>
-    <div class="row2"><button class="big" id="btnFriendsStart" type="button">Walk on</button><button class="ghost wide" id="btnFriendsBack" type="button">Back</button></div>
+    <div class="row2"><button class="ghost wide" id="btnFriendsBack" type="button">Back</button></div>
   </div>
 </div>
 
@@ -5656,7 +5663,7 @@ function aiBull(){if(!S||S.done)return;const me=S.p[1];const sig=me.sigma*(1+S.f
  const step=()=>{if(!S||S.done)return;const [ph,dur]=seq[si];const k=Math.min(1,(performance.now()-t0)/dur);if(ph==='pull')S.oppArm={phase:'pull',pull:k,k};else S.oppArm={phase:ph,pull:1,k};if(k<1){requestAnimationFrame(step);return;}
   if(ph==='throw'){const from=V.oppHandWorld();V.fly(from,lx,ly,1,340,.05,()=>{if(!S||S.done)return;bullLand(lx,ly,true);});}
   si++;t0=performance.now();if(si<seq.length){S.oppArm={phase:seq[si][0],pull:1,k:0};requestAnimationFrame(step);}else S.oppArm={phase:'idle',pull:0,k:0};};requestAnimationFrame(step);}
-function introCard(p0,p1,opts,t){const el=$('intro');el.classList.remove('leg');el.classList.toggle('chalk',opts.tier<=1&&opts.mode==='career');const c=career();$('introPt0').innerHTML=portraitImg(save.look,save.name,opts.tier);$('introPt1').innerHTML=opts.practice?'':portraitImg(p1.look,p1.name,opts.tier);$('introTier').textContent=opts.mode==='career'?(opts.rival?t.n+' · Rival · Decider':(opts.decider?t.n+' · Decider':t.n)):'Friendly';$('introVenue').textContent=opts.mode==='career'?t.venue:(opts.online?'Live online':'Pass and play');$('introP0').textContent=p0.disp;$('introP1').textContent=opts.practice?'Board':p1.disp;$('introP0s').textContent=opts.mode==='career'?(p0.team?p0.team+' · ':'')+`Arm ${save.arm.toFixed(1)} · Composure ${compEff().toFixed(1)}`:'';$('introP1s').textContent=opts.mode==='career'?(p1.team?p1.team+' · ':'')+`Averages about ${opts.oppAvg}`:'';$('introFmt').textContent=`First to ${Math.ceil(opts.legs/2)} legs · 501 ${opts.din?'double in, double out':'double out'}${opts.pairs?' · pairs':''}`+(opts.rival&&c?` · H2H ${c.rivalW||0}–${c.rivalL||0}`:'');{const st=$('introStakes');if(st){const mk=(opts.mode==='career'&&c&&c.next&&!opts.practice&&!opts.local&&!opts.money)?matchKind(c.next,c,t):null;st.textContent=mk?mk.kind+' · '+mk.stakes:(opts.practice?'Practice. Nothing on the line.':(opts.local?'Local night. Cash for a win, no promotion pressure.':(opts.money?'Money match. $30 on the line.':'')));}}el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
+function introCard(p0,p1,opts,t){const el=$('intro');el.classList.remove('leg');el.classList.toggle('chalk',opts.tier<=1&&opts.mode==='career');const c=career();$('introPt0').innerHTML=portraitImg(save.look,save.name,opts.tier);$('introPt1').innerHTML=opts.practice?'':portraitImg(p1.look,p1.name,opts.tier);$('introTier').textContent=opts.mode==='career'?(opts.rival?t.n+' · Rival · Decider':(opts.decider?t.n+' · Decider':t.n)):'Friendly';$('introVenue').textContent=opts.mode==='career'?t.venue:(opts.online?'Live online':'Pass and play');$('introP0').textContent=p0.disp;$('introP1').textContent=opts.practice?'Board':p1.disp;$('introP0s').textContent=opts.mode==='career'?(p0.team?p0.team+' · ':'')+`Arm ${save.arm.toFixed(1)} · Composure ${compEff().toFixed(1)}`:'';$('introP1s').textContent=opts.mode==='career'?(p1.team?p1.team+' · ':'')+`Averages about ${opts.oppAvg}`:'';$('introFmt').textContent=`${opts.legs===1?'One leg':'First to '+Math.ceil(opts.legs/2)+' legs'} · ${opts.start||501} ${opts.din?'double in, double out':'double out'}${opts.pairs?' · pairs':''}`+(opts.rival&&c?` · H2H ${c.rivalW||0}–${c.rivalL||0}`:'');{const st=$('introStakes');if(st){const mk=(opts.mode==='career'&&c&&c.next&&!opts.practice&&!opts.local&&!opts.money)?matchKind(c.next,c,t):null;st.textContent=mk?mk.kind+' · '+mk.stakes:(opts.practice?'Practice. Nothing on the line.':(opts.local?'Local night. Cash for a win, no promotion pressure.':(opts.money?'Money match. $30 on the line.':'')));}}el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
 // ===== 3D SCENE =====
 const V=(function(){try{return (()=>{
  const T=THREE;const cv=$('scene');const renderer=new T.WebGLRenderer({canvas:cv,antialias:true});renderer.setPixelRatio(Math.min(innerWidth<700?1.6:2,devicePixelRatio||1));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
@@ -6678,10 +6685,8 @@ function startRun(){if(!save.name){save.name='You';}const ds=todaySeed();const p
 if(window.__noGL){['btnContinue','btnNewCareer','btnFriends','btnThrow','btnRun','btnNewRun'].forEach(id=>{$(id).disabled=true;});$('noGL').hidden=false;}
 $('btnPlayNext').onclick=playNext;$('btnSettle').onclick=settle;$('btnLocal').onclick=playLocal;$('btnPractice').onclick=playPractice;$('btnMoney').onclick=moneyMatch;$('btnShop').onclick=()=>showHub('kit');$('btnShopBack').onclick=()=>showHub();$('btnLook').onclick=()=>{$('hubPop').hidden=true;showCreator(true);};$('btnHubTitle').onclick=()=>{$('hubPop').hidden=true;showTitle();};$('btnHubMenu').onclick=()=>{const p=$('hubPop');p.hidden=!p.hidden;$('btnHubMenu').setAttribute('aria-expanded',!p.hidden);};document.addEventListener('pointerdown',e=>{if(!$('hubPop').hidden&&!e.target.closest('.hx-menu')){$('hubPop').hidden=true;}});$('btnHubSound').onclick=()=>{$('btnSound').onclick();syncHubAudio();syncTitleAudio();};$('btnHubCaller').onclick=()=>{$('btnCaller').onclick();syncHubAudio();syncTitleAudio();};
 [...$('kitTabs').children].forEach(bt=>bt.onclick=()=>showShop(bt.dataset.t,true));[...$('hubTabs').children].forEach(bt=>bt.onclick=()=>{hubTab(bt.dataset.t);if(bt.dataset.t==='player')showPlayer(true);if(bt.dataset.t==='kit')showShop(showShop.tab,true);if(bt.dataset.t==='board')renderBoard();});$('btnSkills').onclick=()=>showHub('player');$('btnSkillsBack').onclick=()=>showHub();$('btnPlPick').onclick=()=>showPerkPick(()=>showHub('player'));$('btnHubPick').onclick=()=>showPerkPick(showHub);$('btnPerkLater').onclick=()=>{$('perk').hidden=true;const d=window._perkDone;window._perkDone=null;if(career()){career().featBoost=false;persist();}if(d)d();else showHub('player');};
-$('btnFriendsBack').onclick=showTitle;$('btnFriendsStart').onclick=()=>beginMatch({mode:'friends',tier:ui.venue,p0:$('f0').value.trim()||'Player 1',p1:$('f1').value.trim()||'Player 2',legs:ui.legs});
+$('btnFriendsBack').onclick=()=>{onlineLeave();showTitle();};['mpLegs','mpStart','mpIn','mpVenue'].forEach(id=>{const host=$(id);[...host.children].forEach(b=>b.onclick=()=>{[...host.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(id==='mpVenue')V.buildVenue(+b.dataset.v);});});
 $('btnResultNext').onclick=()=>{$('result').hidden=true;const last=S;S=null;afterResult(last);};
-[...$('fmt').children].forEach(b=>b.onclick=()=>{ui.legs=+b.dataset.legs;[...$('fmt').children].forEach(c=>c.setAttribute('aria-pressed',c===b));});
-[...$('fVenue').children].forEach(b=>b.onclick=()=>{ui.venue=+b.dataset.v;[...$('fVenue').children].forEach(c=>c.setAttribute('aria-pressed',c===b));V.buildVenue(ui.venue);});
 
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
@@ -6728,7 +6733,7 @@ async function netSignOut(){try{if(NET.sb)await NET.sb.auth.signOut();}catch(e){
 // ----- online match -----
 function roomCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];return c;}
 function netStatus(t){const el=$('onStatus');if(el)el.textContent=t;}
-async function onlineHost(){const code=roomCode();await onlineJoin(code,0);}
+async function onlineHost(){const code=roomCode();await onlineJoin(code,0);const f=$('onFmt');if(f)f.textContent=mpFmtText({legs:mpOpt('mpLegs',3),start:mpOpt('mpStart',501),din:!!mpOpt('mpIn',0)});$('mpOpts').classList.add('locked');}
 async function onlineJoin(code,seat){code=(code||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);if(code.length<4){netStatus('Enter the 4-letter code.');return;}
  try{netStatus('Connecting…');const sb=await netLoad();if(NET.chan){try{await NET.chan.unsubscribe();}catch(e){}}
   NET.room=code;NET.seat=seat;NET.queue=[];NET.seen={};NET.seq=0;NET.myId=((save.lb&&save.lb.id)||'g').slice(0,8)+'-'+Math.random().toString(36).slice(2,8);
@@ -6740,9 +6745,11 @@ async function onlineJoin(code,seat){code=(code||'').toUpperCase().replace(/[^A-
   $('onCode').textContent=code;$('onLobby').hidden=false;
  }catch(e){console.warn(e);netStatus('Could not connect. Check your connection and try again.');}}
 function netSend(type,data){if(!NET.chan)return;NET.seq++;NET.chan.send({type:'broadcast',event:'tops',payload:Object.assign({t:type,q:NET.seq,from:NET.myId},data||{})});}
-function onlineStart(peer){const first=Math.random()<.5?0:1;const cfg={t:'start',legs:ui.legs||3,tier:ui.venue||0,first,host:{name:save.name||'Host',look:save.look,flight:save.flight},guest:{name:peer.name||'Mate',look:peer.look||lookFor(peer.name||'Mate'),flight:peer.flight}};netSend('start',cfg);onlineBegin(cfg);}
+function mpOpt(id,def){const b=[...$(id).children].find(x=>x.getAttribute('aria-pressed')==='true');return b?+b.dataset.v:def;}
+function mpFmtText(c){return `${c.legs===1?'1 leg':'Best of '+c.legs} · ${c.start} · ${c.din?'double in':'straight in'}, double out`;}
+function onlineStart(peer){const first=Math.random()<.5?0:1;const cfg={t:'start',legs:mpOpt('mpLegs',3),start:mpOpt('mpStart',501),din:!!mpOpt('mpIn',0),tier:mpOpt('mpVenue',0),first,host:{name:save.name||'Host',look:save.look,flight:save.flight},guest:{name:peer.name||'Mate',look:peer.look||lookFor(peer.name||'Mate'),flight:peer.flight}};netSend('start',cfg);onlineBegin(cfg);}
 function onlineBegin(cfg){NET.started=true;const meSeat=NET.seat;const me=meSeat===0?cfg.host:cfg.guest,op=meSeat===0?cfg.guest:cfg.host;$('onLobby').hidden=true;
- beginMatch({mode:'online',tier:cfg.tier,p0:me.name,p1:op.name,legs:cfg.legs,oppLook:op.look,online:{seat:meSeat,first:cfg.first}});}
+ beginMatch({mode:'online',tier:cfg.tier,p0:me.name,p1:op.name,legs:cfg.legs,start:cfg.start||501,din:!!cfg.din,oppLook:op.look,online:{seat:meSeat,first:cfg.first}});}
 function netRecv(m){if(!m||m.from===NET.myId)return;if(m.q!=null){const k=m.from+':'+m.q;if(NET.seen[k])return;NET.seen[k]=1;}
  if(m.t==='start'){if(NET.seat===1&&!NET.started)onlineBegin(m);return;}
  if(m.t==='dart'){NET.queue.push(m);netPump();return;}
@@ -6750,7 +6757,7 @@ function netRecv(m){if(!m||m.from===NET.myId)return;if(m.q!=null){const k=m.from
  if(m.t==='chat'){banter(String(m.text||'').slice(0,60),m.name||'Mate');return;}}
 function netPump(){if(!S||!S.online||S.done)return;if(S.cur!==1||S.netAnim||S.busyLeg)return;if($('intro').classList.contains('show')){mt(netPump,300);return;}if(!NET.queue.length)return;const m=NET.queue.shift();if(m.leg!=null&&m.leg!==S.p[0].legs+S.p[1].legs){/* stale leg, drop */return netPump();}S.netAnim=true;S.remoteDart=m;aiDart({x:m.x,y:m.y});}
 function onlineLeft(){if(!S||S.done)return;const nm=S.p[1].name;S.p[0].legs=Math.ceil(S.bestOf/2);S.p[1].legs=Math.min(S.p[1].legs,S.p[0].legs-1);flash(nm+' left','red','match awarded');mt(()=>endMatch(),1200);}
-async function onlineLeave(){try{if(NET.chan){netSend('quit',{});await NET.chan.unsubscribe();}}catch(e){}NET.chan=null;NET.room=null;NET.started=false;const l=$('onLobby');if(l)l.hidden=true;netStatus('');}
+async function onlineLeave(){{const o=$('mpOpts');if(o)o.classList.remove('locked');const f=$('onFmt');if(f)f.textContent='';}try{if(NET.chan){netSend('quit',{});await NET.chan.unsubscribe();}}catch(e){}NET.chan=null;NET.room=null;NET.started=false;const l=$('onLobby');if(l)l.hidden=true;netStatus('');}
 
 $('btnOnHost').onclick=()=>{audioInit();onlineHost();};$('btnOnJoin').onclick=()=>{audioInit();onlineJoin($('onCodeIn').value,1);};$('btnOnLeave').onclick=onlineLeave;
 netBoot();

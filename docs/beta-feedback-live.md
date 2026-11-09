@@ -99,3 +99,6 @@
 - 15:57 Ween: Hold-to-throw sweet spot is "definitely findable and seemed reasonable", needs more play time to confirm.
 - 15:58 INCIDENT (for Hayden): the Messenger tab switched to the Helen Sherlock 1:1 chat on its own (a chat-list click or a focus jump) and the bot's Ween follow-up question was sent there by mistake. Unsent for everyone within ~1 minute (Helen's chat shows "You deleted a message"); she may have seen a notification. Text was only the heartbeat-strip feedback question, nothing private. Posting procedure tightened: composer label is now checked before every type, in a separate call.
 - 16:00 Hayden(bot): Good, that is the bit I was most worried about. Follow up when you have had more goes: did you ever understand what the heartbeat strip was doing to your ring, or did you just ignore it?
+- 16:09 Hayden(bot): David, status check. Did the lights come back on for you after the new link, and have you finished a leg yet? Yes or no is fine, I know typing is a lot after all that refreshing.
+- 16:12 David: Has not tried since the fixes, will try again after work (evening).
+- 16:13 Hayden(bot): Fair enough, a man with a job. Tonight then. By the time you open it the hands will be less ugly and the opponent throws will skip, so you will have zero excuses. Sign in with Google when it asks so your career is saved.
