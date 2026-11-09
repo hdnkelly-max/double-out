@@ -4988,17 +4988,17 @@ body.split .banter.far{top:auto;bottom:150px;right:14px}
 html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:not([hidden])){overflow:hidden;touch-action:none;position:fixed;inset:0;width:100%;height:100%}#hud,#hud *{touch-action:manipulation}#scene{touch-action:none}
 </style>
 <style id="net-css">
-.lg{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:center;background:#0d1014;overflow:hidden}
-.lg-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:saturate(.9) brightness(.85)}
-.lg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,16,20,.15) 0%,rgba(13,16,20,.55) 55%,rgba(13,16,20,.92) 100%)}
-.lg-wrap{position:relative;z-index:2;width:min(92vw,440px);margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 0 calc(24px + env(safe-area-inset-bottom,0px))}
-.lg-wm{font-size:clamp(72px,18vw,132px);margin:0}
-.lg-kick{font-family:var(--body);color:#e9e4d8;opacity:.85;margin:4px 0 26px;font-size:15px;line-height:1.45}
-.lg-stack{display:flex;flex-direction:column;gap:10px;width:100%}
-.lg-google{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#f3efe6;color:#111}
-.lg-google small{flex-basis:100%;display:block;font-family:var(--body);font-weight:500;font-size:12px;letter-spacing:0;text-transform:none;color:#444;margin-top:2px}
-.lg-status{min-height:18px;font-size:13px;color:#adb0b5;margin:6px 0 0}
-.lg-venue{position:static;margin-top:28px}
+.lgn{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:center;background:#0d1014;overflow:hidden}
+.lgn-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:saturate(.9) brightness(.85)}
+.lgn::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,16,20,.15) 0%,rgba(13,16,20,.55) 55%,rgba(13,16,20,.92) 100%)}
+.lgn-wrap{position:relative;z-index:2;width:min(92vw,440px);margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 0 calc(24px + env(safe-area-inset-bottom,0px))}
+.lgn-wm{font-size:clamp(72px,18vw,132px);margin:0}
+.lgn-kick{font-family:var(--body);color:#e9e4d8;opacity:.85;margin:4px 0 26px;font-size:15px;line-height:1.45}
+.lgn-stack{display:flex;flex-direction:column;gap:10px;width:100%}
+.lgn-google{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#f3efe6;color:#111}
+.lgn-google small{flex-basis:100%;display:block;font-family:var(--body);font-weight:500;font-size:12px;letter-spacing:0;text-transform:none;color:#444;margin-top:2px}
+.lgn-status{min-height:18px;font-size:13px;color:#adb0b5;margin:6px 0 0}
+.lgn-venue{position:static;margin-top:28px}
 .on-box{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
 .on-join{display:flex;gap:8px}
 .on-join input{flex:1;font-family:var(--display);font-size:28px;letter-spacing:.3em;text-transform:uppercase;text-align:center;background:#101318;border:1px solid #343a43;color:#e9e4d8;border-radius:4px;padding:8px 4px 8px 12px;min-width:0}
@@ -5037,17 +5037,17 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 
 <!-- TITLE -->
 <img id="sceneBg" class="scene-bg" alt="" hidden>
-<div class="screen lg" id="login" hidden>
-  <img id="loginBg" class="lg-bg" alt="" hidden>
-  <div class="lg-wrap">
-    <h1 class="wm lg-wm">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</h1>
-    <p class="lg-kick">A darts career. Start at the local. Earn your place at the top.</p>
-    <div class="lg-stack">
-      <button class="big lg-google" id="btnGoogle" type="button"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.5 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.4 0-11.7-4.1-13.6-9.8l-7.8 6C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google<small>Your career follows you to any device</small></button>
+<div class="screen lgn" id="login" hidden>
+  <img id="loginBg" class="lgn-bg" alt="" hidden>
+  <div class="lgn-wrap">
+    <h1 class="wm lgn-wm">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</h1>
+    <p class="lgn-kick">A darts career. Start at the local. Earn your place at the top.</p>
+    <div class="lgn-stack">
+      <button class="big lgn-google" id="btnGoogle" type="button"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.5 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.4 0-11.7-4.1-13.6-9.8l-7.8 6C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google<small>Your career follows you to any device</small></button>
       <button class="ghost wide" id="btnGuest" type="button">Play as guest<small>Saves on this device only</small></button>
-      <p class="lg-status" id="loginStatus"></p>
+      <p class="lgn-status" id="loginStatus"></p>
     </div>
-    <div class="tl-venue lg-venue"><b>The Kauri Arms</b><small>Aotearoa New Zealand</small></div>
+    <div class="tl-venue lgn-venue"><b>The Kauri Arms</b><small>Aotearoa New Zealand</small></div>
   </div>
 </div>
 
