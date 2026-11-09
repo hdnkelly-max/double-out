@@ -102,3 +102,6 @@
 - 16:09 Hayden(bot): David, status check. Did the lights come back on for you after the new link, and have you finished a leg yet? Yes or no is fine, I know typing is a lot after all that refreshing.
 - 16:12 David: Has not tried since the fixes, will try again after work (evening).
 - 16:13 Hayden(bot): Fair enough, a man with a job. Tonight then. By the time you open it the hands will be less ugly and the opponent throws will skip, so you will have zero excuses. Sign in with Google when it asks so your career is saved.
+- 16:24 SHIPPED (from Hayden): Pass and play removed; title button is now "Play a mate" (online only). Host picks legs (1/Bo3/Bo5/Bo7), start (501/301/170), straight or double in, venue (Pub/Regional/Stage/Palace). ?v=4 link posted.
+- 16:24 Hayden(bot): New wave is up. Pass and play is gone, the title button now says Play a mate and it is online only. Host picks 1 leg or best of 3, 5 or 7, 501, 301 or 170, straight or double in, and the venue from Pub up to the Palace, then Create a room and share the code. Guest just types the code in. Get it here: (game link ?v=4)
+- 16:24 Hayden(bot): First grudge match should be a 1 leg, 170, double in shootout. Over in two minutes, maximum embarrassment. Mad Dog versus whoever is brave enough. Loser buys the first round at the next real games night.

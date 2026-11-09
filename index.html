@@ -5015,6 +5015,57 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 #mpOpts.locked{opacity:.45;pointer-events:none}
 #mpStart button,#mpIn button{flex:1 1 0;min-width:0}
 </style>
+<style id="practice-sprint">
+/* ===== PRACTICE (sprint): practice tab, drill HUD strip, result receipt ===== */
+.htab.pr{display:flex;flex-direction:column;gap:14px;background:rgba(5,7,10,.86);padding:18px clamp(14px,2.5vw,24px) 22px}
+.pr-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.pr-h1{margin:2px 0 0;font-family:var(--display);font-weight:800;font-size:var(--h2);line-height:.95;letter-spacing:.02em;text-transform:uppercase;color:#f3efe6}
+.pr-top .hx-kicker{font-size:var(--kick);color:#f3efe6;text-shadow:none}
+.pr-rec{display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(232,56,44,.12);border-left:3px solid var(--acc)}
+.pr-rec .label{margin:0 0 2px;color:#f3efe6}.pr-rec b{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;letter-spacing:.02em;text-transform:uppercase;color:#f3efe6}
+.pr-rec.none b{color:var(--chalk,#e9e4d8)}
+.pr-ev{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#f3efe6}
+.pr-rec p{margin:4px 0 8px;font-size:var(--txt);color:var(--chalk,#e9e4d8);line-height:1.4;max-width:60ch}
+.pr-btn{align-self:flex-start;display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;background:var(--acc);color:#f3efe6;border:0;border-radius:0;padding:14px 22px;min-height:56px;font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-align:left;min-width:0;max-width:100%}
+.pr-btn small{display:block;font-size:12px;letter-spacing:.08em;font-weight:700;color:rgba(243,239,230,.85);text-transform:none}
+.pr-btn:hover,.pr-btn:focus-visible{background:#f04a3e;outline:none}.pr-btn:focus-visible{box-shadow:0 0 0 2px #f3efe6}
+.pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px}
+.pr-card{display:flex;flex-direction:column;gap:6px;background:rgba(5,7,10,.9);border:0;border-top:3px solid rgba(233,228,216,.2);padding:14px 16px 16px;text-align:left;color:#f3efe6;cursor:pointer;font-family:inherit;min-height:150px;border-radius:0}
+.pr-card .k{font-family:var(--display);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.pr-card b{font-family:var(--display);font-weight:800;font-size:22px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
+.pr-card small{font-size:14px;color:var(--chalk,#e9e4d8);line-height:1.35}
+.pr-card em{margin-top:auto;font-style:normal;font-family:var(--display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pr-card:hover b,.pr-card:focus-visible b{color:var(--acc)}.pr-card:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.pr-card.rec{border-top-color:var(--acc)}.pr-card.rec .k{color:var(--acc)}
+.pr-card.soon{opacity:.45;cursor:default}.pr-card.soon:hover b{color:#f3efe6}
+.pr-note{margin:0;font-size:13px;color:var(--muted);line-height:1.4}
+.pr-back{align-self:flex-start;font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:0}
+.pr-brief{margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:var(--txt);color:var(--chalk,#e9e4d8);line-height:1.4;max-width:62ch}.pr-brief li::marker{color:var(--acc)}
+.pr-keys{background:rgba(255,255,255,.03);border-top:1px solid rgba(233,228,216,.12)}
+.pr-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;padding-top:4px}
+.pr-actions .ghost.wide{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:3px;background:none;border:1px solid rgba(233,228,216,.3);color:#f3efe6;padding:12px 16px;font-size:14px;letter-spacing:.1em;text-align:left;border-radius:0}
+.pr-actions .ghost.wide small{font-size:11px;letter-spacing:.06em;text-transform:none;color:var(--muted);font-weight:700}
+.pr-actions .ghost.wide:hover{border-color:var(--acc)}
+.pr-score{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.pr-score b{font-family:var(--display);font-weight:800;font-size:clamp(44px,6vw,72px);line-height:.9;color:#fff;letter-spacing:.01em}
+.pr-score span{font-family:var(--display);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--chalk,#e9e4d8)}.pr-score span.new{color:var(--acc)}
+.pr-xp{display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:rgba(5,7,10,.82);border-top:2px solid var(--acc)}
+.pr-xp b{font-family:var(--display);font-weight:800;font-size:22px;color:#f3efe6;letter-spacing:.04em;text-transform:uppercase}.pr-xp span{font-size:13px;color:var(--chalk,#e9e4d8)}
+/* drill strip in the HUD */
+.drillbar{position:fixed;left:50%;top:max(54px,calc(env(safe-area-inset-top,0px) + 50px));transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:0;background:rgba(5,7,10,.86);border:1px solid rgba(233,228,216,.18);border-left:3px solid var(--acc);font-family:var(--display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk,#e9e4d8);pointer-events:none;max-width:calc(100vw - 24px);white-space:nowrap}
+.drillbar>*{padding:7px 12px;border-right:1px solid rgba(233,228,216,.14)}.drillbar>*:last-child{border-right:0}
+.drillbar b{color:#f3efe6;font-weight:800}.drillbar i{font-style:normal;color:#fff;font-weight:800;font-size:14px;margin-left:2px}
+/* post-match receipt */
+.rx-receipt{display:flex;flex-direction:column;gap:0;background:rgba(5,7,10,.84);padding:12px 14px 14px}
+.rx-receipt .label{margin:0 0 6px;color:#f3efe6}
+.rr-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid rgba(233,228,216,.1)}
+.rr-row small{font-family:var(--display);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.rr-row b{display:block;font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.03em;color:#f3efe6;line-height:1.25}
+.rr-row b em{font-style:normal;color:#f3efe6}.rr-row b em.up{color:#9fd3b1}.rr-row b em.dn{color:var(--acc)}
+.rr-row span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.rx-receipt .pr-btn{margin-top:12px;align-self:stretch;width:100%}
+@media (max-width:700px){.htab.pr{padding:14px 14px 20px}.pr-rec b{font-size:22px}.pr-grid{grid-template-columns:1fr}.pr-card{min-height:0}.pr-btn{font-size:17px;padding:12px 16px;min-height:52px}.pr-actions .pr-btn,.pr-actions .ghost.wide{flex:1 1 100%}.drillbar{top:max(46px,calc(env(safe-area-inset-top,0px) + 44px));font-size:10px;letter-spacing:.1em}.drillbar>*{padding:5px 8px}.drillbar>b{display:none}.rr-row{grid-template-columns:80px minmax(0,1fr)}.rr-row b{font-size:15px}#hub .htabs button{font-size:12px;padding:8px 2px;letter-spacing:.1em}}
+</style>
 
 
 <div id="loading"><span class="wm">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</span><small>Setting up the oche</small><i></i></div>
@@ -5031,6 +5082,7 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
     <div class="tr" id="hudTr"><button class="ghost menu" id="btnMenu" type="button" aria-label="Menu">☰</button><button class="ghost" id="btnView" type="button">View: POV</button><button class="ghost" id="btnSound" type="button" aria-pressed="true">Sound</button><button class="ghost" id="btnCaller" type="button" aria-pressed="true">Caller</button><button class="ghost" id="btnQuit" type="button">Quit</button></div>
   </div>
   <div class="mid"><div class="callout" id="callout"></div></div>
+  <div class="drillbar" id="drillBar" hidden></div>
   <div class="routes" id="routes" hidden></div>
   <div class="bottom">
     <div class="hint" id="hint">Drag on the board to aim · hold below it to pull back</div>
@@ -5115,7 +5167,7 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 <div class="screen hubx" id="hub" hidden>
   <header class="hx-head">
     <span class="hx-wm" aria-hidden="true">T<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</span>
-    <nav class="htabs" id="hubTabs"><button type="button" data-t="play" aria-pressed="true">Career</button><button type="button" data-t="player" aria-pressed="false">Player</button><button type="button" data-t="kit" aria-pressed="false">Kit</button><button type="button" data-t="board" aria-pressed="false">Leaderboard</button></nav>
+    <nav class="htabs" id="hubTabs"><button type="button" data-t="play" aria-pressed="true">Career</button><button type="button" data-t="practice" aria-pressed="false">Practice</button><button type="button" data-t="player" aria-pressed="false">Player</button><button type="button" data-t="kit" aria-pressed="false">Kit</button><button type="button" data-t="board" aria-pressed="false">Leaderboard</button></nav>
     <div class="hx-id"><span id="hubPt"></span><b id="hubName">You</b></div>
     <div class="bank"><div class="label">Bank</div><b id="hubBank">$0</b></div>
     <div class="hx-menu"><button class="ghost" id="btnHubMenu" type="button" aria-haspopup="true" aria-expanded="false">Menu</button><div class="hx-pop" id="hubPop" hidden><button type="button" id="btnLook">Edit look</button><button type="button" id="btnHubSound">Sound on</button><button type="button" id="btnHubCaller">Caller on</button><button type="button" id="btnHubTitle">Main menu</button></div></div>
@@ -5150,6 +5202,7 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
   </section>
   <footer class="htab hx-foot" data-t="play"><span id="hubRecord">Career record 0–0</span><span class="hid"><b id="hubAvg">–</b><b id="hubRecent">–</b><b id="hubStreak">0</b></span><span id="hubWeekNote" hidden></span><span id="hubTierLabel" hidden></span><span id="hubVenue" hidden></span><span id="hubProg" hidden></span><span id="nextStakes" hidden></span><span id="nextInfo" hidden></span></footer>
   <div class="hx-body">
+  <section class="htab pr" data-t="practice" id="hxPractice" hidden></section>
   <section class="htab" data-t="player" hidden>
     <div class="plhead"><span id="plPt" hidden></span><div hidden><div class="hub-name" id="plName">You</div><div class="help" id="plTier"></div></div><div class="plnums"><div><small>Career earnings</small><b class="brass" id="plEarn">$0</b></div><div><small>Perks</small><b id="plPerkCount">0</b></div></div></div>
     <div class="pickcard" id="plPick" hidden><div><div class="label">Perk unlocked</div><b>Choose one of three.</b></div><button class="big" id="btnPlPick" type="button">Pick a perk</button></div>
@@ -5210,6 +5263,7 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
       <div class="res-score"><div class="rs-p"><span class="ptw" id="rsPt0"></span><div><b id="rsN0">You</b><small id="rsA0">Avg 0.0</small></div></div><div class="rs-legs"><span id="rsL0">0</span><i>–</i><span id="rsL1">0</span></div><div class="rs-p r"><div><b id="rsN1">Opp</b><small id="rsA1">Avg 0.0</small></div><span class="ptw" id="rsPt1"></span></div></div>
       <div class="res-earn" id="resEarn" hidden><div class="re-cash"><small>Earned this match</small><b id="reCash">$0</b></div><div class="re-sp"><small>Experience</small><b id="reSp">+0</b></div><div class="re-bank"><small>Bank</small><b id="reBank">$0</b></div></div>
       <p class="rx-net" id="reNet" hidden></p>
+      <div class="rx-receipt" id="resReceipt" hidden></div>
       <div class="res-obj" id="resObj" hidden><div class="label">Objectives completed</div><div class="chips" id="resObjChips"></div></div>
     </div>
     <div class="rx-right">
@@ -5372,7 +5426,7 @@ function attr(id){save.attr=save.attr||{};return save.attr[id]||(save.attr[id]={
 function lvOf(id){return attr(id).lv;}
 function xpNeed(lv){return isRun()?40+lv*18:Math.round(60+30*Math.pow(lv,1.3));}
 function attrCap(){const c=career();return (isRun()||!c)?ATTR_MAX:ATTR_CAP[Math.min(6,c.tier||0)];}
-function gainXP(id,amt,mult){if(S&&S.practice&&isRun())return 0;if(S&&S.practice&&S_lightXP)amt*=.5;amt=Math.round(amt*(mult==null?1:mult)*(1+SK().xp));if(!amt||amt<=0)return 0;const a=attr(id);const cap=attrCap();if(id==='co'&&has('ice'))return 0;a.xp+=amt;if(a.lv>=cap){a.xp=Math.min(a.xp,xpNeed(a.lv)*3);_SK=null;return 0;}let up=0;while(a.lv<cap&&a.xp>=xpNeed(a.lv)){a.xp-=xpNeed(a.lv);a.lv++;up++;}_SK=null;
+function gainXP(id,amt,mult){if(S&&S.practice&&isRun())return 0;if(S&&S.drill&&S.drill.noXP)return 0;if(S&&S.practice&&S_lightXP)amt*=.5;amt=Math.round(amt*(mult==null?1:mult)*(1+SK().xp));if(!amt||amt<=0)return 0;const a=attr(id);const cap=attrCap();if(id==='co'&&has('ice'))return 0;a.xp+=amt;if(a.lv>=cap){a.xp=Math.min(a.xp,xpNeed(a.lv)*3);_SK=null;return 0;}let up=0;while(a.lv<cap&&a.xp>=xpNeed(a.lv)){a.xp-=xpNeed(a.lv);a.lv++;up++;}_SK=null;
  if(S){S.gains=S.gains||{};S.gains[id]=(S.gains[id]||0)+amt;if(up){S.lvUps=(S.lvUps||[]).concat({id,lv:a.lv});setTimeout(()=>{if(!S||S.done)return;flash(ATTRS.find(x=>x.id===id).n+' '+a.lv,'gold','level up');sfxLevel();},900);}xpPop('+'+amt+' '+ATTRS.find(x=>x.id===id).n,id);}return up;}
 const PERKS=[
  // common, stackable (level 1–5), small steps
@@ -6299,12 +6353,12 @@ addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&$('setup').hidden
 addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();release();}});
 function startPull(){if(!S||S.busy||S.done||S.p[S.cur].ai||S.pulling||S.view===1||V.walking())return;S.pulling=true;S.over=false;S.pullStart=performance.now();S.pull=0;S.pullMul=Math.max(.75,Math.min(1.3,1+gauss()*jitter()));S.lastNerves=effNerves();noiseBurst({dur:.12,freq:600,q:.5,gain:.05});
  if(ui.mode==='career'&&!S.practice){const opp=S.p[1];const pc=opp.rival?.18:(ui.tier===0?.08:0);if(Math.random()<pc){setTimeout(()=>{if(S&&S.pulling){banter('*cough*',opp.name);S.adren+=.6*(1+SK().press);}},250);}}}
-function release(){if(!S||!S.pulling)return;S.pulling=false;const perf=isPerfect();S.perfect=perf;{const me=S.p[S.cur];me.throws=(me.throws||0)+1;if(perf){me.perfects=(me.perfects||0)+1;if(!S.practice&&ui.mode==='career'&&career())career().perfects=(career().perfects||0)+1;}}const sig=currentSigma();{const d=(S.pull-SWEET)*PULL_MS/1000;S.lastTiming=S.over?'Held':perf?'Perfect':Math.abs(d)<.03?'Flush':d<0?(d<-.12?'Early':'A touch early'):(d>.12?'Late':'A touch late');{const me=S.p[S.cur];if(d<-.03)me.early=(me.early||0)+1;else if(d>.03||S.over)me.late=(me.late||0)+1;}}S.pull=0;S.over=false;S.throwsMade++;save.totThrows=(save.totThrows||0)+1;if(S.throwsMade>=4)$('hint').style.opacity=0;
+function release(){if(!S||!S.pulling)return;S.pulling=false;const perf=isPerfect();S.perfect=perf;{const me=S.p[S.cur];me.throws=(me.throws||0)+1;if(perf){me.perfects=(me.perfects||0)+1;if(!S.practice&&ui.mode==='career'&&career())career().perfects=(career().perfects||0)+1;}}const sig=currentSigma();{const d=(S.pull-SWEET)*PULL_MS/1000;S.lastTiming=S.over?'Held':perf?'Perfect':Math.abs(d)<.03?'Flush':d<0?(d<-.12?'Early':'A touch early'):(d>.12?'Late':'A touch late');if(S.drill)S.drill.timings.push(S.over?.5:d);{const me=S.p[S.cur];if(d<-.03)me.early=(me.early||0)+1;else if(d>.03||S.over)me.late=(me.late||0)+1;}}S.pull=0;S.over=false;S.throwsMade++;save.totThrows=(save.totThrows||0)+1;if(S.throwsMade>=4)$('hint').style.opacity=0;
  const ax=S.aim.x+S.sway.x,ay=S.aim.y+S.sway.y;const lx=ax+gauss()*sig*.86,ly=ay+gauss()*sig;if(S.online)netSend('dart',{x:+lx.toFixed(2),y:+ly.toFixed(2),dart:S.dart,leg:S.p[0].legs+S.p[1].legs});
  // cinematic: third dart that completes a 180 / 170+ visit, or any match-winning / ton-plus checkout
  const me=S.p[S.cur];const h=scoreAt(lx,ly);const vis=S.visit.reduce((a,v)=>a+(v.bust?0:v.v),0);const need=Math.ceil(S.bestOf/2);const wins=applyDart(me.score,h).won;const big=(S.dart===3&&vis+h.v>=171)||(wins&&(S.visitStart>=100||me.legs+1>=need));S.cine=big;S.aimLabel=scoreAt(S.aim.x,S.aim.y).label;S.aimWasDbl=scoreAt(S.aim.x,S.aim.y).dbl;
  S.busy=true;S.anim={kind:'throw',t0:performance.now(),dur:220};noiseBurst({dur:.08,freq:900,q:.4,gain:.12});
- save.darts++;{const run=isRun();const rate=run?.005:.0025;const pm=S.practice?(run?0:.6):1;save.arm=Math.min(10,save.arm+rate*pm*(gearCount('board')?1.6:1)*(1+SK().armGrow));}
+ save.darts++;{const run=isRun();const rate=run?.005:.0025;const pm=S.practice?(run?0:(S.drill&&S.drill.noXP?0:.6)):1;save.arm=Math.min(10,save.arm+rate*pm*(gearCount('board')?1.6:1)*(1+SK().armGrow));}
  setTimeout(()=>{S.flyingOwn=true;const dur=S.cine?2400:380;if(S.cine){V.cinema(lx,ly,dur+1500);document.getElementById('vig').style.opacity=.5;if(AU.ctx)AU.crowdGain.gain.setTargetAtTime(0.02,AU.ctx.currentTime,.1);}V.fly(V.handWorld(),lx,ly,0,dur,S.cine?.035:.05,()=>{if(!S||S.done)return;S.flyingOwn=false;S.anim=null;if(S.cine){setTimeout(()=>{crowdSet(S.tier.crowd);},300);}land(lx,ly,false);});},150);}
 
 // ===== FLOW =====
@@ -6319,7 +6373,7 @@ function startTurn(){if(S.practice&&S.cur===1){S.cur=0;}const me=S.p[S.cur];S.da
 function prefDbl(){return save.prefDbl||16;}
 function myRoute(s,d){return withPref(prefDbl(),()=>route(s,d));}
 function myAim(s,d){if(S&&S.plan&&S.plan.length)return S.plan[0];return withPref(prefDbl(),()=>aimFor(s,d));}
-function autoAim(){if(S.bull){setAim(0,0);return;}const me=S.p[S.cur];if(S.din&&!me.opened){const t=targetPoint('D20');setAim(t.x,t.y);return;}const t=targetPoint(myAim(me.score,4-S.dart));setAim(t.x,t.y);renderRoutes();}
+function autoAim(){if(S.bull){setAim(0,0);return;}drillBar();if(S.drill){const t=targetPoint(drillTarget());setAim(t.x,t.y);return;}const me=S.p[S.cur];if(S.din&&!me.opened){const t=targetPoint('D20');setAim(t.x,t.y);return;}const t=targetPoint(myAim(me.score,4-S.dart));setAim(t.x,t.y);renderRoutes();}
 function renderRoutes(){const host=$('routes');if(!host)return;const me=S&&S.p[S.cur];const show=S&&!S.done&&!S.bull&&!S.busy&&me&&!me.ai&&!S.mateTurn&&!(S.din&&!me.opened)&&me.score<=170&&me.score>=2&&!$('intro').classList.contains('show');if(!show){host.hidden=true;return;}const d=4-S.dart;const rs=routesFor(me.score,d,prefDbl());if(!rs.length){host.hidden=true;return;}host.hidden=false;const cur=S.plan?S.plan.join(' '):null;host.classList.toggle('collapsed',!!renderRoutes.collapsed&&innerWidth<=700);host.innerHTML=`<button type="button" class="rt-h">${me.score} · ${d} dart${d>1?'s':''} · routes ${renderRoutes.collapsed?'▸':'▾'}</button>`+rs.map((x,i)=>`<button type="button" class="rt ${(cur?cur===x.r.join(' '):i===0)?'on':''} ${x.style>=3?'sty':''}" data-i="${i}">${x.r.map(l=>`<span class="rc ${l[0]==='D'||l==='BULL'?'d':''}">${l}</span>`).join('')}${x.style>=3?'<em>respect</em>':''}</button>`).join('');host.querySelector('.rt-h').onclick=()=>{renderRoutes.collapsed=!renderRoutes.collapsed;renderRoutes();};[...host.querySelectorAll('.rt')].forEach(bt=>bt.onclick=()=>{const x=rs[+bt.dataset.i];S.plan=x.r.slice();S.planPicked=true;const t=targetPoint(S.plan[0]);setAim(t.x,t.y);renderRoutes();updateUI();});}
 function chipify(t){if(!t)return '';const m=t.match(/^(Out|Set up):\s*(.*)$/);if(!m)return t.replace(/</g,'&lt;');const parts=m[2].split(/\s·\s|\s(?=\()/);let out=`<b>${m[1]}</b>`;parts.forEach(p=>{const pp=p.trim();if(!pp)return;if(/^(T|D)?\d+$|^BULL$|^25$/.test(pp))out+=`<span class="rc ${pp[0]==='D'||pp==='BULL'?'d':''}">${pp}</span>`;else out+=`<span>${pp.replace(/</g,'&lt;')}</span>`;});return out;}
 function planText(){const me=S.p[S.cur];if(S.bull)return 'Bull up: closest starts';if(S.din&&!me.opened)return 'Double in: hit a double to start scoring';if(me.score<2)return '';const d=4-S.dart;const rt=(S.plan&&S.plan.length)?S.plan:(me.score<=170?myRoute(me.score,d):null);if(rt)return 'Out: '+rt.join(' · ');if(me.score>230)return '';const a=myAim(me.score,d);const left=me.score-valOf(a);const nxt=left>=2&&left<=170?myRoute(left,3):null;return `Set up: ${a} leaves ${left}${nxt?' ('+nxt.join(' ')+')':''}`;}
@@ -6334,6 +6388,7 @@ function aiDart(preset){if(!S||S.done)return;const me=S.p[S.cur];const thrower=S
 function land(x,y,far){if(S.bull){return bullLand(x,y,far);}const me=S.p[S.cur];let h=scoreAt(x,y);const asAI=me.ai||S.mateTurn;
  sfxDartHit(h.v===0?'miss':(Math.random()<.06?'wire':'hit'),far);if(!far){V.shake();V.punchIn(x,y,S.cine?1900:(S.dart===3?1100:520));if(S.cine){document.getElementById('vig').style.opacity=0;}}else V.punchIn(x,y,S.dart===3?900:600);
  S.log.push({t:Date.now(),player:me.name,leg:S.p[0].legs+S.p[1].legs+1,dart:S.dart,x:+x.toFixed(1),y:+y.toFixed(1),hit:h.label,score:h.v,scoreBefore:me.score,nerves:+effNerves().toFixed(2)});
+ if(S.drill&&!asAI)drillDart(h,x,y);
  if(me.score<=50&&oneDart(me.score))me.coAtt+=1;
  let r;if(S.din&&!me.opened){if(h.dbl){me.opened=true;r=applyDart(me.score,h);}else{r={score:me.score,bust:false,won:false};h={...h,v:0,label:h.label+'·',m:h.m,dbl:false,n:h.n};}}else r=applyDart(me.score,h);me.darts++;me.legDarts++;if(me.legDarts<=9)me.f9darts++;
  S.visit.push({label:h.label,v:h.v,bust:r.bust});
@@ -6360,6 +6415,7 @@ function endLeg(){S.netAnim=false;const need=Math.ceil(S.bestOf/2);if(S.p[0].leg
  const legNo=S.p[0].legs+S.p[1].legs+1;const el=$('intro');el.classList.add('leg');const needL=Math.ceil(S.bestOf/2);const w=S.lastLegWinner;$('introTier').textContent=`Leg ${legNo} of up to ${S.bestOf}${S.p[0].legs===needL-1&&S.p[1].legs===needL-1?' · decider':''}`;$('introVenue').textContent=`${S.p[0].legs}–${S.p[1].legs}`;$('introStakes').textContent=w?`${w.name} took it · ${w.out} out in ${w.darts} darts`:'';$('introP0').textContent=S.p[0].disp;$('introP1').textContent=S.p[1].disp;$('introP0s').textContent='Avg '+avg(S.p[0]).toFixed(1);$('introP1s').textContent='Avg '+avg(S.p[1]).toFixed(1);$('introFmt').textContent=`${S.p[S.cur].name} to throw first · tap to continue`;el.classList.add('show');S.busy=true;{const snap=S;let gone=false;const go=(ev)=>{if(gone)return;if(ev&&ev.type==='keydown'&&!['Space','Enter','Escape'].includes(ev.code))return;gone=true;document.removeEventListener('pointerdown',go,true);document.removeEventListener('keydown',go,true);el.classList.remove('show');if(S===snap&&!S.done)startTurn();};setTimeout(()=>{document.addEventListener('pointerdown',go,true);document.addEventListener('keydown',go,true);},700);setTimeout(go,S.online?2500:6000);}}
 function endMatch(){S.done=true;S.view=0;save.matches++;if(S.online){setTimeout(onlineLeave,500);}const w=S.p[0].legs>S.p[1].legs?0:1;const win=S.p[w],lose=S.p[1-w];S.won=w===0;S.earned=0;
  const objBefore=career()&&career().obj?Object.keys(career().obj).length:0;
+ const posBefore=(career()&&career().season&&!career().season.ko&&!career().run)?youPos(career().season):0;const wasMoney=S_money;
  if(ui.mode==='career')careerAfterMatch();persist();
  const c=career();const p0=S.p[0],p1=S.p[1];
  $('resKicker').textContent=ui.mode==='career'?`${S.tier.n} · ${S.tier.venue}${S.rival?' · Rival':''}`:'Friendly';
@@ -6370,6 +6426,7 @@ function endMatch(){S.done=true;S.view=0;save.matches++;if(S.online){setTimeout(
  if(ui.mode==='career'&&c){$('resEarn').hidden=false;$('resEarn').classList.toggle('run',!!c.run);{const tr=(c&&!S.practice&&!S.local&&!S_money&&c._lastTravel)||0;$('reCash').textContent=money(S.earned||0);$('reNet').textContent=tr?`${money(S.earned||0)} earned − ${money(tr)} travel = ${money((S.earned||0)-tr)}`:'';$('reNet').hidden=!tr;}const g=S.gains||{};const tot=Object.values(g).reduce((a,b)=>a+b,0);$('reSp').textContent='+'+tot;$('reBank').textContent=money(c.bank);renderGains();}else{$('resEarn').hidden=true;$('resProg').hidden=true;}
  const rows=[['3-dart avg',avg(p0),avg(p1),v=>v.toFixed(1),120],['First 9',f9(p0),f9(p1),v=>v.toFixed(1),120],['180s',p0.t180,p1.t180,v=>v,Math.max(1,p0.t180,p1.t180)],['Tons',p0.tons,p1.tons,v=>v,Math.max(1,p0.tons,p1.tons)],['Checkout %',p0.coAtt?p0.coHit/p0.coAtt*100:0,p1.coAtt?p1.coHit/p1.coAtt*100:0,v=>Math.round(v)+'%',100],['High finish',p0.hf,p1.hf,v=>v||'–',170],['Best leg',p0.bestLeg<99?p0.bestLeg:0,p1.bestLeg<99?p1.bestLeg:0,v=>v||'–',0]];
  $('resStats').innerHTML=rows.map(([n,a,b,f,mx])=>{const lo=n==='Best leg';const aw=lo?(a&&(!b||a<=b)):a>=b&&a>0,bw=lo?(b&&(!a||b<=a)):b>=a&&b>0;const pa=mx?Math.min(100,a/mx*100):(a?100:0),pb=mx?Math.min(100,b/mx*100):(b?100:0);return `<div class="st"><span class="v ${aw?'win':''}">${f(a)}</span><div class="bar l"><i class="${aw?'win':''}" style="width:${pa}%"></i></div><span class="n">${n}</span><div class="bar r"><i class="${bw?'win':''}" style="width:${pb}%"></i></div><span class="v r ${bw?'win':''}">${f(b)}</span></div>`;}).join('');
+ renderReceipt(c,posBefore,wasMoney);
  const done=(S.objMsg&&S.objMsg.lines)||[];if(done.length){$('resObj').hidden=false;$('resObjChips').innerHTML=done.map(l=>`<span class="chip">${l.replace('Objective done: ','').replace(/\.\s*\+.*$/,'')}</span>`).join('');}else $('resObj').hidden=true;
  setTimeout(()=>{$('result').hidden=false;$('hud').hidden=true;sceneBg('result');},800);}
 function attrRow(a,gain){const at=attr(a.id);const need=xpNeed(at.lv);const pct=at.lv>=ATTR_MAX?100:at.xp/need*100;return `<div class="ar ${a.id}"><div class="ar-h"><b>${a.n}</b><span class="lv">${at.lv}</span>${gain?`<em>+${gain}</em>`:''}</div><div class="ar-bar"><i style="width:${pct.toFixed(1)}%"></i></div><small>${at.lv>=ATTR_MAX?'Maxed':(at.lv>=attrCap()?`Capped at ${attrCap()} for this chapter · ${at.xp} XP banked`:`${at.xp} / ${need} to level ${at.lv+1}`)}</small></div>`;}
@@ -6491,7 +6548,7 @@ function playNext(){const c=career();if(!c.next)c.next=nextOpponent();const t=TI
 function moneyMatch(){const c=career();const pool=AINAMES[Math.max(0,c.tier-1)].concat(AINAMES[0]);const n=pool[Math.floor(Math.random()*pool.length)];const mp=MM_PAY[c.tier]||30;S_money=true;beginMatch({mode:'career',tier:0,p0:save.name||'You',oppName:n,oppAvg:Math.round(TIERS[c.tier].avg-4+Math.random()*6),legs:3,purse:mp,money:true});}
 let S_money=false,S_adv=false,S_lightXP=false;
 function matchXP(){if(S.practice)return;const me=S.p[0];const c=career();const prev=recentAvg(c);gainXP('cn',8);if(prev&&Math.abs(avg(me)-Math.max(prev,c.best?c.best.avg*.9:0))<=4)gainXP('cn',8);if(S.won&&S.decider)gainXP('co',10);if(S.won&&S.rival)gainXP('co',12);}
-function careerAfterMatch(){const c=career();if(S.practice){if(c&&c.season){c.season.side=true;c.season.sideKind=S_lightXP?'light session':'practice';}S_lightXP=false;S.after=c?'money':'title';return;}if(!c)return;matchXP();if(!c.run)setTimeout(lbPost,1500);if(c.run)S.draftN=S.won?5:3;if(c.season&&(S.local||S_money)){c.season.side=true;c.season.sideKind=S.local?'local match':'money match';}if(S.local){S.after='money';c.pts+=S.p[0].pts;c.darts+=S.p[0].darts;c.history=(c.history||[]).concat(S.won?'W':'L').slice(-8);if(S.won){c.wins++;c.bank+=S.purse;S.earned=S.purse;}else c.losses++;recordBests();checkObjectives();checkFeats();return;}if(S_money){S_money=false;S.after='money';if(S.won){c.bank+=S.purse||30;S.earned=S.purse||30;c.wins++;}else c.losses++;c.pts+=S.p[0].pts;c.darts+=S.p[0].darts;recordBests();checkFeats();return;}const t=TIERS[c.tier];const me=S.p[0];c.pts+=me.pts;c.darts+=me.darts;c.tierPlayed++;c.next=null;c.tierAvgs=(c.tierAvgs||[]).concat(+avg(me).toFixed(1)).slice(-4);
+function careerAfterMatch(){const c=career();if(S.practice){if(c&&c.season){c.season.side=true;c.season.sideKind=S_lightXP?'light session':'practice';}S_lightXP=false;S.after=c?'money':'title';return;}if(!c)return;drillAccum(c);matchXP();if(!c.run)setTimeout(lbPost,1500);if(c.run)S.draftN=S.won?5:3;if(c.season&&(S.local||S_money)){c.season.side=true;c.season.sideKind=S.local?'local match':'money match';}if(S.local){S.after='money';c.pts+=S.p[0].pts;c.darts+=S.p[0].darts;c.history=(c.history||[]).concat(S.won?'W':'L').slice(-8);if(S.won){c.wins++;c.bank+=S.purse;S.earned=S.purse;}else c.losses++;recordBests();checkObjectives();checkFeats();return;}if(S_money){S_money=false;S.after='money';if(S.won){c.bank+=S.purse||30;S.earned=S.purse||30;c.wins++;}else c.losses++;c.pts+=S.p[0].pts;c.darts+=S.p[0].darts;recordBests();checkFeats();return;}const t=TIERS[c.tier];const me=S.p[0];c.pts+=me.pts;c.darts+=me.darts;c.tierPlayed++;c.next=null;c.tierAvgs=(c.tierAvgs||[]).concat(+avg(me).toFixed(1)).slice(-4);
  c.history=(c.history||[]).concat(S.won?'W':'L').slice(-8);if(S.rival){c.rivalW=(c.rivalW||0)+(S.won?1:0);c.rivalL=(c.rivalL||0)+(S.won?0:1);S.rivalMsg=(S.won?RIVAL_MSG.beatRival:RIVAL_MSG.lostToRival)[Math.min(6,c.tier)];}
  if(S.won){c.wins++;c.tierWins++;}
  else c.losses++;
@@ -6545,13 +6602,13 @@ async function renderBoard(){const host=$('hubBoard');if(!host)return;host.inner
  const me=lbId().id;host.innerHTML=`<table class="lbt"><thead><tr><th>#</th><th>Player</th><th>Avg</th><th>Best leg</th><th>180s</th><th>High out</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.id===me?'me':''}"><td>${i+1}</td><td><b>${String(r.name).replace(/</g,'&lt;')}</b><small>${TIERS[Math.min(6,r.tier||0)].n} · ${r.wins}–${(r.matches||0)-(r.wins||0)}</small></td><td>${(+r.avg).toFixed(1)}</td><td>${r.best_leg||'–'}</td><td>${r.t180}</td><td>${r.hf||'–'}</td></tr>`).join('')}</tbody></table>`;}
 function money(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString();}
 function showTitle(){if(isRun())switchSlot('career');const c=career();const r=(save.slots&&save.slots.run&&save.slots.run.career)||null;$('btnRun').innerHTML=r?`<b>Continue the Run</b><small>Tier ${r.tier+1} · ${r.wins}–${r.losses} · ${'♥'.repeat(r.lives||0)}${'♡'.repeat(Math.max(0,3-(r.lives||0)))}</small>`:`<b>The Run</b><small>Three lives. Draft a card after every match. Climb the ladder.${save.runBest?` Best: ${save.runBest.won?'complete':'tier '+(save.runBest.tier+1)}, ${save.runBest.wins} wins.`:''}</small>`;$('btnNewRun').hidden=!r;$('btnContinue').hidden=!c;$('btnNewCareer').classList.toggle('alt',!!c);$('btnNewCareer').textContent=c?'Start a new career':'New career';if(c){$('btnContinue').innerHTML=`Continue career<small>${save.name||'You'} · ${TIERS[c.tier].n} · ${c.wins}–${c.losses} · ${money(c.bank)}</small>`;$('titleCard').hidden=false;$('tcPt').innerHTML=portraitImg(save.look,save.name,c.tier,'md');$('tcName').textContent=save.name||'You';$('tcLine').textContent=`${TIERS[c.tier].n} · ${c.wins}–${c.losses}`;$('tcBank').textContent=money(c.bank);}else $('titleCard').hidden=true;V.buildVenue(c?c.tier:0);V.setPlayerLook(save.look,save.flight);{const a=$('tlAuth');if(a){const u=save.cloudUser;a.innerHTML=u?`Signed in as <b>${u.name||'you'}</b> · career syncs to the cloud · <a href="#" id="tlOut">Sign out</a>`:`Guest · saves on this device only · <a href="#" id="tlIn">Sign in with Google</a> to keep your career anywhere.`;const o=$('tlOut'),i=$('tlIn');if(o)o.onclick=e=>{e.preventDefault();netSignOut();};if(i)i.onclick=e=>{e.preventDefault();save.authSeen=false;showLogin();};}}showScreen('title');}
-function hubTab(t){if(isRun()&&(t==='kit'||t==='board'))t='play';hubTab.cur=t;[...$('hubTabs').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));document.querySelectorAll('#hub .htab').forEach(sec=>sec.hidden=sec.dataset.t!==t);const pn=document.querySelector('#hub .panel');if(pn)pn.scrollTop=0;}
+function hubTab(t){if(isRun()&&(t==='kit'||t==='board'||t==='practice'))t='play';hubTab.cur=t;[...$('hubTabs').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));document.querySelectorAll('#hub .htab').forEach(sec=>sec.hidden=sec.dataset.t!==t);const pn=document.querySelector('#hub .panel');if(pn)pn.scrollTop=0;}
 function showHub(tab){const c=career(),t=TIERS[c.tier];if(!c.run&&seasonNeedsNew(c)){newSeason(c);}if(!c.next)c.next=nextOpponent();persist();const sn=(!c.run&&c.season)||null;if(sn&&!sn.midShown&&sn.week===Math.ceil(sn.len/2)+1&&!sn.done){sn.midShown=true;persist();showMsg(chapterMsg(c.tier,'mid'),()=>showHub(tab));return;}
  if(sn&&maybeSpareEvent(c,sn,()=>showHub(tab)))return;
  const run=!!c.run;const lt=TIERS[Math.max(0,c.tier-1)];V.setPlayerLook(save.look,save.flight,save.name,c.tier);$('hub').classList.toggle('run',run);
  // header
  $('hubName').textContent=save.name||'You';$('hubPt').innerHTML=portraitImg(save.look,save.name,c.tier,'md');const bankBox=$('hubBank').parentNode;bankBox.querySelector('.label').textContent=run?'Lives':'Bank';$('hubBank').textContent=run?'♥'.repeat(c.lives||0)+'♡'.repeat(Math.max(0,3-(c.lives||0))):money(c.bank);$('hubBank').classList.toggle('neg',!run&&c.bank<0);
- $('hubTabs').querySelector('[data-t=kit]').hidden=run;$('hubTabs').querySelector('[data-t=board]').hidden=run;$('hubTabs').querySelector('[data-t=play]').textContent=run?'The Run':'Career';
+ $('hubTabs').querySelector('[data-t=kit]').hidden=run;$('hubTabs').querySelector('[data-t=board]').hidden=run;$('hubTabs').querySelector('[data-t=practice]').hidden=run;$('hubTabs').querySelector('[data-t=play]').textContent=run?'The Run':'Career';
  $('hubTier').textContent=run?`The Run · ${t.n}`:`${CHAPTERS[c.tier]} · ${t.n}`;$('hubSeasonLine').textContent=run?`Tier ${c.tier+1} of 7`:(sn?(sn.ko?`Round ${Math.min(sn.week,sn.len)} of ${sn.len}`:`Season ${sn.n} · Week ${Math.min(sn.week,sn.len)} / ${sn.len}`):'');
  $('hubTierLabel').textContent=run?`The Run · Tier ${c.tier+1} of 7 · ${t.n}`:CHAPTERS[c.tier]+' · '+t.n;$('hubVenue').textContent=t.s;
  // season panel
@@ -6586,7 +6643,7 @@ function showHub(tab){const c=career(),t=TIERS[c.tier];if(!c.run&&seasonNeedsNew
  $('hubRecord').innerHTML=`${run?'Run record':'Career record'} ${c.wins}–${c.losses} <span class="form">${(c.history||[]).slice(-5).map(r=>`<i class="${r}">${r}</i>`).join('')}</span>`;$('hubAvg').textContent=c.darts?(c.pts/c.darts*3).toFixed(1):'–';const ra=recentAvg(c);$('hubRecent').textContent=ra?ra.toFixed(1):'–';$('hubStreak').textContent=(c.streak||0);
  $('nextInfo').textContent='';$('btnSkills').textContent='Player';
  const ol=$('hubObj');ol.innerHTML=OBJ[c.tier].map(o=>`<li class="${objDone(o.id)?'done':''}"><span>${o.t}</span><small>${o.cash?money(o.cash):'perk'}</small></li>`).join('');
- syncHubAudio();V.buildVenue(c.tier);showScreen('hub');const tb=tab||'play';hubTab(tb);if(tb==='player')showPlayer(true);if(tb==='kit')showShop(showShop.tab,true);renderBoard();}
+ syncHubAudio();V.buildVenue(c.tier);showScreen('hub');const tb=tab||(PR.pending?'practice':'play');hubTab(tb);drillBar();if(tb==='practice')renderPractice();if(tb==='player')showPlayer(true);if(tb==='kit')showShop(showShop.tab,true);renderBoard();}
 function syncHubAudio(){$('btnHubSound').textContent=AU.on?'Sound on':'Sound off';$('btnHubCaller').textContent=AU.caller?'Caller on':'Caller off';}
 function kitStats(){const b=barrel();const p=setupParts();const spread=b.base*(1+p.fl.base)*(1+p.pt.base);const win=b.tol*(1+p.fl.tol)*(1+p.shaft.tol);const sway=b.sway*(1+p.shaft.sway);return {spread,win,sway};}
 function showShop(tab,inTab){showShop.tab=tab||showShop.tab||'barrel';$('shopBank').textContent=money(career()?career().bank:0);const ks=kitStats();$('kitImg').src=V.dartShot(save.flight,Object.assign({barrel:barrel()},setupParts()));$('kitName').textContent=barrel().n;$('kitBars').innerHTML=[['Grouping',1-(ks.spread-3.4)/2.6,'tighter is better'],['Release window',(ks.win-.55)/.6,'wider forgives timing'],['Steadiness',1-(ks.sway-.55)/.9,'less sway']].map(([n,v,h])=>`<div class="kb"><span>${n}</span><div class="kb-bar"><i style="width:${Math.round(Math.max(.04,Math.min(1,v))*100)}%"></i></div><small>${h}</small></div>`).join('');[...$('kitTabs').children].forEach(bt=>bt.setAttribute('aria-pressed',bt.dataset.t===showShop.tab));['barrel','setup','gear'].forEach(k=>$('kit_'+k).hidden=showShop.tab!==k);if(!inTab&&!(hubTab.cur==='kit'&&!$('hub').hidden)){showScreen('hub');hubTab('kit');}$('shopSponsor').textContent=sponsor()?`Sponsored by ${sponsor().brand} · ${Math.round(sponsor().disc*100)}% off`:'No sponsor yet';const L=$('shopList');L.innerHTML='';BARRELS.forEach(b=>{const own=save.owned.includes(b.id),cur=save.barrel===b.id;const bank=career()?career().bank:0;
@@ -6684,9 +6741,114 @@ $('btnContinue').onclick=()=>{audioInit();if(isRun())switchSlot('career');showHu
 function startRun(){if(!save.name){save.name='You';}const ds=todaySeed();const played=save.daily&&save.daily[ds];showMsg({from:'Jonno',lines:['The Run. Same ladder, no mercy.','Draft a card after every match. Lose three and it’s over. Every third match has a twist: double in, or a 301 sprint.',played?`Today’s daily is done: ${played.won?'complete':'tier '+(played.tier+1)}, ${played.wins} wins. A fresh run has its own seed.`:'Fresh run, or today’s daily: same draw and the same drafts for everyone who plays it today.'],replies:[['Fresh run','fresh'],['Today’s daily','daily']]},act=>{newRun(act==='daily'?ds:null);showPerkPick(()=>playNext(),3,{won:true,opening:true});});}$('btnNewCareer').onclick=()=>{audioInit();showCreator(false);};$('btnFriends').onclick=()=>{audioInit();V.setPlayerLook(save.look,save.flight);showScreen('friends');};$('btnThrow').onclick=()=>{audioInit();if(window.__noGL)return;playPractice();};
 if(window.__noGL){['btnContinue','btnNewCareer','btnFriends','btnThrow','btnRun','btnNewRun'].forEach(id=>{$(id).disabled=true;});$('noGL').hidden=false;}
 $('btnPlayNext').onclick=playNext;$('btnSettle').onclick=settle;$('btnLocal').onclick=playLocal;$('btnPractice').onclick=playPractice;$('btnMoney').onclick=moneyMatch;$('btnShop').onclick=()=>showHub('kit');$('btnShopBack').onclick=()=>showHub();$('btnLook').onclick=()=>{$('hubPop').hidden=true;showCreator(true);};$('btnHubTitle').onclick=()=>{$('hubPop').hidden=true;showTitle();};$('btnHubMenu').onclick=()=>{const p=$('hubPop');p.hidden=!p.hidden;$('btnHubMenu').setAttribute('aria-expanded',!p.hidden);};document.addEventListener('pointerdown',e=>{if(!$('hubPop').hidden&&!e.target.closest('.hx-menu')){$('hubPop').hidden=true;}});$('btnHubSound').onclick=()=>{$('btnSound').onclick();syncHubAudio();syncTitleAudio();};$('btnHubCaller').onclick=()=>{$('btnCaller').onclick();syncHubAudio();syncTitleAudio();};
-[...$('kitTabs').children].forEach(bt=>bt.onclick=()=>showShop(bt.dataset.t,true));[...$('hubTabs').children].forEach(bt=>bt.onclick=()=>{hubTab(bt.dataset.t);if(bt.dataset.t==='player')showPlayer(true);if(bt.dataset.t==='kit')showShop(showShop.tab,true);if(bt.dataset.t==='board')renderBoard();});$('btnSkills').onclick=()=>showHub('player');$('btnSkillsBack').onclick=()=>showHub();$('btnPlPick').onclick=()=>showPerkPick(()=>showHub('player'));$('btnHubPick').onclick=()=>showPerkPick(showHub);$('btnPerkLater').onclick=()=>{$('perk').hidden=true;const d=window._perkDone;window._perkDone=null;if(career()){career().featBoost=false;persist();}if(d)d();else showHub('player');};
+[...$('kitTabs').children].forEach(bt=>bt.onclick=()=>showShop(bt.dataset.t,true));[...$('hubTabs').children].forEach(bt=>bt.onclick=()=>{hubTab(bt.dataset.t);if(bt.dataset.t==='practice'){if(PR.view&&PR.view.kind==='result')PR.view=null;renderPractice();}if(bt.dataset.t==='player')showPlayer(true);if(bt.dataset.t==='kit')showShop(showShop.tab,true);if(bt.dataset.t==='board')renderBoard();});$('btnSkills').onclick=()=>showHub('player');$('btnSkillsBack').onclick=()=>showHub();$('btnPlPick').onclick=()=>showPerkPick(()=>showHub('player'));$('btnHubPick').onclick=()=>showPerkPick(showHub);$('btnPerkLater').onclick=()=>{$('perk').hidden=true;const d=window._perkDone;window._perkDone=null;if(career()){career().featBoost=false;persist();}if(d)d();else showHub('player');};
 $('btnFriendsBack').onclick=()=>{onlineLeave();showTitle();};['mpLegs','mpStart','mpIn','mpVenue'].forEach(id=>{const host=$(id);[...host.children].forEach(b=>b.onclick=()=>{[...host.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(id==='mpVenue')V.buildVenue(+b.dataset.v);});});
 $('btnResultNext').onclick=()=>{$('result').hidden=true;const last=S;S=null;afterResult(last);};
+
+// ===== PRACTICE (sprint) =====
+const PR={pending:null,view:null};
+const DRILLS=[
+ {id:'doubles',n:'Doubles ladder',attr:'fi',kick:'Finishing',darts:30,hi:true,
+  line:'30 darts. Your double first, then D20, D16, D10, D8. Round and round.',
+  how:'Scored on hits out of 30.',feed:'Feeds Finishing. Shows which double costs you.',
+  target:i=>{const pd=prefDbl();const c=[pd==='BULL'||pd===50?'BULL':'D'+pd,'D20','D16','D10','D8'];return c[i%5];},
+  fmt:v=>v+' / 30',perf:v=>v/15},
+ {id:'scoring',n:'Scoring 20s',attr:'sc',kick:'Scoring',darts:30,hi:true,
+  line:'30 darts at the treble 20. Nothing else.',
+  how:'Scored on 3-dart average.',feed:'Feeds Scoring. Shows which side you miss to.',
+  target:()=>'T20',fmt:v=>v.toFixed(1)+' avg',perf:v=>(v-40)/60},
+ {id:'rhythm',n:'Release rhythm',attr:'cn',kick:'Consistency',darts:30,hi:false,
+  line:'30 darts at one target. Only the release is marked.',
+  how:'Scored on median timing error in milliseconds. Lower is better.',feed:'Feeds Consistency. Shows whether you let go early or late.',
+  target:()=>'T20',fmt:v=>Math.round(v)+' ms',perf:v=>1-v/150},
+ {id:'clock',n:'Round the clock',kick:'Accuracy',soon:true,line:'1 to 20 in order. Fewest darts wins.'},
+ {id:'builder',n:'Checkout builder',kick:'Finishing',soon:true,line:'Reachable finishes first. 170 is the advanced tier.'}];
+function drillDef(id){return DRILLS.find(d=>d.id===id);}
+function drillSave(id){save.drills=save.drills||{};return save.drills[id]||(save.drills[id]={best:null,runs:0});}
+function drillRewardOpen(c){return !!(c&&!c.run&&c.season&&!c.season.side);}
+function drillTarget(){const D=S.drill;return drillDef(D.id).target(Math.min(D.n,D.max-1));}
+function drillAttrName(d){return ATTRS.find(a=>a.id===d.attr).n;}
+function startDrill(id){const d=drillDef(id);const c=career();if(!d||d.soon||!c||c.run)return;const rewarded=drillRewardOpen(c);
+ beginMatch({mode:'career',tier:c.tier,p0:save.name||'You',oppName:'Drill',oppAvg:0,legs:1,purse:0,practice:true,start:5001});
+ S.drill={id,n:0,max:d.darts,darts:[],timings:[],noXP:!rewarded,rewarded};
+ $('eventTier').textContent='Drill';$('eventName').textContent=d.n;$('introStakes').textContent=rewarded?d.n+' · rewarded drill this week':d.n+' · retry, best kept, no XP';drillBar();}
+function drillLive(D){const d=drillDef(D.id);const n=D.darts.length;if(!n)return '';
+ if(D.id==='doubles')return D.darts.filter(x=>x.l===x.t).length+' hits';
+ if(D.id==='scoring')return (D.darts.reduce((a,x)=>a+x.v,0)/n*3).toFixed(1)+' avg';
+ const e=D.darts.filter(x=>x.tm<-.03).length,l=D.darts.filter(x=>x.tm>.03).length;return `${n-e-l} flush · ${e} early · ${l} late`;}
+function drillBar(){const el=$('drillBar');if(!el)return;if(!S||!S.drill){el.hidden=true;return;}const D=S.drill,d=drillDef(D.id);el.hidden=false;const done=D.n>=D.max;
+ el.innerHTML=`<b>${d.n}</b><span>${done?'Done':'Dart '+(D.n+1)+' of '+D.max}</span><span>Target <i>${drillTarget()}</i></span>${drillLive(D)?`<span>${drillLive(D)}</span>`:''}`;}
+function drillDart(h,x,y){const D=S.drill;if(D.n>=D.max)return;const tgt=drillTarget();const tm=D.timings[D.n];D.darts.push({t:tgt,l:h.label,v:h.v,n:h.n,m:h.m,x:+x,y:+y,tm:tm==null?0:tm});D.n++;drillBar();
+ if(D.n>=D.max){S.done=true;const snap=S;setTimeout(()=>{if(S===snap)endDrill();},1700);}}
+function median(a){if(!a.length)return 0;const s=a.slice().sort((p,q)=>p-q);const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+function drillResult(D){const d=drillDef(D.id);const ds=D.darts,n=ds.length;let score=0,keys=[],obs='';
+ if(D.id==='doubles'){const hits=ds.filter(x=>x.l===x.t).length;const per={};ds.forEach(x=>{per[x.t]=per[x.t]||{t:x.t,a:0,h:0};per[x.t].a++;if(x.l===x.t)per[x.t].h++;});const list=Object.values(per).sort((p,q)=>p.h/p.a-q.h/q.a||q.a-p.a);const worst=list[0],best=list[list.length-1];score=hits;
+  keys=[['Hits',hits+' / '+n,'at five doubles'],['Hit rate',Math.round(hits/n*100)+'%',Math.round(hits/n*100)>=33?'match standard':'under one in three'],['Trouble',worst?worst.t:'–',worst?worst.h+' of '+worst.a:'']];
+  obs=!hits?'Nothing dropped in. Aim the wire side of the bed and let the arm do the rest.':(worst&&best&&worst!==best&&best.h/best.a-worst.h/worst.a>=.3)?`${worst.t} was the problem: ${worst.h} of ${worst.a}. ${best.t} went ${best.h} of ${best.a}.`:`Even across the board: ${hits} of ${n}. Nothing to pick on, just more of it.`;}
+ else if(D.id==='scoring'){const pts=ds.reduce((a,x)=>a+x.v,0);const av=pts/n*3;const in20=ds.filter(x=>x.n===20).length,tr=ds.filter(x=>x.l==='T20').length;const miss=ds.filter(x=>x.n!==20);const left=miss.filter(x=>x.x<0).length,right=miss.length-left;score=av;
+  keys=[['3-dart avg',av.toFixed(1),tr+' trebles'],['In the 20',Math.round(in20/n*100)+'%',in20+' of '+n],['Miss bias','L '+left+' · R '+right,miss.length?'outside the 20':'no misses']];
+  obs=miss.length>=4&&left>=right*2?`Misses went left ${left} to ${right}. You are pulling across the 20; square the shoulder.`:miss.length>=4&&right>=left*2?`Misses went right ${right} to ${left}. You are pushing the dart; finish toward the target.`:`${tr} trebles and ${in20} in the bed. Misses split evenly; it is the grouping, not the line.`;}
+ else{const ms=ds.map(x=>x.tm*1000);const abs=ms.map(Math.abs);const med=median(abs);const early=ms.filter(v=>v<-30).length,late=ms.filter(v=>v>30).length;const first=median(abs.slice(0,10)),last=median(abs.slice(-10));score=med;
+  keys=[['Median error',Math.round(med)+' ms','off the stop'],['Early · late',early+' · '+late,(n-early-late)+' flush'],['First ten → last',Math.round(first)+' → '+Math.round(last),'ms, median']];
+  const side=early>=late?'early':'late',big=Math.max(early,late);obs=big/n>=.6?`${big} of ${n} releases were ${side}; your last ten were ${last<first?'closer':'further off'}.`:`Early and late split ${early} to ${late}. ${last<first?'Last ten tighter than the first: you settle in.':'Last ten looser than the first: you drift as you go.'}`;}
+ return {score,keys,obs,fmt:d.fmt(score)};}
+function endDrill(){if(!S||!S.drill)return;const D=S.drill,d=drillDef(D.id),c=career();S.done=true;const r=drillResult(D);
+ const sv=drillSave(D.id);const prev=sv.best;const better=prev==null||(d.hi?r.score>prev:r.score<prev);if(better)sv.best=r.score;sv.runs++;sv.last=r.score;sv.at=Date.now();
+ r.pb=prev==null?'First run · that is the mark':better?`New best · was ${d.fmt(prev)}`:`Best ${d.fmt(prev)}`;r.newBest=better&&prev!=null;
+ let xp=0;if(D.rewarded&&c){const perf=Math.max(0,Math.min(1,d.perf(r.score)));xp=Math.round(10+perf*20);gainXP(d.attr,xp);if(c.season){c.season.side=true;c.season.sideKind='drill · '+d.n;}c.drillsDone=(c.drillsDone||0)+1;}
+ r.xp=xp;r.rewarded=D.rewarded;r.gains=S.gains||{};r.id=D.id;persist();
+ $('drillBar').hidden=true;S=null;PR.view={kind:'result',r};showHub('practice');}
+function drillAccum(c){const me=S.p[0];const a=c.dr=c.dr||{coAtt:0,coHit:0,f9pts:0,f9darts:0,legs:0,par:0,early:0,late:0,throws:0};a.coAtt+=me.coAtt||0;a.coHit+=me.coHit||0;a.f9pts+=me.f9pts||0;a.f9darts+=me.f9darts||0;const legs=(S.p[0].legs||0)+(S.p[1].legs||0);a.legs+=legs;a.par+=legs*((S.tier&&S.tier.avg)||0);a.early+=me.early||0;a.late+=me.late||0;a.throws+=me.throws||0;}
+function recommendDrill(c){const a=(c&&c.dr)||{};const pct=(x,y)=>y?Math.round(x/y*100):0;
+ if((a.coAtt||0)>=10&&a.coHit/a.coAtt<.25)return {id:'doubles',ev:`${a.coHit} of ${a.coAtt} doubles · ${pct(a.coHit,a.coAtt)}%`,why:'Under one in four at a double. Finishing costs you more than scoring.'};
+ if((a.legs||0)>=5&&a.f9darts){const f9=a.f9pts/a.f9darts*3,par=a.par/a.legs;if(f9<=par-8)return {id:'scoring',ev:`First nine ${f9.toFixed(0)} v ${par.toFixed(0)} par · ${a.legs} legs`,why:'You open slow and chase. Twenties until it is boring.'};}
+ if((a.throws||0)>=30){const e=a.early/a.throws,l=a.late/a.throws;if(e>.65)return {id:'rhythm',ev:`${a.early} of ${a.throws} releases early · ${Math.round(e*100)}%`,why:'You let go before the stop. The arm is fine; the timing is not.'};if(l>.65)return {id:'rhythm',ev:`${a.late} of ${a.throws} releases late · ${Math.round(l*100)}%`,why:'You hold past the stop. Release on it, not after it.'};}
+ const bits=[];if(a.coAtt)bits.push(`${a.coHit} of ${a.coAtt} doubles · ${pct(a.coHit,a.coAtt)}%`);if(a.legs&&a.f9darts)bits.push(`first nine ${(a.f9pts/a.f9darts*3).toFixed(0)} v ${(a.par/a.legs).toFixed(0)} par`);if(a.throws)bits.push(`${pct(a.early,a.throws)}% early · ${pct(a.late,a.throws)}% late`);
+ return {id:null,ev:bits.length?bits.join(' · '):'No match data yet',why:'Nothing stands out in the numbers. Try a baseline drill.'};}
+function prKeys(keys){return `<div class="rx-keys pr-keys">${keys.map(([s,b,x])=>`<div><small>${s}</small><b>${b}</b><span>${x||''}</span></div>`).join('')}</div>`;}
+function renderPractice(){const host=$('hxPractice');if(!host)return;const c=career();if(!c||c.run){host.innerHTML='';return;}
+ if(PR.pending){PR.view={kind:'brief',id:PR.pending};PR.pending=null;}
+ const v=PR.view||{kind:'list'};const open=drillRewardOpen(c);const sn=c.season;
+ const badge=`<span class="hx-badge ${open?'':'used'}">${open?'1 rewarded drill this week':(sn?'Spare night used · best kept, no XP':'No season · no XP')}</span>`;
+ const bestLine=d=>{const sv=(save.drills||{})[d.id];return sv&&sv.best!=null?`Best ${d.fmt(sv.best)} · ${sv.runs} run${sv.runs===1?'':'s'}`:'Not run yet';};
+ if(v.kind==='list'){const rec=recommendDrill(c);const rd=rec.id?drillDef(rec.id):null;
+  host.innerHTML=`<div class="pr-top"><div><div class="hx-kicker">Practice room</div><h2 class="pr-h1">Drills</h2></div>${badge}</div>
+  <div class="pr-rec ${rd?'':'none'}"><div class="label">Recommended</div><b>${rd?rd.n:'Try a baseline drill'}</b><span class="pr-ev">${rec.ev}</span><p>${rec.why}</p>${rd?`<button class="pr-btn" type="button" data-start="${rd.id}">Start ${rd.n}<small>${drillAttrName(rd)} · 30 darts</small></button>`:`<button class="pr-btn" type="button" data-start="scoring">Start Scoring 20s<small>Baseline · 30 darts</small></button>`}</div>
+  <div class="pr-grid">${DRILLS.map(d=>`<button class="pr-card ${d.soon?'soon':''} ${rd&&rd.id===d.id?'rec':''}" type="button" ${d.soon?'disabled':`data-brief="${d.id}"`}><span class="k">${d.kick}${d.soon?' · soon':''}${rd&&rd.id===d.id?' · recommended':''}</span><b>${d.n}</b><small>${d.line}</small>${d.soon?'':`<em>${bestLine(d)}</em>`}</button>`).join('')}</div>
+  <p class="pr-note">One drill a week earns XP and arm, same as the spare night. Retries keep your best and give nothing else.</p>`;}
+ else if(v.kind==='brief'){const d=drillDef(v.id);if(!d||d.soon){PR.view=null;return renderPractice();}const sv=(save.drills||{})[d.id];
+  host.innerHTML=`<button class="hx-link pr-back" type="button" data-list="1">← All drills</button>
+  <div class="pr-top"><div><div class="hx-kicker">${d.kick} drill</div><h2 class="pr-h1">${d.n}</h2></div>${badge}</div>
+  <ul class="pr-brief"><li>${d.line}</li><li>${d.how}</li><li>${d.feed}</li><li>The aim snaps to each target. You can still adjust before you throw.</li></ul>
+  ${prKeys([['Personal best',sv&&sv.best!=null?d.fmt(sv.best):'–',sv&&sv.runs?sv.runs+' run'+(sv.runs===1?'':'s'):'first time'],['Darts',String(d.darts),'ten visits'],['Tonight',open?'Rewarded':'Retry',open?drillAttrName(d)+' XP and arm':'best kept, no XP']])}
+  <div class="pr-actions"><button class="pr-btn" type="button" data-start="${d.id}">Start drill<small>${d.darts} darts · ${drillAttrName(d)}</small></button></div>`;}
+ else if(v.kind==='result'){const r=v.r,d=drillDef(r.id);const rec=recommendDrill(c);
+  const rbadge=`<span class="hx-badge ${r.rewarded?'':'used'}">${r.rewarded?'Rewarded · spare night used':'Retry · no XP'}</span>`;
+  host.innerHTML=`<div class="pr-top"><div><div class="hx-kicker">Drill result · ${d.kick}</div><h2 class="pr-h1">${d.n}</h2></div>${rbadge}</div>
+  <div class="pr-score"><b>${r.fmt}</b><span class="${r.newBest?'new':''}">${r.pb}</span></div>
+  ${prKeys(r.keys)}
+  <p class="rx-coach">${r.obs}</p>
+  <div class="pr-xp">${r.rewarded?`<b>+${r.xp} ${drillAttrName(d)}</b><span>${Object.keys(r.gains).length>1?'Plus '+ATTRS.filter(a=>r.gains[a.id]&&a.id!==d.attr).map(a=>'+'+r.gains[a.id]+' '+a.n).join(' · ')+' from the darts themselves. ':''}Spare night used.</span>`:`<b>No XP</b><span>Spare night already used this week. Your best is kept.</span>`}</div>
+  <div class="pr-actions"><button class="pr-btn" type="button" data-start="${d.id}">Again<small>retry · no XP</small></button>${rec.id&&rec.id!==d.id?`<button class="ghost wide" type="button" data-brief="${rec.id}">Recommended: ${drillDef(rec.id).n}<small>${rec.ev}</small></button>`:''}<button class="ghost wide" type="button" data-list="1">All drills</button><button class="ghost wide" type="button" data-fix="1">Next fixture</button></div>`;}
+ host.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>{PR.view=null;startDrill(b.dataset.start);});
+ host.querySelectorAll('[data-brief]').forEach(b=>b.onclick=()=>{PR.view={kind:'brief',id:b.dataset.brief};renderPractice();});
+ host.querySelectorAll('[data-list]').forEach(b=>b.onclick=()=>{PR.view=null;renderPractice();});
+ host.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>{PR.view=null;showHub('play');});}
+function renderReceipt(c,posBefore,wasMoney){const host=$('resReceipt');if(!host)return;const show=ui.mode==='career'&&c&&!c.run&&!S.practice;host.hidden=!show;if(!show)return;
+ const g=S.gains||{};const ups=S.lvUps||[];const skill=ATTRS.filter(a=>g[a.id]).map(a=>`+${g[a.id]} ${a.n}`).join(' · ')||'No XP this match';const upTxt=ups.length?ups.map(u=>`${ATTRS.find(a=>a.id===u.id).n} to ${u.lv}`).join(' · '):'';
+ const tr=(!S.local&&!wasMoney&&c._lastTravel)||0;const earned=S.earned||0;const net=earned-tr;
+ const moneyTxt=tr?`${money(earned)} earned − ${money(tr)} travel = <em class="${net<0?'dn':''}">${money(net)}</em>`:`${money(earned)} earned`;
+ let standTxt='',standSub='';const sn=c.season;if(posBefore&&sn&&!sn.ko&&!S.local&&!wasMoney){const after=sn.done&&sn.pos?sn.pos:youPos(sn);const you=sn.table.find(r=>r.you);standTxt=`${ord(posBefore)} → <em class="${after<posBefore?'up':after>posBefore?'dn':''}">${ord(after)}</em>`;standSub=`${sn.done?'Season over':'Week '+Math.min(sn.week,sn.len)+' of '+sn.len} · ${you?you.pts+' pts':''}`;}
+ const rec=recommendDrill(c);const rd=rec.id?drillDef(rec.id):null;
+ host.innerHTML=`<div class="label">What changed</div>
+ <div class="rr-row"><small>Skill</small><div><b>${skill}</b><span>${upTxt||'No level change'}</span></div></div>
+ <div class="rr-row"><small>Money</small><div><b>${moneyTxt}</b><span>Bank ${money(c.bank)}</span></div></div>
+ ${standTxt?`<div class="rr-row"><small>Standings</small><div><b>${standTxt}</b><span>${standSub}</span></div></div>`:''}
+ <button class="pr-btn" type="button" id="btnResAction">${rd?'Drill: '+rd.n:'Next fixture'}<small>${rd?rec.ev:(sn&&!sn.done?'Week '+Math.min(sn.week,sn.len)+' of '+sn.len:'Back to the hub')}</small></button>`;
+ $('reNet').hidden=true;
+ if(rd){const co=$('resCoach');if(co&&!co.hidden)co.textContent+=` Drill to run: ${rd.n} · ${rec.ev}.`;}
+ $('btnResAction').onclick=()=>{PR.pending=rd?rd.id:null;$('btnResultNext').click();};}
+
 
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
