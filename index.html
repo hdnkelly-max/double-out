@@ -7622,7 +7622,7 @@ async function onlineJoin(code,seat){code=(code||'').toUpperCase().replace(/[^A-
   NET.room=code;NET.seat=seat;NET.ready=false;NET.started=false;NET.hostFmt='';NET.chanReady=false;NET.queue=[];NET.seen={};NET.seq=0;NET.myId=((save.lb&&save.lb.id)||'g').slice(0,8)+'-'+Math.random().toString(36).slice(2,8);
   const ch=sb.channel('tops-'+code,{config:{broadcast:{self:false,ack:false},presence:{key:NET.myId}}});NET.chan=ch;
   ch.on('broadcast',{event:'tops'},({payload})=>netRecv(payload));
-  ch.on('presence',{event:'sync'},()=>{NET.peers=Object.keys(ch.presenceState());renderLobby();});
+  ch.on('presence',{event:'sync'},()=>{const n=Object.keys(ch.presenceState()).length;const grew=n>(NET.peers?NET.peers.length:0);NET.peers=Object.keys(ch.presenceState());renderLobby();if(NET.seat===0&&grew)setTimeout(mpFmtUpdate,400);});
   ch.on('presence',{event:'leave'},({key})=>{if(key!==NET.myId&&S&&S.online&&!S.done){onlineLeft();}});
   await new Promise((res,rej)=>{ch.subscribe(async(status)=>{if(status==='SUBSCRIBED'){NET.chanReady=true;NET.joinedAt=Date.now();await ch.track(mpMeta());res();}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')rej(new Error(status));});});
   $('onCode').textContent=code;$('onLobby').hidden=false;$('onEntry').hidden=true;$('mpOpts').classList.toggle('locked',seat!==0);renderLobby();
