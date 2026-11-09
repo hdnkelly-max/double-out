@@ -6731,7 +6731,7 @@ function netStatus(t){const el=$('onStatus');if(el)el.textContent=t;}
 async function onlineHost(){const code=roomCode();await onlineJoin(code,0);}
 async function onlineJoin(code,seat){code=(code||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);if(code.length<4){netStatus('Enter the 4-letter code.');return;}
  try{netStatus('Connecting…');const sb=await netLoad();if(NET.chan){try{await NET.chan.unsubscribe();}catch(e){}}
-  NET.room=code;NET.seat=seat;NET.queue=[];NET.seen={};NET.seq=0;NET.myId=(save.lb&&save.lb.id)||('g'+Math.random().toString(36).slice(2));
+  NET.room=code;NET.seat=seat;NET.queue=[];NET.seen={};NET.seq=0;NET.myId=((save.lb&&save.lb.id)||'g').slice(0,8)+'-'+Math.random().toString(36).slice(2,8);
   const ch=sb.channel('tops-'+code,{config:{broadcast:{self:false,ack:false},presence:{key:NET.myId}}});NET.chan=ch;
   ch.on('broadcast',{event:'tops'},({payload})=>netRecv(payload));
   ch.on('presence',{event:'sync'},()=>{const st=ch.presenceState();const ids=Object.keys(st);NET.peers=ids;if(seat===0){$('onCode').textContent=code;netStatus(ids.length>=2?'Mate connected. Starting…':`Room ${code}. Tell your mate the code.`);if(ids.length>=2&&!NET.started){NET.started=true;const other=ids.find(i=>i!==NET.myId);const meta=(st[other]||[])[0]||{};setTimeout(()=>onlineStart(meta),600);}}else{netStatus(ids.length>=2?'Connected. Waiting for the host to start…':'Waiting for the host…');}});
