@@ -109,3 +109,7 @@
 - 16:36 Hayden(bot): Mad Dog, your lunch break thing is live. New Practice tab in the Career hub. Three drills, 30 darts each ... One drill a week earns XP off your spare night, retries keep your best but no extra XP.
 - 16:36 Hayden(bot): Also after a career match there is now a What changed box ... Force the update here: (game link ?v=5). Whoever tries it first, tell me which drill it recommended and whether the reason sounded right.
 - 17:04 Lee: posted a TikTok link (9News Australia), not game related. Not opened, not answered; left for Hayden.
+- 17:14 SHIPPED (from Hayden): opponent personalities (6 regulars, 4 temperaments, nerve labels), match intro with form/fav double/H2H, Run route choice (safe 3-card vs hard twist 5-card), hub fixtures, table movement, Deano texts. ?v=6 link posted.
+- 17:14 Hayden(bot): Next wave: the opponents have personalities now. Six regulars ... they get nervous on the same triggers you do.
+- 17:14 Hayden(bot): Match intro shows their form, favourite double and your head to head ... Deano texts you if you pass him. Link: (game link ?v=6)
+- 17:14 Hayden(bot): Mad Dog, Pete the Plumber is a Grinder. He settles, you do not. No excuses left. Question for all of you: who would you least like to draw, and why?

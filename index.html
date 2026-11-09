@@ -5120,10 +5120,44 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
 .lt td em.mv.same{color:rgba(233,228,216,.3)}
 @media (max-width:700px){.lt td em.mv{margin-left:4px;font-size:10px}.lt td em.mv span{display:none}.hx-strip{grid-template-columns:1fr 1fr 1fr;gap:4px}.hs-cell{padding:6px 7px}.hs-cell b{font-size:14px}.hs-cell span{font-size:11px}}
 </style>
+<style>
+/* ===== FEEL (sprint): pull area, settle hold, hint placement ===== */
+.pa{position:fixed;z-index:30;display:flex;flex-direction:column;gap:0;pointer-events:none;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;color:#e9e4d8;--paW:366px}
+.pa[hidden]{display:none}
+.pa-verdict{height:20px;line-height:20px;font-size:13px;font-weight:700;text-align:center;color:#e9e4d8;opacity:0;transition:opacity .12s;white-space:nowrap;overflow:hidden}
+.pa-verdict.show{opacity:1}.pa-verdict.late{color:#e8382c}.pa-verdict.wide{color:#9aa3ad;font-weight:500}
+.pa-track{position:relative;height:4px;margin:4px 0 4px;background:#2b313a;border-radius:2px;overflow:visible}
+.pa-track .pa-late{position:absolute;top:0;bottom:0;left:calc(100%/1.3);right:0;background:rgba(232,56,44,.28);border-radius:0 2px 2px 0}
+.pa-track .pa-win{position:absolute;top:-1px;bottom:-1px;left:50%;width:2px;background:rgba(233,228,216,.55);display:none}
+.pa.haswin .pa-win{display:block}
+.pa-track .pa-tick{position:absolute;width:2px;height:6px;background:#e9e4d8;display:none;transform:translateX(-50%)}
+.pa.haswin .pa-tick{display:block}
+.pa-track .pa-tick.t1,.pa-track .pa-tick.t2{top:-8px}.pa-track .pa-tick.t3,.pa-track .pa-tick.t4{bottom:-8px}
+.pa-track .pa-mark{position:absolute;top:-3px;width:2px;height:10px;background:#e9e4d8;left:0;transform:translateX(-50%);display:none;box-shadow:0 0 0 1px #1b1d21}
+.pa.pulling .pa-mark,.pa.late .pa-mark{display:block}.pa.late .pa-mark{background:#e8382c}
+.pa-pad{pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;height:48px;display:flex;align-items:center;justify-content:center;background:#14181d;border:1px solid #e9e4d8;border-radius:4px;font-size:14px;font-weight:700;letter-spacing:.16em;color:#e9e4d8;cursor:pointer;transition:background .08s}
+.pa.pulling .pa-pad{background:#1f252c}
+.pa.late .pa-pad{border-color:#e8382c;color:#e8382c}
+.pa.opp .pa-pad,.pa.off .pa-pad{background:#0e1116;border-color:rgba(233,228,216,.28);color:#7f8893;cursor:default}
+.pa.breathe .pa-pad{opacity:.5}
+/* phone: full-width strip at the bottom, under the scoreboard */
+body.feel-phone .pa{left:12px;right:12px;bottom:max(10px,env(safe-area-inset-bottom,0px))}
+body.feel-phone .hud{padding-bottom:calc(84px + max(10px,env(safe-area-inset-bottom,0px)))}
+body.feel-phone .xp{bottom:calc(84px + max(10px,env(safe-area-inset-bottom,0px)) + 176px)}
+/* desktop: 72px pad under the player pane (right half), above the scoreboard; no verdict line (xpPop carries it) */
+body.feel-desk .pa{left:calc(50% + 12px);right:12px;bottom:96px}
+body.feel-desk .pa-verdict{display:none}
+body.feel-desk .pa-pad{height:72px;font-size:15px}
+body.feel-desk.split .hint{left:auto;right:12px;transform:none;bottom:200px;max-width:calc(50% - 24px)}
+/* settle: hold-to-breathe button, 72x44 outlined red on phone */
+.hr .settle{min-width:72px;min-height:44px;padding:6px 10px;border:1px solid var(--acc);background:transparent;color:#e9e4d8;touch-action:none;-webkit-user-select:none;user-select:none}
+.hr .settle.breathing{background:rgba(232,56,44,.18)}
+@media (min-width:701px){.hr .settle{min-height:0;padding:5px 9px}}
+</style>
 
 
 <div id="loading"><span class="wm">T<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="33" fill="none" stroke="#e8382c" stroke-width="19"/><circle cx="50" cy="50" r="43.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/><circle cx="50" cy="50" r="22.5" fill="none" stroke="#f3efe6" stroke-width="2.2"/></svg>PS</span><small>Setting up the oche</small><i></i></div>
-<canvas id="scene" aria-label="First-person view of the oche. Drag on the board to aim. Press and hold below the board to pull back, release to throw."></canvas>
+<canvas id="scene" aria-label="View of the oche. Drag on the board to aim. Hold the pull pad (or Space) to pull back, release to throw."></canvas>
 <div id="grade"></div><div id="grain"></div>
 <div id="nerve"></div>
 <div id="vig" style="position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(60,0,0,.9) 100%);opacity:0;transition:opacity .25s"></div>
@@ -5148,6 +5182,13 @@ html,body{overscroll-behavior:none;overscroll-behavior-y:contain}body:has(#hud:n
       <div class="pl r" id="pl1"><div class="sc" id="score1">501</div><div class="lg" id="legs1">0</div><div class="av" id="avg1"><small>Avg</small><b>0.0</b></div><div class="nm" id="name1">Opponent<span class="opp-state" id="oppState" hidden></span><small id="sub1">Avg 0.0</small></div></div>
     </div>
   </div>
+</div>
+
+<!-- FEEL (sprint): dedicated pull control. Verdict line (reserved), timing track with honest perfect window, pull pad. -->
+<div id="pullArea" class="pa ready" hidden>
+  <div class="pa-verdict" id="paVerdict" aria-live="polite"></div>
+  <div class="pa-track" id="paTrack"><i class="pa-late"></i><i class="pa-win" id="paWin"></i><i class="pa-tick t1"></i><i class="pa-tick t2"></i><i class="pa-tick t3"></i><i class="pa-tick t4"></i><i class="pa-mark" id="paMark"></i></div>
+  <div class="pa-pad" id="pullPad" role="button" tabindex="-1" aria-label="Pull pad: hold to pull back, release to throw"><span id="paLabel">Hold to pull</span></div>
 </div>
 
 <!-- TITLE -->
@@ -5760,9 +5801,9 @@ function beginMatch(opts){audioInit();const t=TIERS[opts.tier];ui.mode=opts.mode
    anim:null,adren:0,hr:72,view:0,throwsMade:0,oppArm:{pull:0,phase:'idle'},oppAvg:opts.oppAvg,decider:!!opts.decider,rival:!!opts.rival,start:opts.start||501,twist:opts.twist||null,oppKey:opts.oppKey||opts.oppName,fee:opts.fee||0,purse:opts.purse||0,intro:!!opts.intro,din:!!opts.din,pairs:!!opts.pairs,practice:!!opts.practice,local:!!opts.local,online:opts.online||null};if(opts.online){S.legStarter=opts.online.first===opts.online.seat?0:1;S.cur=S.legStarter;}
  $('eventTier').textContent=opts.practice?'Practice':(opts.local?'Local night':(opts.mode==='career'?(opts.rival?t.n+' · rival · decider':(opts.decider?t.n+' · decider':t.n)):(opts.online?'Online · live':'Friendly')));$('eventName').textContent=opts.mode==='career'?t.venue:'Best of '+opts.legs;
  $('name0').firstChild.textContent=p0.disp;$('name1').firstChild.textContent=p1.disp;
- showScreen(null);$('hud').hidden=false;$('hint').style.opacity=0;introCard(p0,p1,opts,t);V.buildVenue(opts.tier);V.clearDarts();V.setOpponentLook(p1.look,p1.name,opts.tier);V.setPlayerLook(save.look,save.flight,save.name,opts.tier);crowdSet(t.crowd);setAim(0,-103);V.walkOn();if(t.crowd>.4)setTimeout(()=>sfxCheer(t.crowd>.8),300);
+ showScreen(null);$('hud').hidden=false;$('hint').style.opacity=0;introCard(p0,p1,opts,t);V.buildVenue(opts.tier);V.clearDarts();V.setOpponentLook(p1.look,p1.name,opts.tier);V.setPlayerLook(save.look,save.flight,save.name,opts.tier);crowdSet(t.crowd);setAim(0,-103);V.walkOn();feelMatchStart();if(t.crowd>.4)setTimeout(()=>sfxCheer(t.crowd>.8),300);
  setTimeout(()=>{if(S&&!S.done){if(opts.mode==='career'&&!opts.intro&&!opts.practice){startBullUp();}else{startTurn();setHint();$('hint').style.opacity=1;say(t.caller==='pro'?'Game on!':'Game on.',t.caller);}}},3400);}
-function setHint(){const h=$('hint');if(!h)return;h.style.display=(save.totThrows||0)>=12?'none':'';const vert=innerHeight>innerWidth*1.1;const touch=matchMedia('(pointer:coarse)').matches;h.innerHTML=V.isSplit()?`Drag on the board to aim · <b>hold on your player${vert?' (below)':' (right side)'}</b>${touch?'':' or hold Space'} to pull back · let go to throw`:'Drag on the board to aim · hold below it to pull back · let go to throw';}
+function setHint(){const h=$('hint');if(!h)return;h.style.display=(save.totThrows||0)>=12?'none':'';const vert=innerHeight>innerWidth*1.1;const touch=matchMedia('(pointer:coarse)').matches;/* FEEL: copy matches the pull pad */h.innerHTML=vert?`Drag the board to aim · <b>hold the pad below</b> to pull back · let go to throw`:`Drag the board to aim · <b>hold the pad</b>${touch?'':', Space'} or your player to pull back · let go to throw`;}
 function startBullUp(){S.bull={me:null,op:null};S.cur=0;S.dart=1;S.visit=[];S.busy=false;S.view=0;setAim(0,0);updateUI();$('outshot').textContent='Bull up: closest to the bull throws first';setHint();$('hint').style.opacity=1;say(S.tier.caller==='pro'?'Throw for the bull.':'Bull up.',S.tier.caller);}
 function bullDist(x,y){return Math.hypot(x,y);}
 function bullLand(x,y,far){const d=bullDist(x,y);const h=scoreAt(x,y);if(!far){S.bull.me=d;flash(h.label==='BULL'?'Bull':h.label==='25'?'25':'Off',h.label==='BULL'?'gold':'',null);sfxDartHit(h.v?'hit':'miss',false);V.shake();V.punchIn(x,y,700);setTimeout(()=>{S.cur=1;S.view=1;S.busy=true;S.oppArm={pull:0,phase:'idle'};setTimeout(aiBull,900);},1200);}
@@ -5829,6 +5870,34 @@ const V=(function(){try{return (()=>{
  // aim plane + reticle
  const aimPlane=new T.Mesh(new T.PlaneGeometry(1.2,1.2),new T.MeshBasicMaterial({visible:false}));aimPlane.position.set(0,BOARD_H,BOARD_Z);scene.add(aimPlane);
  const reticle=new T.Group();const rr=new T.Mesh(new T.RingGeometry(.9,1,48),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthTest:false}));reticle.add(rr);const rc=new T.Mesh(new T.CircleGeometry(.03,10),new T.MeshBasicMaterial({color:0xffffff,depthTest:false}));reticle.add(rc);const xh=new T.Group();[0,Math.PI/2].forEach(a=>{const m=new T.Mesh(new T.PlaneGeometry(2.6,.08),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthTest:false}));m.rotation.z=a;xh.add(m);});xh.visible=false;reticle.add(xh);reticle.userData.xh=xh;reticle.position.z=BOARD_Z+.002;reticle.renderOrder=5;scene.add(reticle);
+ // ===== FEEL (sprint): shader reticle (board mm, DPR-independent) + landing ghosts =====
+ const FR_U={uSize:{value:30},uRing:{value:0},uStroke:{value:.75},uOutline:{value:.5},uDot:{value:.5},uArmIn:{value:3},uArmLen:{value:0},uTick:{value:0},uTickLen:{value:4},uDash:{value:0},uAA:{value:.4},uCol:{value:new T.Color(0xe9e4d8)},uOut:{value:new T.Color(0x1b1d21)},uOp:{value:1}};
+ const feelRet=new T.Mesh(new T.PlaneGeometry(2,2),new T.ShaderMaterial({uniforms:FR_U,transparent:true,depthTest:false,depthWrite:false,
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:`uniform float uSize,uRing,uStroke,uOutline,uDot,uArmIn,uArmLen,uTick,uTickLen,uDash,uAA,uOp;uniform vec3 uCol,uOut;varying vec2 vUv;
+  float band(float x,float lo,float hi){return smoothstep(lo-uAA,lo,x)*(1.0-smoothstep(hi,hi+uAA,x));}
+  void main(){vec2 p=(vUv*2.0-1.0)*uSize;float d=length(p);vec2 q=abs(p);float along=max(q.x,q.y),across=min(q.x,q.y);float a=0.0,o=0.0;
+   a=max(a,1.0-smoothstep(uDot,uDot+uAA,d));o=max(o,1.0-smoothstep(uDot+uOutline,uDot+uOutline+uAA,d));
+   if(uArmLen>0.0){float w=uStroke*0.5;float ia=band(along,uArmIn,uArmIn+uArmLen)*(1.0-smoothstep(w,w+uAA,across));a=max(a,ia);float io=band(along,uArmIn-uOutline,uArmIn+uArmLen+uOutline)*(1.0-smoothstep(w+uOutline,w+uOutline+uAA,across));o=max(o,io);}
+   if(uRing>0.0){float dash=1.0;if(uDash>0.5){float ang=atan(p.y,p.x);dash=step(0.5,fract(ang/6.2831853*24.0));}float w=uStroke*0.5;float ra=1.0-smoothstep(w,w+uAA,abs(d-uRing));a=max(a,dash*ra);float ro=1.0-smoothstep(w+uOutline,w+uOutline+uAA,abs(d-uRing));o=max(o,dash*ro);}
+   if(uTick>0.5&&uRing>0.0){float w=uStroke*0.5;float t0=uRing+uStroke*0.5+uOutline+0.6;float ta=band(along,t0,t0+uTickLen)*(1.0-smoothstep(w,w+uAA,across));a=max(a,ta);float to=band(along,t0-uOutline,t0+uTickLen+uOutline)*(1.0-smoothstep(w+uOutline,w+uOutline+uAA,across));o=max(o,to);}
+   float al=max(a,o)*uOp;if(al<0.004)discard;gl_FragColor=vec4(mix(uOut,uCol,a),al);}`}));
+ feelRet.position.z=BOARD_Z+.0025;feelRet.renderOrder=6;feelRet.visible=false;scene.add(feelRet);reticle.visible=false;
+ // mm of board per CSS px for the camera that draws the board pane
+ function boardMmPerPx(){const sz=renderer.getSize(new T.Vector2());if(splitOn&&!previewOn&&!idleOn){const vert=sz.y>sz.x*1.1;const lh=vert?Math.round(sz.y*.5):sz.y;const fov=vert?12:9;return 2000*Math.tan(fov*Math.PI/360)/lh;}const dist=Math.max(.3,camera.position.distanceTo(boardC));return 2000*dist*Math.tan(camera.fov*Math.PI/360)/sz.y;}
+ // st: {x,y (board mm, incl sway), mode:'aim'|'pull', sigma, perfect, over, wide}
+ const FR_CREAM=new T.Color(0xe9e4d8),FR_RED=new T.Color(0xe8382c);let frInfo={};
+ let retLast=null,retHideT=0;
+ function feelReticle(st){if(!st){feelRet.visible=false;return;}const mpp=boardMmPerPx();const w=mmToWorld(st.x,st.y);feelRet.position.x=w.x;feelRet.position.y=w.y;
+  const dot=Math.max(.5,1*mpp),stroke=1.5*mpp,outline=1*mpp,aa=Math.max(.05,.7*mpp);let ring=0,dash=0,tick=0,arms=0;const col=FR_CREAM;
+  if(st.mode==='pull'){ring=1.794*st.sigma;if(ring>45){ring=45;dash=1;}if(st.over){dash=1;}if(st.perfect&&!st.over)tick=1;}else{arms=1;}
+  const tickLen=Math.max(4,6*mpp);const size=Math.max(ring+stroke+outline+tickLen+2,arms?(3+3+outline+1):0,dot+outline+1,2*mpp);
+  FR_U.uSize.value=size;FR_U.uRing.value=ring;FR_U.uStroke.value=stroke;FR_U.uOutline.value=outline;FR_U.uDot.value=dot;FR_U.uArmIn.value=3;FR_U.uArmLen.value=arms?3:0;FR_U.uTick.value=tick;FR_U.uTickLen.value=tickLen;FR_U.uDash.value=dash;FR_U.uAA.value=aa;FR_U.uCol.value.copy(st.over?FR_RED:col);FR_U.uOp.value=st.op==null?1:st.op;
+  feelRet.scale.set(size/1000,size/1000,1);feelRet.visible=true;frInfo={mpp,ring,dot,stroke,tick,dash,arms,size,mode:st.mode};}
+ // landing ghosts: three reusable hollow rings on the board plane
+ const ghostG=new T.Group();ghostG.renderOrder=4;scene.add(ghostG);const ghosts=[];for(let i=0;i<3;i++){const m=new T.Mesh(new T.RingGeometry(.0022,.0034,28),new T.MeshBasicMaterial({color:0xe9e4d8,transparent:true,opacity:.2,depthTest:false,depthWrite:false}));m.visible=false;m.position.z=BOARD_Z+.0021;ghostG.add(m);ghosts.push(m);}
+ function ghostsSet(list){ghosts.forEach((m,i)=>{const g=list&&list[i];if(!g){m.visible=false;return;}const w=mmToWorld(g.x,g.y);m.position.x=w.x;m.position.y=w.y;m.visible=true;});}
+ function ghostsClear(){ghostsSet(null);}
  // lights (rebuilt per venue)
  const lights=new T.Group();scene.add(lights);
  // --- dart model
@@ -6339,7 +6408,7 @@ const V=(function(){try{return (()=>{
   // opponent
   if(opp){opp.visible=!previewOn&&!idleOn&&(state.p[state.cur].ai||state.mateTurn)&&!state.done;}if(opp&&opp.visible){const oa=state.oppArm;poseOpp(oa);if(O.dt)O.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');opp.position.y=Math.sin(t*.9)*.004;opp.rotation.z=Math.sin(t*.7)*.006;opp.rotation.y=1.0+Math.sin(t*.23)*.03;opp.position.x=-.06+Math.sin(t*.31)*.012;}
   // reticle
-  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=showRet;if(reticle.userData.xh)reticle.userData.xh.visible=splitOn;rr.material.color.set(0xffffff);if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;const w=mmToWorld(ax,ay);reticle.position.x=w.x;reticle.position.y=w.y;const r=Math.max(.002,state.sigma*1.1/1000);reticle.scale.set(r,r,1);if(reticle.userData.xh)reticle.userData.xh.scale.setScalar(.009/r);if(rc)rc.visible=!splitOn;if(state.over)rr.material.color.set(0xff5a50);}
+  const showRet=!previewOn&&!idleOn&&camK<.5&&!state.busy&&!state.done&&!state.p[state.cur].ai&&!state.mateTurn;reticle.visible=false;/* FEEL: shader reticle replaces rr/rc/xh */if(showRet){const ax=state.aim.x+state.sway.x,ay=state.aim.y+state.sway.y;retLast={x:ax,y:ay,mode:state.pulling?'pull':'aim',sigma:state.sigma,perfect:!!state.inWin,over:!!state.over};retHideT=0;feelReticle(retLast);}else if(retLast){if(!retHideT)retHideT=now;const k=(now-retHideT)/100;if(k>=1||state.done){retLast=null;feelReticle(null);}else feelReticle(Object.assign({},retLast,{op:1-k}));}else feelReticle(null);
   stepFlights(now);stepMarks(now);stepPuffs(now);wobble(now);crowdBob(t);extrasIdle(t);if(ledWall){ledWall.material.map.offset.x=(t*.004)%1;ledWall.material.map.wrapS=T.RepeatWrapping;}const useSplit=splitOn&&!previewOn&&!idleOn&&!cine&&state&&!state.done&&!(state.reader);
   if(useSplit){const _sz=renderer.getSize(new T.Vector2());const W=_sz.x,Hh=_sz.y;const vert=Hh>W*1.1;const aiTurn=state.p[state.cur].ai||state.mateTurn;const aa=aiTurn&&state.aiAim?state.aiAim:null;const aimW=aa?mmToWorld(aa.x,aa.y):mmToWorld(state.aim.x+state.sway.x*.3,state.aim.y+state.sway.y*.3);
    // left/top: board close-up that follows the aim
@@ -6374,7 +6443,7 @@ const V=(function(){try{return (()=>{
   const c=document.createElement('canvas');c.width=DW;c.height=DH;const x=c.getContext('2d');const id=x.createImageData(DW,DH);const g=new Uint8Array(256);for(let i=0;i<256;i++)g[i]=Math.round(Math.pow(i/255,1/2.2)*255);for(let y=0;y<DH;y++){const src=(DH-1-y)*DW*4,dst=y*DW*4;for(let i=0;i<DW*4;i+=4){id.data[dst+i]=g[buf[src+i]];id.data[dst+i+1]=g[buf[src+i+1]];id.data[dst+i+2]=g[buf[src+i+2]];id.data[dst+i+3]=255;}}x.putImageData(id,0,0);const url=c.toDataURL('image/jpeg',.88);dartCache[key]=url;return url;}
  function oppScreen(){if(!opp||!opp.visible)return null;const B=opp.userData.B;let w;if(B&&B.Head){w=boneW(B.Head);}else{w=opp.position.clone();w.y+=1.65;}const v=w.clone().project(camera);if(v.z>1)return null;return {x:(v.x+1)/2*innerWidth,y:(1-v.y)/2*innerHeight};}
  function pointToBoardMM(cx,cy){if(!splitOn||previewOn||idleOn)return pointToBoardMM_main(cx,cy);const W=innerWidth,Hh=innerHeight;const vert=Hh>W*1.1;const lw=vert?W:W*.5,lh=vert?Hh*.5:Hh;if(vert?cy>lh:cx>lw)return null;const ndc=new T.Vector2(cx/lw*2-1,-(cy/lh)*2+1);const rc=new T.Raycaster();rc.setFromCamera(ndc,boardCam);const hit=rc.intersectObject(aimPlane)[0];if(!hit)return null;return {x:(hit.point.x-boardC.x)*1000,y:-(hit.point.y-boardC.y)*1000};}
- return {setSplit,title,isSplit:()=>splitOn,oppScreen,dartShot,portrait:headshot,cheer,punchIn,cinema,myDart,oppDart,_qa:{rigReady:()=>RIG.ready,T,scene,camera,renderer,makeFigure,poseFigure,makeHand,stance,armScene,armCam,fpArm,getHand:()=>hand,poseArm,lights,venue},_dbg:()=>({cam:camera.position.toArray(),fov:camera.fov,camK}),buildVenue,frame,setOpponentLook,setPlayerLook,preview,idle,pointToBoardMM,boardBottomY,fly,clearDarts,handWorld,oppHandWorld,shake,stuck,walkOn,walking:()=>performance.now()-walkT0<2800};
+ return {feelReticle,boardMmPerPx,retInfo:()=>frInfo,ghostsSet,ghostsClear,setSplit,title,isSplit:()=>splitOn,oppScreen,dartShot,portrait:headshot,cheer,punchIn,cinema,myDart,oppDart,_qa:{rigReady:()=>RIG.ready,T,scene,camera,renderer,makeFigure,poseFigure,makeHand,stance,armScene,armCam,fpArm,getHand:()=>hand,poseArm,lights,venue},_dbg:()=>({cam:camera.position.toArray(),fov:camera.fov,camK}),buildVenue,frame,setOpponentLook,setPlayerLook,preview,idle,pointToBoardMM,boardBottomY,fly,clearDarts,handWorld,oppHandWorld,shake,stuck,walkOn,walking:()=>performance.now()-walkT0<2800};
 })();}catch(e){window.__noGL=e;console.error('3D failed',e);const stub=()=>null;return new Proxy({},{get:(t,k)=>k==='_qa'?{rigReady:()=>false}:stub});}})();
 if(window.__noGL){document.body.classList.add('nogl');const l=document.getElementById('loading');if(l)l.classList.add('gone');}
 
@@ -6383,7 +6452,7 @@ function situational(){const me=S.p[S.cur],op=S.p[1-S.cur];let n=S.tier.press*(1
 function effNerves(){if(!S||S.done||S.practice)return 0;const raw=situational()+S.adren-(S.calm||0);return Math.max(0,raw-compEff()*.28);}
 function nerveCause(){if(!S)return '';const me=S.p[S.cur],op=S.p[1-S.cur];const need=Math.ceil(S.bestOf/2);if(me.score<=50&&me.legs===need-1)return 'Match dart';if(me.score<=50)return 'On a finish';if(op.score<=40)return 'Opponent on a finish';if(me.legs===need-1||op.legs===need-1)return 'Deciding leg';if(S.adren>1.2)return 'Big visit';if(S.tier.press>=.9)return 'The stage';return 'Settled';}
 function nervePct(){const nv=spreadNerves();const sk=save.arm/10;const F0=.16+.1*(1-sk);return Math.round(((F0+nv*.045)/F0-1)*100+nv*4);}
-function settle(){if(!S||S.done||S.settled||S.pulling||S.p[S.cur].ai||S.mateTurn)return;S.settled=true;S.calm=(S.calm||0)+.55;S.adren=Math.max(0,S.adren-.6);noiseBurst({dur:.5,freq:400,q:1,gain:.05});xpPop('Breathe','tm');}
+function settle(){/* FEEL: now starts a hold-to-breathe; see breatheStart()/feelBreathe() */breatheStart();}
 function spreadNerves(){return SK().noNerves?0:effNerves();}
 function addAdrenaline(h,dartNo){const rarity=[1.6,1.3,1,.7,.5,.35,.3][ui.tier]*(1+SK().chase);
  if(h.label==='T20'||(h.m===3&&h.n>=19)){S.adren+=dartNo===1?.9*rarity:1.6*rarity;}else if(h.m===3)S.adren+=.4*rarity;else S.adren*=.5;}
@@ -6398,16 +6467,18 @@ function setAim(x,y){const d=Math.hypot(x,y);if(d>180){x*=180/d;y*=180/d;}S.aim=
 let dragging=false;const cvEl=$('scene');
 cvEl.addEventListener('pointerdown',e=>{audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!S||S.done||S.busy||S.p[S.cur].ai||S.view===1)return;
  const p=V.pointToBoardMM(e.clientX,e.clientY);const onBoard=p&&Math.hypot(p.x,p.y)<260&&(V.isSplit()||e.clientY<V.boardBottomY());
- cvEl.setPointerCapture(e.pointerId);if(onBoard){dragging=true;setAim(p.x,p.y);}else startPull();});
+ /* FEEL: board drag only aims; board pane outside the board does nothing; desktop player pane still pulls */
+ if(onBoard){cvEl.setPointerCapture(e.pointerId);dragging=true;setAim(p.x,p.y);return;}
+ if(!p&&feelPaneHold(e)){cvEl.setPointerCapture(e.pointerId);startPull('pane');}});
 cvEl.addEventListener('pointermove',e=>{if(dragging){const p=V.pointToBoardMM(e.clientX,e.clientY);if(p)setAim(p.x,p.y);}});
-cvEl.addEventListener('pointerup',()=>{if(dragging){dragging=false;return;}release();});
-cvEl.addEventListener('pointercancel',()=>{dragging=false;if(S&&S.pulling){S.pulling=false;S.pull=0;S.over=false;}});
-addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&$('setup').hidden&&$('result').hidden){e.preventDefault();startPull();}
+cvEl.addEventListener('pointerup',e=>{if(dragging){dragging=false;return;}release(e,'pane');});
+cvEl.addEventListener('pointercancel',()=>{dragging=false;cancelPull();});
+addEventListener('keydown',e=>{const _su=$('setup');if(e.code==='Space'&&!e.repeat&&(!_su||_su.hidden)&&$('result').hidden){e.preventDefault();startPull('key');}/* FEEL: #setup no longer exists; Space was dead */
  if(!S||S.busy||S.p[S.cur].ai)return;const k={ArrowUp:[0,-2],ArrowDown:[0,2],ArrowLeft:[-2,0],ArrowRight:[2,0]}[e.code];if(k){e.preventDefault();setAim(S.aim.x+k[0],S.aim.y+k[1]);}});
-addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();release();}});
-function startPull(){if(!S||S.busy||S.done||S.p[S.cur].ai||S.pulling||S.view===1||V.walking())return;S.pulling=true;S.over=false;S.pullStart=performance.now();S.pull=0;S.pullMul=Math.max(.75,Math.min(1.3,1+gauss()*jitter()));S.lastNerves=effNerves();noiseBurst({dur:.12,freq:600,q:.5,gain:.05});
+addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();release(e,'key');}});
+function startPull(src){if(!S||S.busy||S.done||S.p[S.cur].ai||S.pulling||S.view===1||S.breathe||V.walking())return;S.pullSrc=src||'key';S.pulling=true;S.over=false;S.pullStart=performance.now();S.pull=0;S.pullMul=Math.max(.75,Math.min(1.3,1+gauss()*jitter()));S.lastNerves=effNerves();noiseBurst({dur:.12,freq:600,q:.5,gain:.05});
  if(ui.mode==='career'&&!S.practice){const opp=S.p[1];const pc=opp.rival?.18:(ui.tier===0?.08:0);if(Math.random()<pc){setTimeout(()=>{if(S&&S.pulling){banter('*cough*',opp.name);S.adren+=.6*(1+SK().press);}},250);}}}
-function release(){if(!S||!S.pulling)return;S.pulling=false;const perf=isPerfect();S.perfect=perf;{const me=S.p[S.cur];me.throws=(me.throws||0)+1;if(perf){me.perfects=(me.perfects||0)+1;if(!S.practice&&ui.mode==='career'&&career())career().perfects=(career().perfects||0)+1;}}const sig=currentSigma();{const d=(S.pull-SWEET)*PULL_MS/1000;S.lastTiming=S.over?'Held':perf?'Perfect':Math.abs(d)<.03?'Flush':d<0?(d<-.12?'Early':'A touch early'):(d>.12?'Late':'A touch late');if(S.drill)S.drill.timings.push(S.over?.5:d);{const me=S.p[S.cur];if(d<-.03)me.early=(me.early||0)+1;else if(d>.03||S.over)me.late=(me.late||0)+1;}}S.pull=0;S.over=false;S.throwsMade++;save.totThrows=(save.totThrows||0)+1;if(S.throwsMade>=4)$('hint').style.opacity=0;
+function release(ev,src){if(!S||!S.pulling)return;if(src&&src!=='auto'&&S.pullSrc&&S.pullSrc!==src)return;S.pull=pullAt(feelStamp(ev));S.over=S.pull>=1.0;/* FEEL: timestamp-based, never frame-derived */S.pulling=false;const perf=isPerfect();S.perfect=perf;{const me=S.p[S.cur];me.throws=(me.throws||0)+1;if(perf){me.perfects=(me.perfects||0)+1;if(!S.practice&&ui.mode==='career'&&career())career().perfects=(career().perfects||0)+1;}}const sig=currentSigma();{const d=(S.pull-SWEET)*PULL_MS/1000;S.lastTiming=S.over?'Held':perf?'Perfect':Math.abs(d)<.03?'Flush':d<0?(d<-.12?'Early':'A touch early'):(d>.12?'Late':'A touch late');if(S.drill)S.drill.timings.push(S.over?.5:d);{const me=S.p[S.cur];if(d<-.03)me.early=(me.early||0)+1;else if(d>.03||S.over)me.late=(me.late||0)+1;}}S.pull=0;S.over=false;S.throwsMade++;save.totThrows=(save.totThrows||0)+1;if(S.throwsMade>=4)$('hint').style.opacity=0;feelAfterRelease(perf);
  const ax=S.aim.x+S.sway.x,ay=S.aim.y+S.sway.y;const lx=ax+gauss()*sig*.86,ly=ay+gauss()*sig;if(S.online)netSend('dart',{x:+lx.toFixed(2),y:+ly.toFixed(2),dart:S.dart,leg:S.p[0].legs+S.p[1].legs});
  // cinematic: third dart that completes a 180 / 170+ visit, or any match-winning / ton-plus checkout
  const me=S.p[S.cur];const h=scoreAt(lx,ly);const vis=S.visit.reduce((a,v)=>a+(v.bust?0:v.v),0);const need=Math.ceil(S.bestOf/2);const wins=applyDart(me.score,h).won;const big=(S.dart===3&&vis+h.v>=171)||(wins&&(S.visitStart>=100||me.legs+1>=need));S.cine=big;S.aimLabel=scoreAt(S.aim.x,S.aim.y).label;S.aimWasDbl=scoreAt(S.aim.x,S.aim.y).dbl;
@@ -6446,7 +6517,7 @@ function land(x,y,far){if(S.bull){return bullLand(x,y,far);}const me=S.p[S.cur];
  if(me.score<=50&&oneDart(me.score))me.coAtt+=1;
  let r;if(S.din&&!me.opened){if(h.dbl){me.opened=true;r=applyDart(me.score,h);}else{r={score:me.score,bust:false,won:false};h={...h,v:0,label:h.label+'·',m:h.m,dbl:false,n:h.n};}}else r=applyDart(me.score,h);me.darts++;me.legDarts++;if(me.legDarts<=9)me.f9darts++;
  S.visit.push({label:h.label,v:h.v,bust:r.bust});
- if(!asAI){if(S.lastTiming&&!S.bull)xpPop(S.lastTiming,S.lastTiming==='Perfect'?'tm perf':'tm');if(S.perfect&&!S.bull){S.perfect=false;noiseBurst({dur:.06,freq:3200,q:6,gain:.12});gainXP('cn',3,S.practice?.5:1);}const pm=S.practice?.5:1;if(!S.practice&&ui.mode==='career'){const nv=S.lastNerves||0;if(nv>2.5)gainXP('co',2);else if(nv>1.2)gainXP('co',1);}if(ui.mode==='career'){if(h.m===3)gainXP('sc',h.n>=19?3:2,pm);if(S.aimWasDbl)gainXP('fi',h.dbl?3:1,pm);}setTimeout(()=>{if(!S)return;if(h.m===3||h.label==='BULL')sledgeOnHit();else sledgeOnMiss(h);},450);addAdrenaline(h,S.dart);const after=me.score-(r.bust?0:h.v);const ld=me.legDarts+1;if(!r.bust&&((ld===6&&after<=170&&route(after,3))||(ld===7&&after<=110&&route(after,2))||(ld===8&&after<=50&&oneDart(after)))){S.adren+=[2.2,1.6,1.2,.9,.7,.5,.4][ui.tier]*(ld-5);S.nineOn=true;if(ld===6)setTimeout(()=>banter(S.tier.caller==='pro'?'Nine-darter on.':'Oi. He\u2019s on a nine.',S.tier.caller==='pro'?'Crowd':'Bar'),600);}S.lastAim=S.aimLabel;S.lastMissDbl=!!(S.aimWasDbl&&!h.dbl);if(S.plan&&S.plan.length){if(h.label===S.plan[0]||valOf(h.label)===valOf(S.plan[0]))S.plan.shift();else S.plan=null;}if(S.aimLabel&&S.aimLabel[0]==='T'&&h.m===1&&h.n!==+S.aimLabel.slice(1)&&S.tier.crowd>.3)sfxSwell(S.tier.crowd*.25,.7,380,1.3,.4);}
+ if(!asAI){feelGhostAdd(x,y);if(S.lastTiming&&!S.bull&&!feelPhone())xpPop(feelVerdictText(),S.lastTiming==='Perfect'?'tm perf':'tm');if(S.perfect&&!S.bull){S.perfect=false;noiseBurst({dur:.06,freq:3200,q:6,gain:.12});gainXP('cn',3,S.practice?.5:1);}const pm=S.practice?.5:1;if(!S.practice&&ui.mode==='career'){const nv=S.lastNerves||0;if(nv>2.5)gainXP('co',2);else if(nv>1.2)gainXP('co',1);}if(ui.mode==='career'){if(h.m===3)gainXP('sc',h.n>=19?3:2,pm);if(S.aimWasDbl)gainXP('fi',h.dbl?3:1,pm);}setTimeout(()=>{if(!S)return;if(h.m===3||h.label==='BULL')sledgeOnHit();else sledgeOnMiss(h);},450);addAdrenaline(h,S.dart);const after=me.score-(r.bust?0:h.v);const ld=me.legDarts+1;if(!r.bust&&((ld===6&&after<=170&&route(after,3))||(ld===7&&after<=110&&route(after,2))||(ld===8&&after<=50&&oneDart(after)))){S.adren+=[2.2,1.6,1.2,.9,.7,.5,.4][ui.tier]*(ld-5);S.nineOn=true;if(ld===6)setTimeout(()=>banter(S.tier.caller==='pro'?'Nine-darter on.':'Oi. He\u2019s on a nine.',S.tier.caller==='pro'?'Crowd':'Bar'),600);}S.lastAim=S.aimLabel;S.lastMissDbl=!!(S.aimWasDbl&&!h.dbl);if(S.plan&&S.plan.length){if(h.label===S.plan[0]||valOf(h.label)===valOf(S.plan[0]))S.plan.shift();else S.plan=null;}if(S.aimLabel&&S.aimLabel[0]==='T'&&h.m===1&&h.n!==+S.aimLabel.slice(1)&&S.tier.crowd>.3)sfxSwell(S.tier.crowd*.25,.7,380,1.3,.4);}
  if(r.bust){const rem=3-S.dart;me.darts+=rem;me.legDarts+=rem;me.f9darts+=Math.max(0,Math.min(rem,9-(me.legDarts-rem)));me.score=S.visitStart;
   me.busts++;flash('Bust','red',null);callVisit(0,'bust');if(!me.ai)sfxGroan();updateUI();mt(nextTurn,1300);return;}
  me.score=r.score;const gained=S.visitStart-me.score;
@@ -6465,7 +6536,7 @@ function f9credit(me,gained){return (me.legDarts-3)<9?gained:0;}
 function celebrating(){return S&&S.celebrateUntil&&performance.now()<S.celebrateUntil;}
 function mt(fn,ms){const snap=S;return setTimeout(()=>{if(S&&S===snap&&!S.done)fn();},ms);}
 function nextTurn(){if(!S||S.done)return;if(celebrating()){mt(nextTurn,300);return;}S.cur=1-S.cur;startTurn();}
-function endLeg(){S.netAnim=false;const need=Math.ceil(S.bestOf/2);if(S.p[0].legs>=need||S.p[1].legs>=need)return endMatch();S.settled=false;S.p.forEach(p=>{p.score=S.start||501;p.legDarts=0;p.opened=false;});S.legStarter=1-S.legStarter;S.cur=S.legStarter;
+function endLeg(){S.netAnim=false;const need=Math.ceil(S.bestOf/2);if(S.p[0].legs>=need||S.p[1].legs>=need)return endMatch();S.settled=false;feelGhostsClear();S.p.forEach(p=>{p.score=S.start||501;p.legDarts=0;p.opened=false;});S.legStarter=1-S.legStarter;S.cur=S.legStarter;
  const legNo=S.p[0].legs+S.p[1].legs+1;const el=$('intro');el.classList.add('leg');const needL=Math.ceil(S.bestOf/2);const w=S.lastLegWinner;$('introTier').textContent=`Leg ${legNo} of up to ${S.bestOf}${S.p[0].legs===needL-1&&S.p[1].legs===needL-1?' · decider':''}`;$('introVenue').textContent=`${S.p[0].legs}–${S.p[1].legs}`;$('introStakes').textContent=w?`${w.name} took it · ${w.out} out in ${w.darts} darts`:'';$('introP0').textContent=S.p[0].disp;$('introP1').textContent=S.p[1].disp;$('introP0s').textContent='Avg '+avg(S.p[0]).toFixed(1);$('introP1s').textContent='Avg '+avg(S.p[1]).toFixed(1);$('introFmt').textContent=`${S.p[S.cur].name} to throw first · tap to continue`;el.classList.add('show');S.busy=true;{const snap=S;let gone=false;const go=(ev)=>{if(gone)return;if(ev&&ev.type==='keydown'&&!['Space','Enter','Escape'].includes(ev.code))return;gone=true;document.removeEventListener('pointerdown',go,true);document.removeEventListener('keydown',go,true);el.classList.remove('show');if(S===snap&&!S.done)startTurn();};setTimeout(()=>{document.addEventListener('pointerdown',go,true);document.addEventListener('keydown',go,true);},700);setTimeout(go,S.online?2500:6000);}}
 function endMatch(){S.done=true;S.view=0;save.matches++;if(S.online){setTimeout(onlineLeave,500);}const w=S.p[0].legs>S.p[1].legs?0:1;const win=S.p[w],lose=S.p[1-w];S.won=w===0;S.earned=0;
  const objBefore=career()&&career().obj?Object.keys(career().obj).length:0;
@@ -6794,7 +6865,7 @@ $('btnCopy').onclick=async()=>{const txt=JSON.stringify(S.log);try{await navigat
 $('btnContinue').onclick=()=>{audioInit();if(isRun())switchSlot('career');showHub();};$('btnRun').onclick=()=>{audioInit();if(window.__noGL)return;const r=(save.slots&&save.slots.run&&save.slots.run.career)||null;if(r){switchSlot('run');showHub();}else{startRun();}};$('btnNewRun').onclick=()=>{audioInit();startRun();};
 function startRun(){if(!save.name){save.name='You';}const ds=todaySeed();const played=save.daily&&save.daily[ds];showMsg({from:'Jonno',lines:['The Run. Same ladder, no mercy.','Draft a card after every match. Lose three and it’s over. Every third match has a twist: double in, or a 301 sprint.',played?`Today’s daily is done: ${played.won?'complete':'tier '+(played.tier+1)}, ${played.wins} wins. A fresh run has its own seed.`:'Fresh run, or today’s daily: same draw and the same drafts for everyone who plays it today.'],replies:[['Fresh run','fresh'],['Today’s daily','daily']]},act=>{newRun(act==='daily'?ds:null);showPerkPick(()=>playNext(),3,{won:true,opening:true});});}$('btnNewCareer').onclick=()=>{audioInit();showCreator(false);};$('btnFriends').onclick=()=>{audioInit();V.setPlayerLook(save.look,save.flight);showScreen('friends');};$('btnThrow').onclick=()=>{audioInit();if(window.__noGL)return;playPractice();};
 if(window.__noGL){['btnContinue','btnNewCareer','btnFriends','btnThrow','btnRun','btnNewRun'].forEach(id=>{$(id).disabled=true;});$('noGL').hidden=false;}
-$('btnPlayNext').onclick=playNext;$('btnSettle').onclick=settle;$('btnLocal').onclick=playLocal;$('btnPractice').onclick=playPractice;$('btnMoney').onclick=moneyMatch;$('btnShop').onclick=()=>showHub('kit');$('btnShopBack').onclick=()=>showHub();$('btnLook').onclick=()=>{$('hubPop').hidden=true;showCreator(true);};$('btnHubTitle').onclick=()=>{$('hubPop').hidden=true;showTitle();};$('btnHubMenu').onclick=()=>{const p=$('hubPop');p.hidden=!p.hidden;$('btnHubMenu').setAttribute('aria-expanded',!p.hidden);};document.addEventListener('pointerdown',e=>{if(!$('hubPop').hidden&&!e.target.closest('.hx-menu')){$('hubPop').hidden=true;}});$('btnHubSound').onclick=()=>{$('btnSound').onclick();syncHubAudio();syncTitleAudio();};$('btnHubCaller').onclick=()=>{$('btnCaller').onclick();syncHubAudio();syncTitleAudio();};
+$('btnPlayNext').onclick=playNext;feelBindSettle();/* FEEL: hold-to-breathe replaces tap settle */$('btnLocal').onclick=playLocal;$('btnPractice').onclick=playPractice;$('btnMoney').onclick=moneyMatch;$('btnShop').onclick=()=>showHub('kit');$('btnShopBack').onclick=()=>showHub();$('btnLook').onclick=()=>{$('hubPop').hidden=true;showCreator(true);};$('btnHubTitle').onclick=()=>{$('hubPop').hidden=true;showTitle();};$('btnHubMenu').onclick=()=>{const p=$('hubPop');p.hidden=!p.hidden;$('btnHubMenu').setAttribute('aria-expanded',!p.hidden);};document.addEventListener('pointerdown',e=>{if(!$('hubPop').hidden&&!e.target.closest('.hx-menu')){$('hubPop').hidden=true;}});$('btnHubSound').onclick=()=>{$('btnSound').onclick();syncHubAudio();syncTitleAudio();};$('btnHubCaller').onclick=()=>{$('btnCaller').onclick();syncHubAudio();syncTitleAudio();};
 [...$('kitTabs').children].forEach(bt=>bt.onclick=()=>showShop(bt.dataset.t,true));[...$('hubTabs').children].forEach(bt=>bt.onclick=()=>{hubTab(bt.dataset.t);if(bt.dataset.t==='practice'){if(PR.view&&PR.view.kind==='result')PR.view=null;renderPractice();}if(bt.dataset.t==='player')showPlayer(true);if(bt.dataset.t==='kit')showShop(showShop.tab,true);if(bt.dataset.t==='board')renderBoard();});$('btnSkills').onclick=()=>showHub('player');$('btnSkillsBack').onclick=()=>showHub();$('btnPlPick').onclick=()=>showPerkPick(()=>showHub('player'));$('btnHubPick').onclick=()=>showPerkPick(showHub);$('btnPerkLater').onclick=()=>{$('perk').hidden=true;const d=window._perkDone;window._perkDone=null;if(career()){career().featBoost=false;persist();}if(d)d();else showHub('player');};
 $('btnFriendsBack').onclick=()=>{onlineLeave();showTitle();};['mpLegs','mpStart','mpIn','mpVenue'].forEach(id=>{const host=$(id);[...host.children].forEach(b=>b.onclick=()=>{[...host.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(id==='mpVenue')V.buildVenue(+b.dataset.v);});});
 $('btnResultNext').onclick=()=>{$('result').hidden=true;const last=S;S=null;afterResult(last);};
@@ -6904,16 +6975,61 @@ function renderReceipt(c,posBefore,wasMoney){const host=$('resReceipt');if(!host
  $('btnResAction').onclick=()=>{PR.pending=rd?rd.id:null;$('btnResultNext').click();};}
 
 
+// ===== FEEL (sprint) =====
+// Pull progress from a timestamp (same formula the frame loop used). Event timestamps share performance.now()'s origin.
+function pullAt(ts){return Math.min(1.3,(ts-S.pullStart)/(PULL_MS*(S.pullMul||1)));}
+function feelStamp(ev){const now=performance.now();const t=ev&&typeof ev.timeStamp==='number'?ev.timeStamp:NaN;return (t>0&&S&&t>=S.pullStart-5&&t<=now+1)?t:now;}
+function feelPhone(){return innerHeight>innerWidth*1.1;}
+function cancelPull(){if(S&&S.pulling){S.pulling=false;S.pull=0;S.over=false;S.pullSrc=null;}dragging=false;}
+// desktop only: holding on the player pane (right half, off the board) still pulls
+function feelPaneHold(e){if(feelPhone()||!V.isSplit())return false;return e.clientX>innerWidth*.5;}
+// --- pull pad ---
+const PA=$('pullArea'),PAD=$('pullPad'),PAL=$('paLabel'),PAV=$('paVerdict'),PAM=$('paMark'),PAWIN=$('paWin');let paState='',paVerdT=0,paWinKey='';
+function padCanPull(){return !!(S&&!S.done&&!S.busy&&!S.p[S.cur].ai&&!S.mateTurn&&S.view!==1&&!S.breathe&&!V.walking());}
+if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!padCanPull())return;try{PAD.setPointerCapture(e.pointerId);}catch(x){}S.padPtr=e.pointerId;startPull('pad');});
+ PAD.addEventListener('pointerup',e=>{if(S&&S.pulling&&S.pullSrc==='pad')release(e,'pad');});
+ PAD.addEventListener('pointercancel',()=>{if(S&&S.pullSrc==='pad')cancelPull();});
+ PAD.addEventListener('lostpointercapture',()=>{if(S&&S.pulling&&S.pullSrc==='pad')cancelPull();});
+ PAD.addEventListener('contextmenu',e=>e.preventDefault());}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelPull();breatheEnd();}});
+addEventListener('blur',()=>{cancelPull();breatheEnd();});
+function feelLayoutClass(){const ph=feelPhone();document.body.classList.toggle('feel-phone',ph);document.body.classList.toggle('feel-desk',!ph);}
+addEventListener('resize',()=>{feelLayoutClass();paWinKey='';});
+function feelMatchStart(){S.perfStreak=0;S.ghostQ=[];V.ghostsClear();feelLayoutClass();if(PA){PA.hidden=false;paState='';paWinKey='';}}
+// honest window on the track: track spans pull 0..1.3, sweet at SWEET, half-width perfectWin() seconds
+function feelPadWindow(){if(!PA)return;const w=perfectWin();const key=w.toFixed(4)+'|'+PA.offsetWidth;if(key===paWinKey)return;paWinKey=key;const W=PA.offsetWidth||366;if(w<=0){PA.classList.remove('haswin');return;}PA.classList.add('haswin');const half=w*1000/PULL_MS/1.3;const c=SWEET/1.3;let l=(c-half)*W,r=(c+half)*W;if(r-l<2){const m=(l+r)/2;l=m-1;r=m+1;}PAWIN.style.left=l+'px';PAWIN.style.width=(r-l)+'px';const t=PA.querySelectorAll('.pa-tick');t[0].style.left=t[2].style.left=l+'px';t[1].style.left=t[3].style.left=r+'px';}
+function feelPadSet(st,label){if(paState!==st){paState=st;PA.className='pa '+st+(PA.classList.contains('haswin')?' haswin':'');}if(PAL.textContent!==label)PAL.textContent=label;}
+function feelPadTick(now){if(!PA)return;if(!S||S.done){if(!PA.hidden)PA.hidden=true;return;}if(PA.hidden)PA.hidden=false;if(S.bull&&S.bull.me!=null&&S.bull.op==null){feelPadSet('opp','Opponent throwing');return;}
+ const me=S.p[S.cur];const opp=me.ai||S.mateTurn;
+ if(opp)feelPadSet('opp','Opponent throwing');
+ else if(S.breathe)feelPadSet('breathe','Breathe…');
+ else if(S.pulling){feelPadWindow();feelPadSet(S.over?'late':'pulling',S.over?'Late':'Release to throw');PAM.style.left=(Math.max(0,S.pull)/1.3*100)+'%';}
+ else if(S.busy)feelPadSet('off','Hold to pull');
+ else{feelPadWindow();feelPadSet('ready','Hold to pull');}
+ if(PAV){if(paVerdT&&now>paVerdT){paVerdT=0;PAV.classList.remove('show');}else if(!paVerdT&&S.pulling&&S.sigma*1.794>45){if(PAV.textContent!=='Wide'){PAV.textContent='Wide';PAV.className='pa-verdict show wide';}}else if(!paVerdT&&PAV.classList.contains('wide')){PAV.className='pa-verdict';}}}
+function feelVerdictText(){const n=S&&S.perfStreak||0;return (S.lastTiming==='Perfect'&&n>=2)?'Perfect ×'+n:S.lastTiming;}
+function feelAfterRelease(perf){S.perfStreak=perf?(S.perfStreak||0)+1:0;S.pullSrc=null;if(PAV&&feelPhone()){PAV.textContent=feelVerdictText();PAV.className='pa-verdict show'+((S.lastTiming==='Late'||S.lastTiming==='Held')?' late':'');paVerdT=performance.now()+400;}}
+// --- hold-to-breathe settle (once per leg; releasing early keeps what was gained) ---
+function breatheStart(){if(!S||S.done||S.settled||S.pulling||S.p[S.cur].ai||S.mateTurn||S.breathe)return;S.settled=true;S.breathe={t0:performance.now(),calm:0,adren:0};noiseBurst({dur:.5,freq:400,q:1,gain:.05});const b=$('btnSettle');if(b){b.textContent='Breathe…';b.classList.add('breathing');}}
+function feelBreathe(now){const br=S&&S.breathe;if(!br)return;if(S.done||S.p[S.cur].ai||S.mateTurn){breatheEnd();return;}const k=Math.min(1,(now-br.t0)/1200);const e=1-Math.pow(1-k,2);const tc=.55*e,ta=.6*e;S.calm=(S.calm||0)+(tc-br.calm);br.calm=tc;const da=ta-br.adren;S.adren=Math.max(0,S.adren-da);br.adren=ta;if(k>=1)breatheEnd();}
+function breatheEnd(){if(!S||!S.breathe)return;S.breathe=null;const b=$('btnSettle');if(b){b.textContent='Settle';b.classList.remove('breathing');}}
+function feelBindSettle(){const b=$('btnSettle');if(!b)return;b.onclick=null;b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(x){}breatheStart();});b.addEventListener('pointerup',breatheEnd);b.addEventListener('pointercancel',breatheEnd);b.addEventListener('lostpointercapture',breatheEnd);b.addEventListener('keydown',e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();if(!e.repeat)breatheStart();}});b.addEventListener('keyup',e=>{if(e.code==='Enter'||e.code==='Space')breatheEnd();});}
+// --- landing ghosts: previous three human landings; Practice + career tiers 0-1 by default; save.ghosts true/false overrides ---
+function ghostsOn(){if(!S)return false;if(save.ghosts===true)return true;if(save.ghosts===false)return false;return !!(S.practice||(ui.mode==='career'&&ui.tier<=1));}
+function feelGhostAdd(x,y){if(!S||S.bull)return;S.ghostQ=S.ghostQ||[];S.ghostQ.unshift({x,y});S.ghostQ.length=Math.min(3,S.ghostQ.length);V.ghostsSet(ghostsOn()?S.ghostQ:null);}
+function feelGhostsClear(){if(S)S.ghostQ=[];V.ghostsClear();}
+feelLayoutClass();
+
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
 let lastBeat=0;
 function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();const amp=2.0*S.barrel.sway*swayMult()*(1+nv*.4)*(0.7+armMult()*.3);
   S.sway={x:amp*(Math.sin(t*1.7)+.5*Math.sin(t*4.3+1)),y:amp*(Math.sin(t*2.1+2)+.5*Math.sin(t*3.7))};
-  if(S.pulling){S.pull=Math.min(1.3,(now-S.pullStart)/(PULL_MS*(S.pullMul||1)));if(S.pull>=1.0)S.over=true;if(S.pull>=1.3)release();}
+  if(S.pulling){S.pull=pullAt(performance.now());if(S.pull>=1.0)S.over=true;if(S.pull>=1.3)release(null,'auto');}S.inWin=S.pulling&&isPerfect();feelBreathe(now);
   const thr=targetHR();S.hr+=(thr-S.hr)*.02;const period=60000/S.hr;if(now-lastBeat>period){lastBeat=now;if(nv>1.2)sfxHeart();ecgBeat=now;}
-  $('bpm').textContent=Math.round(S.hr);$('hr').classList.toggle('hot',S.hr>105);{const pc=nervePct();const me=S.p[S.cur];const mine=!me.ai&&!S.mateTurn&&!S.practice;$('hrNote').textContent=mine&&nv>.3?`${nerveCause()} · spread +${pc}%`:(mine?'Settled':'');$('btnSettle').hidden=!(mine&&nv>.9&&!S.settled&&!S.pulling&&!S.busy);}ecgDraw(now,S.hr,nv);$('nerve').style.opacity=S.view===1?0:Math.min(.7,Math.max(0,nv-.8)*.22);sfxPubAmbience();
-  S.nerves=nv;S.sigma=currentSigma();S.reader=false;V.frame(now,S);}
- else{if(S){S.nerves=0;S.sigma=0;}V.frame(now,S);}
+  $('bpm').textContent=Math.round(S.hr);$('hr').classList.toggle('hot',S.hr>105);{const pc=nervePct();const me=S.p[S.cur];const mine=!me.ai&&!S.mateTurn&&!S.practice;$('hrNote').textContent=mine&&nv>.3?`${nerveCause()} · spread +${pc}%`:(mine?'Settled':'');$('btnSettle').hidden=!(S.breathe||(mine&&nv>.9&&!S.settled&&!S.pulling&&!S.busy));}ecgDraw(now,S.hr,nv);$('nerve').style.opacity=S.view===1?0:Math.min(.7,Math.max(0,nv-.8)*.22);sfxPubAmbience();
+  S.nerves=nv;S.sigma=currentSigma();S.reader=false;feelPadTick(now);V.frame(now,S);}
+ else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);V.frame(now,S);}
  fxTick();requestAnimationFrame(tick);}
 requestAnimationFrame(tick);
 if('speechSynthesis'in window){try{speechSynthesis.getVoices();}catch(e){}}
