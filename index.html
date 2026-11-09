@@ -5412,6 +5412,26 @@ body.lk-phone.lk-match .rt-bar .rc{font-size:12px!important;padding:1px 5px!impo
 body.lk-phone.lk-match .rt-bar .rt-tog{height:24px!important;padding:0 6px!important;font-size:10px!important}
 body.lk-phone.lk-match .routes.lk-open .rt-list{position:absolute;top:36px;left:0;right:0}
 </style>
+<style id="hold-zone">
+/* the player pane is the hold zone: outlined, labelled, with the timing bar inside it */
+body.lk-match .lk-pull{display:none}
+body.lk-match .pa{display:block!important;position:fixed!important;left:calc(var(--lk-px) + 10px)!important;top:calc(var(--lk-py) + 10px)!important;width:calc(var(--lk-pw) - 20px)!important;height:calc(var(--lk-ph) - 20px)!important;right:auto!important;bottom:auto!important;z-index:29}
+body.lk-match.feel-desk .pa{top:calc(var(--lk-py) + 72px)!important;height:calc(var(--lk-ph) - 84px)!important}
+body.lk-match .pa-pad{position:absolute!important;inset:0!important;height:auto!important;display:flex;align-items:flex-end;justify-content:center;padding-bottom:34px;background:rgba(13,16,20,.06)!important;border:2px dashed rgba(233,228,216,.42)!important;border-radius:10px!important;transition:border-color .12s,background .12s}
+body.lk-match .pa-pad #paLabel{background:rgba(13,16,20,.85);padding:9px 16px;border-radius:4px;border:1px solid rgba(233,228,216,.55);font-size:13px;letter-spacing:.14em;white-space:nowrap}
+body.lk-match .pa-track{position:absolute!important;left:18px;right:18px;bottom:14px;z-index:2;width:auto!important}
+body.lk-match .pa-verdict{position:absolute!important;top:10px;left:0;right:0;text-align:center;display:block!important;z-index:2}
+body.lk-match .pa.ready .pa-pad{animation:holdPulse 2.2s ease-in-out infinite}
+@keyframes holdPulse{0%,100%{border-color:rgba(233,228,216,.32)}50%{border-color:rgba(233,228,216,.75)}}
+body.lk-match .pa.pulling .pa-pad{border-style:solid!important;border-color:#e9e4d8!important;background:rgba(233,228,216,.07)!important;animation:none}
+body.lk-match .pa.late .pa-pad{border-style:solid!important;border-color:#e8382c!important;animation:none}
+body.lk-match .pa.opp .pa-pad,body.lk-match .pa.off .pa-pad{border-color:transparent!important;background:transparent!important;animation:none}
+body.lk-match .pa.opp #paLabel,body.lk-match .pa.off #paLabel{opacity:.55}
+body.lk-match .pa.opp .pa-track,body.lk-match .pa.off .pa-track{opacity:0}
+body.lk-match.feel-desk .hint,body.lk-match.feel-phone .hint{display:none!important}
+@media (prefers-reduced-motion:reduce){body.lk-match .pa.ready .pa-pad{animation:none}}
+</style>
+
 
 
 
@@ -6675,9 +6695,9 @@ const V=(function(){try{return (()=>{
  let lkSafeB=0,lkProbe=null;function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';document.body.appendChild(lkProbe);}return lkProbe.offsetHeight||0;}
  let lkKey='';const lkR={phone:false,hdr:48,sb:112,pull:0,pad:72,diam:400,board:{x:0,y:48,w:100,h:100},player:{x:100,y:48,w:100,h:100}};
  function lkRects(){const W=innerWidth,H=innerHeight;const phone=lkPhone();const key=W+'x'+H+(phone?'p':'d');if(key===lkKey)return lkR;lkKey=key;lkSafeB=lkSafe();
-  if(phone){const hdr=40,sb=116,pull=118+lkSafeB;const avail=Math.max(300,H-hdr-sb-pull);let board=Math.min(W,avail-180);if(board<W)board=Math.min(W,avail-110);board=Math.max(190,board);const ph=Math.max(0,avail-board);
+  if(phone){const hdr=40,sb=116,pull=lkSafeB;const avail=Math.max(300,H-hdr-sb-pull);let board=Math.round(Math.min(W*1.05,avail*.52));board=Math.max(190,board);const ph=Math.max(0,avail-board);
    Object.assign(lkR,{phone,hdr,sb,pull,pad:0,diam:Math.round(Math.min(W,board)*.897),board:{x:0,y:hdr,w:W,h:board},player:{x:0,y:hdr+board,w:W,h:ph}});}
-  else{const hdr=48,sb=112,pad=72;const bh=Math.max(240,H-hdr-sb-pad);const bw=Math.round(W*840/1440);Object.assign(lkR,{phone,hdr,sb,pull:0,pad,diam:Math.round(Math.min(bw,bh)*.842),board:{x:0,y:hdr,w:bw,h:bh},player:{x:bw,y:hdr,w:W-bw,h:bh}});}
+  else{const hdr=48,sb=112,pad=0;const bh=Math.max(240,H-hdr-sb-pad);const bw=Math.round(W*840/1440);Object.assign(lkR,{phone,hdr,sb,pull:0,pad,diam:Math.round(Math.min(bw,bh)*.842),board:{x:0,y:hdr,w:bw,h:bh},player:{x:bw,y:hdr,w:W-bw,h:bh}});}
   const st=document.documentElement.style;st.setProperty('--lk-hdr',lkR.hdr+'px');st.setProperty('--lk-sb',lkR.sb+'px');st.setProperty('--lk-pull',lkR.pull+'px');st.setProperty('--lk-pad',lkR.pad+'px');st.setProperty('--lk-bw',lkR.board.w+'px');st.setProperty('--lk-bh',lkR.board.h+'px');st.setProperty('--lk-px',lkR.player.x+'px');st.setProperty('--lk-py',lkR.player.y+'px');st.setProperty('--lk-pw',lkR.player.w+'px');st.setProperty('--lk-ph',lkR.player.h+'px');st.setProperty('--lk-diam',lkR.diam+'px');document.body.classList.toggle('lk-phone',phone);return lkR;}
  // earned moments: 350 ms board push (140 in / 210 out, 8 %) toward a board point; 450-800 ms thrower reaction (player pane only)
  let lkPushS=null,lkReactS=null;function lookPush(x,y){if(RM)return;lkPushS={t0:performance.now(),x,y};}function lookReact(ms){if(RM)return;lkReactS={t0:performance.now(),dur:ms||450};}function lookSkip(){lkPushS=null;lkReactS=null;}
@@ -7325,7 +7345,7 @@ function feelPadTick(now){if(!PA)return;if(!S||S.done){if(!PA.hidden)PA.hidden=t
  else if(S.breathe)feelPadSet('breathe','Breathe…');
  else if(S.pulling){feelPadWindow();feelPadSet(S.over?'late':'pulling',S.over?'Late':'Release to throw');PAM.style.left=(Math.max(0,S.pull)/1.3*100)+'%';}
  else if(S.busy)feelPadSet('off','Hold to pull');
- else{feelPadWindow();feelPadSet('ready',(feelPhone()&&(save.totThrows||0)<12)?'Hold · let go to throw':'Hold to pull');}
+ else{feelPadWindow();feelPadSet('ready',(save.totThrows||0)<30?'Hold here · let go to throw':'Hold here to throw');}
  if(PAV){if(paVerdT&&now>paVerdT){paVerdT=0;PAV.classList.remove('show');}else if(!paVerdT&&S.pulling&&S.sigma*1.794>45){if(PAV.textContent!=='Wide'){PAV.textContent='Wide';PAV.className='pa-verdict show wide';}}else if(!paVerdT&&PAV.classList.contains('wide')){PAV.className='pa-verdict';}}}
 function feelVerdictText(){const n=S&&S.perfStreak||0;return (S.lastTiming==='Perfect'&&n>=2)?'Perfect ×'+n:S.lastTiming;}
 function feelAfterRelease(perf){S.perfStreak=perf?(S.perfStreak||0)+1:0;S.pullSrc=null;if(PAV&&feelPhone()){PAV.textContent=feelVerdictText();PAV.className='pa-verdict show'+((S.lastTiming==='Late'||S.lastTiming==='Held')?' late':'');paVerdT=performance.now()+400;}}
