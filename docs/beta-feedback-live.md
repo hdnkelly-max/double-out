@@ -1,0 +1,34 @@
+# TOPS beta feedback (live log, Games night chat)
+
+- 14:23 Lee: Asked how to continue career on a different device without losing progress (answered earlier: cloud saves coming today).
+- 14:23 Lee: Asked what if he is not near the original device, and how to request a refund (joke, game is free).
+- 14:23 David: Went to shoot and the page refreshed (pull-to-refresh on phone while dragging down). Second report of this today.
+- ACTION: Pull-to-refresh on phone during a downward drag is still biting players (David). Confirm the overscroll block ships in wave 1.
+- ACTION: Cross-device career continuity is the top asked-for feature (Lee x2). Google sign-in + cloud saves.
+- 14:25 Hayden(bot): Refund request denied, Mad Dog, on the grounds that you paid nothing. If you are not near the old device your career stays put for now. Google sign in with cloud saves is coming today, then it follows you wherever you log in.
+- 14:25 Hayden(bot): David, no attitude, that one is a real bug and you are the second bloke to cop it. The phone pull-to-refresh is being blocked right now, ships today. Until then drag sideways or short, not straight down from the top.
+- 14:25 Hayden(bot): Quick one for both of you: what phone and browser? Helps me pin the refresh thing down.
+- 14:27 NOTE: pull-to-refresh block shipped 14:24 (from Hayden). Told David to refresh once and stop.
+- 14:27 Hayden(bot): Update for David. The refresh thing is fixed as of 14:24. So here is what you do, slowly: refresh the page ONE more time, on purpose this time. Then you stop refreshing. Forever. The board is for throwing darts at, not for pulling down like a window blind.
+- 14:27 Hayden(bot): Big congrats on finding the link by the way mate, genuinely proud. Next milestone is finishing a leg without the page vanishing. Report back.
+- 14:31 Hayden(bot): Gene. Very quiet over there. Link ... Finish one Career match and you go on the leaderboard. Ween is currently top by default because he is the only one who has finished a match without crying.
+- 14:33 Lee: (banter) says the alpha is "nowhere near playable" and wants reimbursement for time/emotional toll. Underlying signal: Lee thinks the current build is rough.
+- 14:34 Hayden(bot): Mad Dog, your emotional toll has been logged and forwarded to the complaints department, which is also me, and I have ruled against you. Your reimbursement is a game that gets less shit every hour, paid in refreshes.
+- 14:34 Hayden(bot): Serious question though since you have put the time in: what was the single moment that made you want to close it? Not the list, the one thing.
+- 14:36 Lee: The one thing making him close it: it is distracting him from work (positive signal: engagement, not a bug).
+- 14:37 Hayden(bot): That is the best review the game has had all day, Mad Dog. Go do your work. The practice room with drills lands later today, perfect for a lunch break. I will not tell your boss.
+- 14:39 Lee: FEATURE REQUEST: an actual gear shop (gear skins and merch) to spend career money on, plus a reputation mechanic.
+- ACTION: Feature backlog: gear shop (skins/merch spend sink for career money) and reputation mechanic (Lee). Asked Lee what reputation should do.
+- 14:40 Hayden(bot): Both logged. Gear shop is a good shout, you earn money for travel already so there is somewhere to spend it. Reputation: what do you picture it doing? Unlocking venues and invites, changing how the crowd treats you, or rivals talking shit before a match?
+- 14:42 Lee: FEATURE REQUEST: option to skip opponent player animations.
+- ACTION: Add a "skip opponent animations" toggle (or fast-forward opponent turns). Low effort, high value for pacing (Lee).
+- 14:42 Lee: Reputation should unlock venues, sponsorships, exclusive gear, emotes.
+- ACTION: Backlog detail for reputation mechanic: venue unlocks, sponsorships, exclusive gear, emotes (Lee).
+- 14:43 Hayden(bot): Skip opponent animations, logged, that one is easy and I get it. Roughly how long did a match feel? Too long because of the opponent's throws, or too long full stop?
+- 14:43 Hayden(bot): Venues, sponsorships, exclusive gear, emotes. Sponsorships is the one I like, a pub league bloke with a sticker from the local chippy on his shirt. All in the backlog, Mad Dog.
+- 14:46 Lee: Matches feel too long because of opponent throws; does not care to watch how they throw.
+- 14:46 Lee: BUG/BALANCE: upgraded his darts and now feels LESS accurate.
+- ACTION: Investigate darts upgrade making accuracy worse (Lee). Check whether a gear/dart upgrade changes spread, weighting, or pull timing in the wrong direction, or whether HR/nerves rose at the same time and masked it. Asked Lee what he upgraded.
+- ACTION: Opponent turns need a fast-forward / skip (second mention from Lee). Pacing is the main complaint about match length.
+- 14:47 Hayden(bot): Fair. Opponent throws will get a fast forward. Noted.
+- 14:47 Hayden(bot): The darts upgrade making you worse is interesting and should not happen. I will check it. What exactly did you upgrade, and was it right after that your ring got bigger, or did your HR strip also go up at the same time?
