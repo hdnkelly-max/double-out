@@ -6748,7 +6748,7 @@ function netRecv(m){if(!m||m.from===NET.myId)return;if(m.q!=null){const k=m.from
  if(m.t==='dart'){NET.queue.push(m);netPump();return;}
  if(m.t==='quit'){onlineLeft();return;}
  if(m.t==='chat'){banter(String(m.text||'').slice(0,60),m.name||'Mate');return;}}
-function netPump(){if(!S||!S.online||S.done)return;if(S.cur!==1||S.netAnim||S.busyLeg)return;if(!NET.queue.length)return;const m=NET.queue.shift();if(m.leg!=null&&m.leg!==S.p[0].legs+S.p[1].legs){/* stale leg, drop */return netPump();}S.netAnim=true;S.remoteDart=m;aiDart({x:m.x,y:m.y});}
+function netPump(){if(!S||!S.online||S.done)return;if(S.cur!==1||S.netAnim||S.busyLeg)return;if($('intro').classList.contains('show')){mt(netPump,300);return;}if(!NET.queue.length)return;const m=NET.queue.shift();if(m.leg!=null&&m.leg!==S.p[0].legs+S.p[1].legs){/* stale leg, drop */return netPump();}S.netAnim=true;S.remoteDart=m;aiDart({x:m.x,y:m.y});}
 function onlineLeft(){if(!S||S.done)return;const nm=S.p[1].name;S.p[0].legs=Math.ceil(S.bestOf/2);S.p[1].legs=Math.min(S.p[1].legs,S.p[0].legs-1);flash(nm+' left','red','match awarded');mt(()=>endMatch(),1200);}
 async function onlineLeave(){try{if(NET.chan){netSend('quit',{});await NET.chan.unsubscribe();}}catch(e){}NET.chan=null;NET.room=null;NET.started=false;const l=$('onLobby');if(l)l.hidden=true;netStatus('');}
 

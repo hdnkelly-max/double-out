@@ -40,3 +40,8 @@
 - 14:57 Hayden(bot): Also Mad Dog, your darts upgrade making you worse was a real bug, not you. The better barrels had a smaller timing sweet spot. Fixed: upgrades now widen the window a bit and tighten the spread. Live in about 2 minutes after a refresh. You were right, I hate it.
 - 14:57 Hayden(bot): Leg endings now stop on a card and wait for your tap. Full stop delivered, no more mid sentence. And David, your pull-to-refresh is blocked. Refresh exactly once. One. Then put the finger away.
 - 14:57 Hayden(bot): Still cooking for later today: fast forward on opponent throws, practice drills, the match view rebuild. Online live matches are in beta, you will see Online live match under Pass and play. Try it with a mate only if you are brave, and screenshot whatever breaks.
+- 15:00 Lee: The darts upgrade bug cost him a match, he is annoyed about it. (Possible goodwill idea: nothing promised.)
+- 15:00 Hayden(bot): Mad Dog the Mad, living up to the name. The bug cost you one match, your double 16 has cost you several. Refresh, sign in with Google so that career is safe, and go get it back off whoever beat you. Who was it?
+- 15:05 Lee: BUG: visual bugs, items being listed way down the screen out of view (screen not yet specified, asked).
+- ACTION: Layout overflow: a list screen renders items below the viewport with no scroll (Lee). Screen TBC, likely phone. Check shop/season table/Run draft for missing overflow scroll or fixed-height containers.
+- 15:06 Hayden(bot): Visual bugs logged. Which screen is listing items off the bottom, the shop, the season table, or the Run card draft? And is that on phone? A screenshot would save us both a message.
