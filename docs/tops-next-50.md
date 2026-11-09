@@ -8,19 +8,22 @@ Ranked by player impact per effort (ChatGPT, from the full QA screenshots in sho
 - Fixed during QA: the phone route bar was 48px wider than its slot ("ROUTES" cut off).
 - Known gaps: Run Player tab still shows career labels; the leaderboard screen can't be checked offline.
 
+## Progress (9 Nov, evening)
+- Done: 1-9. Item 10 is partly done: events are recorded in each player's save (synced to the cloud when signed in) because creating a dedicated anonymous events table needs Hayden's OK.
+
 ## The list
 | # | Area | Item | Size |
 |---|---|---|---|
-| 1 ★ | Result bug | Feats render as full rows (min 180px), hide empties, overflow behind "All feats" | S |
-| 2 ★ | Career bug | Remove "undefined" from the previous-fixture tile; fallback "Previous result unavailable" | S |
-| 3 ★ | Phone throwing | Throw pad explains its state: Aim on the board, Hold here, Release at the marker, verdict | M |
-| 4 ★ | Pub polish | Buff chip under the name/score row so names never collapse | S |
-| 5 ★ | Run context | Run Player tab: seed, match, lives, run average, cards, suits; no bank/chapter/Deano | M |
-| 6 ★ | Phone intro | Venue and competition on separate lines (12px kicker, 16px name) | S |
-| 7 ★ | Onboarding | Six-dart first-play lesson: three guided, three unassisted; Skip and Replay | M |
-| 8 ★ | Multiplayer | "Rematch, same room" on online results; keep pros, teams, rules; re-collect ready | M |
-| 9 ★ | Match feedback | Visit receipt: three dart chips, visit total, remaining, exact bust cause | M |
-| 10 ★ | Beta evidence | Anonymous funnel: mode entry, first dart, first leg, result, rematch, quit, disconnect | M |
+| 1 ★ ✅ | Result bug | Feats render as full rows (min 180px), hide empties, overflow behind "All feats" | S |
+| 2 ★ ✅ | Career bug | Remove "undefined" from the previous-fixture tile; fallback "Previous result unavailable" | S |
+| 3 ★ ✅ | Phone throwing | Throw pad explains its state: Aim on the board, Hold here, Release at the marker, verdict | M |
+| 4 ★ ✅ | Pub polish | Buff chip under the name/score row so names never collapse | S |
+| 5 ★ ✅ | Run context | Run Player tab: seed, match, lives, run average, cards, suits; no bank/chapter/Deano | M |
+| 6 ★ ✅ | Phone intro | Venue and competition on separate lines (12px kicker, 16px name) | S |
+| 7 ★ ✅ | Onboarding | Six-dart first-play lesson: three guided, three unassisted; Skip and Replay | M |
+| 8 ★ ✅ | Multiplayer | "Rematch, same room" on online results; keep pros, teams, rules; re-collect ready | M |
+| 9 ★ ✅ | Match feedback | Visit receipt: three dart chips, visit total, remaining, exact bust cause | M |
+| 10 ★ (partly) | Beta evidence | Anonymous funnel: mode entry, first dart, first leg, result, rematch, quit, disconnect | M |
 | 11 | Presentation | Remove duplicate throwing poses behind the active player | S |
 | 12 | Career table | Compact table: position, player, played, points; W/L and legs in the full table | S |
 | 13 | Kit shop | Show deltas vs equipped (Spread −7%, Window +4%), formulas under Details | M |
