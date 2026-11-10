@@ -10,6 +10,20 @@ Round 1–3 went live in v1.55. **Wave 2 (this push, 11 Nov afternoon)** is on t
 
 Regression gate (`tests/regress.js 2`) passes with everything built in.
 
+## Wave 3 (11 Nov afternoon, from Hayden's phone feedback)
+- **Reveal fanfare:**
+  - Rare: rays and a pop.
+  - Epic and legendary also get a flash, a canvas spark burst (a gold fountain for legendary), a screen shake and an "Epic pull" / "Legendary" banner.
+- **The holo finish moves on its own:** the light drifts on a loop, a moving foil edge runs round the frame, and sparkles twinkle. On iPhone the tilt sensor drives the foil once allowed; permission is asked on the first pick tap.
+- **Pack screen:**
+  - The summary scrolls, and Done stays reachable with 8+ cards; big hauls go 4 across with names.
+  - The deal is a bigger fanned hand with an invite glow.
+- **Visit medals** (`v11.js`): bronze 60+, silver 100+, gold 140+ medal with the score, plus a lime PB tag. The text pops are gone except "on a finish".
+- **Board by level** (`tc/venue.js`, `TOPS_BOARD` hook):
+  - Pub: worn and stained, with missed-dart holes in the surround.
+  - Stage tiers: fresh, white numbers, an event ring and sponsor marks.
+- **Pub posters** (`tc/venue.js`, `TOPS_VENUE_TEX` hook): 4 posters painted into the baked wall frames from `assets/venue/`.
+
 ## Wave 2: what's new
 - **68 cards** (66 in packs + 2 exclusives), up from 22. New regulars, venues, moments, disasters, kit, and legends Price, Wright, Smith, Barneveld, Sherlock, Humphries, Anderson. Phil Taylor now has real art. **Phil** (Phillip Callard) and **Water on Standby** from the boys' chat are in.
 - New rewards: 9 titles, aviators (face slot), flame and lantern flights, black barrel, Humphries' "cool" win celebration, Anderson's saltire walk-on. The barrel cosmetic needs hook 6 below.
