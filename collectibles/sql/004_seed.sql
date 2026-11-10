@@ -8,7 +8,8 @@ insert into tc_card_sets(id,name,completion_cosmetic,sort) values
 ('kit','The Kit','flight_steel',4),
 ('legends','Ally Pally Legends','walk_lasers',5),
 ('nineclub','Nine-Dart Club',null,6),
-('exhibitions','Exhibition Nights',null,7)
+('exhibitions','Exhibition Nights',null,7),
+('tnbc','Tangaroa Weekend','title_tnbc',8)
 on conflict (id) do update set name=excluded.name, completion_cosmetic=excluded.completion_cosmetic, sort=excluded.sort;
 insert into tc_cards(id,set_id,no,name,rarity,art_key,cosmetic_id,exclusive) values
 ('deano','regulars',1,'Deano','epic','assets/cards/art/deano.webp','wear_mullet',false),
@@ -77,6 +78,22 @@ insert into tc_cards(id,set_id,no,name,rarity,art_key,cosmetic_id,exclusive) val
 ('anderson','legends',64,'Gary Anderson','legendary','assets/cards/art/anderson.webp','walk_saltire',false),
 ('phil','regulars',65,'Phil','uncommon','assets/cards/art/phil.webp',null,false),
 ('water','disasters',66,'Water on Standby','common','assets/cards/art/water.webp',null,false),
+('tn_stu','tnbc',67,'Stu Sweeps','rare','assets/cards/art/tn_stu.webp',null,false),
+('tn_donkey','tnbc',68,'The Donkey Slayer','epic','assets/cards/art/tn_donkey.webp','title_donkey',false),
+('tn_king','tnbc',69,'The Only Legal King','legendary','assets/cards/art/tn_king.webp','title_legalking',false),
+('tn_hotsauce','tnbc',70,'Malicious Intent','uncommon','assets/cards/art/tn_hotsauce.webp',null,false),
+('tn_tard','tnbc',71,'Tard Darts','common','assets/cards/art/tn_tard.webp',null,false),
+('tn_cruiser','tnbc',72,'The T18 Vessel','uncommon','assets/cards/art/tn_cruiser.webp','flight_cruiser',false),
+('tn_5am','tnbc',73,'The 5am 180','epic','assets/cards/art/tn_5am.webp','title_180club',false),
+('tn_maddog','tnbc',74,'Mad Dog','rare','assets/cards/art/tn_maddog.webp','title_maddog',false),
+('tn_tow','tnbc',75,'Warp Speed Bryn','rare','assets/cards/art/tn_tow.webp',null,false),
+('tn_daisy','tnbc',76,'The Daisy Chain','common','assets/cards/art/tn_daisy.webp',null,false),
+('tn_sammo','tnbc',77,'Sammo''s 21','legendary','assets/cards/art/tn_sammo.webp','flight_snapper',false),
+('tn_warship','tnbc',78,'The War Ship','common','assets/cards/art/tn_warship.webp',null,false),
+('tn_pie','tnbc',79,'Never Outsource','common','assets/cards/art/tn_pie.webp',null,false),
+('tn_biter','tnbc',80,'The Biter Cup','rare','assets/cards/art/tn_biter.webp','title_bitercup',false),
+('tn_407','tnbc',81,'The 4:07am 160','uncommon','assets/cards/art/tn_407.webp',null,false),
+('tn_stickers','tnbc',82,'25mm Stickers','common','assets/cards/art/tn_stickers.webp',null,false),
 ('ninex','nineclub',100,'Nine-Dart Club','legendary','assets/cards/art/ninex.webp','flight_gold',true),
 ('ticket','exhibitions',101,'Exhibition Ticket','common','assets/cards/art/ticket.webp',null,true)
 on conflict (id) do update set set_id=excluded.set_id, no=excluded.no, name=excluded.name, rarity=excluded.rarity, art_key=excluded.art_key, cosmetic_id=excluded.cosmetic_id, exclusive=excluded.exclusive;
