@@ -23,7 +23,7 @@ Regression gate (`tests/regress.js 2`) passes with everything built in.
   - Spare legendaries only, with mates you've played online (from `tops_mp_results`).
   - Offers in and out with Accept / Decline / Cancel, plus your spares and each mate's spares. Pick yours and theirs, then Send. Offers last 48 hours.
   - Accept swaps in another free copy if the one asked for is busy, and nobody ever ends with zero copies.
-  - Needs `sql/005_trade_view.sql` (not applied yet, waiting on Hayden's OK). Covered by `collectibles/tests/trade.js`.
+  - `sql/005_trade_view.sql` is applied live. Covered by `collectibles/tests/trade.js`.
 - **Opponent walk-on online:** if your mate has a walk-on equipped, their name and title banner plus their effect play on your screen at the start of an online match, before your own.
 
 ## What the player gets
@@ -83,7 +83,7 @@ Everything is in `save.tc`, so it syncs with the cloud save:
 - The loadout lives in `save.look.wear`, `save.look.cel`, `save.look.kit` and `save.look.title`, so opponents receive it through the existing online look sync.
 
 ## Server (Supabase, `tc_` tables)
-- Live: `001_collectibles`, `002_trades`, `003_client_sync`, `004_seed` (catalogue). Pending: `005_trade_view` and the 2 new cards in `004_seed` (Phil, Water).
+- Live: `001_collectibles`, `002_trades`, `003_client_sync`, `004_seed` (68-card catalogue), `005_trade_view`.
 - Re-run `node sql/gen_seed.js > sql/004_seed.sql` after adding cards to `tc/data.js`.
 - Tests: `test_collectibles.sql`, `test_trades.sql` and `test_sync.sql` all pass on local Postgres 16 with auth stubs.
 - Career trust is accepted (mates-only game). Online awards could later go through the referee with `p_trust 'verified'`.
