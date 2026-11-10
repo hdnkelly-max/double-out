@@ -74,3 +74,4 @@
 - SHIPPED v1.47: season board for the boys in Play Online records: season and career average, career title, record, 180s, high out, best leg, and how many darts into a nine-darter you've got (tracked from now on)
 - SHIPPED v1.48: Lee's logo replaces the old TOPS wordmark in the match header and the career and creator headers
 - SHIPPED v1.49: Lee's two new walk-ons, Walk-On Energy and Late-night Lounge
+- SHIPPED v1.50: per-match telemetry (time to first dart, how each match ends, frame rate p50/p95 and long frames, device) and a regression gate that plays real matches before every ship. Found the old funnel was wrong: first-dart counted once per session, so the 41% never-throw figure was a tracking bug
