@@ -259,6 +259,7 @@
   // ---------- welcome backfill: returning players get the picks their history would have earned ----------
   function backfill() {
     const t = st(); if (!t || t.bf) return false;
+    if (!((save.matches || 0) > 0)) return false; // brand-new players: welcome after their first match, not over the lesson
     t.bf = Date.now(); const before = openPicks().length; H.sess = [];
     const got = Object.keys(save.ach || {});
     got.forEach(id => { const a = (typeof ACH !== 'undefined' && ACH.find(x => x.id === id)); award('ach:' + id, 'ach', 'Welcome · ' + (a ? a.n : 'achievement')); });

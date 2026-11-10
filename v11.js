@@ -136,3 +136,12 @@
  window.TOPS_SAVEV={pull,dev:()=>DEV};
 })();
 </script>
+<script>
+// ===== v1.57 guided first throw before your first career match =====
+(function(){if(typeof lessonStart!=='function'||typeof playNext!=='function')return;
+ const need=()=>!save.lessonDone&&(save.totThrows||0)<30;
+ const _pn=playNext;playNext=function(){try{const c=career();if(c&&!c.run&&need()&&!(typeof LES!=='undefined'&&LES.on)){LES.career=true;try{trackEv('lesson_auto');}catch(e){}lessonStart();return;}}catch(e){}return _pn.apply(this,arguments);};
+ const _lf=lessonFinish;lessonFinish=function(){const r=_lf.apply(this,arguments);try{if(LES.career){const b=$('lsCareer');if(b){b.textContent='Play your first match';b.onclick=ev=>{ev.stopPropagation();LES.on=false;LES.career=false;save.lessonDone=true;persist();$('lesson').hidden=true;if(S)S.done=true;$('hud').hidden=true;try{showHub();}catch(e){}setTimeout(()=>{try{playNext();}catch(e){}},300);};}}}catch(e){}return r;};
+ const _le=lessonEnd;lessonEnd=function(skipped){const wasC=LES.career;LES.career=false;const r=_le.apply(this,arguments);if(wasC&&skipped){try{if(S)S.done=true;$('hud').hidden=true;showHub();setTimeout(()=>{try{playNext();}catch(e){}},300);}catch(e){}}return r;};
+})();
+</script>
