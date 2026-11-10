@@ -8,6 +8,9 @@
 @keyframes v11pop{0%{transform:translateY(8px) scale(.9)}45%{transform:translateY(0) scale(1.05)}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){#vpop .vp{animation:none}}
 #hub b.nm{font-size:15px!important;line-height:1.05!important;letter-spacing:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block}
+/* the reward card already lists achievements: no toasts on top of it */
+body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
+#lvFirst .sw,.c3rw-unl .sw{display:none!important}
 /* breakdown tiles */
 #resKeys.v11{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #resKeys.v11>div{min-width:0}

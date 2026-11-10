@@ -85,3 +85,4 @@
 - SHIPPED v1.58: server referee covers doubles (team scores by seat parity, same as the local engine)
 - SHIPPED v1.59: collectibles wave 2 (68 cards incl. Phil and Water on Standby, reveal sounds, server mode with offline queue, trades screen, opponent walk-on online, barrel cosmetics hook 6)
 - SHIPPED v1.60: polish: card unlock tags show the reward name (not the id), collection shows owned cards first and lighter empty slots, career strip hides position before the first match and wraps long opponent names, 'level on points' promotion line, exhibitions skip the difficulty shift
+- SHIPPED v1.61: no achievement toasts over the reward card (it lists them already), stray swatch dot removed from unlock icons
