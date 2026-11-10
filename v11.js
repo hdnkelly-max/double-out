@@ -1,12 +1,12 @@
 <style>
 /* v1.53 quick wins: visit pops, post-match breakdown, rematch, first level-up */
 #vpop{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 118px);transform:translateX(-50%);z-index:9000;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px}
-#vpop .vp{font:800 15px/1 Barlow,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:8px 14px;border-radius:999px;background:rgba(14,16,20,.86);color:#f1e6c8;border:1px solid rgba(214,178,94,.55);box-shadow:0 6px 18px rgba(0,0,0,.35);animation:vpIn 1.6s cubic-bezier(.2,.75,.2,1) forwards;white-space:nowrap}
+#vpop .vp{font:800 15px/1 Barlow,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:8px 14px;border-radius:999px;background:rgba(14,16,20,.86);color:#f1e6c8;border:1px solid rgba(214,178,94,.55);box-shadow:0 6px 18px rgba(0,0,0,.35);animation:v11pop .5s cubic-bezier(.2,.75,.2,1);white-space:nowrap}
 #vpop .vp.gold{background:linear-gradient(180deg,#e9c46a,#b8872b);color:#1b1306;border-color:#f6dc92}
 #vpop .vp.pb{background:linear-gradient(180deg,#f3d27a,#c2902f);color:#1b1306;border-color:#fff1bf;font-size:17px;box-shadow:0 0 0 2px rgba(246,220,146,.35),0 10px 26px rgba(0,0,0,.45)}
 #vpop .vp small{display:block;font:600 11px/1.2 Manrope,system-ui,sans-serif;letter-spacing:.04em;text-transform:none;margin-top:3px;opacity:.85}
-@keyframes vpIn{0%{opacity:0;transform:translateY(8px) scale(.9)}12%{opacity:1;transform:translateY(0) scale(1.04)}22%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
-@media (prefers-reduced-motion:reduce){#vpop .vp{animation:vpFade 1.6s linear forwards}@keyframes vpFade{0%,85%{opacity:1}100%{opacity:0}}}
+@keyframes v11pop{0%{transform:translateY(8px) scale(.9)}45%{transform:translateY(0) scale(1.05)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){#vpop .vp{animation:none}}
 /* breakdown tiles */
 #resKeys.v11{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #resKeys.v11>div{min-width:0}
@@ -18,13 +18,13 @@
 #btnResultNext.v11rem small{color:#3a2a0c!important;opacity:.85}
 /* first level-up reveal */
 #lvFirst{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 42%,#3a2a0c,#0b0c0f 72%);color:#f1e6c8;text-align:center;padding:24px;cursor:pointer}
-#lvFirst .k{font:700 13px Manrope,system-ui,sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#d6b25e;opacity:0;animation:lvUp .5s .1s forwards}
-#lvFirst .n{font:900 88px/1 Barlow,system-ui,sans-serif;background:linear-gradient(180deg,#fff1bf,#d6a640 60%,#9a6d1e);-webkit-background-clip:text;background-clip:text;color:transparent;opacity:0;animation:lvBig .7s .25s cubic-bezier(.2,.75,.2,1) forwards;filter:drop-shadow(0 6px 18px rgba(214,166,64,.45))}
-#lvFirst .s{font:600 15px/1.4 Manrope,system-ui,sans-serif;max-width:300px;margin-top:14px;opacity:0;animation:lvUp .5s .8s forwards}
-#lvFirst .t{margin-top:26px;font:700 12px Manrope,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#d6b25e;opacity:0;animation:lvUp .5s 1.4s forwards}
+#lvFirst .k{font:700 13px Manrope,system-ui,sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#d6b25e;animation:lvUp .5s .1s}
+#lvFirst .n{font:900 88px/1 Barlow,system-ui,sans-serif;background:linear-gradient(180deg,#fff1bf,#d6a640 60%,#9a6d1e);-webkit-background-clip:text;background-clip:text;color:transparent;animation:lvBig .7s .25s cubic-bezier(.2,.75,.2,1);filter:drop-shadow(0 6px 18px rgba(214,166,64,.45))}
+#lvFirst .s{font:600 15px/1.4 Manrope,system-ui,sans-serif;max-width:300px;margin-top:14px;animation:lvUp .5s .8s}
+#lvFirst .t{margin-top:26px;font:700 12px Manrope,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#d6b25e;animation:lvUp .5s 1.4s}
 #lvFirst .ring{position:absolute;width:220px;height:220px;border-radius:50%;border:2px solid rgba(246,220,146,.6);opacity:0;animation:lvRing 1.2s .25s ease-out forwards}
-@keyframes lvUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes lvBig{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+@keyframes lvUp{from{transform:translateY(8px)}to{transform:none}}
+@keyframes lvBig{0%{transform:scale(.6)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
 @keyframes lvRing{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(2.2)}}
 </style>
 <script>
@@ -86,7 +86,7 @@
  const lvReveal=(unl)=>{const lab=(unl.querySelector('small')||{}).textContent||'';const m=lab.match(/Level (\d+)/);const lv=m?m[1]:'2';
    const item=(unl.querySelector('b')||{}).textContent||'';const ico=unl.querySelector('.ri');
    const o=document.createElement('div');o.id='lvFirst';o.innerHTML=`<div class="ring"></div><div class="k">Level up</div><div class="n">${lv}</div><div class="s">${item?`<b style="display:block;font:800 22px Barlow,system-ui,sans-serif;letter-spacing:.04em;color:#fff1bf;margin-bottom:6px">${item}</b>`:''}Your first unlock. Every level from here adds something to your kit, your look or your name.</div><div class="t">Tap to equip</div>`;
-   if(ico){const c=ico.cloneNode(true);c.style.cssText='display:block;width:96px;height:96px;margin:18px auto 0;opacity:0;animation:lvUp .5s .6s forwards';const im=c.querySelector('img');if(im)im.style.cssText='width:96px;height:96px;object-fit:contain';o.querySelector('.s').after(c);}
+   if(ico){const c=ico.cloneNode(true);c.style.cssText='display:block;width:96px;height:96px;margin:18px auto 0;animation:lvUp .5s .6s';const im=c.querySelector('img');if(im)im.style.cssText='width:96px;height:96px;object-fit:contain';o.querySelector('.s').after(c);}
    document.body.appendChild(o);try{sfxLevel();setTimeout(()=>{try{sfxCheer(false);}catch(e){}},350);}catch(e){}try{confetti(1);}catch(e){}
    let gone=false;const go=()=>{if(gone)return;gone=true;o.style.transition='opacity .25s';o.style.opacity='0';setTimeout(()=>o.remove(),260);};o.onclick=go;setTimeout(go,5000);};
  new MutationObserver(()=>{try{const u=$('c3rwUnl');if(!u||u.hidden||u.dataset.v11||save.lvFirstSeen)return;u.dataset.v11=1;if(!/Level \d+ unlocked/.test(u.textContent))return;save.lvFirstSeen=true;try{persist();}catch(e){}setTimeout(()=>lvReveal(u),250);}catch(e){}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden'],childList:true});
