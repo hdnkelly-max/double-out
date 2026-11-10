@@ -77,3 +77,4 @@
 - SHIPPED v1.50: per-match telemetry (time to first dart, how each match ends, frame rate p50/p95 and long frames, device) and a regression gate that plays real matches before every ship. Found the old funnel was wrong: first-dart counted once per session, so the 41% never-throw figure was a tracking bug
 - SHIPPED v1.51: server referee for online (Supabase tops_ref_*): every dart submitted, phones snap to server state on a confirmed mismatch, leave skips turns. Teams stay on peer sync.
 - SHIPPED v1.52: referee waits for celebrations, card drafts and leg changes, and needs 3 matching polls (~7s) before correcting a phone
+- SHIPPED v1.53: visit pops (60/80 plus, first treble, first ton, ton-forty, new best visit, on a finish), post-match breakdown in every mode (first 9, average vs your form, checkouts, timing, tip), rematch button first and gold after online games, full-screen first level-up reveal
