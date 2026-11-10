@@ -148,7 +148,7 @@
       if (r !== 'common') Sfx.play('rev_' + r, r === 'legendary' ? 1 : .85); if (r === 'epic') buzz(15); else if (r === 'legendary') buzz([20, 40, 30]);
       const owned = (res.owned && res.owned[def.id]) || 1;
       if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
-      else tag(mine, def.cosmetic ? `New · unlocks ${def.cosmetic}` : 'New', 'new');
+      else tag(mine, def.cosmetic ? `New · unlocks ${((window.TC_DATA && TC_DATA.COS && TC_DATA.COS[def.cosmetic]) || {}).n || 'a reward'}` : 'New', 'new');
       mine.dataset.inspect = '1';
       got.push({ def, dupe: owned > 1 });
       await wait(quick ? 120 : T.react);
