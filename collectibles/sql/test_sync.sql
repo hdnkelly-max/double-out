@@ -1,0 +1,11 @@
+insert into auth.users values ('11111111-1111-1111-1111-111111111111');
+select set_config('t.uid','11111111-1111-1111-1111-111111111111',false);
+select 'S1 import', (tc_import('{"own":{"deano":2,"shazza":1,"nosuch":3},"unl":["wear_towel"],"paid":["ach:tonout","match:x:180"],"picks":[{"reason":"180","opts":["kev","mo","fly"]},{"reason":"Ton Out","opts":["kev"]}],"since":12}'::jsonb))->'own';
+select 'S2 reimport ignored', (tc_import('{"own":{"deano":9}}'::jsonb))->'own'->>'deano';
+select 'S3 paid dedupe', tc_award('ach:tonout','achievement','Ton Out');
+select 'S4 open picks', jsonb_array_length(tc_state()->'picks');
+select 'S5 choose', (tc_choose((select min(id) from tc_picks where status='open'),2))->>'chosen';
+select 'S6 state', tc_state()->'own';
+select 'S7 grant', tc_grant('exh:taylor:win','taylor','title_power'), tc_grant('exh:taylor:win','taylor','title_power');
+select 'S8 unlocks', tc_state()->'unl';
+select 'S9 since', tc_state()->'since';

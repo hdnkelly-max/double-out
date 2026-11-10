@@ -1,0 +1,42 @@
+const { chromium } = require('playwright');
+const { execFileSync } = require('child_process');
+const U1 = '11111111-1111-1111-1111-111111111111', U2 = '22222222-2222-2222-2222-222222222222';
+const lit = v => v === null || v === undefined ? 'null' : typeof v === 'number' ? String(v) : Array.isArray(v) ? (v.length && typeof v[0] === 'number' ? `array[${v.join(',')}]::bigint[]` : `array[${v.map(x => `'${x}'`).join(',')}]::uuid[]`) : typeof v === 'object' ? `$tc$${JSON.stringify(v)}$tc$::jsonb` : `$tc$${v}$tc$`;
+function sql(q, uid) { const pre = uid ? `select set_config('t.uid','${uid}',false);` : ''; return execFileSync('su', ['postgres', '-c', `psql -h /var/tmp/pgtest -p 5499 -d tcint -At -v ON_ERROR_STOP=1 -c "${(pre + q).replace(/"/g, '\\"').replace(/\$/g, '\\$')}"`], { encoding: 'utf8' }).trim().split('\n').pop(); }
+function rpc(fn, args, uid) { const a = Object.entries(args || {}).map(([k, v]) => `${k} => ${lit(v)}`).join(', '); try { return { data: JSON.parse(sql(`select to_jsonb(${fn}(${a}))`, uid)) }; } catch (e) { return { error: { message: String(e.stderr || e.message).split('\n').find(l => /ERROR/.test(l)) || 'sql error' } }; } }
+const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
+(async () => {
+  sql(`delete from tc_trade_items; delete from tc_trades; delete from tc_owned; delete from tc_pick_options; delete from tc_picks; delete from tc_unlocks; delete from tc_reward_events; delete from tc_pick_state;
+    insert into tc_pick_state(user_id, imported_at) values ('${U1}', now());
+    insert into tc_owned(card_id, owner_id) values ('nine','${U1}'),('nine','${U1}'),('littler','${U1}'),('littler','${U1}'),('kev','${U1}'),('taylor','${U2}'),('taylor','${U2}'),('humphries','${U2}'),('humphries','${U2}');`);
+  sql(`select tc_trade_offer('${U1}', array[(select max(id) from tc_owned where card_id='humphries')], array[(select max(id) from tc_owned where card_id='littler')])`, U2);
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist'] });
+  const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const errs = []; p.on('pageerror', e => errs.push(e.message));
+  await p.exposeFunction('__rpc', (fn, args, uid) => rpc(fn, args, uid));
+  const ev = (f, a) => p.evaluate(f, a);
+  await p.goto('http://localhost:8790/index.html'); await p.waitForTimeout(3500);
+  await ev(([U, U2]) => { save.authSeen = true; $('login').hidden = true; newCareer(); save.tc = { bf: 1 }; persist(); showHub('play');
+    window.mpFetch = async () => [{ players: [{ pid: 'u:' + U, name: 'Hayden Kelly' }, { pid: 'u:' + U2, name: 'Lee McKenzie' }, { pid: 'u:f2988dfb-e265-4099-908c-d500279af2c2', name: 'David Fraser' }] }];
+    window.NET.sb = { rpc: (fn, args) => window.__rpc(fn, args, U), from: () => ({ upsert: async () => ({ error: null }), insert: () => Promise.resolve({ error: null }), select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }; window.NET.user = { id: U }; }, [U1, U2]);
+  await ev(() => TC.sync()); await ev(() => TC.ready());
+  await ev(() => { document.querySelectorAll('.tc-sheet').forEach(e => e.remove()); TC_API.binder(); }); await p.waitForTimeout(1200);
+  await p.screenshot({ path: '/home/claude/qa/t1_binder.png' });
+  await p.click('#tcTradeBtn'); await p.waitForTimeout(1500);
+  await p.screenshot({ path: '/home/claude/qa/t2_trades.png' });
+  await ev(() => { const s = document.querySelector('.tc-trades .tc-sh-in') || document.querySelector('.tc-trades'); s.scrollTop = 400; }); await p.waitForTimeout(300);
+  await p.click('#tcMine .tc-tcard:has-text("Nine-Darter")'); await p.waitForTimeout(300);
+  await p.click('.tc-mate[data-u="' + U2 + '"] .tc-tcard:has-text("Taylor")'); await p.waitForTimeout(400);
+  await p.screenshot({ path: '/home/claude/qa/t3_compose.png' });
+  await p.click('#tcSend'); await p.waitForTimeout(1500);
+  ok(sql(`select count(*) from tc_trades where sender_id='${U1}' and status='open'`) === '1', 'offer sent from the UI');
+  await ev(() => { const s = document.querySelector('.tc-trades .tc-sh-in'); s.scrollTop = 0; }); await p.waitForTimeout(200);
+  await p.screenshot({ path: '/home/claude/qa/t4_after_send.png' });
+  const acc = await p.$('.tc-offer [data-a="accept"]'); await acc.click(); await p.waitForTimeout(2000);
+  ok(sql(`select count(*) from tc_owned where owner_id='${U1}' and card_id='humphries'`) === '1', 'accepting gives you their card');
+  ok(sql(`select count(*) from tc_owned where owner_id='${U1}' and card_id='littler'`) === '1', 'and you keep one copy of yours');
+  ok(await ev(() => TC_API.st().own.humphries === 1), 'collection mirrored after the swap');
+  await p.screenshot({ path: '/home/claude/qa/t5_after_accept.png' });
+  console.log('errors:', JSON.stringify(errs.slice(0, 6)));
+  await b.close();
+})();

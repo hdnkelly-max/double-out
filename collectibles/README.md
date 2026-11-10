@@ -1,14 +1,30 @@
 # TOPS collectibles: handoff for the build chat (11 Nov 2026)
 
 Built in the collectibles chat. Spec: `claude/tops-collectibles-plan.md`. Rules: `claude/tops-coordination.md`.
-Nothing here is live. Two branches to merge at a clean point:
+Round 1–3 went live in v1.55. **Wave 2 (this push, 11 Nov afternoon)** is on the same two branches, rebased on `src` v1.58 with your backfill line kept. Merge at a clean point:
 
 | Branch | What | Where it lands |
 |---|---|---|
 | `collectibles-src` (from `src`) | Game integration: `tc/` module + 5 small hooks in `game4.js` + `build.js` bundling | Your game source (oche-next) |
-| `collectibles` (from `main`) | `assets/cards/` (all art, 4.1 MB WebP), `collectibles/sql`, sim, prototype, review shots | `assets/cards/` on main; SQL to Supabase when the lock is free |
+| `collectibles` (from `main`) | `assets/cards/` (all art incl. 47 new, plus `sfx/` reveal sounds, about 11 MB), `collectibles/sql`, sim, tests, review shots | `assets/cards/` on main (sfx folder is new). SQL 001–004 is already applied live |
 
 Regression gate (`tests/regress.js 2`) passes with everything built in.
+
+## Wave 2: what's new
+- **68 cards** (66 in packs + 2 exclusives), up from 22. New regulars, venues, moments, disasters, kit, and legends Price, Wright, Smith, Barneveld, Sherlock, Humphries, Anderson. Phil Taylor now has real art. **Phil** (Phillip Callard) and **Water on Standby** from the boys' chat are in.
+- New rewards: 9 titles, aviators (face slot), flame and lantern flights, black barrel, Humphries' "cool" win celebration, Anderson's saltire walk-on. The barrel cosmetic needs hook 6 below.
+- **Card reveal sounds:** 11 short mp3s in `assets/cards/sfx/` (deal, select, flip, missed, charge, one reveal per rarity, duplicate), about 170 KB. Falls back to synth if a file is missing.
+- **Server mode:**
+  - Signed-in players use the live `tc_` RPCs. The first sync imports the save-file collection once (`tc_import`); after that awards and exhibition grants queue in `save.tc.q` and flush whenever online.
+  - The pack screen resolves picks through `tc_choose`. Offline, it shows "Connection dropped, tap again" and keeps the pick.
+  - Signed-out or offline-forever players stay in local mode as before.
+  - Covered by `collectibles/tests/srv.js`: 20 checks against the real SQL on local Postgres.
+- **Trades** (Collection → Trades, signed-in only):
+  - Spare legendaries only, with mates you've played online (from `tops_mp_results`).
+  - Offers in and out with Accept / Decline / Cancel, plus your spares and each mate's spares. Pick yours and theirs, then Send. Offers last 48 hours.
+  - Accept swaps in another free copy if the one asked for is busy, and nobody ever ends with zero copies.
+  - Needs `sql/005_trade_view.sql` (not applied yet, waiting on Hayden's OK). Covered by `collectibles/tests/trade.js`.
+- **Opponent walk-on online:** if your mate has a walk-on equipped, their name and title banner plus their effect play on your screen at the start of an online match, before your own.
 
 ## What the player gets
 - **Card picks:** one each for a 180, a 100+ checkout, an achievement and an achievement tier. A nine-darter keeps all three cards plus the exclusive Nine-Dart Club card. Practice and drills never count.
@@ -59,17 +75,18 @@ Regression gate (`tests/regress.js 2`) passes with everything built in.
 3. `useSplit` and `fpFig.visible`: both check `!window.TOPS_WALKFULL`.
 4. Arm pass: skipped while `TOPS_WALKFULL` is set. `TOPS_WALKPOST()` runs right before `renderer.render(scene,camera)`.
 5. `V.tcCelebrate()`: plays the `pump` clip on the player.
+6. `makeDart`: calls `TOPS_BARREL(bmat)` when `setup.mine`, and `myDart` passes `mine:true` (wave 2, barrel cosmetics).
 
 ## Saved data
 Everything is in `save.tc`, so it syncs with the cloud save:
 - `picks` (options rolled when the pick is earned), `own`, `paid` (unique source keys: no double awards), `unl`, `stats`, `tiers`, `troph`, `exh`, `since` (pity counter), `sets`, `bf` (backfill done)
 - The loadout lives in `save.look.wear`, `save.look.cel`, `save.look.kit` and `save.look.title`, so opponents receive it through the existing online look sync.
 
-## Server mode (when the Supabase lock frees)
-- `sql/001_collectibles.sql` (8 integrity tests) and `sql/002_trades.sql` (trade tests) both pass on local Postgres 16 with auth stubs.
-- To switch over, replace `choose()` / `award()` in `tc/core.js` with `rpc('tc_choose')` / `rpc('tc_award')`. The shapes already match.
-- Trading UI hooks into `tc_trade_offer` / `tc_trade_respond` / `tc_tradeable`. The binder already marks duplicate legendaries as tradeable.
-- For a mates-only game, career trust is accepted. Online awards go through the referee with `p_trust 'verified'`.
+## Server (Supabase, `tc_` tables)
+- Live: `001_collectibles`, `002_trades`, `003_client_sync`, `004_seed` (catalogue). Pending: `005_trade_view` and the 2 new cards in `004_seed` (Phil, Water).
+- Re-run `node sql/gen_seed.js > sql/004_seed.sql` after adding cards to `tc/data.js`.
+- Tests: `test_collectibles.sql`, `test_trades.sql` and `test_sync.sql` all pass on local Postgres 16 with auth stubs.
+- Career trust is accepted (mates-only game). Online awards could later go through the referee with `p_trust 'verified'`.
 
 ## Numbers
 - Odds C60 U25 R11 E3.5 L0.5, with three independent rolls per pick.
@@ -80,7 +97,8 @@ Everything is in `save.tc`, so it syncs with the cloud save:
 - Round 3 fixed the rest: three-shot dimmed walk-on, choreographed pyro, tier medals, finishes stronger at phone scale.
 
 ## Known gaps
-- 20 + 2 cards so far, against about 150 planned. `tc/data.js` is the catalogue, and the art pipeline is in `claude/tops-coordination.md`.
+- 66 + 2 cards so far. `tc/data.js` is the catalogue, and the art pipeline is in `claude/tops-coordination.md`.
 - Mullet and towel read best from the side and back. A proper baked cloth mesh for the towel would be nicer.
 - The cabinet is a painted scene with trophies placed over it, not a live 3D model. It's light on phones; a glb version can swap in later.
-- Legends are drawn as silhouettes from behind (no faces), because the image tool won't do real likenesses.
+- Most legends are drawn from behind in their signature look; Phil Taylor's card shows his face.
+- Phil's card is a generic regular, not his real face. Swap the art if someone sends a photo.
