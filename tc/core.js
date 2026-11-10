@@ -396,7 +396,7 @@
       D.CARDS.filter(c => filt === 'all' || c.set === filt).filter(c => !c.exclusive || t.own[c.id]).sort((a, b) => a.no - b.no).forEach(c => {
         const n = t.own[c.id] || 0; const k = TCC.card(c); k.classList.add('is-mini');
         if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); }
-        else { k.classList.add('is-locked'); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno">No. ${String(c.no).padStart(3, '0')}</span>`); }
+        else { k.classList.add('is-locked'); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
         grid.appendChild(k);
       });
       el.querySelector('#tcSets').innerHTML = `<div class="tcpk__kicker">Sets</div>` + sets.filter(s => !s.exclusive).map(s => {
@@ -446,7 +446,7 @@
       // offers
       const sec = (title, html) => `<div class="tcpk__kicker tc-trk">${title}</div>${html}`;
       let h = '';
-      if (open.length) h += sec('Offers', open.map(x => `<div class="tc-offer" data-id="${x.id}"><div class="tc-off-h"><b>${x.dir === 'in' ? esc(nm(x.other)) + ' wants to swap' : 'You offered ' + esc(nm(x.other))}</b><small>${Math.max(1, Math.round((new Date(x.expires_at) - Date.now()) / 36e5))}h left</small></div><div class="tc-off-cards"><span class="tc-off-side" data-side="${x.dir === 'in' ? 'give' : 'get'}"><small>${x.dir === 'in' ? 'You get' : 'You get'}</small></span><i class="tc-off-arrow">⇄</i><span class="tc-off-side" data-side="${x.dir === 'in' ? 'get' : 'give'}"><small>You give</small></span></div><div class="tc-off-act">${x.dir === 'in' ? '<button type="button" class="tcpk__btn tcpk__btn--go" data-a="accept">Accept</button><button type="button" class="tcpk__later" data-a="decline">Decline</button>' : '<button type="button" class="tcpk__later" data-a="cancel">Cancel offer</button>'}</div></div>`).join(''));
+      if (open.length) h += sec('Offers', open.map(x => `<div class="tc-offer" data-id="${x.id}"><div class="tc-off-h"><b>${x.dir === 'in' ? esc(nm(x.other)) + ' wants to swap' : 'You offered ' + esc(nm(x.other))}</b><small>${Math.max(1, Math.round((new Date(x.expires_at) - Date.now()) / 36e5))}h left</small></div><div class="tc-off-cards"><span class="tc-off-side" data-side="${x.dir === 'in' ? 'get' : 'give'}"><small>You give</small></span><i class="tc-off-arrow">→</i><span class="tc-off-side is-get" data-side="${x.dir === 'in' ? 'give' : 'get'}"><small>You get</small></span></div><div class="tc-off-act">${x.dir === 'in' ? '<button type="button" class="tcpk__btn tcpk__btn--go" data-a="accept">Accept</button><button type="button" class="tcpk__later" data-a="decline">Decline</button>' : '<button type="button" class="tcpk__later" data-a="cancel">Cancel offer</button>'}</div></div>`).join(''));
       // your spares
       h += sec('Your spares', mine.length ? `<div class="tc-trrow" id="tcMine"></div>` : `<p class="tc-dim">No spare legendaries yet. A second copy of any legendary shows up here.</p>`);
       // mates
@@ -464,7 +464,8 @@
       const cp = body.querySelector('#tcCompose'), gv = mine.find(x => x.i === sel.give), wn = sel.mate && (board[sel.mate] || []).find(x => x.i === sel.want);
       if (gv || wn) {
         cp.hidden = false;
-        cp.innerHTML = `<div class="tc-cp-l"><small>Your</small><b>${gv ? esc(CARD[gv.c].name) : 'pick a spare'}</b></div><i>⇄</i><div class="tc-cp-l"><small>${wn ? 'for ' + esc(nm(sel.mate).split(' ')[0]) + "'s" : 'for'}</small><b>${wn ? esc(CARD[wn.c].name) : 'pick a mate\'s card'}</b></div><button type="button" class="tcpk__btn tcpk__btn--go" id="tcSend" ${gv && wn ? '' : 'disabled'}>Send</button>`;
+        cp.innerHTML = `<div class="tc-cp-side"><i class="tc-cp-th" data-c="${gv ? gv.c : ''}"></i><span><small>You give</small><b>${gv ? esc(CARD[gv.c].name) : 'Pick a spare'}</b></span></div><i class="tc-cp-arrow">→</i><div class="tc-cp-side"><i class="tc-cp-th" data-c="${wn ? wn.c : ''}"></i><span><small>${wn ? 'From ' + esc(nm(sel.mate).split(' ')[0]) : 'You get'}</small><b>${wn ? esc(CARD[wn.c].name) : "Pick a mate's card"}</b></span></div><button type="button" class="tcpk__btn tcpk__btn--go" id="tcSend" ${gv && wn ? '' : 'disabled'}>Propose trade</button>`;
+        cp.querySelectorAll('.tc-cp-th').forEach(th => { const c = CARD[th.dataset.c]; if (c) { const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini'); th.appendChild(k); } });
         const sd = cp.querySelector('#tcSend'); if (gv && wn) sd.onclick = () => { sd.disabled = true; act('tc_trade_offer', { p_to: sel.mate, p_give: [gv.i], p_get: [wn.i] }, () => 'Offer sent to ' + nm(sel.mate)); };
       }
     };
