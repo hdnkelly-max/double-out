@@ -79,3 +79,4 @@
 - SHIPPED v1.52: referee waits for celebrations, card drafts and leg changes, and needs 3 matching polls (~7s) before correcting a phone
 - SHIPPED v1.53: visit pops (60/80 plus, first treble, first ton, ton-forty, new best visit, on a finish), post-match breakdown in every mode (first 9, average vs your form, checkouts, timing, tip), rematch button first and gold after online games, full-screen first level-up reveal
 - SHIPPED v1.54: visit pops and level-up reveal no longer start invisible (CSS animations stall on some phones and background tabs)
+- SHIPPED v1.55: collectibles merged (tc/ module from collectibles-src, 5 TOPS_ hooks in game4.js, assets/cards from collectibles). Runs on save.tc; SQL not applied. Also difficulty: Rookie/Club/Competitive picker before the next career match, placement after 120 darts, chip on the hub

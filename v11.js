@@ -92,3 +92,47 @@
  new MutationObserver(()=>{try{const u=$('c3rwUnl');if(!u||u.hidden||u.dataset.v11||save.lvFirstSeen)return;u.dataset.v11=1;if(!/Level \d+ unlocked/.test(u.textContent))return;save.lvFirstSeen=true;try{persist();}catch(e){}setTimeout(()=>lvReveal(u),250);}catch(e){}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden'],childList:true});
 })();
 </script>
+<script>
+// ===== v1.55 difficulty: Rookie / Club / Competitive + placement from your first 120 career darts =====
+// Open, not secret: the level and the shift are shown to the player. No rubber-banding mid-match.
+(function(){
+ const LV={rookie:{n:'Rookie',off:-6,d:'Opponents a step below the pub field. Learn the throw.'},club:{n:'Club',off:0,d:'The field as written. Pub regulars play their usual.'},comp:{n:'Competitive',off:8,d:'Everyone brings their best night. For players already averaging 60+.'}};
+ const D=()=>save.diff||null;window.TOPS_DIFF=LV;
+ const placeOff=()=>{const d=D();return d&&d.place!=null?d.place:0;};
+ const totalOff=()=>{const d=D();if(!d)return 0;return (LV[d.lv]||LV.club).off+placeOff();};
+ window.topsDiffOffset=totalOff;
+ // shift opponent averages in career (not practice, drills or the intro tutorial)
+ const shift=v=>Math.max(25,Math.min(108,Math.round(v+totalOff())));
+ const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&D()){n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&opts.oppAvg>0&&D()&&!viaNext){const o=totalOff();opts=Object.assign({},opts,{oppAvg:shift(opts.oppAvg),_diffOff:o});}}catch(e){}return _bm.call(this,opts);};
+ // count career darts for placement
+ const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
+   if(d.place==null&&d.darts>=120){const a=d.pts/d.darts*3;const c=career();const par=c?TIERS[c.tier].avg:45;d.place=Math.max(-6,Math.min(15,Math.round((a-par)*0.6)));d.placeAvg=+a.toFixed(1);d.placeNew=true;try{trackEv('diff_place',{avg:d.placeAvg,place:d.place,lv:d.lv});}catch(e){}}}}catch(e){}return _em.apply(this,arguments);};
+ const pick=(done,again)=>{const cur=D()&&D().lv;showMsg({from:'Kev Mercer',lines:[again?'Change how hard it is? Your placement stays.':'Before you play: how hard do you want it? Rookie is a step below the pub, Club is the field as written, Competitive is for 60+ averages.','After 120 darts I\'ll tune the field to how you actually throw, and tell you when I do.'],replies:[['Rookie','rookie'],['Club','club'],['Competitive','comp']]},a=>{save.diff=Object.assign(D()||{darts:0,pts:0,place:null},{lv:LV[a]?a:'club'});try{const c=career();if(c)c.next=null;}catch(e){}try{persist();trackEv('diff_pick',{lv:save.diff.lv,again:!!again});}catch(e){}done&&done();});};
+ window.topsPickDiff=()=>pick(()=>{try{showHub();}catch(e){}},true);
+ const placedMsg=done=>{const d=D();d.placeNew=false;try{const c=career();if(c)c.next=null;}catch(e){}try{persist();}catch(e){}const c=career();const par=c?TIERS[c.tier].avg:45;const up=d.place>0;
+   showMsg({from:'Kev Mercer',lines:[`120 darts in. You're averaging ${d.placeAvg} against a ${par} room.`,d.place===0?'That\'s right where the field is. No change.':up?`So the field gets ${d.place} points tougher from tonight. No point beating mugs.`:`So I've eased the field by ${-d.place}. Get the throw right, then we push.`,`You're on ${(LV[d.lv]||LV.club).n}. Change it any time from the hub.`],replies:[['Sweet','ok']]},done);};
+ const _pn=playNext;playNext=function(){const args=arguments,self=this;try{const c=career();if(c&&!c.run&&c.stage!=='intro'){if(!D()){return pick(()=>_pn.apply(self,args));}if(D().placeNew)return placedMsg(()=>_pn.apply(self,args));}}catch(e){}return _pn.apply(self,args);};
+ // a small difficulty chip on the career hub, tap to change
+ setInterval(()=>{try{const d=D();const h=document.querySelector('#hub:not([hidden]) .hx-head');if(!d||!h||h.querySelector('.v11diff'))return;const b=document.createElement('button');b.type='button';b.className='v11diff';b.textContent=(LV[d.lv]||LV.club).n+(d.place?` ${d.place>0?'+':''}${d.place}`:'');b.onclick=e=>{e.stopPropagation();window.topsPickDiff();};const bk=h.querySelector('.bank');h.insertBefore(b,bk||null);}catch(e){}},1500);
+})();
+</script>
+<style>.v11diff{margin:0 8px 0 auto;font:700 11px Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:999px;border:1px solid rgba(214,178,94,.5);background:rgba(14,16,20,.6);color:#e9d9a8;cursor:pointer}</style>
+<script>
+// ===== v1.56 versioned cloud saves: an older device can never overwrite newer progress =====
+(function(){if(typeof cloudPush!=='function'||typeof NET==='undefined')return;
+ let DEV='';try{DEV=localStorage.getItem('tops-dev')||'';if(!DEV){DEV='d'+Math.random().toString(36).slice(2,10);localStorage.setItem('tops-dev',DEV);}}catch(e){DEV='d'+Math.random().toString(36).slice(2,10);}
+ const _ps=persist;persist=function(){try{save.sv=(save.sv||0)+1;save.dev=DEV;}catch(e){}return _ps.apply(this,arguments);};
+ const busy=()=>typeof S!=='undefined'&&S&&!S.done;
+ const adopt=(cloud,why)=>{if(!cloud)return;if(busy()){NET.pendCloud=cloud;return;}NET.pendCloud=null;const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);save.dev=DEV;try{localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){}
+   try{trackEv('save_newer',{why,sv:cloud.sv||0});}catch(e){}try{flash('Synced','',why==='push'?'Newer progress from your other device':'Loaded your latest progress');}catch(e){}try{if(document.querySelector('#hub:not([hidden])'))showHub();else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}};
+ cloudPush=function(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const {data,error}=await NET.sb.rpc('tops_save_put',{p_data:save});if(error)throw error;
+    if(data&&data.ok){NET.cloudAt=Date.now();return;}if(data&&data.err==='older'&&data.data){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+(save.sv||0)+'), loading it');adopt(data.data,'push');}}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);};
+ // coming back to the app: pull, and load the cloud copy if another device moved on
+ const pull=async()=>{try{if(!NET.user||!NET.sb)return;const {data,error}=await NET.sb.from('tops_saves').select('data').eq('user_id',NET.user.id).maybeSingle();if(error||!data||!data.data)return;const c=data.data;
+   if((c.sv||0)>(save.sv||0)&&c.dev!==DEV)adopt(c,'pull');}catch(e){}};
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pull();});
+ setInterval(()=>{try{if(NET.pendCloud&&!busy())adopt(NET.pendCloud,'push');}catch(e){}},2000);
+ window.TOPS_SAVEV={pull,dev:()=>DEV};
+})();
+</script>
