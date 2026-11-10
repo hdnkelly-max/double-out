@@ -507,7 +507,7 @@
       el.querySelector('#tcSlots').innerHTML = D.SLOTS.map(([slot, nm]) => {
         const cur = slotOf(slot), opts = Object.entries(D.COS).filter(([, c]) => c.slot === slot), have = opts.filter(([id]) => t.unl[id]).length;
         const sc = cur && srcOf(cur).card;
-        return `<button type="button" class="tc-lrow" data-slot="${slot}"><i class="tc-lthumb">${sc ? `<img src="${sc.art}" alt="">` : ''}</i><span><small>${nm}</small><b>${cur ? esc(D.COS[cur].n) : 'None'}</b></span><em>${have}/${opts.length}</em><i class="tc-chev">›</i></button>`;
+        return `<button type="button" class="tc-lrow" data-slot="${slot}"><i class="tc-lthumb">${sc ? `<img src="${sc.art}" alt="">` : ''}</i><span><small>${nm}</small><b class="${cur ? '' : 'tc-none'}">${cur ? esc(D.COS[cur].n) : 'Not equipped'}</b></span><em>${have}/${opts.length}</em><i class="tc-chev">›</i></button>`;
       }).join('');
       el.querySelectorAll('.tc-lrow').forEach(b => b.onclick = () => pickSlot(b.dataset.slot, draw));
     };

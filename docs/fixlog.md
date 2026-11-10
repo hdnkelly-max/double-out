@@ -86,3 +86,4 @@
 - SHIPPED v1.59: collectibles wave 2 (68 cards incl. Phil and Water on Standby, reveal sounds, server mode with offline queue, trades screen, opponent walk-on online, barrel cosmetics hook 6)
 - SHIPPED v1.60: polish: card unlock tags show the reward name (not the id), collection shows owned cards first and lighter empty slots, career strip hides position before the first match and wraps long opponent names, 'level on points' promotion line, exhibitions skip the difficulty shift
 - SHIPPED v1.61: no achievement toasts over the reward card (it lists them already), stray swatch dot removed from unlock icons
+- SHIPPED v1.62: ChatGPT polish round 1 (7.6/10): loadout as a 2-column tile grid with a bigger player stage and 'Not equipped' labels, heavier tier medals and rows, card picks banner with lime rule, taller exhibition stakes, consistent chips and close buttons. Regression gate now checks card awards (180s and 100+ outs pay exactly once)

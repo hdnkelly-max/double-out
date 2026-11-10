@@ -149,3 +149,42 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const _le=lessonEnd;lessonEnd=function(skipped){const wasC=LES.career;LES.career=false;const r=_le.apply(this,arguments);if(wasC&&skipped){try{if(S)S.done=true;$('hud').hidden=true;showHub();setTimeout(()=>{try{playNext();}catch(e){}},300);}catch(e){}}return r;};
 })();
 </script>
+<style>
+/* ===== v1.62 polish pass from ChatGPT review (11 Nov, 7.6/10): loadout, tiers, picks banner, stakes, chips, standings ===== */
+/* loadout: the player is the product */
+.tc-load{background:linear-gradient(180deg,rgba(16,25,26,0) 0,rgba(16,25,26,0) 40vh,#10191A 50vh)!important}
+.tc-load-stage{height:42vh!important;padding-bottom:12px!important}
+.tc-load-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:4px}
+.tc-load-list .tc-lrow{min-height:84px;padding:10px;border:1px solid #344345!important;border-radius:10px;background:#162123!important;flex-direction:column;align-items:flex-start;gap:6px;position:relative}
+.tc-load-list .tc-lrow .tc-lthumb{position:absolute;right:10px;top:10px;width:30px;height:42px}
+.tc-load-list .tc-lrow span{padding-right:36px}
+.tc-load-list .tc-lrow small{font:700 10px Manrope,system-ui,sans-serif!important;letter-spacing:.12em}
+.tc-load-list .tc-lrow b{font:800 15px/1.15 "Barlow Condensed",sans-serif!important;letter-spacing:.02em}
+.tc-load-list .tc-lrow b.tc-none{font:600 12px Manrope,system-ui,sans-serif!important;text-transform:none!important;color:#899693}
+.tc-load-list .tc-lrow em{font-size:11px!important;position:absolute;right:10px;bottom:8px}
+.tc-load-list .tc-lrow .tc-chev{display:none}
+.tc-load-list .tc-lrow:has(b:not(.tc-none)){border-color:#C6F36B!important;background:linear-gradient(180deg,#1b2a24,#162123)!important}
+/* achievement tiers: medals with weight */
+.tc-trow{min-height:88px!important;padding:12px 4px!important}
+.tc-trow .tc-medal{width:32px!important;height:32px!important}
+.tc-trow .tc-medal.off{background:radial-gradient(circle at 35% 30%,#8f9699,#4c5357 60%,#2c3134)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.18)!important;opacity:.5!important;filter:none!important}
+.tc-trow .tc-medal.next{opacity:.9!important;box-shadow:0 0 0 2px #C6F36B,inset 0 1px 1px rgba(255,255,255,.2)!important}
+.tc-trow b{font-size:17px!important}
+.tc-trow span{font-size:12px!important;color:#A0AAA7!important}
+.tc-trow .tc-bar{height:4px!important;border-radius:2px;background:#344345!important}
+.tc-trow.done b{color:#D7B45C}
+/* card picks banner reads as a reward */
+.tc-picks{min-height:80px!important;border-left:3px solid #C6F36B!important}
+.tc-picks span b{font-size:26px!important;font-weight:900!important}
+/* exhibition stakes */
+.tc-stakes div{min-height:76px;display:flex;flex-direction:column;justify-content:center;border:1px solid #344345}
+.tc-stakes b{font-size:20px!important}
+/* filter chips */
+.tc-chips button{min-height:36px;font:650 12px Manrope,system-ui,sans-serif!important}
+/* collection: rarity borders, missing cards read as silhouettes */
+.tc.is-locked{opacity:.62}
+/* close buttons: consistent */
+.tc-x{width:44px!important;height:44px!important;top:max(12px,env(safe-area-inset-top))!important;right:12px!important}
+/* career standings: your row stands out */
+#hub tr.you,#hub .you-row,#hub [data-you="1"]{background:#263B32!important;box-shadow:inset 3px 0 0 #C6F36B}
+</style>
