@@ -223,3 +223,39 @@ body.tc-walking #scene{visibility:visible!important}
 .tc-wk-ban span{font-size:13px;color:rgba(237,236,229,.75);margin-top:6px}
 .tc-wk-skip{position:fixed;right:16px;top:calc(9vh + 12px);font:700 12px Manrope,sans-serif;color:rgba(237,236,229,.6)}
 body:has(.tcpk) .ach-toasts,body.tc-walking .ach-toasts{visibility:hidden}
+
+/* ===== round 3 (ChatGPT review 2) ===== */
+/* walk-on: venue exposure down, spotlight on the player, title in the central band */
+#tcWalk::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 55% 48% at 50% 52%,rgba(0,0,0,0) 0%,rgba(0,0,0,.35) 55%,rgba(0,0,0,.78) 100%),linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,.12) 40%,rgba(0,0,0,.55));pointer-events:none}
+.tc-wk-ban{left:15%;right:15%;align-items:center;text-align:center;bottom:calc(9vh + 26px)}
+#tcWalk[data-shot="0"] .tc-wk-ban{opacity:0}
+#tcWalk[data-shot="1"] .tc-wk-ban,#tcWalk[data-shot="2"] .tc-wk-ban{opacity:1;transition:opacity .35s}
+/* tiers: bigger material medals, earned filled, locked outlined, next highlighted */
+.tc-trow{min-height:66px}
+.tc-trow .tc-medal{width:28px;height:28px}
+.tc-trow .tc-medal.off{filter:none;background:none;box-shadow:inset 0 0 0 1.5px rgba(237,236,229,.35);opacity:.45}
+.tc-trow .tc-medal.off b{color:rgba(237,236,229,.6)}
+.tc-trow .tc-medal.next{opacity:1;box-shadow:inset 0 0 0 1.5px var(--lime,#C6F36B)}
+.tc-bronze{background:radial-gradient(circle at 35% 30%,#E2A97C,#A76C43 55%,#6E4326)}
+.tc-silver{background:radial-gradient(circle at 35% 30%,#F4F8FA,#B9C3C7 55%,#77838A)}
+.tc-trow em{font-style:normal;font-size:12px;color:var(--muted,#9AA7A5);align-self:flex-end;margin-top:-2px}
+.tc-trow.done b{color:var(--gold,#C49A52)}
+/* play hub: picks tile with lime accent and room below */
+.tc-picks{border-left:3px solid var(--lime,#C6F36B);background:linear-gradient(90deg,rgba(198,243,107,.2),var(--raised,#263335) 70%)}
+#tcPlay{margin-bottom:16px}
+.ach-toasts{top:calc(64px + env(safe-area-inset-top))!important}
+/* loadout: soft fade from the stage into the list, bigger thumbs */
+.tc-load{background:linear-gradient(180deg,rgba(16,25,26,0) 0,rgba(16,25,26,0) 30vh,rgba(16,25,26,.85) calc(30vh + 60px),var(--base,#10191A) calc(30vh + 90px))!important}
+.tc-othumb{width:44px;height:58px}.tc-opt{min-height:66px}
+/* collection */
+.tc-progbar{height:3px}
+/* cabinet: gradient starts lower, selected trophy gets a warm spotlight */
+.tc-cabinfo{margin-top:-90px;padding-top:100px;background:linear-gradient(180deg,rgba(16,25,26,0),rgba(16,25,26,.9) 90px,var(--base,#10191A) 140px)}
+.tc-tro.sel{filter:drop-shadow(0 0 16px rgba(255,214,140,.55)) drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+.tc-tro.sel::before{content:"";position:absolute;left:-30%;right:-30%;top:-40%;bottom:-6%;background:radial-gradient(ellipse at 50% 30%,rgba(255,220,150,.32),transparent 65%);pointer-events:none}
+/* exhibition: bigger stakes text, reward preview */
+.tc-post{margin-top:52px;aspect-ratio:2/2.8}
+.tc-stakes b{font-size:16px}.tc-stakes small{font-size:12px}
+.tc-st-card{display:flex;align-items:center;gap:8px;justify-content:center;text-align:left}
+.tc-st-mini{--card-w:30px;flex:none;display:block}
+.tc-st-mini .tc{--card-w:30px}

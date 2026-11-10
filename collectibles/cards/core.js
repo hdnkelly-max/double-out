@@ -401,10 +401,10 @@
     });
   }
   function tiersView() {
-    const t = st();
-    sheet('tc-tiers', `<div class="tcpk__kicker">Achievements</div><h2 class="tc-h">Tiers</h2><p class="tc-dim">Bronze, silver and gold. Each tier earns a card pick.</p>` + D.TIERS.map(T => {
-      const lv = t.tiers[T.id] || 0, n = t.stats[T.stat] || 0, nxt = T.lv[Math.min(2, lv)];
-      return `<div class="tc-trow"><div class="tc-meds">${[0, 1, 2].map(i => `<i class="tc-medal tc-${['bronze', 'silver', 'gold'][i]}${i < lv ? '' : ' off'}"><b>${['I', 'II', 'III'][i]}</b></i>`).join('')}</div><div><b>${esc(T.n)}</b><span>${lv >= 3 ? 'Complete · ' + n : `${n} / ${nxt} · ${esc(T.d(nxt))}`}</span><i class="tc-bar" style="--p:${lv >= 3 ? 1 : Math.min(1, n / nxt)}"></i></div></div>`;
+    const t = st(), mats = ['bronze', 'silver', 'gold'];
+    sheet('tc-tiers', `<div class="tcpk__kicker">Achievements</div><h2 class="tc-h">Tiers</h2><p class="tc-dim">Bronze, silver and gold. Every tier earns a card pick.</p>` + D.TIERS.map(T => {
+      const lv = t.tiers[T.id] || 0, n = t.stats[T.stat] || 0, nxt = T.lv[Math.min(2, lv)], done = lv >= 3;
+      return `<div class="tc-trow${done ? ' done' : ''}"><div class="tc-meds">${[0, 1, 2].map(i => `<i class="tc-medal tc-${mats[i]}${i < lv ? '' : ' off'}${i === lv ? ' next' : ''}"><b>${['I', 'II', 'III'][i]}</b></i>`).join('')}</div><div><b>${esc(T.n)}</b><span>${done ? 'All three tiers · ' + n : `Next: ${D.TIER_NAMES[lv]} · ${esc(T.d(nxt))}`}</span><i class="tc-bar" style="--p:${done ? 1 : Math.min(1, n / nxt)}"></i><em>${done ? '' : `${n} / ${nxt}`}</em></div></div>`;
     }).join(''));
   }
 
@@ -468,8 +468,12 @@
     const cel = (save.look && save.look.cel) || {};
     if (!stage && !cel.walkon) return;
     if (S && S.cur !== 0) return;                       // only when you throw first
+    // not before every match: once a session, always for exhibitions and the Palace
+    let seen = false; try { seen = sessionStorage.getItem('tcWalkSeen') === '1'; } catch (e) {}
+    if (seen && !opts.tcExh && (opts.tier | 0) < 6) return;
+    try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {}
     const L = save.look || {}, title = L.title && D.COS[L.title], song = (window.TOPS_walk && save.walkon && TOPS_walk.WALK.find(w => w.id === save.walkon)) || null;
-    WK = { t0: performance.now() + 350, dur: 5200, fx: cel.walkon || null, fired: false, name: save.name || 'You' };
+    WK = { t0: performance.now() + 300, dur: 4800, fx: cel.walkon || null, fired: false, name: save.name || 'You' };
     window.TOPS_WALKFULL = true; document.body.classList.add('tc-walking');
     const ov = document.createElement('div'); ov.id = 'tcWalk';
     ov.innerHTML = `<div class="tc-wk-bars"></div><div class="tc-wk-ban"><small>Now walking on</small><b>${esc(WK.name)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}${song && song.id !== 'off' ? `<span>♪ ${esc(song.n)}</span>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
@@ -526,12 +530,15 @@
     me.rotation.y = k < .78 ? face : face + (WK.rot - face) * Math.min(1, (k - .78) / .12);
     if (k >= .78 && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
     if (k >= .8 && !WK.fired && WK.fx) { WK.fired = true; FX.run(WK.fx, WK.name); }
-    // camera waits by the oche, low and to the side, and watches you walk in; settles at the end
-    const tgt = me.position.clone(); tgt.y += 1.35;
-    const cam = WK.home.clone().addScaledVector(WK.fwd, -.55).addScaledVector(WK.side, -1.7); cam.y = 1.5;
-    const blend = k < .9 ? 1 : 1 - (k - .9) / .1;
+    // three deliberate shots with hard cuts: entrance (low 3/4 front), walk (tracking alongside), arrival (rear 3/4 to the board)
+    const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
+    let cam, tgt, fov;
+    if (k < .7) { cam = up(WK.home.clone().addScaledVector(F, -.55).addScaledVector(Sd, -1.7), 1.5); tgt = up(p0.clone(), 1.3); fov = k < .3 ? 38 : 44; }
+    else { cam = up(WK.home.clone().addScaledVector(F, -2.3).addScaledVector(Sd, -.9), 1.5); tgt = up(WK.home.clone().addScaledVector(F, 1.4), 1.35); fov = 46; }
+    const shot = k < .22 ? 0 : k < .7 ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
+    const blend = k < .93 ? 1 : 1 - (k - .93) / .07;
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
-    return { fov: 46 + (1 - blend) * 6 };
+    return { fov: fov + (1 - blend) * 4 };
   };
 
   // ---------- trophy cabinet ----------
@@ -558,13 +565,13 @@
   const CASE = [{ x: .779, y: .316 }, { x: .896, y: .316 }, { x: .779, y: .419 }, { x: .896, y: .419 }, { x: .779, y: .529 }, { x: .896, y: .529 }];
   function cabinet() {
     const t = st();
-    const el = sheet('tc-cab', `<div class="tc-cabwrap"><img class="tc-cabimg" src="assets/cards/hub_cabinet.webp" alt=""><div class="tc-cablayer"></div></div><div class="tc-cabinfo"><div class="tcpk__kicker">Trophy cabinet</div><h2 class="tc-h">${t.troph.length ? 'Your titles' : 'Empty for now'}</h2><p class="tc-dim">${t.troph.length ? 'Tap a trophy for the final.' : 'Win a league or a knockout and the trophy goes here. Your best cards sit in the case.'}</p><div class="tc-cabdet" id="tcCabDet"></div></div>`);
+    const el = sheet('tc-cab', `<div class="tc-cabwrap"><img class="tc-cabimg" src="assets/cards/hub_cabinet.webp" alt=""><div class="tc-cablayer"></div></div><div class="tc-cabinfo"><div class="tcpk__kicker">Trophy cabinet</div><h2 class="tc-h">${t.troph.length ? 'Your titles' : 'Empty for now'}</h2><p class="tc-dim">${t.troph.length ? `${t.troph.length} ${t.troph.length === 1 ? 'title' : 'titles'} won · ${t.troph.reduce((a, x) => a + x.wins.length, 0)} trophies lifted` : 'Win a league or a knockout and the trophy goes here. Your best cards sit in the case.'}</p><div class="tc-cabdet" id="tcCabDet"></div></div>`);
     const lay = el.querySelector('.tc-cablayer');
     D.TROPHIES.forEach((T, i) => {
       const got = t.troph.find(x => x.id === T.id); if (!got) return;
       const s = SHELF[i]; const b = document.createElement('button'); b.type = 'button'; b.className = 'tc-tro'; b.style.left = (s.x * 100) + '%'; b.style.top = (s.y * 100) + '%'; b.style.width = (s.w * 100) + '%';
       b.innerHTML = `<img src="assets/cards/${T.img}.webp" alt="${esc(T.n)}">${got.wins.length > 1 ? `<em>×${got.wins.length}</em>` : ''}`;
-      b.onclick = () => { const w = got.wins[got.wins.length - 1]; el.querySelector('#tcCabDet').innerHTML = `<b>${esc(T.n)}</b>${got.wins.map(w => `<div class="tc-plate"><span>${new Date(w.at).toLocaleDateString()}</span><span>${w.opp ? 'Final v ' + esc(w.opp) : ''} ${esc(w.score)}</span><span>${w.avg ? 'Avg ' + w.avg : ''}${w.co ? ' · High out ' + w.co : ''}</span></div>`).join('')}`; };
+      b.onclick = () => { lay.querySelectorAll('.tc-tro').forEach(x => x.classList.toggle('sel', x === b)); const w = got.wins[got.wins.length - 1]; el.querySelector('#tcCabDet').innerHTML = `<b>${esc(T.n)}</b>${got.wins.map(w => `<div class="tc-plate"><span>${new Date(w.at).toLocaleDateString()}</span><span>${w.opp ? 'Final v ' + esc(w.opp) : ''} ${esc(w.score)}</span><span>${w.avg ? 'Avg ' + w.avg : ''}${w.co ? ' · High out ' + w.co : ''}</span></div>`).join('')}`; };
       lay.appendChild(b);
     });
     // display case: best six cards, legendary first
@@ -596,8 +603,9 @@
   }
   function poster(ex, L, isNew) {
     const el = sheet('tc-poster', `<div class="tc-post"><img src="assets/cards/exh_poster.webp" alt=""><div class="tc-post-t"><small>${isNew ? 'Just announced' : 'Exhibition night'}</small><b>${esc(L.name)}</b><em>"${esc(L.nick)}"</em><span>Live at ${esc(ex.venue)}</span></div><div class="tc-post-b"><span>${esc(L.blurb)}</span><span>Best of 3 legs · plays near a ${L.avg} average · ${ex.tries} ${ex.tries === 1 ? 'chance' : 'chances'} in the next ${ex.weeksLeft} weeks · uses your spare night</span></div></div>
-      <div class="tc-stakes"><div><b>Best of 3</b><small>legs</small></div><div><b>${ex.tries} ${ex.tries === 1 ? 'try' : 'tries'}</b><small>in ${ex.weeksLeft} weeks</small></div><div><b>${esc(L.nick)}</b><small>foil card</small></div></div>
+      <div class="tc-stakes"><div><b>Best of 3</b><small>legs</small></div><div><b>${ex.tries} ${ex.tries === 1 ? 'try' : 'tries'}</b><small>in ${ex.weeksLeft} weeks</small></div><div class="tc-st-card"><i class="tc-st-mini" data-card="${L.card}"></i><span><b>${esc(L.nick)}</b><small>foil card</small></span></div></div>
       <div class="tc-post-act"><button type="button" class="tcpk__btn tcpk__btn--go" id="tcPGo">Accept invite</button><button type="button" class="tcpk__later" id="tcPLater">Not tonight</button></div>`);
+    { const m = el.querySelector('.tc-st-mini'); if (m) { const k0 = TCC.card(CARD[m.dataset.card]); k0.classList.add('is-flipped', 'is-mini'); m.appendChild(k0); } }
     el.querySelector('#tcPLater').onclick = () => el.querySelector('.tc-x').click();
     el.querySelector('#tcPGo').onclick = () => {
       el.querySelector('.tc-x').click(); const c = career();
