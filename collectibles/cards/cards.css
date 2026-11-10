@@ -1,0 +1,111 @@
+/* TOPS collectible cards. After Hours tokens. Standalone; plugs into the game as-is. */
+:root{
+  --base:#10191A;--surface:#192426;--raised:#263335;--text:#EDECE5;--muted:#9AA7A5;
+  --lime:#C6F36B;--gold:#C49A52;--red:#C9554A;--divider:#34413F;
+  --card-w:min(58vw,232px);
+  --flip-ms:540ms;--ease-flip:cubic-bezier(.2,.75,.2,1);
+}
+
+/* ---------- card ---------- */
+.tc{position:relative;width:var(--card-w);aspect-ratio:2/3;perspective:1100px;
+  -webkit-tap-highlight-color:transparent;user-select:none;touch-action:none}
+.tc__inner{position:absolute;inset:0;transform-style:preserve-3d;
+  transition:transform var(--flip-ms) var(--ease-flip);will-change:transform}
+.tc.is-flipped .tc__inner{transform:rotateY(180deg)}
+.tc__face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border-radius:5.5%/3.7%;overflow:hidden}
+.tc__back{background:#0d1516 url(assets/back.webp) center/100% 100% no-repeat;
+  box-shadow:0 14px 30px rgba(0,0,0,.55)}
+.tc__front{transform:rotateY(180deg);box-shadow:0 14px 30px rgba(0,0,0,.55);background:#0d1516}
+
+/* art window: measured from the frame (x 47-653, y 52-827 on 700x1050) */
+.tc__art{position:absolute;left:6.7%;top:4.95%;width:86.6%;height:73.8%;
+  background:var(--raised) center/cover no-repeat;
+  transform:translate3d(var(--px,0),var(--py,0),0) scale(1.04);transition:transform .25s ease-out}
+.tc__frame{position:absolute;inset:0;background:center/100% 100% no-repeat;pointer-events:none}
+.tc[data-r="common"]   .tc__frame{background-image:url(assets/frame_common.webp)}
+.tc[data-r="uncommon"] .tc__frame{background-image:url(assets/frame_uncommon.webp)}
+.tc[data-r="rare"]     .tc__frame{background-image:url(assets/frame_rare.webp)}
+.tc[data-r="epic"]     .tc__frame{background-image:url(assets/frame_epic.webp)}
+.tc[data-r="legendary"].tc__frame,.tc[data-r="legendary"] .tc__frame{background-image:url(assets/frame_legendary.webp)}
+
+/* nameplate text (live) */
+.tc__plate{position:absolute;left:9%;right:9%;top:80.5%;bottom:3.5%;display:flex;flex-direction:column;
+  justify-content:center;gap:.25em;color:var(--text);font-family:Manrope,system-ui,sans-serif}
+.tc__name{font:800 calc(var(--card-w)*.105)/0.95 "Barlow Condensed",Impact,sans-serif;
+  text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc__meta{display:flex;justify-content:space-between;font-size:calc(var(--card-w)*.047);
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tc__rar{color:var(--rc,var(--muted))}
+.tc[data-r="common"]{--rc:#AEB7B5}
+.tc[data-r="uncommon"]{--rc:#C08A5B}
+.tc[data-r="rare"]{--rc:#B9B4D8}
+.tc[data-r="epic"]{--rc:var(--gold)}
+.tc[data-r="legendary"]{--rc:#E2C27E}
+
+/* light: soft static sheen on every card, moves with tilt */
+.tc__sheen{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;opacity:.55;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) calc(var(--lx,50%) - 10%),
+  transparent calc(var(--lx,50%) + 12%))}
+
+/* foil: legendary only. masked holo + one light sweep */
+.tc__foil,.tc__sweep{position:absolute;inset:0;pointer-events:none;display:none}
+.tc[data-r="legendary"] .tc__foil,.tc[data-r="legendary"] .tc__sweep{display:block}
+.tc__foil{background:url(assets/foil.webp) center/cover;mix-blend-mode:color-dodge;opacity:.18;
+  background-position:var(--fx,50%) var(--fy,50%);
+  -webkit-mask:var(--foil-mask,linear-gradient(#000,#000));mask:var(--foil-mask,linear-gradient(#000,#000))}
+.tc__sweep{background:linear-gradient(110deg,transparent 35%,rgba(255,244,214,.55) 48%,
+  rgba(198,243,107,.18) 52%,transparent 62%) no-repeat;background-size:250% 100%;
+  background-position:120% 0;mix-blend-mode:screen;opacity:0}
+.tc.do-sweep .tc__sweep{animation:tc-sweep 780ms cubic-bezier(.3,.6,.2,1) 1}
+@keyframes tc-sweep{0%{background-position:120% 0;opacity:0}15%{opacity:1}100%{background-position:-60% 0;opacity:0}}
+
+/* states */
+.tc.is-missed .tc__front{filter:saturate(.35) brightness(.72)}
+.tc__tag{position:absolute;left:50%;top:-11%;transform:translateX(-50%);white-space:nowrap;
+  font:800 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;text-transform:uppercase;
+  padding:6px 10px;border-radius:6px;background:var(--surface);color:var(--muted);opacity:0;transition:opacity .2s}
+.tc.show-tag .tc__tag{opacity:1}
+.tc__tag.is-new{background:var(--lime);color:#0c1410}
+.tc__tag.is-dupe{background:var(--raised);color:var(--text)}
+
+@media (prefers-reduced-motion:reduce){
+  :root{--flip-ms:1ms}
+  .tc.do-sweep .tc__sweep{animation:none}
+  .tc__art{transition:none}
+}
+
+/* ---------- pack screen ---------- */
+.pk{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;
+  justify-content:space-between;padding:max(20px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(16,25,26,.82),rgba(16,25,26,.96)),var(--bd,none) center/cover,var(--base);
+  color:var(--text);font-family:Manrope,system-ui,sans-serif;animation:pk-in .22s ease-out;overflow:hidden}
+.pk.is-out{opacity:0;transition:opacity .2s}
+@keyframes pk-in{from{opacity:0}to{opacity:1}}
+.pk__head{text-align:center;margin-top:4px}
+.pk__kicker{font:800 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--lime)}
+.pk__count{font:800 44px/1 "Barlow Condensed",sans-serif;margin-top:6px}
+.pk__count b{color:var(--text)}
+.pk__why{font-size:14px;color:var(--muted);margin-top:6px;min-height:1.2em}
+.pk__row{flex:1;display:flex;align-items:center;justify-content:center;width:100%;position:relative;--card-w:min(30vw,150px);gap:3vw}
+.pk__row .tc{transition:transform .18s ease-out,opacity .18s ease-out;transition-delay:calc(var(--d,0)*60ms);cursor:pointer}
+.pk__row .tc.is-dealing{transform:translateY(20px);opacity:0}
+.pk__row .tc.is-chosen{transform:translateY(-8px) scale(1.06);z-index:2}
+.pk__row .tc.is-other{transform:scale(.96)}
+/* after the reveal the chosen card grows for inspection */
+.pk__row .tc.is-chosen.is-flipped{transform:translateY(-8px) scale(1.18)}
+.pk__foot{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:420px}
+.pk__btn{flex:1;min-height:52px;min-width:120px;border-radius:8px;border:1px solid var(--divider);background:var(--surface);
+  color:var(--text);font:800 18px/1 "Barlow Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.pk__btn--go{background:var(--lime);color:#0c1410;border-color:var(--lime)}
+.pk__btn[hidden]{display:none}
+.pk__summary{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;overflow:auto}
+.pk__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;--card-w:min(27vw,120px);padding-top:14px}
+.tc.is-mini .tc__tag{top:-9px;font-size:10px;padding:3px 6px}
+.tc.is-mini .tc__plate{display:none}
+.pk__summary .pk__done{flex:none;width:100%;max-width:420px}
+.pk__summary[hidden],.pk__head[hidden],.pk__foot[hidden]{display:none}
+/* small cards: number + rarity only; set name shows when the card is bigger than 180px */
+.tc__set .tc__setname{display:none}
+@container (min-width:180px){.tc__set .tc__setname{display:inline}}
+.tc{container-type:inline-size}

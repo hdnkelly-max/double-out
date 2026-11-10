@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TOPS cards prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cards.css">
+<style>
+  html,body{margin:0;background:var(--base);color:var(--text);font-family:Manrope,system-ui,sans-serif}
+  .wrap{max-width:440px;margin:0 auto;padding:20px 16px 40px}
+  h1{font:800 32px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;margin:6px 0 4px}
+  p{color:var(--muted);font-size:14px;margin:0 0 16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .row .pk__btn{flex:1 1 40%}
+  .gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:22px 12px;--card-w:min(42vw,190px);justify-items:center;padding-top:14px}
+  .gallery .tc{cursor:grab}
+  label{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;margin-bottom:12px}
+</style></head>
+<body><div class="wrap">
+  <div class="pk__kicker">TOPS · prototype</div>
+  <h1>Card picks</h1>
+  <p>Open a pack to test the flip. Drag a revealed card to tilt it. Legendaries get the foil sweep.</p>
+  <div class="row">
+    <button class="pk__btn pk__btn--go" data-n="1">1 pick</button>
+    <button class="pk__btn" data-n="4">4 picks</button>
+    <button class="pk__btn" data-n="9">9 picks</button>
+    <button class="pk__btn" data-n="1" data-force="legendary">Legendary in pack</button>
+  </div>
+  <label><input type="checkbox" id="mute"> Mute</label>
+  <div class="pk__kicker">All 20 test cards</div>
+  <div class="gallery" id="gal"></div>
+</div>
+<script src="catalog.js"></script>
+<script src="cards.js"></script>
+<script>
+  const C = window.TOPS_CATALOG, owned = {};
+  const ODDS = [['common', .60], ['uncommon', .25], ['rare', .11], ['epic', .035], ['legendary', .005]];
+  const byR = r => C.filter(c => c.rarity === r);
+  function rollR() { let x = Math.random(), a = 0; for (const [r, p] of ODDS) { a += p; if (x < a) return r; } return 'common'; }
+  function rollCard(force) { let r = force || rollR(); let pool = byR(r); while (!pool.length) { r = 'common'; pool = byR(r); } return pool[Math.floor(Math.random() * pool.length)]; }
+  // mock of the server RPC: options are rolled BEFORE the tap in the real thing; same shape here
+  function mockServer(force) {
+    const store = {};
+    return {
+      open(id) { store[id] = [rollCard(force), rollCard(), rollCard()]; },
+      resolve: (id, pos) => new Promise(res => setTimeout(() => {
+        const opts = store[id], k = opts[pos]; owned[k.id] = (owned[k.id] || 0) + 1;
+        res({ options: opts, chosen: pos, owned: { ...owned } });
+      }, 120))
+    };
+  }
+  const reasons = ['180', 'Ton Out · bronze', '121 checkout', '180', 'Bully Boy · silver', '104 checkout', '180', '140 checkout', 'Shanghai · bronze'];
+  document.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
+    TopsCards.Sfx.ctx || TopsCards.Sfx.init();
+    const n = +b.dataset.n, srv = mockServer(b.dataset.force);
+    const picks = Array.from({ length: n }, (_, i) => ({ id: 'p' + Date.now() + i, reason: reasons[i % reasons.length] }));
+    picks.forEach(p => srv.open(p.id));
+    TopsCards.openPack({ picks, resolve: srv.resolve, backdrop: 'assets/bg_pub.webp' });
+  });
+  document.getElementById('mute').onchange = e => TopsCards.Sfx.muted = e.target.checked;
+  const gal = document.getElementById('gal');
+  C.forEach(d => { const c = TopsCards.card(d); c.classList.add('is-flipped'); c.dataset.inspect = '1';
+    c.addEventListener('dblclick', () => { c.classList.remove('do-sweep'); void c.offsetWidth; c.classList.add('do-sweep'); });
+    gal.appendChild(c); });
+</script>
+</body></html>
