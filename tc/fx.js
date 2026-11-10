@@ -81,9 +81,11 @@ window.TC_FX = (function () {
     green() { for (let i = 0; i < 3; i++) flashes.push({ kind: 'vignette', c: '#3BE07A', a: .45, life: .6, age: -i * .5 }); lasers(['#3BE07A']); },
     smoke() { smoke(cap(26), .95); },
     lasers() { lasers(['#C6F36B', '#7FD3C9', '#C9554A']); smoke(cap(12), .98); },
+    cool() { for (let i = 0; i < 2; i++) flashes.push({ kind: 'vignette', c: '#7FD3FF', a: .45, life: .7, age: -i * .45 }); const W = innerWidth, H = innerHeight; for (let i = 0; i < cap(60); i++) parts.push({ kind: 'spark', x: W * R(), y: H * (.2 + R() * .5), vx: (R() - .5) * 40, vy: -20 - R() * 40, g: 30, drag: .4, life: 1.2 + R() * .5, age: -R() * .4, s: 1.2, a: .9, c: R() < .5 ? '#E6F7FF' : '#9ED8FF' }); chime(); },
+    saltire() { beams.push({ x: 0, y: 0, a0: .85, a1: .65, life: 1.8, age: 0, w: 5, a: .9, c: '#FFFFFF' }, { x: 1, y: 0, a0: 2.3, a1: 2.5, life: 1.8, age: 0, w: 5, a: .9, c: '#FFFFFF' }); lasers(['#2F6BFF', '#FFFFFF']); smoke(cap(14), .98); },
     power() { const seed = () => Array.from({ length: 10 }, R); flashes.push({ kind: 'bolt', x: .3, y: .7, seed: seed(), a: 1, life: .5, age: 0 }, { kind: 'bolt', x: .72, y: .6, seed: seed(), a: 1, life: .5, age: -.25 }, { kind: 'fill', c: '#DDEBFF', a: .4, life: .25, age: 0 }, { kind: 'fill', c: '#DDEBFF', a: .3, life: .25, age: -.25 }); thunder(); smoke(cap(10), .98); },
   };
-  const MAP = { cel_pyro: 'pyro', cel_nuke: 'nuke', cel_confetti: 'confetti', cel_chant: 'chant', cel_goldflash: 'goldflash', cel_green: 'green', walk_smoke: 'smoke', walk_lasers: 'lasers', walk_power: 'power' };
+  const MAP = { cel_pyro: 'pyro', cel_nuke: 'nuke', cel_confetti: 'confetti', cel_chant: 'chant', cel_goldflash: 'goldflash', cel_green: 'green', walk_smoke: 'smoke', walk_lasers: 'lasers', walk_power: 'power', cel_cool: 'cool', walk_saltire: 'saltire' };
   function run(cosId, name) { const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }
 
   // ---------- audio (uses the game's AudioContext when present) ----------
