@@ -581,9 +581,9 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
  const _ld=land;land=function(x,y,far){let mine=false,bo=false;try{mine=live()&&!S.bull&&S.p[S.cur]&&S.p[S.cur].key===NET.myId&&!S.netAnim;bo=!!S.boNext;}catch(e){}const r=_ld.apply(this,arguments);
   if(mine){R.q.push({x,y,bo});pump();}return r;};
  // snap this phone to the server when it disagrees (never mid-animation)
- function reconcile(){if(!live()||!R.st||S.bull)return;if(S.netAnim||S.pulling||S.busy&&S.p[S.cur].key===NET.myId)return;if((NET.queue||[]).length||R.q.length)return;
+ function reconcile(){if(!live()||!R.st||S.bull)return;if(S.netAnim||S.pulling||S.busyLeg||S.busy&&S.p[S.cur].key===NET.myId)return;if(S.celebrateUntil&&performance.now()<S.celebrateUntil+1500)return;if(document.querySelector('.cd-wrap:not([hidden]),#cardDraft:not([hidden])'))return;if((NET.queue||[]).length||R.q.length)return;
   const st=R.st;const sig=st.v+':'+st.cur+':'+st.scores.join(',');const ok=st.players.every((k,j)=>{const i=byKey(k);return i<0||(S.p[i].score===st.scores[j]&&(S.p[i].legs||0)===st.legs[j]);})&&byKey(st.players[st.cur])===S.cur;
-  if(ok){R.pend=null;return;}if(R.pend!==sig){R.pend=sig;return;}R.pend=null;let changed=false;
+  if(ok){R.pend=null;return;}if(R.pend!==sig){R.pend=sig;R.pendN=1;return;}if(++R.pendN<3)return;R.pend=null;let changed=false;
   st.players.forEach((k,j)=>{const i=byKey(k);if(i<0)return;const p=S.p[i];const sc=st.scores[j],lg=st.legs[j];if(p.score!==sc||(p.legs||0)!==lg){p.score=sc;p.legs=lg;changed=true;}});
   const ni=byKey(st.players[st.cur]);
   if(ni>=0&&ni!==S.cur){S.cur=ni;changed=true;try{NET.queue=(NET.queue||[]).filter(q=>q.from===st.players[st.cur]);startTurn();if(st.dart>1){S.dart=st.dart;S.visitStart=st.visitStart;}}catch(e){console.warn('ref turn',e);}}
