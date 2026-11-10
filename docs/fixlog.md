@@ -75,3 +75,4 @@
 - SHIPPED v1.48: Lee's logo replaces the old TOPS wordmark in the match header and the career and creator headers
 - SHIPPED v1.49: Lee's two new walk-ons, Walk-On Energy and Late-night Lounge
 - SHIPPED v1.50: per-match telemetry (time to first dart, how each match ends, frame rate p50/p95 and long frames, device) and a regression gate that plays real matches before every ship. Found the old funnel was wrong: first-dart counted once per session, so the 41% never-throw figure was a tracking bug
+- SHIPPED v1.51: server referee for online (Supabase tops_ref_*): every dart submitted, phones snap to server state on a confirmed mismatch, leave skips turns. Teams stay on peer sync.
