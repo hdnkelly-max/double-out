@@ -6,7 +6,17 @@
 #vpop .vp.pb{background:linear-gradient(180deg,#f3d27a,#c2902f);color:#1b1306;border-color:#fff1bf;font-size:17px;box-shadow:0 0 0 2px rgba(246,220,146,.35),0 10px 26px rgba(0,0,0,.45)}
 #vpop .vp small{display:block;font:600 11px/1.2 Manrope,system-ui,sans-serif;letter-spacing:.04em;text-transform:none;margin-top:3px;opacity:.85}
 @keyframes v11pop{0%{transform:translateY(8px) scale(.9)}45%{transform:translateY(0) scale(1.05)}100%{transform:none}}
-@media (prefers-reduced-motion:reduce){#vpop .vp{animation:none}}
+#vpop .vmed{display:flex;flex-direction:column;align-items:center;gap:6px;animation:v11med .45s cubic-bezier(.2,1.3,.4,1)}
+#vpop .vmed-c{position:relative;display:grid;place-items:center;width:78px;height:78px;border-radius:50%;font-style:normal;box-shadow:0 0 0 3px rgba(0,0,0,.35),0 10px 26px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -4px 8px rgba(0,0,0,.3)}
+#vpop .vmed-c::before{content:"";position:absolute;inset:6px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35)}
+#vpop .vmed-c b{font:900 32px/1 "Barlow Condensed",Barlow,system-ui,sans-serif;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+#vpop .vmed-c em{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font:800 10px/1 Barlow,system-ui,sans-serif;font-style:normal;letter-spacing:.14em;padding:3px 7px;border-radius:999px;background:#C6F36B;color:#0c1410;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#vpop .vmed.bronze .vmed-c{background:radial-gradient(circle at 35% 28%,#F2C39A,#B87333 45%,#6E3E18);color:#2a1406}
+#vpop .vmed.silver .vmed-c{background:radial-gradient(circle at 35% 28%,#FFFFFF,#C9D1D6 42%,#7E8A92);color:#1b2228}
+#vpop .vmed.gold .vmed-c{background:radial-gradient(circle at 35% 28%,#FFF3C4,#E2B84F 42%,#9C6B19);color:#2a1a02;box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 26px rgba(246,210,120,.55),0 10px 26px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -4px 8px rgba(0,0,0,.3)}
+#vpop .vmed small{white-space:nowrap;font:600 12px/1.2 Manrope,system-ui,sans-serif;color:#f1e6c8;background:rgba(14,16,20,.8);padding:4px 10px;border-radius:999px}
+@keyframes v11med{0%{opacity:0;transform:scale(.4) rotate(-20deg)}70%{opacity:1;transform:scale(1.08) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion:reduce){#vpop .vp,#vpop .vmed{animation:none}}
 /* breakdown tiles */
 #resKeys.v11{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #resKeys.v11>div{min-width:0}
@@ -35,6 +45,9 @@
  let host=null;const pop=(txt,cls,sub)=>{if(!host){host=document.createElement('div');host.id='vpop';document.body.appendChild(host);}
   host.innerHTML='';const d=document.createElement('div');d.className='vp '+(cls||'');d.innerHTML=txt+(sub?`<small>${sub}</small>`:'');host.appendChild(d);setTimeout(()=>{if(d.parentNode)d.remove();},1700);};
  window.TOPS_POP=pop;
+ const medal=(n,tier,pb,sub)=>{if(!host){host=document.createElement('div');host.id='vpop';document.body.appendChild(host);}
+  host.innerHTML='';const d=document.createElement('div');d.className='vmed '+tier;
+  d.innerHTML=`<i class="vmed-c"><b>${n}</b>${pb?'<em>PB</em>':''}</i>${sub?`<small>${sub}</small>`:''}`;host.appendChild(d);setTimeout(()=>{if(d.parentNode)d.remove();},1500);};
  const mine=p=>p&&!p.ai&&(!S.online||p.key===NET.myId);
  const _vc=visitCall;visitCall=function(gained,h,who){const r=_vc.apply(this,arguments);safe(()=>{
    if(!S||S.done||S.bull)return;const me=S.p[who==null?S.cur:who];if(!mine(me)||gained>=180)return;
@@ -43,12 +56,11 @@
    if(!S.practice)save.pbVisit=Math.max(prev,gained);
    let left='';try{if(me.score>1&&me.score<=170&&route(me.score,3)&&S.visitStart>170)left=`${me.score} left, you're on a finish`;}catch(e){}
    const hadT=labs.some(l=>/^T/.test(l));
-   if(!S.practice&&seasoned&&prev>=60&&gained>prev){if(hadT)S.v11.tre=true;pop('New best visit','pb',`${gained}, beats your ${prev}`);try{sfxLevel();}catch(e){}return;}
-   if(gained>=140){if(hadT)S.v11.tre=true;pop('Ton-forty','gold',left);return;}
-   if(gained>=100){if(hadT)S.v11.tre=true;pop(S.v11.ton?'Ton':'First ton','gold',left);S.v11.ton=true;return;}
-   const tre=labs.filter(l=>/^T/.test(l));const firstT=tre.length&&!S.v11.tre;if(tre.length)S.v11.tre=true;if(firstT){pop('First treble','',left||tre.join(' · '));return;}
-   if(tre.length>=2){pop('Two trebles','',left);return;}
-   if(gained>=60){pop(gained>=80?'80 plus':'60 plus','',left);return;}
+   // visit medal (Hayden 11 Nov: show the score as bronze / silver / gold, no "new best" banners)
+   const pb=!S.practice&&seasoned&&prev>=60&&gained>prev;
+   if(labs.some(l=>/^T/.test(l)))S.v11.tre=true;
+   const tier=gained>=140?'gold':gained>=100?'silver':gained>=60?'bronze':'';
+   if(tier){medal(gained,tier,pb,left);if(pb){try{sfxLevel();}catch(e){}}return;}
    if(left)pop('On a finish','',left);
  })();return r;};
  const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.v11={ton:false,tre:false};}catch(e){}return r;};
