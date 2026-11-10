@@ -20,7 +20,10 @@ const v8=fs.existsSync('v08.js')?fs.readFileSync('v08.js','utf8'):'';
 const v9=fs.existsSync('v09.js')?fs.readFileSync('v09.js','utf8'):'';
 const v10=fs.existsSync('v10.js')?fs.readFileSync('v10.js','utf8'):'';
 const dg=fs.existsSync('dartgeo.json')?`<script>window.TOPS_DG_RAW=${fs.readFileSync('dartgeo.json','utf8')}</script>\n`:'';
-const page=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10;
+// collectibles (cards, packs, cabinet, exhibitions): tc/
+const tcf=n=>fs.existsSync('tc/'+n)?fs.readFileSync('tc/'+n,'utf8'):'';
+const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<script>${tcf('cards.js')}\n${tcf('data.js')}\n${tcf('fx.js')}\n${tcf('core.js')}</script>\n`:'';
+const page=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+tc;
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
 fs.writeFileSync('double-out.html','<meta charset="utf-8">\n<script>window.RIG_B64_URL="remy.b64.txt"</script>\n'+page);
 const b64=fs.readFileSync('remy.b64.txt','utf8').trim();
