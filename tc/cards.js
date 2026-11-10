@@ -14,7 +14,7 @@
   /* ---------- audio: tiny palette, preloaded, one context ---------- */
   const Sfx = {
     ctx: null, buf: {}, muted: false, base: 'assets/sfx/',
-    names: ['select', 'flip', 'tick', 'chime', 'legendary', 'dupe'],
+    names: ['deal', 'select', 'flip', 'missed', 'charge_epic', 'charge_legendary', 'rev_uncommon', 'rev_rare', 'rev_epic', 'rev_legendary', 'dupe'],
     async init(base) {
       if (base) this.base = base;
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
@@ -34,11 +34,11 @@
   function synth(ctx, n, vol) {
     const t = ctx.currentTime, g = ctx.createGain(); g.connect(ctx.destination);
     const o = ctx.createOscillator();
-    const set = { select: [1800, .03, 'square', .05], flip: [420, .09, 'triangle', .12], tick: [2600, .05, 'sine', .1],
-      chime: [880, .5, 'sine', .14], legendary: [110, .7, 'sine', .3], dupe: [300, .12, 'triangle', .06] }[n] || [500, .1, 'sine', .1];
+    const set = { select: [1800, .03, 'square', .05], flip: [420, .09, 'triangle', .12], missed: [300, .07, 'triangle', .05], deal: [600, .08, 'triangle', .04], rev_rare: [2600, .25, 'sine', .1],
+      rev_uncommon: [523, .3, 'sine', .1], rev_epic: [880, .5, 'sine', .14], rev_legendary: [110, .7, 'sine', .3], charge_epic: [500, .4, 'sine', .05], charge_legendary: [300, .55, 'sine', .07], dupe: [300, .12, 'triangle', .06] }[n] || [500, .1, 'sine', .1];
     o.type = set[2]; o.frequency.setValueAtTime(set[0], t);
     if (n === 'flip') o.frequency.exponentialRampToValueAtTime(180, t + set[1]);
-    if (n === 'legendary') { const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 1320; const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t + .15); g2.gain.linearRampToValueAtTime(.05 * vol, t + .3); g2.gain.exponentialRampToValueAtTime(.001, t + 1.1); o2.connect(g2).connect(ctx.destination); o2.start(t + .15); o2.stop(t + 1.2); }
+    if (n === 'rev_legendary') { const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 1320; const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t + .15); g2.gain.linearRampToValueAtTime(.05 * vol, t + .3); g2.gain.exponentialRampToValueAtTime(.001, t + 1.1); o2.connect(g2).connect(ctx.destination); o2.start(t + .15); o2.stop(t + 1.2); }
     g.gain.setValueAtTime(set[3] * vol, t); g.gain.exponentialRampToValueAtTime(.001, t + set[1]);
     o.connect(g); o.start(t); o.stop(t + set[1] + .02);
   }
@@ -125,7 +125,7 @@
       btnNext.hidden = true; hint.hidden = false; btnLater.hidden = false; cnt.textContent = i + 1; why.textContent = picks[i].reason || '';
       row.innerHTML = ''; busy = false;
       const cards = [0, 1, 2].map(pos => { const c = card(null); c.style.setProperty('--d', pos); c.classList.add('is-dealing'); row.appendChild(c); return c; });
-      requestAnimationFrame(() => cards.forEach(c => c.classList.remove('is-dealing')));
+      requestAnimationFrame(() => cards.forEach(c => c.classList.remove('is-dealing'))); Sfx.play('deal', .7);
       cards.forEach((c, pos) => c.addEventListener('click', () => choose(cards, pos), { once: true }));
     }
     async function choose(cards, pos) {
@@ -141,11 +141,11 @@
       const mine = cards[pos], def = res.options[pos];
       const fms = quick ? T.quickFlip : T.flip;
       await wait(quick ? 0 : T.lift);
-      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) { mine.classList.add('is-charging'); await wait(def.rarity === 'legendary' ? 620 : 460); mine.classList.remove('is-charging'); }
+      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) { Sfx.play('charge_' + def.rarity, .9); mine.classList.add('is-charging'); await wait(def.rarity === 'legendary' ? 620 : 460); mine.classList.remove('is-charging'); }
       Sfx.play('flip');
       await flip(mine, fms);
       const r = def.rarity;
-      if (r === 'rare') Sfx.play('tick'); else if (r === 'epic') { Sfx.play('chime'); buzz(15); } else if (r === 'legendary') { Sfx.play('legendary', 1); buzz([20, 40, 30]); }
+      if (r !== 'common') Sfx.play('rev_' + r, r === 'legendary' ? 1 : .85); if (r === 'epic') buzz(15); else if (r === 'legendary') buzz([20, 40, 30]);
       const owned = (res.owned && res.owned[def.id]) || 1;
       if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
       else tag(mine, def.cosmetic ? `New · unlocks ${def.cosmetic}` : 'New', 'new');
@@ -153,7 +153,7 @@
       got.push({ def, dupe: owned > 1 });
       await wait(quick ? 120 : T.react);
       for (let k = 0; k < 3; k++) if (k !== pos) {
-        const c = cards[k]; c.classList.add('is-missed'); flip(c, quick ? T.quickFlip : 360); tag(c, 'Missed');
+        const c = cards[k]; c.classList.add('is-missed'); Sfx.play('missed', .5); flip(c, quick ? T.quickFlip : 360); tag(c, 'Missed');
         await wait(T.othersGap);
       }
       await wait(quick ? 150 : 300);
