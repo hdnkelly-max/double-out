@@ -141,12 +141,13 @@
       const mine = cards[pos], def = res.options[pos];
       const fms = quick ? T.quickFlip : T.flip;
       await wait(quick ? 0 : T.lift);
+      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) { mine.classList.add('is-charging'); await wait(def.rarity === 'legendary' ? 620 : 460); mine.classList.remove('is-charging'); }
       Sfx.play('flip');
       await flip(mine, fms);
       const r = def.rarity;
       if (r === 'rare') Sfx.play('tick'); else if (r === 'epic') { Sfx.play('chime'); buzz(15); } else if (r === 'legendary') { Sfx.play('legendary', 1); buzz([20, 40, 30]); }
       const owned = (res.owned && res.owned[def.id]) || 1;
-      if (owned > 1) { tag(mine, `Duplicate · ${owned} owned`, 'dupe'); Sfx.play('dupe', .5); }
+      if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
       else tag(mine, def.cosmetic ? `New · unlocks ${def.cosmetic}` : 'New', 'new');
       mine.dataset.inspect = '1';
       got.push({ def, dupe: owned > 1 });

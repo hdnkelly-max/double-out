@@ -94,7 +94,7 @@
   transition:transform .42s cubic-bezier(.2,.9,.25,1.12),opacity .3s ease-out;transition-delay:calc(var(--d,0)*60ms)}
 .tcpk__row .tc.is-dealing{--ty:36px;opacity:0}
 .tcpk__row .tc.is-hero{--tx:0px;--sc:1;--ty:-6px;z-index:3;transition-delay:0s}
-.tcpk__row .tc.is-behind{--tx:calc(var(--side,1) * 104px);--sc:.62;--rot:calc(var(--side,1) * 12deg);--ty:22px;z-index:1;opacity:.5;transition-delay:0s}
+.tcpk__row .tc.is-behind{--tx:calc(var(--side,1) * 118px);--sc:.6;--rot:calc(var(--side,1) * 13deg);--ty:40px;z-index:1;opacity:.28;transition-delay:0s}
 .tcpk__row .tc.is-behind .tc__tag{font-size:18px;top:-14%}
 .tcpk__row .tc.is-hero .tc__tag{font-size:14px;padding:7px 12px;top:-8%}
 .tcpk__hint{margin:0 0 8px;font:800 14px "Barlow Condensed",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
@@ -154,3 +154,14 @@
 .tc.is-mini .tc__holo{opacity:.42}.tc.is-mini[data-r="legendary"] .tc__holo{opacity:.5}
 .tc__name.is-long{font-size:calc(var(--card-w)*.078)}
 
+
+/* round 3: rarity charge before the flip, quiet duplicate line */
+.tcpk__row .tc.is-charging{--ty:-22px;--sc:1.04;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.tcpk__row .tc[data-r="epic"].is-charging .tc__back{box-shadow:0 0 0 2px rgba(127,211,201,.6),0 0 34px rgba(127,211,201,.45)}
+.tcpk__row .tc[data-r="legendary"].is-charging .tc__back{box-shadow:0 0 0 2px rgba(226,194,126,.8),0 0 46px rgba(226,194,126,.55)}
+.tc.is-dupe::after{content:attr(data-dupe);position:absolute;left:0;right:0;bottom:-34px;text-align:center;font:700 12px Manrope,sans-serif;color:var(--muted);letter-spacing:.04em}
+/* stronger finishes at phone scale */
+.tc[data-r="epic"] .tc__holo{opacity:.78}
+.tc[data-r="epic"] .tc__holo::after{background:linear-gradient(125deg,transparent 36%,rgba(255,255,255,.26) 48%,rgba(255,255,255,.08) 54%,transparent 62%) no-repeat;background-size:300% 100%;background-position:var(--fx) 0}
+.tc[data-r="epic"] .tc__frame{filter:saturate(.85) contrast(1.05)}
+.tc[data-r="legendary"] .tc__holo{opacity:.68;filter:contrast(1.35)}

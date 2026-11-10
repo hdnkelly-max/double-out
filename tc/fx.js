@@ -73,7 +73,7 @@ window.TC_FX = (function () {
   function smoke(n, y) { const W = innerWidth, H = innerHeight; for (let i = 0; i < n; i++) parts.push({ kind: 'smoke', x: W * R(), y: H * (y || .95) + R() * 40, vx: (R() - .5) * 30, vy: -20 - R() * 30, g: 0, drag: .2, life: 2.6 + R(), age: -R() * .8, s: 70 + R() * 70, a: .5, c: '#B9C4C2' }); }
   function lasers(cols) { for (let i = 0; i < 6; i++) { const side = i % 2 ? .05 : .95; beams.push({ x: side, y: 0, a0: side < .5 ? 1.1 : 2.0, a1: side < .5 ? 0.35 : 2.8, life: 1.6, age: -i * .12, w: 2.5, a: .85, c: cols[i % cols.length] }); } }
   const play = {
-    pyro() { fountain(.14, cap(50), ['#FFD27A', '#FF9F43', '#FFF3D6'], 820); fountain(.86, cap(50), ['#FFD27A', '#FF9F43', '#FFF3D6'], 820); fountain(.5, cap(24), ['#FFF3D6', '#FFD27A'], 700); flashes.push({ kind: 'radial', x: .5, y: .8, r: .9, c: '#FFB54A', a: .3, life: .7, age: 0 }); boom(.5); },
+    pyro() { fountain(.28, cap(60), ['#FFD27A', '#FF9F43', '#FFF3D6'], 1120); fountain(.72, cap(60), ['#FFD27A', '#FF9F43', '#FFF3D6'], 1120); flashes.push({ kind: 'radial', x: .5, y: .78, r: .45, c: '#FFC468', a: .45, life: .55, age: 0 }); flashes.push({ kind: 'radial', x: .5, y: .8, r: .9, c: '#FFB54A', a: .3, life: .7, age: 0 }); boom(.5); },
     nuke() { flashes.push({ kind: 'fill', c: '#FFFFFF', a: .7, life: .35, age: 0 }, { kind: 'ring', x: .5, y: .45, r: 1.1, c: '#C6F36B', a: .9, life: 1.1, age: 0 }, { kind: 'radial', x: .5, y: .45, r: .7, c: '#FFE6A0', a: .45, life: 1.3, age: 0 }); confetti(cap(120), false); boom(1); },
     confetti() { confetti(cap(140), true); pop(); },
     chant(name) { flashes.push({ kind: 'vignette', c: '#C6F36B', a: .18, life: 1.6, age: 0 }); chant(name); },
