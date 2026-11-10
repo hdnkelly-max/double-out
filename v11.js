@@ -17,6 +17,10 @@
 #vpop .vmed small{white-space:nowrap;font:600 12px/1.2 Manrope,system-ui,sans-serif;color:#f1e6c8;background:rgba(14,16,20,.8);padding:4px 10px;border-radius:999px}
 @keyframes v11med{0%{opacity:0;transform:scale(.4) rotate(-20deg)}70%{opacity:1;transform:scale(1.08) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
 @media (prefers-reduced-motion:reduce){#vpop .vp,#vpop .vmed{animation:none}}
+#hub b.nm{font-size:15px!important;line-height:1.05!important;letter-spacing:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block}
+/* the reward card already lists achievements: no toasts on top of it */
+body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
+#lvFirst .sw,.c3rw-unl .sw{display:none!important}
 /* breakdown tiles */
 #resKeys.v11{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 #resKeys.v11>div{min-width:0}
@@ -116,7 +120,7 @@
  // shift opponent averages in career (not practice, drills or the intro tutorial)
  const shift=v=>Math.max(25,Math.min(108,Math.round(v+totalOff())));
  const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&D()){n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
- const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&opts.oppAvg>0&&D()&&!viaNext){const o=totalOff();opts=Object.assign({},opts,{oppAvg:shift(opts.oppAvg),_diffOff:o});}}catch(e){}return _bm.call(this,opts);};
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&D()&&!viaNext){const o=totalOff();opts=Object.assign({},opts,{oppAvg:shift(opts.oppAvg),_diffOff:o});}}catch(e){}return _bm.call(this,opts);};
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
    if(d.place==null&&d.darts>=120){const a=d.pts/d.darts*3;const c=career();const par=c?TIERS[c.tier].avg:45;d.place=Math.max(-6,Math.min(15,Math.round((a-par)*0.6)));d.placeAvg=+a.toFixed(1);d.placeNew=true;try{trackEv('diff_place',{avg:d.placeAvg,place:d.place,lv:d.lv});}catch(e){}}}}catch(e){}return _em.apply(this,arguments);};

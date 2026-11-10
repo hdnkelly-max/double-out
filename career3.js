@@ -179,11 +179,11 @@ const REP=[[0,'Unknown','Win a few and the regulars learn your name'],[20,'Local
 function renderSeason(){const c=career(),v=V3();const host=$('c3season');if(!host||!v)return;const aside=document.querySelector('#hub .hx-season');const sn=c.season;const n=c.next;
  const rows=sn&&!sn.ko?seasonPos(sn):null;const yi=rows?rows.findIndex(r=>r.you):-1;
  const rep=REP.filter(r=>v.fame>=r[0]).pop();const nextRep=REP.find(r=>r[0]>v.fame);
- const stake=rows?(yi<=1?`In the promotion places. ${sn.len-sn.week+1} fixture${sn.len-sn.week===0?'':'s'} left.`:`${rows[1].pts-rows[yi].pts} pts behind ${rows[1].name.split(' ')[0]} for promotion. ${sn.len-sn.week+1} left.`):sn&&sn.ko?'Knockout. Lose once and it’s over.':'';
+ const stake=rows?(yi<=1?`In the promotion places. ${sn.len-sn.week+1} fixture${sn.len-sn.week===0?'':'s'} left.`:(rows[1].pts-rows[yi].pts<=0?`Level on points with the top two. ${sn.len-sn.week+1} fixtures left.`:`${rows[1].pts-rows[yi].pts} pts behind ${rows[1].name} for promotion. ${sn.len-sn.week+1} left.`)):sn&&sn.ko?'Knockout. Lose once and it’s over.':'';
  const ch=String(CHAPTERS[c.tier]).split(' · ');const ROADV=['th_local','bg_pub','bg_club','bg_club','bg_stage','th_arena','bg_stage'];const ROADP=['center','70% 50%','30% 40%','75% 50%','50% 35%','center','80% 40%'];
  const me=rows&&rows[yi];
  host.innerHTML=`<section class="c3x-hero c3x-ch">${heroImg()}<div class="c3x-copy"><div class="c3x-k">${ch[0]}</div><h1 class="c3x-big sm">${ch[1]||TIERS[c.tier].n}</h1><div class="c3x-sub">${stake}</div></div></section>
- <div class="c3x-strip"><div><small>Position</small><b>${rows?ord(yi+1):'–'}<i>/${rows?rows.length:'–'}</i></b></div><div><small>Points</small><b>${me?me.pts:'–'}</b></div><div><small>Record</small><b>${c.wins}–${c.losses}</b></div><div><small>Next</small><b class="nm">${n?c3First(n.oppName):'–'}</b></div></div>
+ <div class="c3x-strip"><div><small>Position</small><b>${rows&&me&&me.p>0?ord(yi+1):'–'}<i>/${rows?rows.length:'–'}</i></b></div><div><small>Points</small><b>${me?me.pts:'–'}</b></div><div><small>Record</small><b>${c.wins}–${c.losses}</b></div><div><small>Next</small><b class="nm">${n?c3First(n.oppName):'–'}</b></div></div>
  <div id="c3TableSlot"></div>
  <div class="c3x-sh"><b>Road to the Palace</b><span>${c.tier+1} of 7</span></div>
  <div class="c3x-road">${TIERS.map((T,i)=>`<div class="c3x-ven${i<c.tier?' done':i===c.tier?' cur':' lock'}" style="--art:url(assets/ui/${ROADV[i]}.webp),url(assets/ui/bg_stage.webp);--pos:${ROADP[i]}"><span class="c3x-vn">${i+1}</span>${i>c.tier?'<img class="lk" src="assets/ui/ic_lock.webp" alt="">':''}<b>${T.venue.split(' · ')[0]}</b><small>${i<c.tier?'Done':i===c.tier?'You are here':T.n}</small></div>`).join('')}</div>
