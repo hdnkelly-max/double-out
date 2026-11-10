@@ -113,7 +113,7 @@
 .tcpk__summary{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;overflow:auto}
 .tcpk__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;--card-w:min(27vw,120px);padding-top:14px}
 .tc.is-mini .tc__tag{top:-9px;font-size:10px;padding:3px 6px}
-.tcpk__grid .tc.is-mini .tc__plate,.tc-incase .tc__plate{display:none}
+.tc-incase .tc__plate{display:none}
 .tcpk__summary .tcpk__done{flex:none;width:100%;max-width:420px}
 .tcpk__summary[hidden],.tcpk__head[hidden],.tcpk__foot[hidden]{display:none}
 /* small cards: number + rarity only; set name shows when the card is bigger than 180px */
@@ -165,3 +165,80 @@
 .tc[data-r="epic"] .tc__holo::after{background:linear-gradient(125deg,transparent 36%,rgba(255,255,255,.26) 48%,rgba(255,255,255,.08) 54%,transparent 62%) no-repeat;background-size:300% 100%;background-position:var(--fx) 0}
 .tc[data-r="epic"] .tc__frame{filter:saturate(.85) contrast(1.05)}
 .tc[data-r="legendary"] .tc__holo{opacity:.68;filter:contrast(1.35)}
+
+/* ===== v2 finishes (Hayden 11 Nov: "expected more fanfare, no holographic feel") ===== */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+/* the foil lives on its own: light drifts across epic + legendary cards with no touch. Tilt / gyro take over when present */
+@keyframes tc-drift{0%{--fx:15%;--fy:25%;--gx:10%;--gy:15%}25%{--fx:85%;--fy:20%;--gx:90%;--gy:20%}50%{--fx:80%;--fy:85%;--gx:85%;--gy:85%}75%{--fx:20%;--fy:75%;--gx:15%;--gy:80%}100%{--fx:15%;--fy:25%;--gx:10%;--gy:15%}}
+.tc[data-r="epic"].is-flipped,.tc[data-r="legendary"].is-flipped{animation:tc-drift 6s ease-in-out infinite}
+.tc.is-mini[data-r="epic"].is-flipped,.tc.is-mini[data-r="legendary"].is-flipped{animation-duration:9s}
+body.tc-gyro .tc[data-r]{animation:none}
+/* EPIC: stronger rainbow refractor over the whole art */
+.tc[data-r="epic"] .tc__holo{opacity:.95;
+  background:
+    linear-gradient(115deg,transparent 4%,rgba(80,230,255,.42) 18%,rgba(190,110,255,.38) 32%,rgba(255,90,200,.36) 46%,rgba(255,225,110,.4) 60%,rgba(90,255,190,.36) 74%,transparent 92%),
+    url(assets/cards/diffract.webp) 0 0/64px 64px;
+  background-size:220% 220%,64px 64px;background-position:var(--fx) var(--fy),calc(var(--fx) * .3) 0;mix-blend-mode:color-dodge}
+.tc[data-r="epic"] .tc__glare{opacity:.9}
+/* moving foil edge: a band of colour runs round the frame */
+@keyframes tc-spin{to{--ang:360deg}}
+.tc__edge{position:absolute;inset:0;pointer-events:none;display:none;border-radius:5.5%/3.7%;padding:2.2%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  animation:tc-spin 3.2s linear infinite;mix-blend-mode:screen}
+.tc.is-flipped[data-r="epic"] .tc__edge,.tc.is-flipped[data-r="legendary"] .tc__edge{display:block}
+.tc[data-r="epic"] .tc__edge{background:conic-gradient(from var(--ang),#7FF5E4,#C98BFF 18%,transparent 30%,transparent 50%,#FF7AD0 62%,#FFE68A 78%,transparent 90%,#7FF5E4)}
+.tc[data-r="legendary"] .tc__edge{background:conic-gradient(from var(--ang),#FFF7DA,#E2C27E 15%,transparent 28%,transparent 48%,#FFE9A8 60%,#FFFFFF 70%,transparent 82%,#FFF7DA);animation-duration:2.4s}
+/* sparkles: twinkling glints over the art */
+@keyframes tc-twinkle{0%,100%{opacity:.15}50%{opacity:1}}
+.tc__spark{position:absolute;left:6.7%;top:4.95%;width:86.6%;height:73.8%;pointer-events:none;display:none;mix-blend-mode:screen;
+  background:
+    radial-gradient(circle at 18% 22%,#fff 0 1.2px,transparent 3px),radial-gradient(circle at 72% 14%,#fff 0 1px,transparent 2.6px),
+    radial-gradient(circle at 84% 58%,#fff 0 1.4px,transparent 3.4px),radial-gradient(circle at 32% 70%,#fff 0 1px,transparent 2.6px),
+    radial-gradient(circle at 58% 40%,#fff 0 .9px,transparent 2.4px),radial-gradient(circle at 12% 88%,#fff 0 1.1px,transparent 2.8px);
+  animation:tc-twinkle 1.8s ease-in-out infinite}
+.tc__spark::after{content:"";position:absolute;inset:0;animation:tc-twinkle 2.3s .9s ease-in-out infinite;
+  background:radial-gradient(circle at 44% 18%,#fff 0 1.2px,transparent 3px),radial-gradient(circle at 90% 30%,#fff 0 1px,transparent 2.6px),radial-gradient(circle at 26% 46%,#fff 0 1.3px,transparent 3.2px),radial-gradient(circle at 66% 82%,#fff 0 1.1px,transparent 2.8px)}
+.tc[data-r="epic"] .tc__spark,.tc[data-r="legendary"] .tc__spark{display:block}
+.tc.is-mini .tc__spark{opacity:.7}
+/* rarity glow under the card */
+.tc.is-flipped[data-r="epic"] .tc__front{box-shadow:0 0 0 1px rgba(201,139,255,.45),0 14px 30px rgba(0,0,0,.55),0 0 26px rgba(127,245,228,.28)}
+.tc.is-flipped[data-r="legendary"] .tc__front{box-shadow:0 0 0 1px rgba(255,240,181,.55),0 14px 30px rgba(0,0,0,.55),0 0 34px rgba(226,194,126,.4)}
+
+/* ===== reveal fanfare ===== */
+@keyframes tc-pop{0%{scale:1}30%{scale:1.14}60%{scale:.98}100%{scale:1}}
+.tcpk__row .tc.is-pop{animation:tc-pop .6s cubic-bezier(.2,.9,.3,1.2) 1,tc-drift 6s .6s ease-in-out infinite}
+.tcpk__row .tc[data-r="rare"].is-pop{animation:tc-pop .45s cubic-bezier(.2,.9,.3,1.2) 1}
+@keyframes tc-rays-in{from{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0)}to{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(30deg)}}
+@keyframes tc-rays-spin{from{transform:translate(-50%,-50%) rotate(30deg)}to{transform:translate(-50%,-50%) rotate(390deg)}}
+.tcpk__rays{position:absolute;width:760px;height:760px;z-index:0;pointer-events:none;border-radius:50%;
+  -webkit-mask:radial-gradient(circle,#000 8%,rgba(0,0,0,.6) 32%,transparent 68%);mask:radial-gradient(circle,#000 8%,rgba(0,0,0,.6) 32%,transparent 68%);
+  animation:tc-rays-in .7s cubic-bezier(.2,.8,.2,1) both,tc-rays-spin 26s .7s linear infinite}
+.tcpk__rays.is-rare{background:repeating-conic-gradient(rgba(159,198,255,.22) 0 6deg,transparent 6deg 18deg);width:560px;height:560px}
+.tcpk__rays.is-epic{background:repeating-conic-gradient(rgba(127,245,228,.34) 0 5deg,transparent 5deg 15deg,rgba(201,139,255,.32) 15deg 20deg,transparent 20deg 30deg)}
+.tcpk__rays.is-legendary{background:repeating-conic-gradient(rgba(255,233,168,.5) 0 5deg,transparent 5deg 12deg);width:900px;height:900px}
+.tcpk__aura{position:absolute;width:420px;height:520px;transform:translate(-50%,-50%);z-index:0;pointer-events:none;border-radius:50%;filter:blur(26px);animation:tc-aura 2.4s ease-in-out infinite alternate}
+.tcpk__aura.is-rare{background:radial-gradient(closest-side,rgba(111,160,232,.35),transparent)}
+.tcpk__aura.is-epic{background:radial-gradient(closest-side,rgba(201,139,255,.45),rgba(127,245,228,.18) 60%,transparent)}
+.tcpk__aura.is-legendary{background:radial-gradient(closest-side,rgba(255,226,150,.6),rgba(196,154,82,.25) 60%,transparent)}
+@keyframes tc-aura{from{opacity:.75}to{opacity:1}}
+.tcpk__row .tc.is-hero{z-index:3}
+.tcpk__flash{position:absolute;inset:0;z-index:60;pointer-events:none;animation:tc-flash .8s ease-out both}
+.tcpk__flash.is-epic{background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.95),rgba(201,139,255,.5) 40%,rgba(0,0,0,0) 75%)}
+.tcpk__flash.is-legendary{background:radial-gradient(circle at 50% 50%,#fff,rgba(255,226,150,.75) 45%,rgba(196,154,82,.2) 80%)}
+@keyframes tc-flash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.tcpk__sparks{position:fixed;inset:0;width:100vw;height:100vh;z-index:61;pointer-events:none}
+@keyframes tc-shake{0%,100%{translate:0 0}15%{translate:-6px 3px}30%{translate:5px -4px}45%{translate:-4px 2px}60%{translate:3px -2px}80%{translate:-1px 1px}}
+.tcpk.is-shake{animation:tc-shake .5s ease-out 1}
+.tcpk__pull{position:absolute;left:0;right:0;z-index:4;text-align:center;pointer-events:none;animation:tc-slam .55s cubic-bezier(.2,1.4,.4,1) both .1s}
+.tcpk__pull b{display:inline-block;font:900 italic 44px/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:0 .2em}
+.tcpk__pull.is-epic b{background:linear-gradient(90deg,#7FF5E4,#C98BFF 40%,#FF7AD0 70%,#FFE68A);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(201,139,255,.6))}
+.tcpk__pull.is-legendary b{font-size:52px;background:linear-gradient(180deg,#FFF7DA,#E2C27E 55%,#A46C23);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 14px rgba(226,194,126,.8))}
+@keyframes tc-slam{0%{opacity:0;transform:scale(2.4)}60%{opacity:1;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+/* summary: scrolls, Done stays reachable, big hauls go 4-up with names */
+.tcpk__summary{min-height:0;justify-content:flex-start;padding:8px 16px 0;box-sizing:border-box}
+.tcpk__grid.is-many{grid-template-columns:repeat(4,1fr);--card-w:min(21vw,96px);gap:16px 8px}
+.tcpk__summary .tcpk__done{position:sticky;bottom:calc(env(safe-area-inset-bottom) + 14px);z-index:5;min-height:56px;margin-top:auto;box-shadow:0 -10px 30px rgba(6,9,9,.9)}
+@media (prefers-reduced-motion:reduce){.tc[data-r].is-flipped,.tc__edge,.tc__spark,.tcpk__rays{animation:none!important}}
+.tc__name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc__name.is-xlong{font-size:calc(var(--card-w)*.066)}
+.tcpk__pull b{font-size:40px}.tcpk__pull.is-legendary b{font-size:46px}
