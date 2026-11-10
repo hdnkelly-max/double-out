@@ -82,3 +82,4 @@
 - SHIPPED v1.55: collectibles merged (tc/ module from collectibles-src, 5 TOPS_ hooks in game4.js, assets/cards from collectibles). Runs on save.tc; SQL not applied. Also difficulty: Rookie/Club/Competitive picker before the next career match, placement after 120 darts, chip on the hub
 - SHIPPED v1.56: versioned cloud saves (save.sv + device id, Supabase tops_save_put rejects older writes and returns the newer save; app reloads newer progress on return, never mid-match)
 - SHIPPED v1.57: throwing lesson runs before your first career match (skip or finish goes straight to Big Mal); cards welcome waits until a new player's first match
+- SHIPPED v1.58: server referee covers doubles (team scores by seat parity, same as the local engine)

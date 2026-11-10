@@ -568,12 +568,12 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
 (function(){if(typeof NET==='undefined'||typeof LB==='undefined')return;
  const R={mid:null,v:0,st:null,busy:false,started:false,fixes:0,on:true,q:[]};window.TOPS_REF=R;
  const rpc=async(fn,body)=>{const r=await fetch(LB.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':LB.key,'Authorization':'Bearer '+LB.key,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(fn+' '+r.status);return r.json();};
- const live=()=>R.on&&R.mid&&typeof S!=='undefined'&&S&&S.online&&!S.done&&!S.teams;
+ const live=()=>R.on&&R.mid&&typeof S!=='undefined'&&S&&S.online&&!S.done;const ti=(st,j)=>st.teams?j%2:j;
  const byKey=k=>S.p.findIndex(p=>p.key===k);
  // a shared match id: the host stamps it into the start message
  const _ns=netSend;netSend=function(t,d){if(t==='start'&&d&&!d.mid)d.mid=(NET.room||'r')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);return _ns.apply(this,arguments);};
  const _ob=onlineBegin;onlineBegin=function(cfg){R.on=true;R.pend=null;R.mid=cfg&&cfg.mid||null;R.v=0;R.st=null;R.started=false;R.q=[];R.cfg=cfg;return _ob.apply(this,arguments);};
- async function ensureStart(){if(R.started||!live())return;R.started=true;try{const c=R.cfg||{};const keys=(c.players||[]).map(p=>p.key);if(keys.length<2||keys.indexOf(NET.myId)<0){R.on=false;return;}const st=await rpc('tops_ref_start',{p_match:R.mid,p_room:NET.room||'',p_cfg:{players:keys,start:c.start||501,legs:c.legs||S.bestOf||3,first:c.first||0,din:!!c.din,teams:false}});take(st);}catch(e){R.started=false;console.warn('ref start',e);}}
+ async function ensureStart(){if(R.started||!live())return;R.started=true;try{const c=R.cfg||{};const keys=(c.players||[]).map(p=>p.key);if(keys.length<2||keys.indexOf(NET.myId)<0){R.on=false;return;}const st=await rpc('tops_ref_start',{p_match:R.mid,p_room:NET.room||'',p_cfg:{players:keys,start:c.start||501,legs:c.legs||S.bestOf||3,first:c.first||0,din:!!c.din,teams:!!c.teams}});take(st);}catch(e){R.started=false;console.warn('ref start',e);}}
  function take(st){if(!st||st.err==='no match')return;if(st.v!=null&&st.v>=R.v){R.v=st.v;R.st=st;}}
  // submit my darts in order
  async function pump(){if(R.busy||!R.q.length)return;R.busy=true;try{await ensureStart();while(R.q.length){const d=R.q[0];const st=await rpc('tops_ref_dart',{p_match:R.mid,p_key:NET.myId,p_seq:R.v+1,p_x:d.x,p_y:d.y,p_bo:!!d.bo});
@@ -582,9 +582,9 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
   if(mine){R.q.push({x,y,bo});pump();}return r;};
  // snap this phone to the server when it disagrees (never mid-animation)
  function reconcile(){if(!live()||!R.st||S.bull)return;if(S.netAnim||S.pulling||S.busyLeg||S.busy&&S.p[S.cur].key===NET.myId)return;if(S.celebrateUntil&&performance.now()<S.celebrateUntil+1500)return;if(document.querySelector('.cd-wrap:not([hidden]),#cardDraft:not([hidden])'))return;if((NET.queue||[]).length||R.q.length)return;
-  const st=R.st;const sig=st.v+':'+st.cur+':'+st.scores.join(',');const ok=st.players.every((k,j)=>{const i=byKey(k);return i<0||(S.p[i].score===st.scores[j]&&(S.p[i].legs||0)===st.legs[j]);})&&byKey(st.players[st.cur])===S.cur;
+  const st=R.st;const sig=st.v+':'+st.cur+':'+st.scores.join(',');const ok=st.players.every((k,j)=>{const i=byKey(k);return i<0||(S.p[i].score===st.scores[ti(st,j)]&&(S.p[i].legs||0)===st.legs[ti(st,j)]);})&&byKey(st.players[st.cur])===S.cur;
   if(ok){R.pend=null;return;}if(R.pend!==sig){R.pend=sig;R.pendN=1;return;}if(++R.pendN<3)return;R.pend=null;let changed=false;
-  st.players.forEach((k,j)=>{const i=byKey(k);if(i<0)return;const p=S.p[i];const sc=st.scores[j],lg=st.legs[j];if(p.score!==sc||(p.legs||0)!==lg){p.score=sc;p.legs=lg;changed=true;}});
+  st.players.forEach((k,j)=>{const i=byKey(k);if(i<0)return;const p=S.p[i];const sc=st.scores[ti(st,j)],lg=st.legs[ti(st,j)];if(p.score!==sc||(p.legs||0)!==lg){p.score=sc;p.legs=lg;changed=true;}});
   const ni=byKey(st.players[st.cur]);
   if(ni>=0&&ni!==S.cur){S.cur=ni;changed=true;try{NET.queue=(NET.queue||[]).filter(q=>q.from===st.players[st.cur]);startTurn();if(st.dart>1){S.dart=st.dart;S.visitStart=st.visitStart;}}catch(e){console.warn('ref turn',e);}}
   else if(ni===S.cur&&S.p[ni].key!==NET.myId&&S.dart<st.dart){S.dart=st.dart;changed=true;}
