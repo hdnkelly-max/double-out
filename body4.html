@@ -1,0 +1,294 @@
+<style>/* ===== v1.30 loading screen ===== */
+#loading{background:#07100f!important;overflow:hidden}
+#loading .ld-bg{position:absolute;inset:-20px;background:#07100f center 30%/cover no-repeat;filter:blur(5px) brightness(.5) saturate(1.1);transform:scale(1.06);animation:ldpan 9s ease-out forwards}
+#loading .ld-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(7,16,15,.2),rgba(7,16,15,.85) 75%)}
+#loading .ld-logo{position:relative;width:min(220px,56vw);height:auto;filter:drop-shadow(0 10px 30px rgba(0,0,0,.6));animation:ldin .6s cubic-bezier(.2,.9,.3,1.1) both}
+#loading small{position:relative;letter-spacing:.22em!important;color:#aab6af!important}
+#loading i{position:relative;width:160px!important;background:rgba(198,243,107,.14)!important}
+@keyframes ldpan{to{transform:scale(1.0)}}@keyframes ldin{from{opacity:0;transform:translateY(8px) scale(.96)}}
+@media (prefers-reduced-motion:reduce){#loading .ld-bg,#loading .ld-logo{animation:none}}
+</style><div id="loading"><div class="ld-bg" aria-hidden="true"></div><img class="ld-logo" src="assets/ui/logo_tops.webp" alt="TOPS" onerror="this.style.display='none'"><small id="ldTip">Setting up the oche</small><i></i></div>
+<script>(function(){try{var k=+(localStorage.getItem('tops_menuart')||0)||0;var bg=document.querySelector('#loading .ld-bg');if(bg)bg.style.backgroundImage='url(img/menu_'+Math.max(0,Math.min(3,k))+'.jpg)';var T=['Setting up the oche','Chalking the board','Pouring the first round','Warming up the arm','Hanging the flights'];var n=0;var el=document.getElementById('ldTip');var iv=setInterval(function(){var L=document.getElementById('loading');if(!L||L.classList.contains('gone')){clearInterval(iv);return;}n=(n+1)%T.length;if(el)el.textContent=T[n];},1400);}catch(e){}})();</script>
+<canvas id="scene" aria-label="View of the oche. Drag on the board to aim. Hold the pull pad (or Space) to pull back, release to throw."></canvas>
+<div id="grade"></div><div id="grain"></div>
+<div id="nerve"></div>
+<div id="vig" style="position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(60,0,0,.9) 100%);opacity:0;transition:opacity .25s"></div>
+<canvas id="fx" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5"></canvas>
+<div class="intro" id="intro"><div class="intro-tier" id="introTier">Pub league</div><div class="intro-venue" id="introVenue">Local Thursday</div><div class="intro-vs"><div class="intro-p"><span class="ptw" id="introPt0"></span><b id="introP0">You</b><small id="introP0s"></small></div><div class="intro-v">v</div><div class="intro-p"><span class="ptw" id="introPt1"></span><b id="introP1">Opp</b><small id="introP1s"></small></div></div><div class="intro-opp" id="introOpp" hidden></div><div class="intro-fmt" id="introFmt">First to 2 legs</div><div class="intro-stakes" id="introStakes"></div></div>
+<div class="hud" id="hud" hidden>
+  <div class="top">
+    <span class="wm" aria-label="TOPS"><img class="wm-img" src="assets/ui/logo_tops.webp" alt="TOPS"></span>
+    <div class="event"><span id="eventTier">Pub league</span><b id="eventName">Local Thursday</b><i id="lkLeg"></i></div>
+    <div class="tr" id="hudTr"><button class="ghost menu" id="btnMenu" type="button" aria-label="Menu" aria-haspopup="true" aria-expanded="false">Menu</button><div class="lk-menu" id="lkMenu"><button class="ghost" id="btnView" type="button">View: POV</button><button class="ghost" id="btnSound" type="button" aria-pressed="true">Sound</button><button class="ghost" id="btnCaller" type="button" aria-pressed="true">Caller</button><button class="ghost" id="btnHaptics" type="button" aria-pressed="true">Haptics</button><button class="ghost" id="btnQuick" type="button" aria-pressed="true">Quick pace</button><button class="ghost" id="btnQuit" type="button">Quit</button></div></div>
+  </div>
+  <div class="lk-band" id="lkBand" hidden></div>
+  <div class="lk-pull" id="lkPull" aria-hidden="true"></div>
+  <div class="mid"><div class="callout" id="callout"></div></div>
+  <div class="drillbar" id="drillBar" hidden></div>
+  <div class="routes" id="routes" hidden></div>
+  <div class="bottom">
+    <div class="hint" id="hint">Drag on the board to aim · hold below it to pull back</div>
+    <div class="banter" id="banter"><b id="banterWho">Big Mal</b><span id="banterTxt"></span></div>
+    <div class="xp" id="xp"></div><div class="pulse"><div class="hr" id="hr"><canvas id="ecg" width="128" height="40"></canvas><span>HR</span><b id="bpm">72</b><small id="hrNote"></small><button class="ghost settle" id="btnSettle" type="button" hidden>Settle</button></div><div class="out" id="outshot"></div></div>
+    <div class="sb">
+      <div class="sbrow">
+      <div class="pl on" id="pl0"><div class="nm" id="name0">You<small id="sub0">Avg 0.0</small></div><div class="lg" id="legs0">0</div><div class="av" id="avg0"><small>Avg</small><b>0.0</b></div><div class="x1" id="one0"><small>180s</small><b>0</b></div><div class="lv" id="last0"><small>Last</small><b>–</b></div><div class="sc" id="score0">501</div></div>
+      <div class="sbmid" id="sbMid" aria-hidden="true"><small>Legs</small><b id="sbLegs">0–0</b><i id="sbFmt">First to 2</i></div><div class="pl r" id="pl1"><div class="nm" id="name1">Opponent<span class="opp-state" id="oppState" hidden></span><small id="sub1">Avg 0.0</small></div><div class="lg" id="legs1">0</div><div class="av" id="avg1"><small>Avg</small><b>0.0</b></div><div class="x1" id="one1"><small>180s</small><b>0</b></div><div class="lv" id="last1"><small>Last</small><b>–</b></div><div class="sc" id="score1">501</div></div>
+      </div>
+      <div class="visit"><div class="chips" id="visit"><span class="chip empty">–</span><span class="chip empty">–</span><span class="chip empty">–</span></div><div class="tot" id="visitTot">Dart 1 of 3</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FEEL (sprint): dedicated pull control. Verdict line (reserved), timing track with honest perfect window, pull pad. -->
+<div id="pullArea" class="pa ready" hidden>
+  <div class="pa-verdict" id="paVerdict" aria-live="polite"></div>
+  <div class="pa-track" id="paTrack"><i class="pa-late"></i><i class="pa-win" id="paWin"></i><i class="pa-tick t1"></i><i class="pa-tick t2"></i><i class="pa-tick t3"></i><i class="pa-tick t4"></i><i class="pa-mark" id="paMark"></i></div>
+  <div class="pa-pad" id="pullPad" role="button" tabindex="-1" aria-label="Pull pad: hold to pull back, release to throw"><span id="paLabel">Hold to pull</span></div>
+</div>
+
+<div class="mpb" id="mpBoard" hidden></div>
+<div class="pub-bet" id="pubBet" hidden></div>
+<div class="pub-blur" id="pubBlur" hidden></div>
+<div class="pub-band" id="pubBand" hidden></div>
+<div class="lesson" id="lesson" hidden></div>
+<div class="bet-reveal" id="betReveal" hidden></div>
+<button class="chat-btn" id="btnChat" type="button" hidden aria-label="Quick chat">💬 Chat</button>
+<div class="chat-panel" id="chatPanel" hidden></div>
+<div class="chat-feed" id="chatFeed" aria-live="polite"></div>
+<div class="bet-round" id="betRound" hidden></div>
+<button class="zoom-btn" id="btnZoom" type="button" aria-pressed="true">Whole board</button>
+<!-- TITLE -->
+<img id="sceneBg" class="scene-bg" alt="" hidden>
+<div class="screen lgn" id="login" hidden>
+  <img id="loginBg" class="lgn-bg" alt="" hidden>
+  <div class="lgn-wrap">
+    <h1 class="wm lgn-wm"><img class="wm-img" src="assets/ui/logo_tops.webp" alt="TOPS"></h1>
+    <p class="lgn-kick">A darts career. Start at the local. Earn your place at the top.</p>
+    <div class="lgn-stack">
+      <button class="big lgn-google" id="btnGoogle" type="button"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.5 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.4 0-11.7-4.1-13.6-9.8l-7.8 6C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+      <p class="lgn-help">Your career follows you to any device</p>
+      <button class="ghost wide" id="btnGuest" type="button" hidden>Play as guest</button>
+      <p class="lgn-help">Season 1. Your career saves to the cloud.</p>
+      <p class="lgn-status" id="loginStatus"></p>
+    </div>
+    <div class="tl-venue lgn-venue"><b>The Kauri Arms</b><small>Aotearoa New Zealand</small></div>
+  </div>
+</div>
+
+<div class="screen" id="title">
+  <img id="titleBg" class="tl-bg" alt="" hidden>
+  <div class="tl-top"><button class="ghost" id="btnTSound" type="button" aria-pressed="true">Sound on</button><button class="ghost" id="btnTCaller" type="button" aria-pressed="true">Caller on</button></div>
+  <div class="tl">
+    <div class="hero"><h1 class="wm wm-img" style="margin:0"><img src="assets/ui/logo_tops.webp" alt="TOPS" style="display:block;width:clamp(230px,62vw,380px);height:auto;filter:drop-shadow(0 10px 24px rgba(0,0,0,.6))"></h1><div class="wm-sub">From the Kauri to the Palace</div>
+      <p class="tl-blurb">A first-person darts career. Start at the local. Earn your place at the top.</p></div>
+    <div class="nogl" id="noGL" hidden><b>This browser can’t run the 3D view.</b> TOPS needs WebGL. Try Chrome or Safari with hardware acceleration on, or another device.</div>
+    <div class="stack tl-stack">
+      <div class="tcard" id="titleCard" hidden><span id="tcPt"></span><div><b id="tcName">You</b><small id="tcLine"></small></div><em id="tcBank">$0</em></div>
+      <button class="big" id="btnContinue" type="button" hidden>Continue career</button>
+      <button class="big" id="btnNewCareer" type="button">New career</button>
+      <button class="tl-run" id="btnRun" type="button"><b>The Run</b><small>Three lives. Draft a card after every match. Climb the ladder.</small></button>
+      <button class="ghost wide" id="btnNewRun" type="button" hidden>New run<small>Abandons the current run</small></button>
+      <div class="tl-row"><button class="tl-sec" id="btnThrow" type="button"><b>Have a throw</b><small>Quick practice · first time? 1 min lesson</small></button><button class="tl-sec" id="btnFriends" type="button"><b>Play a mate</b><small>Live online match</small></button></div>
+      <button class="tl-link" id="btnLesson" type="button">How to throw · replay the 1-minute lesson</button>
+      <button class="tl-link" id="btnCalib" type="button">Tap timing</button>
+      <button class="tl-link" id="btnCredits" type="button">Credits</button>
+    </div>
+    <p class="tl-note" id="tlAuth">Sound starts after your first tap.</p>
+  </div>
+  <div class="tl-venue"><b>The Kauri Arms</b><small>Aotearoa New Zealand</small></div>
+</div>
+
+<!-- CREATOR -->
+<div class="screen hubx cx" id="creator" hidden>
+  <header class="hx-head"><span class="hx-wm" aria-hidden="true"><img class="wm-img" src="assets/ui/logo_tops.webp" alt="TOPS"></span><span class="rx-kick" id="cxTitle">Create your player</span><span class="rx-kicker">The Kauri Arms · Thursday</span></header>
+  <section class="cx-main">
+    <div class="cx-stage" aria-hidden="true"><div class="cx-hint">Live preview</div></div>
+    <div class="cx-form">
+      <div class="cx-steps" id="cxSteps"><button type="button" data-s="look" aria-pressed="true">Look</button><button type="button" data-s="darts" aria-pressed="false">Darts</button><button type="button" data-s="game" aria-pressed="false">Game</button></div>
+      <div class="cx-sec" data-s="look">
+<div class="field"><label class="label" for="cName">Name</label><input type="text" id="cName" value="" maxlength="16" placeholder="What they'll call out"></div>
+    <div class="field"><span class="label">Character</span><div class="seg char-pick" id="segChar"></div></div>
+    <div class="field"><span class="label">Hair</span><div class="seg char-pick" id="segHair2"></div></div>
+    <div class="field"><span class="label">Hair colour</span><div class="swatches" id="swHair2"></div></div>
+    <div class="field"><span class="label">Skin</span><div class="swatches" id="swSkin2"></div></div>
+    <div class="field"><span class="label">Extras</span><div class="seg char-pick" id="segExtra"></div></div>
+    <div class="field"><span class="label">Skin</span><div class="swatches" id="swSkin"></div></div>
+    <div class="field"><span class="label">Hair</span><div class="seg four" id="segHair"><button type="button" data-v="short" aria-pressed="true">Short</button><button type="button" data-v="buzz" aria-pressed="false">Buzz</button><button type="button" data-v="long" aria-pressed="false">Long</button><button type="button" data-v="bald" aria-pressed="false">Bald</button></div><div class="swatches" id="swHair"></div></div>
+    <div class="field"><span class="label">Shirt</span><div class="swatches" id="swShirt"></div></div><div class="field"><span class="label">Kit</span><div class="seg wrap" id="segKit"></div></div>
+    <div class="field"><span class="label">Beard</span><div class="seg" id="segBeard"><button type="button" data-v="0" aria-pressed="true">Clean</button><button type="button" data-v="1" aria-pressed="false">Beard</button></div></div>
+    </div><div class="cx-sec" data-s="darts" hidden><div class="field"><span class="label">Starter darts</span><div class="ladder" id="cBarrels"></div></div>
+    <div class="field"><span class="label">Flights</span><div class="swatches" id="swFlight"></div></div>
+    </div><div class="cx-sec" data-s="game" hidden><p class="help">Checkout routes finish on your double when they can. You can still pick any route mid-match from the side of the board.</p><div class="field"><span class="label">Preferred double</span><div class="seg" id="prefDbl"></div></div>
+    </div>
+      <div class="cx-foot"><button class="big" id="btnCreate" type="button">That's me</button><button class="ghost wide" id="btnCreatorBack" type="button">Back</button></div>
+    </div>
+  </section>
+</div>
+
+<!-- MESSAGE (phone chat) -->
+<div class="screen msgx" id="msg" hidden>
+  <div class="phone">
+    <div class="phone-status"><span id="phTime">9:41</span><span class="phsig">●●●● <i>▮▮▮</i></span></div><div class="phone-head"><i id="msgAv"></i><div><b id="msgFrom">Jonno</b><small id="msgSub">Mobile</small></div></div>
+    <div class="thread" id="msgThread"></div>
+    <div class="replies" id="msgReplies"></div>
+  </div>
+</div>
+
+<!-- HUB (tabbed career shell) -->
+<div class="screen hubx" id="hub" hidden>
+  <header class="hx-head">
+    <span class="hx-wm" aria-hidden="true"><img class="wm-img" src="assets/ui/logo_tops.webp" alt="TOPS"></span>
+    <nav class="htabs" id="hubTabs"><button type="button" data-t="play" aria-pressed="true">Career</button><button type="button" data-t="practice" aria-pressed="false">Practice</button><button type="button" data-t="player" aria-pressed="false">Player</button><button type="button" data-t="kit" aria-pressed="false">Kit</button><button type="button" data-t="board" aria-pressed="false">Leaderboard</button></nav>
+    <div class="hx-id"><span id="hubPt"></span><b id="hubName">You</b></div>
+    <div class="bank"><div class="label">Bank</div><b id="hubBank">$0</b></div>
+    <div class="hx-menu"><button class="ghost" id="btnHubMenu" type="button" aria-haspopup="true" aria-expanded="false">Menu</button><div class="hx-pop" id="hubPop" hidden><button type="button" id="btnLook">Edit look</button><button type="button" id="btnHubSound">Sound on</button><button type="button" id="btnHubCaller">Caller on</button><button type="button" id="btnHubTitle">Main menu</button></div></div>
+  </header>
+  <div class="hx-sub"><span id="hubTier">Pub league</span><span id="hubSeasonLine"></span></div>
+  <section class="htab hx-main" data-t="play">
+    <aside class="hx-season">
+      <div class="hx-h"><b id="hxSeasonTitle">The season</b><span id="hxSeasonSub">Top two earn promotion</span></div>
+      <div class="hx-status" id="hxStatus">Season starting · no matches played</div>
+      <div id="hubTable"></div>
+      <button class="hx-link" id="btnFullTable" type="button">View full table →</button>
+      <div class="hx-timeline"><div class="pips" id="hubProgPips"></div><span id="hubProgTxt">Week 1 of 8</span></div><div class="hx-strip" id="hubStrip" hidden></div>
+      <div class="hx-run" id="hxRun" hidden></div>
+    </aside>
+    <div class="hx-fix">
+      <div class="pickcard" id="hubPick" hidden><div><div class="label">Perk unlocked</div><b id="hubPickTxt">A perk is waiting.</b></div><button class="big" id="btnHubPick" type="button">Choose</button></div>
+      <div class="hx-kicker" id="nextKind">This week’s fixture</div>
+      <div class="hx-vs"><span id="nextPt"></span><div class="hx-opp"><h2 id="nextOpp">Big Mal</h2><div class="hx-facts" id="nextMeta"></div></div></div>
+      <div class="hx-stakes"><div class="hx-win" id="fixWin"></div><div class="hx-loss" id="fixLoss"></div></div>
+      <button class="big" id="btnPlayNext" type="button">Walk on</button>
+      <div class="hx-fixsub" id="fixSub">Continue to your scheduled match</div>
+      <div class="rival" id="hubRival" hidden></div>
+    </div>
+  </section>
+  <section class="htab hx-spare" data-t="play">
+    <div class="hx-spare-h"><b>Your spare night</b><span class="hx-badge" id="spareAvail">1 available this week</span><small id="spareHint">Choose one activity before your next fixture.</small></div>
+    <div class="hx-acts">
+      <button class="wk" id="btnPractice" type="button"><i class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="22" cy="26" r="16"/><circle cx="22" cy="26" r="10"/><circle cx="22" cy="26" r="3.5"/><path d="M22 26 40 8"/><path d="M36 12l5-1-1 5"/></svg></i><div><b>Practice</b><small id="practiceInfo"></small></div></button>
+      <button class="wk" id="btnLocal" type="button"><i class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8h18l-2 32H16z"/><path d="M32 14h5a4 4 0 0 1 0 8h-6"/><path d="M15.5 16h15"/></svg></i><div><b>Local match</b><small id="localInfo"></small></div></button>
+      <button class="wk" id="btnMoney" type="button"><i class="ic"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="14" width="30" height="18" rx="2"/><path d="M12 10h30v18"/><circle cx="21" cy="23" r="4.5"/></svg></i><div><b>Money match</b><small id="moneyInfo"></small></div></button>
+    </div>
+  </section>
+  <footer class="htab hx-foot" data-t="play"><span id="hubRecord">Career record 0–0</span><span class="hid"><b id="hubAvg">–</b><b id="hubRecent">–</b><b id="hubStreak">0</b></span><span id="hubWeekNote" hidden></span><span id="hubTierLabel" hidden></span><span id="hubVenue" hidden></span><span id="hubProg" hidden></span><span id="nextStakes" hidden></span><span id="nextInfo" hidden></span></footer>
+  <div class="hx-body">
+  <section class="htab pr" data-t="practice" id="hxPractice" hidden></section>
+  <section class="htab" data-t="player" hidden>
+    <div class="plhead"><span id="plPt" hidden></span><div hidden><div class="hub-name" id="plName">You</div><div class="help" id="plTier"></div></div><div class="plnums"><div><small>Career earnings</small><b class="brass" id="plEarn">$0</b></div><div><small>Perks</small><b id="plPerkCount">0</b></div></div></div>
+    <div class="pickcard" id="plPick" hidden><div><div class="label">Perk unlocked</div><b>Choose one of three.</b></div><button class="big" id="btnPlPick" type="button">Pick a perk</button></div>
+    <div class="attrrow" id="hubAttrs" hidden></div>
+    <div class="card"><div class="label">Career</div><div class="grid2 four" id="plStats"></div><div class="rival" id="plRival"></div></div>
+    <div class="cols">
+      <div class="card"><div class="label">Attributes</div><div class="attrs" id="plAttrs"></div></div>
+      <div class="card"><div class="label">Perks</div><div class="perks" id="plPerks"></div></div>
+    </div>
+    <div class="card"><div class="label">Side quests · cash</div><ul class="obj" id="hubObj"></ul></div>
+    <div class="card"><div class="label">Feats · each new one earns a perk draft</div><ul class="feats" id="plFeats"></ul><ul class="feats one" id="hubFeats" hidden></ul></div>
+  </section>
+  <section class="htab" data-t="kit" hidden>
+    <div class="hub-top"><div><div class="label">Kit room · <span id="shopSponsor"></span></div><div class="hub-name kitn" id="kitName">Your setup</div></div><b id="shopBank" hidden>$0</b></div>
+    <div class="kit"><img id="kitImg" alt="Your dart"><div class="kitbars" id="kitBars"></div></div>
+    <div class="seg kittabs" id="kitTabs"><button type="button" data-t="barrel" aria-pressed="true">Barrels</button><button type="button" data-t="setup" aria-pressed="false">Setup</button><button type="button" data-t="gear" aria-pressed="false">Gear</button></div>
+    <div id="kit_barrel"><div class="ladder" id="shopList"></div></div>
+    <div id="kit_setup" hidden><div class="field"><span class="label">Flight colour</span><div class="swatches" id="swFlight2"></div></div><div class="ladder" id="setupList"></div></div>
+    <div id="kit_gear" hidden><div class="ladder" id="gearList"></div></div>
+  </section>
+  <section class="htab" data-t="board" hidden>
+    <div class="card"><div class="label">Mates leaderboard · career totals across players</div><div id="hubBoard"></div></div>
+  </section>
+  </div>
+  <div class="hid"><button id="btnSkills" type="button" hidden></button><button id="btnShop" type="button" hidden></button></div>
+</div>
+
+<!-- SHOP (merged into hub) -->
+<div class="screen side" id="shop" hidden><div class="panel"><button class="ghost wide" id="btnShopBack" type="button">Back</button></div></div>
+
+<!-- FRIENDS -->
+<div class="screen side mpx" id="friends" hidden>
+  <div class="panel mp">
+    <div class="mp-head"><div><div class="mp-kick">Live online · 2 to 5 players</div><h1 class="mp-h1">Play online</h1><p class="mp-sub">Invite mates. Pick your pros. Play.</p></div><button class="ghost" id="btnFriendsBack" type="button">Back</button></div>
+    <div class="mp-grid">
+      <div class="mp-col">
+    <div class="on-box" id="onBox">
+      <label class="on-name"><span>Your name</span><input id="onName" maxlength="14" autocomplete="nickname" placeholder="So your mates know it's you"></label>
+      <div class="on-row" id="onEntry"><button class="big" id="btnOnHost" type="button">Create a room</button><p class="mp-note">You set the rules, then share the invite link in your group chat.</p><div class="mp-or">Have a room code?</div>
+        <div class="on-join"><input type="text" id="onCodeIn" placeholder="Room code" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="ghost" id="btnOnJoin" type="button">Join</button></div></div>
+      <div class="on-lobby" id="onLobby" hidden>
+        <div class="on-lhead"><div><small>Room</small><div class="on-code" id="onCode">----</div><small class="on-fmt" id="onFmt"></small></div><div class="on-acts"><button class="ghost" id="btnOnShare" type="button">Share invite</button><button class="ghost" id="btnOnLeave" type="button">Leave</button></div></div>
+        <div class="on-players" id="onPlayers"></div>
+        <div class="on-wait" id="onWait"></div>
+        <button class="big" id="btnOnStart" type="button" hidden disabled>Start match</button>
+        <button class="big" id="btnOnReady" type="button" hidden>Ready</button>
+      </div>
+      <p class="help" id="onStatus">Everyone plays a pro, not their career player, so it's fair.</p>
+    </div>
+    <details class="mp-rules" id="mpRules" open><summary><span class="mp-h2">Match rules</span><small id="mpRulesSum">501 · Best of 3 · Straight in</small></summary>
+    <div class="mp-opts" id="mpOpts">
+      <p class="mp-note" id="mpOptsNote">Host sets the rules. Everyone sees them before they ready up.</p>
+      <div class="field pub-sec"><span class="pub-sh"><i class="pint" aria-hidden="true"></i><b>Pub rules</b><small>The drinking game. Secret bets, wobble, the lot.</small></span><div class="seg" id="mpPub"><button type="button" data-v="0" aria-pressed="true">Off</button><button type="button" data-v="1">On · drinking game</button></div></div>
+      <div class="pub-opts" id="pubOpts" hidden>
+        <label class="pub-in"><span>Sip on a visit of</span><input id="pubSips" value="26" inputmode="numeric" autocomplete="off"></label>
+        <label class="pub-in"><span>Down it on an unaimed</span><input id="pubTre" value="T18, T12" autocomplete="off"></label>
+        <div class="seg pub-tg" id="pubTg"><button type="button" data-k="low" aria-pressed="true">Under 60 = sip · 26 or less = drink</button><button type="button" data-k="t180" aria-pressed="true">180 = others down it · 140+ = others sip</button><button type="button" data-k="bust" aria-pressed="false">Bust = sip</button><button type="button" data-k="bets" aria-pressed="true">Ability cards</button></div>
+        <p class="help">Twice a leg a secret bet round pops up: pick one player, back one outcome, longer odds win bigger. Sips build your wobble meter: more spread and sway. Downing one is four sips. Real drinks optional, water counts.</p>
+      </div>
+      <div class="field"><span class="label">Legs</span><div class="seg" id="mpLegs"><button type="button" data-v="1">1 leg</button><button type="button" data-v="3" aria-pressed="true">Best of 3</button><button type="button" data-v="5">Best of 5</button><button type="button" data-v="7">Best of 7</button></div></div>
+      <div class="field"><span class="label">Game</span><div class="seg" id="mpStart"><button type="button" data-v="501" aria-pressed="true">501</button><button type="button" data-v="301">301</button><button type="button" data-v="170">170</button></div></div>
+      <div class="field"><span class="label">Start</span><div class="seg" id="mpIn"><button type="button" data-v="0" aria-pressed="true">Straight in</button><button type="button" data-v="1">Double in</button></div></div>
+      <div class="field"><span class="label">Players</span><div class="seg" id="mpMode"><button type="button" data-v="0" aria-pressed="true">Every player for themselves</button><button type="button" data-v="1">2v2 teams (4 players)</button></div></div>
+      <div class="field"><span class="label">Standard</span><div class="seg" id="mpLevel"><button type="button" data-v="0">Pub</button><button type="button" data-v="1" aria-pressed="true">Club</button><button type="button" data-v="2">Pro</button></div></div>
+      <div class="field"><span class="label">Venue</span><div class="seg" id="mpVenue"><button type="button" data-v="-1" aria-pressed="true">Random</button><button type="button" data-v="0">Pub</button><button type="button" data-v="1">Club</button><button type="button" data-v="2">Regional</button><button type="button" data-v="4">Stage</button><button type="button" data-v="6">Palace</button></div></div>
+    </div>
+    </details>
+      </div>
+      <div class="mp-col">
+        <section class="mp-sec"><h2 class="mp-h2">Choose your pro <small id="mpProSel"></small></h2><p class="mp-note">Everyone plays a pro, not their career player, so it's fair.</p><div class="mp-pros" id="mpPros"></div></section>
+        <section class="mp-sec"><h2 class="mp-h2">Records</h2><div class="mp-recs" id="mpRecords"></div></section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen hubx rx" id="result" hidden>
+  <header class="hx-head rx-head"><span class="hx-wm" aria-hidden="true"><img class="wm-img" src="assets/ui/logo_tops.webp" alt="TOPS"></span><span class="rx-kick">Match result</span><span class="rx-kicker" id="resKicker">Pub league</span></header>
+  <section class="rx-main">
+    <div class="rx-left">
+      <h2 class="res-win" id="resTitle">You win</h2><p class="res-sub" id="resSub"></p>
+      <div class="rx-keys" id="resKeys" hidden></div><p class="rx-coach" id="resCoach" hidden></p><p class="rx-oppline" id="resOppLine" hidden></p>
+      <div class="res-score"><div class="rs-p"><span class="ptw" id="rsPt0"></span><div><b id="rsN0">You</b><small id="rsA0">Avg 0.0</small></div></div><div class="rs-legs"><span id="rsL0">0</span><i>–</i><span id="rsL1">0</span></div><div class="rs-p r"><div><b id="rsN1">Opp</b><small id="rsA1">Avg 0.0</small></div><span class="ptw" id="rsPt1"></span></div></div>
+      <div class="res-earn" id="resEarn" hidden><div class="re-cash"><small>Earned this match</small><b id="reCash">$0</b></div><div class="re-sp"><small>Experience</small><b id="reSp">+0</b></div><div class="re-bank"><small>Bank</small><b id="reBank">$0</b></div></div>
+      <p class="rx-net" id="reNet" hidden></p>
+      <div class="rx-receipt" id="resReceipt" hidden></div>
+      <div class="res-obj" id="resObj" hidden><div class="label">Objectives completed</div><div class="chips" id="resObjChips"></div></div>
+    </div>
+    <div class="rx-right">
+      <div class="label">Match stats</div>
+      <div class="res-stats" id="resStats"></div>
+      <div class="res-prog" id="resProg" hidden><div class="label">Progress</div><div class="attrs four" id="resAttrs"></div><div class="chips" id="resUps"></div></div>
+    </div>
+  </section>
+  <footer class="hx-spare rx-foot"><div class="actions"><button class="big" id="btnResultNext" type="button">Continue</button><button class="ghost wide" id="btnCopy" type="button">Copy dart log</button></div></footer>
+</div>
+<div id="logInfo" hidden></div><table id="resTable" hidden></table>
+<textarea class="hidden-copy" id="copyBox" aria-hidden="true"></textarea>
+<!-- PLAYER (merged into hub) -->
+<div class="screen side" id="skills" hidden><div class="panel"><button class="ghost wide" id="btnSkillsBack" type="button">Back</button></div></div>
+<!-- PERK PICK -->
+<div class="screen center" id="perk" hidden>
+  <div class="panel">
+    <div class="res-head"><div class="res-kicker" id="perkWhy">Feat</div><h2 class="res-win">Pick a perk</h2><p class="res-sub" id="perkCount">Pick one</p></div>
+    <div class="perks pickgrid" id="perkCards"></div>
+    <p class="help" id="perkKeyHelp">Keystones are exclusive: take one and the others in its group lock for this career.</p>
+    <p class="help" id="perkFlush" hidden>Three of a suit is a flush, five is a double flush. ♣ scoring · ♦ doubles · ♠ spread · ♥ composure.</p>
+    <div class="row2"><button class="ghost wide" id="btnPerkReroll" type="button" hidden>Reroll</button>
+    <button class="ghost wide" id="btnPerkLater" type="button">Decide later</button></div>
+  </div>
+</div>
+<div class="overlay" id="credits" hidden><div class="ov-card cred-card"><h2>Credits</h2>
+<p>Characters and animations: Mixamo (Adobe). Textures, HDRI lighting and furniture: Poly Haven (CC0) and pmndrs/assets (CC0).</p>
+<p>3D models used under Creative Commons Attribution 4.0:</p><ul><li>&ldquo;Dart&rdquo; by <a href="https://sketchfab.com/slothisticated" target="_blank" rel="noopener">Kabir</a> &middot; <a href="https://sketchfab.com/3d-models/dart-96aa56cca1ba45a9be5c43c07e696a0a" target="_blank" rel="noopener">Sketchfab</a> &middot; CC BY 4.0 (barrel and point, recoloured and resized per barrel)</li><li>&ldquo;Beer Tap&rdquo; by <a href="https://sketchfab.com/Jessica_Cooper" target="_blank" rel="noopener">Jessica Cooper</a> &middot; <a href="https://sketchfab.com/3d-models/beer-tap-848d23329e76434bba29034a9f508191" target="_blank" rel="noopener">Sketchfab</a> &middot; CC BY 4.0</li><li>&ldquo;Pint of Guinness&rdquo; by <a href="https://sketchfab.com/MatthewForgrave1998" target="_blank" rel="noopener">Matthew Forgrave</a> &middot; <a href="https://sketchfab.com/3d-models/pint-of-guinness-f4aedb44497640fca7e652898c3ff4c5" target="_blank" rel="noopener">Sketchfab</a> &middot; CC BY 4.0</li></ul>
+<button class="big" id="btnCreditsClose" type="button">Close</button></div></div>
+<div id="cardDraft" hidden></div><div id="cardTray" hidden></div><div id="cardFog"></div>

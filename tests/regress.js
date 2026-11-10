@@ -1,0 +1,39 @@
+// TOPS regression suite: plays real matches in a headless browser (sped-up timers) and checks scoring invariants.
+// Usage: node tests/regress.js [matches=6]   exits 1 on any failure.
+const {chromium}=require('playwright');
+const N=+process.argv[2]||6;
+(async()=>{
+ const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
+ const fails=[];const stats=[];
+const one=async(m)=>{
+  const p=await b.newPage({viewport:{width:390,height:844}});
+  const errs=[];p.on('pageerror',e=>errs.push(e.message));
+  await p.addInitScript(()=>{const st=window.setTimeout;window.setTimeout=(f,ms,...a)=>st(f,Math.max(0,(ms||0)*0.06),...a);});
+  await p.goto('file://'+require('path').resolve(__dirname,'../index.html'));await p.waitForTimeout(3500);
+  const setup=await p.evaluate((m)=>{try{save.authSeen=true;$('login').hidden=true;newCareer();const n=nextOpponent();V.walkOn=()=>{};
+   const tier=m%3,start=301;
+   beginMatch({mode:'career',tier,p0:'Test',oppKey:n.oppKey,oppName:n.oppName,oppAvg:[42,55,70][tier],legs:1,start});
+   window.__T={viol:[],turns:{},base:{},last:{},start};const _fly=V.fly;V.fly=function(){const a=[...arguments];if(typeof a[4]==='number')a[4]=a[4]*0.08;return _fly.apply(this,a);};
+   const _st=startTurn;startTurn=function(){const r=_st.apply(this,arguments);try{if(S&&!S.bull)S.p.forEach((q,i)=>{const s0=window.__T.start;if(q.score===s0&&window.__T.last[i]!==s0)window.__T.base[i]=q.pts;window.__T.last[i]=q.score;const base=window.__T.base[i]||0;if(q.pts-base!==s0-q.score)window.__T.viol.push(`pts drift p${i}: pts ${q.pts} base ${base} score ${q.score}`);if(q.score<0||q.score===1)window.__T.viol.push(`bad score p${i} ${q.score}`);});}catch(e){window.__T.viol.push('hook '+e.message)}return r;};
+   const _ld=land;land=function(x,y,far){if(S&&!S.bull&&!S.done){const k=S.cur+':'+S.turnN;window.__T.turns[k]=(window.__T.turns[k]||0)+1;if(window.__T.turns[k]>3)window.__T.viol.push(`4th dart in turn ${k} (p${S.cur})`);}return _ld.apply(this,arguments);};
+   return 'ok';}catch(e){return 'setup '+e.message;}},m);
+  if(setup!=='ok'){fails.push(`match ${m}: ${setup}`);await p.close();return;}
+  const t0=Date.now();let st='';
+  let iter=0;while(Date.now()-t0<200000){if((++iter)%60===0&&process.env.DBG)console.log("  m"+m+" "+st+" "+await p.evaluate(()=>JSON.stringify({cur:S.cur,busy:S.busy,dart:S.dart,v:S.visit.length,sc:S.p.map(q=>q.score),bull:!!S.bull,fly:!!S.aiFlying,cel:!!(S.celebrateUntil&&performance.now()<S.celebrateUntil),cards:!!document.querySelector(".cd-wrap:not([hidden]),#cardDraft:not([hidden])"),done:S.done,lg:S.p.map(q=>q.legs)})));st=await p.evaluate(()=>{try{if(S.done)return 'done';
+    if(S.bull){if(S.cur===0&&!S.busy&&S.bull.me==null){S.busy=true;land(gauss()*30,gauss()*30);}return 'bull';}
+    if(S.cur===0&&!S.busy&&S.visit.length<3&&!S.p[0].ai){const me=S.p[0];const lbl=aimFor(me.score,4-S.dart);const t=targetPoint(lbl);S.busy=true;land(t.x+gauss()*16,t.y+gauss()*16);}
+    return 'play';}catch(e){return 'ERR '+e.message;}});
+   if(st==='done'||st.startsWith('ERR'))break;await p.waitForTimeout(40);}
+  const r=await p.evaluate(()=>({viol:window.__T.viol.slice(0,10),p:S.p.map(q=>({legs:q.legs,avg:q.darts?+(q.pts/q.darts*3).toFixed(1):0,darts:q.darts,ai:!!q.ai})),done:!!S.done}));
+  if(!r.done)fails.push(`match ${m}: did not finish (${st})`);
+  r.viol.forEach(v=>fails.push(`match ${m}: ${v}`));errs.slice(0,3).forEach(e=>fails.push(`match ${m}: page error ${e}`));
+  const ai=r.p.find(q=>q.ai);if(ai&&ai.darts>30&&ai.avg>110)fails.push(`match ${m}: AI avg ${ai.avg} impossible for rating`);
+  stats.push(r.p.map(q=>(q.ai?'AI ':'P ')+q.avg+'/'+q.legs).join(' vs '));
+  await p.close();
+ };
+ for(let m=0;m<N;m++){await one(m);}
+ await b.close();
+ console.log('regress: '+N+' matches · '+stats.join(' | '));
+ if(fails.length){console.log('REGRESSION FAILED\n- '+fails.join('\n- '));process.exit(1);}
+ console.log('regress: all checks passed');
+})();
