@@ -36,16 +36,39 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
     let darts=0,pts=0,m180=0,b2b=0,visits=0;
     for(let i=0;i<LEGS;i++){const a=avgs[i%avgs.length];const r=leg(a,t,temps[i%temps.length],[20,16,18,12,10,8][i%6]);darts+=r.darts;pts+=r.pts;m180+=r.m180;b2b+=r.b2b;visits+=Math.ceil(r.darts/3);}
     avgs.sort((x,y)=>x-y);
-    out.push({set:lab,tier:t,targetMin:avgs[0],targetMax:avgs[avgs.length-1],targetMean:+(avgs.reduce((s,x)=>s+x,0)/avgs.length).toFixed(1),avg:+(pts/darts*3).toFixed(1),p180:+(m180/visits*100).toFixed(2),b2bPer100Legs:+(b2b/LEGS*100).toFixed(2)});}}
+    let topAvg=null;if(lab==='comp'){let d2=0,p2=0;const mx=avgs[avgs.length-1];for(let i=0;i<LEGS;i++){const r=leg(mx,t,temps[i%temps.length],[20,16,18,12,10,8][i%6]);d2+=r.darts;p2+=r.pts;}topAvg=+(p2/d2*3).toFixed(1);}
+    out.push({set:lab,tier:t,targetMin:avgs[0],targetMax:avgs[avgs.length-1],targetMean:+(avgs.reduce((s,x)=>s+x,0)/avgs.length).toFixed(1),avg:+(pts/darts*3).toFixed(1),p180:+(m180/visits*100).toFixed(2),b2bPer100Legs:+(b2b/LEGS*100).toFixed(2),topAvg});}}
   delete save.diff;return out;},{LEGS,SETS});
+ // ---- edge checks (ChatGPT 19:47) ----
+ const edge=await p.evaluate(({LEGS})=>{const out={order:[],idem:[],top:[],legacy:null};const sh=window.TOPS_OPP_SHIFT;
+  // (a) every opponent: Rookie < Club < Competitive
+  for(let t=0;t<7;t++)for(let v=TIERS[t].avg-12;v<=TIERS[t].avg+12;v++){const r=[];for(const lv of ['rookie','club','comp']){save.diff={lv,darts:999,pts:0,place:0};r.push(sh(v,t));}if(!(r[0]<r[1]&&r[1]<r[2]))out.order.push(`t${t} raw ${v}: ${r.join(' / ')}`);}
+  // (b) shifted once: nextOpponent -> beginMatch, twice, same object and a rebuilt object
+  save.diff={lv:'comp',darts:999,pts:0,place:0};newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;V.walkOn=()=>{};
+  const n=nextOpponent();c.next=n;const want=n.oppAvg;const go=o=>{beginMatch(o);const got=S.oppAvg;try{S.done=true;}catch(e){}return got;};
+  const base={mode:'career',tier:1,p0:'T',oppName:n.oppName,oppAvg:n.oppAvg,legs:1};
+  const g1=go(base),g2=go(base),g3=go(Object.assign({},base)),g4=go(Object.assign({},base,{oppAvg:n.oppAvg}));go(base);const raw=S.oppRaw;c.next=null;const g5=go(Object.assign({},base,{oppAvg:raw})); // revenge: the real match (started from the fixture) stores its raw rating; the replay shifts it once
+  out.idem=[want,g1,g2,g3,g4,g5];
+  // (c) toughest opponent each tier on Competitive (deciders, Deano): simulate the max target on its own
+  return out;},{LEGS});
+ // (d) legacy saves: placement -6, 0, +15 stored before the update, then the page reloads with the new code
+ const legacy=[];for(const pl of [-6,0,15]){await p.evaluate(pl=>{save.diff={lv:'comp',darts:300,pts:21000,place:pl,placeAvg:70,placeNew:pl!==0};persist();},pl);await p.reload();await p.waitForTimeout(4000);
+  legacy.push(await p.evaluate(()=>{const d=save.diff;save.authSeen=true;$('login').hidden=true;newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;const n=nextOpponent();return {place:d.place,placeNew:d.placeNew,opp:n.oppAvg,raw:n.oppRaw};}));}
  await b.close();
- const fails=[];const pad=(s,n)=>String(s).padEnd(n);
+ const fails=[];
+ if(edge.order.length)fails.push('difficulty order broken: '+edge.order.slice(0,3).join(' | '));
+ const [want,...got]=edge.idem;if(got.some(g=>g!==want))fails.push(`opponent shifted more than once: wanted ${want}, got ${got.join(',')}`);
+ legacy.forEach((l,i)=>{if(l.place!==0||l.placeNew)fails.push(`legacy save placement ${[-6,0,15][i]} not cleared: ${JSON.stringify(l)}`);});
+ const lt=legacy.map(l=>TOPS_TGT(l.raw));function TOPS_TGT(x){return x;}
+ if(new Set(legacy.map(l=>l.opp)).size>1&&new Set(legacy.map(l=>l.raw)).size===1)fails.push('legacy saves give different opponents for the same raw rating: '+JSON.stringify(legacy));
+ console.log('edges: order ok='+!edge.order.length+' · shift-once '+edge.idem.join('/')+' · legacy '+JSON.stringify(legacy));const pad=(s,n)=>String(s).padEnd(n);
  console.log(pad('setting',18)+pad('tier',6)+pad('band',9)+pad('targets',12)+pad('sim avg',9)+pad('180s/100 visits',17)+'b2b 180s/100 legs');
  res.forEach(r=>{const [lo,hi]=BANDS[r.tier];console.log(pad(r.set,18)+pad(r.tier,6)+pad(lo+'-'+hi,9)+pad(r.targetMin+'-'+r.targetMax,12)+pad(r.avg,9)+pad(r.p180,17)+r.b2bPer100Legs);
   // gate (rule 11): Competitive inside the band (1 point of sim noise); no setting above the band top; placement must not change anything
   if(/^comp/.test(r.set)&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
   if(r.avg>hi+1)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} above band top ${hi}`);
   if(r.targetMax>hi+((r.tier<=1)?4:7))fails.push(`tier ${r.tier} ${r.set}: an opponent target of ${r.targetMax} is far above band top ${hi}`);
+  if(r.topAvg!=null){console.log(`   toughest ${r.set} opponent at tier ${r.tier} (target ${r.targetMax}): sim ${r.topAvg}`);if(r.topAvg>hi+2)fails.push(`tier ${r.tier}: toughest Competitive opponent sims at ${r.topAvg}, over band top ${hi}`);}
   if(r.tier<=2&&r.b2bPer100Legs>1)fails.push(`tier ${r.tier} ${r.set}: back-to-back 180s in ${r.b2bPer100Legs} of 100 legs`);});
  // tiers climb in order on every setting
  const bySet={};res.forEach(r=>(bySet[r.set]=bySet[r.set]||[])[r.tier]=r.avg);Object.entries(bySet).forEach(([k,a])=>{for(let t=1;t<a.length;t++)if(!(a[t]>a[t-1]))fails.push(`${k}: tier ${t} (${a[t]}) not above tier ${t-1} (${a[t-1]})`);});

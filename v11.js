@@ -139,8 +139,12 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   const top=hi+adj,bot=lo+adj-(lv==='comp'?0:16);   // Competitive stays inside the band; easier settings may sit below it, never above
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
- const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0){n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
- const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext){const o=totalOff();opts=Object.assign({},opts,{oppAvg:shift(opts.oppAvg,opts.tier),_diffOff:o});}}catch(e){}return _bm.call(this,opts);};
+ // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
+ const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
+ const SHIFTED=new WeakSet();
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
+  else if(opts&&viaNext&&c.next.oppRaw!=null&&opts.oppRaw==null)opts=Object.assign({},opts,{oppRaw:c.next.oppRaw});}catch(e){}
+  const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
    if(false&&d.place==null&&d.darts>=120){ /* v1.77: placement retired (rule 11) */const a=d.pts/d.darts*3;const c=career();const par=c?TIERS[c.tier].avg:45;d.place=Math.max(-6,Math.min(15,Math.round((a-par)*0.6)));d.placeAvg=+a.toFixed(1);d.placeNew=true;try{trackEv('diff_place',{avg:d.placeAvg,place:d.place,lv:d.lv});}catch(e){}}}}catch(e){}return _em.apply(this,arguments);};
