@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="r2_fonts.css"><style>
+:root{--k:#0a0a0b;--k2:#121213;--brass:#c3a06a;--brass2:#8a6f45;--w:#ece8e1;--g:#8d8a84}
+body{background:var(--k);color:var(--w);font-family:Inter,sans-serif}
+.light{position:absolute;inset:0;background:
+  radial-gradient(circle at 74% 20%,rgba(195,160,106,.16),transparent 34%),
+  radial-gradient(ellipse 120% 60% at 50% 110%,rgba(195,160,106,.06),transparent 60%),var(--k)}
+.board{position:absolute;right:-90px;top:40px;width:330px;height:330px;border-radius:50%;background:url(../../assets/ui/bg_club.webp) 50% 22.5%/1440px auto;filter:grayscale(.8) brightness(.45) contrast(1.2);opacity:.55;-webkit-mask:radial-gradient(circle,#000 52%,transparent 71%);mask:radial-gradient(circle,#000 52%,transparent 71%)}
+.top{position:absolute;left:28px;right:28px;top:26px;display:flex;align-items:center;justify-content:space-between}
+.wm{font:500 13px/1 Inter;letter-spacing:.5em;color:var(--w)}
+.lv{font:400 12px/1 Inter;letter-spacing:.24em;color:var(--g);text-transform:uppercase}
+.lv b{font:500 italic 22px/1 Cormorant;color:var(--brass);letter-spacing:0;margin-left:6px}
+.main{position:absolute;left:28px;right:28px;top:250px}
+.kick{font:400 11px/1 Inter;letter-spacing:.34em;text-transform:uppercase;color:var(--brass)}
+h1{font:500 italic 104px/.86 Cormorant;letter-spacing:-.02em;margin-top:18px}
+.sub{font:300 17px/1.5 Inter;color:#c9c5bd;margin-top:18px;max-width:300px}
+.sub em{font-style:normal;color:var(--w);font-weight:400}
+.rule{height:1px;background:linear-gradient(90deg,var(--brass),rgba(195,160,106,0));margin:30px 0 22px}
+.stats{display:flex;gap:30px}
+.stats div small{display:block;font:400 10px/1 Inter;letter-spacing:.28em;text-transform:uppercase;color:var(--g)}
+.stats div b{display:block;font:500 34px/1 Cormorant;margin-top:8px}
+.stats div b i{font-style:normal;font-size:18px;color:var(--g);margin-left:4px}
+.go{position:absolute;left:28px;right:28px;top:668px;height:64px;border:1px solid var(--brass);border-radius:32px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 30px;background:linear-gradient(180deg,rgba(195,160,106,.08),rgba(195,160,106,0))}
+.go b{font:500 13px/1 Inter;letter-spacing:.42em;text-transform:uppercase;color:var(--w)}
+.go i{width:44px;height:44px;border-radius:50%;background:var(--brass);display:grid;place-items:center}
+.go i::after{content:"";width:12px;height:12px;border-top:2px solid #14110c;border-right:2px solid #14110c;transform:translateX(-2px) rotate(45deg)}
+.prize{position:absolute;left:28px;right:28px;top:744px;text-align:center;font:400 11px/1 Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--g)}
+.nav{position:absolute;left:20px;right:20px;bottom:18px;display:flex;justify-content:space-between}
+.nav b{min-width:60px;height:44px;display:flex;align-items:center;justify-content:center;font:400 11px/1 Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--g)}
+.nav b.on{color:var(--brass)}
+.cash{position:absolute;left:28px;top:62px;font:400 12px/1 Inter;letter-spacing:.24em;color:var(--g);text-transform:uppercase}
+.cash b{font:500 italic 22px/1 Cormorant;color:var(--w);letter-spacing:0;margin-left:6px}
+</style></head><body>
+<div class="light"></div><div class="board"></div>
+<div class="top"><span class="wm">TOPS</span><span class="lv">Level<b>14</b></span></div>
+<div class="cash">Purse<b>$640</b></div>
+<div class="main">
+  <div class="kick">Tonight · Club League · Night V</div>
+  <h1>Big Mal.</h1>
+  <p class="sub">Third against fifth at the Waitākere Club. <em>Win, and second place is yours.</em></p>
+  <div class="rule"></div>
+  <div class="stats"><div><small>Your average</small><b>61.4</b></div><div><small>His</small><b>58.2</b></div><div><small>Form</small><b>4<i>/5</i></b></div></div>
+</div>
+<div class="go"><b>Walk on</b><i></i></div>
+<div class="prize">Best of three · $60 · 120 XP</div>
+<div class="nav"><b class="on">Play</b><b>Career</b><b>Store</b><b>Player</b><b>Practice</b></div>
+</body></html>
