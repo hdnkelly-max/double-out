@@ -5,6 +5,8 @@
 //  - an injected 120 ms main-thread stall shows up as stalls100 and an incident with the game phase
 //  - a quit before 30 frames sends nothing; guests' rows wait in a bounded local queue
 //  - cost: the per-frame bookkeeping p95 < 0.05 ms and max < 0.5 ms (bench, median of 3 runs), and no raw user-agent in the row
+//  - insert-only stub like the real table: a duplicate in a batch is retried row by row and clears the queue; keepalive is a plain POST
+//  - a leg ending during the next pull sends nothing until a real break (QA 09:03 / 11:00)
 //  - every row: version, match index, standalone flag, 10-bin frame histogram summing to frame_n, under 5 KB; the 5 KB guard trims an oversized row
 // usage: node tests/perf-tel.js
 const {chromium}=require('playwright');const path=require('path');
@@ -13,7 +15,8 @@ const {chromium}=require('playwright');const path=require('path');
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(5000);
  const f=[];
  await p.evaluate(()=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;
-  window.__rows=[];NET.user={id:'u1'};NET.sb={from:()=>({upsert:(rows)=>{__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null});}}),auth:{getSession:()=>Promise.resolve({data:{}})}};
+  window.__rows=[];NET.user={id:'u1'};/* insert-only like the real table (QA 09:03): no upsert; a row whose sample_id is already stored fails the whole batch with 23505 / 409 */
+  window.__stored=new Set();window.__calls=[];NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used: needs SELECT on tops_perf');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};
   window.TOPS_PERF_30=3000;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:3});});
  await p.waitForTimeout(2500);await p.evaluate(()=>{if(S&&S.bull)S.bull=null;S.busy=false;S.cur=0;/* the 'who throws first, tap to continue' card, as a player's tap */});
  // aim input (real pointer events) so the reticle latency has samples
@@ -72,6 +75,24 @@ const {chromium}=require('playwright');const path=require('path');
  await p.evaluate(()=>{try{S.won=true;endMatch();}catch(e){}localStorage.setItem('tops_perfq','[]');localStorage.setItem('tops_perfck',JSON.stringify({sample_id:'ck-zz',match_id:'zz',phase:'end',status:'interrupted'}));});
  await p.reload();await p.waitForTimeout(4500);const k=await p.evaluate(()=>({ck:localStorage.getItem('tops_perfck'),q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').map(r=>[r.match_id,r.status,String(r.sample_id).startsWith('ck-')])}));
  if(k.ck||k.q.length!==1||k.q[0][0]!=='zz'||k.q[0][1]!=='interrupted'||k.q[0][2])f.push('killed-while-hidden checkpoint not promoted once with a fresh id: '+JSON.stringify(k));
+ 
+ // the page was reloaded above: put the insert-only stub back, with one row already stored
+ await p.evaluate(()=>{window.__stored=new Set(['old-1']);window.__calls=[];window.__rows=[{sample_id:'old-1',phase:'end',ver:'x'}];NET.user={id:'u1'};NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};if(!career())newCareer();const c=career();c.stage=null;c.tier=1;});
+ // QA 09:03 / 11:00 finding 1: a batch with a row already stored (lost response, retry) still clears the queue, row by row
+ const dupc=await p.evaluate(async()=>{const old=__rows[0];const fresh=Object.assign({},old,{sample_id:'fresh-'+Date.now()});
+  localStorage.setItem('tops_perfq',JSON.stringify([old,fresh]));const before=__rows.length;TOPS_perf.flush&&TOPS_perf.flush();await new Promise(r=>setTimeout(r,800));
+  return {q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').length,added:__rows.length-before,freshStored:__stored.has(fresh.sample_id)};});
+ if(dupc.q!==0||!dupc.freshStored||dupc.added!==1)f.push('duplicate in a batch: '+JSON.stringify(dupc));
+ // keepalive: plain POST, no on_conflict / resolution
+ const ka=await p.evaluate(()=>{const seen=[];const of=window.fetch;window.fetch=(u,o)=>{seen.push({u:String(u),p:o&&o.headers&&o.headers.Prefer});return Promise.resolve({ok:true});};try{TOPS_perf.kaTest&&TOPS_perf.kaTest();}finally{window.fetch=of;}return seen;});
+ if(!ka.length)f.push('keepalive not exercised');else if(ka.some(x=>/on_conflict/.test(x.u)||/resolution/.test(x.p||'')))f.push('keepalive still asks for on_conflict/resolution: '+JSON.stringify(ka));
+ // QA 09:03 / 11:00 finding 2: a leg that ends while the next pull is under way sends nothing until a real break
+ const midp=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:9});/* long match: two endLeg() calls must not finish it */await new Promise(r=>setTimeout(r,800));
+  const m=TOPS_perf.m;if(!m)return {err:'no match'};m.want30=true;m.sent30=false;const n0=__calls.length;S.busy=false;S.pulling=true;try{endLeg();}catch(e){}
+  await new Promise(r=>setTimeout(r,6500));/* a pull held through the whole 5 s look-again window: nothing may go */const during=__calls.length-n0;
+  S.pulling=false;S.busy=false;await new Promise(r=>setTimeout(r,1500));const afterWindow=__calls.length-n0;/* window over: wait for the next break */
+  try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,3000));return {during,afterWindow,sent30:m.sent30,calls:__calls.length-n0};});
+ if(midp.err||midp.during!==0||midp.afterWindow!==0||!midp.sent30)f.push('leg break during a pull: '+JSON.stringify(midp));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
  console.log(JSON.stringify({r30:r30&&{fps:r30.fps,p95:r30.p95,frame_n:r30.frame_n,dev:r30.dev,reticle_n:r30.reticle_n},end:re&&{status:re.status,stalls100:re.stalls100,max_ms:re.max_ms,incidents:(re.incidents||[]).slice(0,2),draws_max:re.draws_max,reticle_n:re.reticle_n,reticle_p95:re.reticle_p95,match_index:re.match_index,app_secs:re.app_secs,geometries:re.geometries,textures:re.textures,programs:re.programs,tex_mb:re.tex_mb},cost}));
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: 30 s checkpoint + end row (same match), hidden is a pause, stall caught with its phase, quit sends nothing, guest queue bounded, bookkeeping p95 '+cost.p95+' us per frame, single-call max (median of 3) '+cost.call_max+' us');})();

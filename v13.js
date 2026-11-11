@@ -48,8 +48,10 @@ let exp=0,tickN=0;setInterval(()=>{const t=performance.now();if(!M||M.done||docu
  watchAudio();},250);
 // QA 08:23: nothing is built or sent during aiming or a dart's flight. Flush points: a leg ending (the scoreboard between legs), the
 // match ending or being left, and the hub (a 15 s timer that only acts when no match is running).
-function legBreak(){try{if(!M||M.done)return;if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length)idle(()=>send([]));}catch(e){}}
-if(typeof endLeg==='function'){const el=endLeg;endLeg=function(){const r=el.apply(this,arguments);try{if(M&&!M.done)setTimeout(legBreak,600);/* after the leg's own scoring work */}catch(e){}return r;};}
+// a real break: no pull, no busy turn, no dart in the air (QA 09:03 / 11:00 finding 2); otherwise wait for the next break or match end
+function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
+function legBreak(id,tries){try{if(!M||M.done||M.id!==id)return;if(!quiet()){/* the leg-end banner keeps the game busy for ~0.6-0.9 s: look again, up to 5 s, then wait for the next break */if((tries||0)<20)setTimeout(()=>legBreak(id,(tries||0)+1),250);return;}if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length)idle(()=>send([]));}catch(e){}}
+if(typeof endLeg==='function'){const el=endLeg;endLeg=function(){const r=el.apply(this,arguments);try{if(M&&!M.done){const id=M.id;setTimeout(()=>legBreak(id,0),600);}/* after the leg's own scoring work */}catch(e){}return r;};}
 setInterval(()=>{try{if((M&&!M.done)||document.hidden)return;if(typeof NET!=='undefined'&&NET.user&&NET.sb){if(!KA)prepKA();if(qGet().length)idle(()=>send([]));}}catch(e){}},15000);
 const idle=f=>{try{if(window.requestIdleCallback)return requestIdleCallback(f,{timeout:3000});}catch(e){}setTimeout(f,1500);};
 // audio: the game's AudioContext state changes (incl. iOS 'interrupted') and playbackStats underruns where the browser has them
@@ -88,10 +90,18 @@ function ckGet(){try{return JSON.parse(localStorage.getItem(CK_KEY)||'null');}ca
 function ckSave(row){try{const q=qGet();q.push(row);qSet(q);}catch(e){}}/* queue only; sent at the next flush point */
 function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
  if(typeof NET==='undefined'||!NET.user||!NET.sb){qSet(all);return;}
- qSet(all);try{NET.sb.from('tops_perf').upsert(all,{onConflict:'sample_id',ignoreDuplicates:true}).then(({error})=>{if(error){console.warn('tops_perf',error.message);return;}const ids=new Set(all.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}).catch(()=>{});}catch(e){}}
+ qSet(all);
+ // QA 09:03 / 11:00 finding 1: plain INSERT only (the table grants INSERT, not SELECT, so ON CONFLICT (sample_id) is refused).
+ // A row already stored comes back as a unique violation (23505 / 409): count it as stored. One duplicate fails the whole batch,
+ // so on a duplicate the rows are retried one at a time and each stored or duplicate row leaves the queue.
+ try{const ins=r=>NET.sb.from('tops_perf').insert(r);
+  ins(all).then(({error,status})=>{if(!error){done(all);return;}if(!dup(error,status)){console.warn('tops_perf',error.message);return;}
+   all.reduce((p,r)=>p.then(()=>ins([r]).then(({error,status})=>{if(!error||dup(error,status))done([r]);})),Promise.resolve()).catch(()=>{});}).catch(()=>{});}catch(e){}}
+function dup(e,st){return st===409||(e&&(e.code==='23505'||/duplicate key/i.test(e.message||'')));}
+function done(rows){try{const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
 // keepalive on page close: needs the URL, key and token prepared before (no async work while closing)
 let KA=null;function prepKA(){try{if(typeof NET==='undefined'||!NET.sb||!NET.user)return;const u=NET.sb.supabaseUrl||(NET.sb.rest&&NET.sb.rest.url&&NET.sb.rest.url.replace(/\/rest\/v1$/,''));const k=NET.sb.supabaseKey;NET.sb.auth.getSession().then(({data})=>{const t=data&&data.session&&data.session.access_token;if(u&&k&&t)KA={u,k,t};}).catch(()=>{});}catch(e){}}
-function keepalive(rows){try{if(!KA||!rows.length)return false;fetch(KA.u+'/rest/v1/tops_perf?on_conflict=sample_id',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(rows)}).catch(()=>{});return true;}catch(e){return false;}}
+function keepalive(rows){try{if(!KA||!rows.length)return false;fetch(KA.u+'/rest/v1/tops_perf',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(rows)})/* plain insert; rows stay queued, so a duplicate (409) is cleared by the next send() */.catch(()=>{});return true;}catch(e){return false;}}
 // --- lifecycle ---
 function finish(status){if(!M||M.done)return null;M.done=true;ckSet(null);if(M.vis<5000){M=null;return null;}/* QA 08:23: under 5 s of play (an instant quit) sends nothing */const row=build('end',status);M=null;return row;}
 const _bm=beginMatch;beginMatch=function(){let prev=null;try{prev=finish('interrupted');}catch(e){M=null;}const r=_bm.apply(this,arguments);try{M=newM();prepKA();watchAudio();if(prev)ckSave(prev);/* the previous match's row is queued, sent at the next flush point */}catch(e){M=null;}return r;};
@@ -104,6 +114,6 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
-window.TOPS_perf={fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
+window.TOPS_perf={flush(){send([]);},kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>
