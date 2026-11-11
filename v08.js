@@ -35,6 +35,6 @@ new MutationObserver(()=>{const on=document.body.classList.contains('lk-cine');i
 })();
 </script>
 <style id="v07-css">
-.walk-sec{margin:18px 0}.walk-row{display:flex;flex-wrap:wrap;gap:8px}.walk-b{padding:10px 14px;border-radius:999px;border:1px solid rgba(237,236,229,.18);background:#192426;color:#EDECE5;font:700 13px Manrope,sans-serif}.walk-b.on{background:#C6F36B;color:#10191A;border-color:#C6F36B}
+.walk-sec{margin:18px 0}.walk-row{display:flex;flex-wrap:wrap;gap:8px}.walk-b{padding:10px 14px;min-height:44px;border-radius:999px;border:1px solid rgba(237,236,229,.18);background:#192426;color:#EDECE5;font:700 13px Manrope,sans-serif}.walk-b.on{background:#C6F36B;color:#10191A;border-color:#C6F36B}
 .clip-btn{position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 56px);z-index:120;padding:10px 14px;border-radius:999px;background:rgba(16,25,26,.92);border:1px solid #C6F36B;color:#C6F36B;font:800 13px Manrope,sans-serif;text-decoration:none;box-shadow:0 8px 20px rgba(0,0,0,.4)}.clip-btn[hidden]{display:none}
 </style>
