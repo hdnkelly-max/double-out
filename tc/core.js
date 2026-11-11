@@ -411,6 +411,28 @@
     return el;
   }
 
+  // P6 (a11y): a Collection card is a real button for keyboard and screen-reader users (Tab to it, Enter or Space opens it)
+  function kbCard(k, label) {
+    k.tabIndex = 0; k.setAttribute('role', 'button'); k.setAttribute('aria-label', label);
+    k.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); k.click();
+      /* when the card view it opened closes, put keyboard focus back on this card (ChatGPT a11y review) */
+      const view = [...document.querySelectorAll('.tc-inspect')].pop(); if (!view) return;
+      /* keyboard users: focus moves into the card view, Tab stays inside it, Escape closes it */
+      const foc = () => [...view.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent);
+      const onKey = ev => {
+        if (ev.key === 'Escape') { ev.preventDefault(); const x = view.querySelector('.tc-x'); x ? x.click() : view.remove(); return; }
+        if (ev.key !== 'Tab') return; const f = foc(); if (!f.length) return;
+        const i = f.indexOf(document.activeElement);
+        if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (!ev.shiftKey && (i === -1 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
+      };
+      document.addEventListener('keydown', onKey, true);
+      const x0 = view.querySelector('.tc-x'); if (x0) x0.focus({ preventScroll: true });
+      const mo = new MutationObserver(() => { if (!view.isConnected) { mo.disconnect(); document.removeEventListener('keydown', onKey, true); if (k.isConnected) k.focus({ preventScroll: true }); } });
+      mo.observe(view.parentNode || document.body, { childList: true });
+    });
+  }
   // Collection binder
   function binder() {
     const t = st(); let filt = 'all';
@@ -425,8 +447,8 @@
       grid.innerHTML = '';
       D.CARDS.filter(c => filt === 'all' || c.set === filt).filter(c => !c.exclusive || t.own[c.id]).sort((a, b) => (!t.own[a.id]) - (!t.own[b.id]) || a.no - b.no).forEach(c => {
         const n = t.own[c.id] || 0; const k = TCC.card(c); k.classList.add('is-mini');
-        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); }
-        else { k.classList.add('is-locked'); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
+        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); kbCard(k, `${c.name}, ${c.rarity} card${n > 1 ? `, ${n} owned` : ''}`); }
+        else { k.classList.add('is-locked'); k.setAttribute('role', 'img'); k.setAttribute('aria-label', `Card ${c.no}, not collected`); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno" aria-hidden="true">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
         grid.appendChild(k);
       });
       el.querySelector('#tcSets').innerHTML = `<div class="tcpk__kicker">Sets</div>` + sets.filter(s => !s.exclusive).map(s => {
