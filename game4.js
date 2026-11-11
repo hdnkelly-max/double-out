@@ -1072,7 +1072,9 @@ const V=(function(){try{return (()=>{
  function floorPlate(){if(window.TOPS_PLATES===false)return;const pm=new T.MeshBasicMaterial({color:0x000000,toneMapped:false,fog:false});pm.userData.own=1;const ph=4.8,pw=7.2;const pl=new T.Mesh(new T.PlaneGeometry(pw,ph),pm);pl.position.set(7.42,ph/2-.7,3.45);pl.rotation.y=-Math.PI/2;pl.name='floorPlate';venue.add(pl);
   {const lm=new T.MeshBasicMaterial({color:0xe8eef8,toneMapped:false});for(let i=0;i<3;i++)for(let j=0;j<2;j++){const lp=new T.Mesh(new T.PlaneGeometry(.9,.35),lm);lp.rotation.x=Math.PI/2;lp.position.set(2.2+i*1.9,3.38,1.6+j*2.6);venue.add(lp);}}
   {const cf=new T.PointLight(0xc5d9e8,.28,6);cf.position.set(-1,2.2,OCHE_Z+.8);venue.add(cf);}
-  try{new T.TextureLoader().load('assets/venue/plate_5.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x0a1d3a);});}catch(e){}}
+  if(PLATE5){pm.map=PLATE5;pm.color.setRGB(1,1,1);pm.needsUpdate=true;return;}   // Art: the hall plate is loaded once and kept, so a venue rebuild (e.g. when character models finish loading) no longer blinks it black
+  try{new T.TextureLoader().load('assets/venue/plate_5.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());KEEP.add(tx);PLATE5=tx;pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x0a1d3a);});}catch(e){}}
+ let PLATE5=null;
  function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:(window.TOPS_PLATE6?{6:'plate_6.webp'}:{})[t];
   const big=t>=4,X=big?3.4:3.1,Z0=OCHE_Z;const NAMES={2:['AUCKLAND','REGIONAL OPEN'],3:['DPNZ','NATIONAL SERIES'],4:['TRANS-TASMAN','DARTS CUP'],5:['PDC','PRO TOUR'],6:['WORLD','CHAMPIONSHIP']};const N=NAMES[t]||NAMES[4];
   const ACC={2:'#2fa046',3:'#e8382c',4:'#ffb000',5:'#2c8cff',6:'#D7B45C'}[t]||'#C6F36B';
@@ -1248,7 +1250,7 @@ const V=(function(){try{return (()=>{
     const mat=new T.Mesh(new T.PlaneGeometry(.9,.1),new T.MeshBasicMaterial({color:0xdcdcdc}));mat.rotation.x=-Math.PI/2;mat.position.set(x,.012,OCHE_Z);venue.add(mat);
     // divider + scorer stand + player at the oche
     box(.04,1.2,2.4,new T.MeshStandardMaterial({color:0x121418,roughness:.7}),x-1.3,.6,1.2);box(.5,1.1,.4,new T.MeshStandardMaterial({color:0x16191e,roughness:.6}),x+.9,.55,OCHE_Z-.6);
-    addExtra('Pro '+i,x-.06,OCHE_Z+.08,1.0,'stand',5);}
+    if(i!==1)addExtra('Pro '+i,x-.06,OCHE_Z+.08,1.0,'stand',5);}   // Art: board 8's player stood right behind the divider in the thrower view, so only a torso and a floating hand showed; boards 5, 6 and 9 keep theirs
    addLight(new T.PointLight(0xffffff,.5,16)).position.set(0,3.2,3);addLight(new T.PointLight(0xffffff,.4,16)).position.set(-5,3.2,2);addLight(new T.PointLight(0xffffff,.4,16)).position.set(5,3.2,2);amb.intensity=.45;key.intensity=1.2;
    box(.5,1.1,.4,new T.MeshStandardMaterial({color:0x16191e,roughness:.6}),.9,.55,OCHE_Z-.6);{const tb=new T.Mesh(new T.PlaneGeometry(.26,.18),new T.MeshBasicMaterial({color:0x2c6fb8,toneMapped:false}));tb.rotation.x=-Math.PI/2+.5;tb.position.set(.9,1.115,OCHE_Z-.6);venue.add(tb);} /* scorer's tablet */addExtra('Marker',1.35,OCHE_Z-1.55,Math.PI,'stand',5,{shirt:'#1c1c1c'});
   }else{ // worlds
