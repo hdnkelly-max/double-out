@@ -1,0 +1,127 @@
+{
+ "cls": "screen mm2",
+ "scrollH": 844,
+ "clientH": 844,
+ "controls": [
+  {
+   "id": "btnTSound",
+   "vis": true,
+   "y": 14,
+   "h": 34,
+   "text": "SOUND ON"
+  },
+  {
+   "id": "btnTCaller",
+   "vis": true,
+   "y": 14,
+   "h": 34,
+   "text": "CALLER ON"
+  },
+  {
+   "id": "btnContinue",
+   "vis": true,
+   "y": 377,
+   "h": 74,
+   "text": "CONTINUE CAREER Club singles · 23–11"
+  },
+  {
+   "id": "btnNewCareer",
+   "vis": true,
+   "y": 459,
+   "h": 48,
+   "text": "START A NEW CAREER"
+  },
+  {
+   "id": "btnRun",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": "The RunThree lives. Draft a card after every match. Climb the ladder."
+  },
+  {
+   "id": "btnNewRun",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": "New runAbandons the current run"
+  },
+  {
+   "id": "mmMate",
+   "vis": true,
+   "y": 527,
+   "h": 134,
+   "text": "PLAY A MATE Live online · Games night"
+  },
+  {
+   "id": "mmRun",
+   "vis": true,
+   "y": 527,
+   "h": 134,
+   "text": "THE RUN Three lives, a card each win"
+  },
+  {
+   "id": "mmThrow",
+   "vis": true,
+   "y": 527,
+   "h": 134,
+   "text": "HAVE A THROW Practice and drills"
+  },
+  {
+   "id": "btnLesson",
+   "vis": true,
+   "y": 677,
+   "h": 28,
+   "text": "How to throw · replay the 1-minute lesson"
+  },
+  {
+   "id": "btnCalib",
+   "vis": true,
+   "y": 677,
+   "h": 28,
+   "text": "Tap timing"
+  },
+  {
+   "id": "btnCredits",
+   "vis": true,
+   "y": 710,
+   "h": 28,
+   "text": "Credits"
+  },
+  {
+   "id": "mmRestartRun",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": "Restart the Run"
+  },
+  {
+   "id": "btnThrow",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": "Have a throwQuick practice · first time? 1 min lesson"
+  },
+  {
+   "id": "btnFriends",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": "Play a mateLive online match"
+  },
+  {
+   "id": "btnInstall",
+   "vis": false,
+   "y": 0,
+   "h": 0,
+   "text": ""
+  },
+  {
+   "id": "tlIn",
+   "vis": true,
+   "y": 766,
+   "h": 14,
+   "text": "Sign in with Google"
+  }
+ ],
+ "text": "SOUND ON\nCALLER ON\nFROM THE KAURI TO THE PALACE\nHAYDEN\nClub singles · 23–11\n$640\nCONTINUE CAREER\nClub singles · 23–11\nSTART A NEW CAREER\nPLAY A MATE\nLive online · Games night\nTHE RUN\nThree lives, a card each win\nHAVE A THROW\nPractice and drills\nHow to throw · replay the 1-minute lesson\nTap timing\nCredits\nGuest · Sign in with Google to save your career to the cloud.\nTOPS v2.08 · Season 1"
+}
