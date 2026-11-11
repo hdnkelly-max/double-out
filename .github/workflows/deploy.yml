@@ -6,7 +6,9 @@ on:
   push: { branches: [main, deploy-fallback] }
   workflow_dispatch:
 permissions: { contents: read, pages: write, id-token: write }
-concurrency: { group: pages-${{ github.ref }}, cancel-in-progress: false }
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +24,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
     steps:
       - id: d
         uses: actions/deploy-pages@v4
