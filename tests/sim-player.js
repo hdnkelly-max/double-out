@@ -29,7 +29,7 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
   // base throw parameters for a player at tier t: a real career match, so every live wrapper (v09 career window etc.) applies
   // stats (st2.v), barrel and setup as the tester has them now; nerves held at 0 here because each replayed dart brings its own
   const baseTp=(t,pr,st)=>{newCareer();save.arm=pr.arm;const c=career();c.tier=t;c.stage=null;
-   const s2=save.st2||(window.TOPS_ST2&&TOPS_ST2(),save.st2);if(save.st2)save.st2.v=Object.assign({},st||pr.st2v);if(save.st2){save.st2.tb=Object.assign({sc:20,fi:20,ct:20},pr.tb||{});}
+   const s2=save.st2||(window.TOPS_ST2&&TOPS_ST2(),save.st2);if(save.st2)save.st2.v=Object.assign({},st||pr.st2v);if(save.st2){save.st2.tb=Object.assign({sc:20,fi:20,ct:20},pr.tb||{});}try{const v3=C3.V3();const sv=Object.values(st||pr.st2v);const avg=sv.reduce((a,b)=>a+b,0)/sv.length;v3.lv=pr.lv||Math.max(1,Math.round(1+(avg-20)*5/7));}catch(e){}
    save.owned=Array.from(new Set((save.owned||[]).concat(pr.barrel)));save.barrel=pr.barrel;save.setup=Object.assign({},pr.setup);
    beginMatch({mode:'career',tier:t,p0:'P',oppName:'X',oppAvg:50,legs:1});S.adren=0;S.calm=99;
    const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}try{S.done=true;}catch(e){}return tp;};
