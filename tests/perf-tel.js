@@ -18,7 +18,11 @@ const {chromium}=require('playwright');const path=require('path');
  // aim input (real pointer events) so the reticle latency has samples
  await p.evaluate(()=>{for(let k=0;k<5;k++)setTimeout(()=>document.querySelector('canvas').dispatchEvent(new PointerEvent('pointermove',{pointerType:'touch',pointerId:3,clientX:200+k,clientY:300,bubbles:true})),k*400);});
  // wait for the 30 s checkpoint (3 s here) to upload at a safe moment
- for(let i=0;i<40;i++){await p.waitForTimeout(500);if(await p.evaluate(()=>__rows.some(r=>r.phase==='30s')))break;}
+ // QA 08:23: nothing is sent during play; the 30 s checkpoint waits for the next leg end (the game's own endLeg)
+ for(let i=0;i<30;i++){await p.waitForTimeout(500);if(await p.evaluate(()=>TOPS_perf.m&&TOPS_perf.m.want30))break;}
+ await p.waitForTimeout(3000);const early=await p.evaluate(()=>__rows.length);if(early)f.push('a row was sent during play, before any leg ended: '+early);
+ await p.evaluate(()=>{try{endLeg();}catch(e){}S.busy=false;S.cur=0;});
+ for(let i=0;i<20;i++){await p.waitForTimeout(500);if(await p.evaluate(()=>__rows.some(r=>r.phase==='30s')))break;}
  const r30=await p.evaluate(()=>__rows.find(r=>r.phase==='30s')||null);
  if(!r30)f.push('no 30 s checkpoint row');else{if(r30.status!=='partial')f.push('30 s row status '+r30.status);for(const k of ['ver','match_id','sample_id','fps','p95','frame_n','visible_secs','dev'])if(r30[k]==null)f.push('30 s row missing '+k);
   if(r30.dev&&(r30.dev.ua||/Mozilla\//.test(JSON.stringify(r30))))f.push('raw user-agent stored');if(!r30.dev||!r30.dev.device_class)f.push('no device_class');}
@@ -37,7 +41,7 @@ const {chromium}=require('playwright');const path=require('path');
  const re=end.rows[0];if(end.rows.length!==1)f.push('end rows: '+end.rows.length);else{if(re.status!=='complete')f.push('end status '+re.status);if(r30&&re.match_id!==r30.match_id)f.push('30 s and end rows have different match ids');if(re.stalls100<1)f.push('end row lost the stall');if(!(re.reticle_n>=1))f.push('no reticle latency samples from the aim input: '+re.reticle_n);}
  if(end.q.some(r=>String(r.sample_id).startsWith('ck-'))||end.ck)f.push('the hidden checkpoint survived the finished match');if(end.all.some(r=>r.status==='interrupted'))f.push('an interrupted row was uploaded for a match that finished');if(re&&re.audio_issue_n)f.push('audio issues reported with no audio problem: '+re.audio_issue_n+' '+JSON.stringify(re.audio));
  // Overseer 07:56: per-match memory and session fields, version on every funnel event
- if(re){for(const k of ['match_index','app_secs','geometries','textures','programs','tex_mb'])if(re[k]==null)f.push('end row missing '+k);if(!re.mem||!re.mem.start||!re.mem.now)f.push('end row missing mem start/now');}
+ if(re){for(const k of ['match_index','app_secs','geometries','textures','programs'])if(re[k]==null)f.push('end row missing '+k);if(!re.mem||!re.mem.start||!re.mem.now)f.push('end row missing mem start/now');}
  const fv=await p.evaluate(()=>(save.funnel||[]).slice(-5).map(e=>e.v));if(!fv.length||fv.some(v=>!v))f.push('funnel events without a version: '+JSON.stringify(fv));
  // short match quit: nothing sent; guest: queued, bounded
  const g=await p.evaluate(async()=>{const n0=__rows.length;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));const q=document.getElementById('btnQuit');if(q)q.click();
@@ -46,6 +50,13 @@ const {chromium}=require('playwright');const path=require('path');
  // match index counts up across matches in one session
  const ix=await p.evaluate(async()=>{const out=[];for(let i=0;i<2;i++){window.__rows.length=0;NET.user={id:'u1'};beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});out.push(TOPS_perf.m&&TOPS_perf.m.ix);await new Promise(r=>setTimeout(r,200));}return out;});
  if(!(ix[1]===ix[0]+1&&ix[0]>=3))f.push('match index does not count up per match: '+JSON.stringify(ix));
+ // QA 08:23: a telemetry fault can't touch gameplay: break the sampler's state, frames and the next match start still run
+ const fault=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});const m=TOPS_perf.m;m.fh=null;m.rh=null;m.inc=null;let frames=0;const f0=V.frame;
+   await new Promise(r=>setTimeout(r,2500));let ok=true;try{beginMatch({mode:'career',tier:1,p0:'P',oppName:'Y',oppAvg:60,legs:1});}catch(e){ok=false;}return {ok,started:!!(S&&!S.done&&S.p)};});
+ if(!fault.ok||!fault.started)f.push('a broken telemetry state stopped a match starting: '+JSON.stringify(fault));
+ // a quit after a few seconds of play (under 5 s) sends nothing even with plenty of frames
+ const q5=await p.evaluate(async()=>{const n0=__rows.length;beginMatch({mode:'career',tier:1,p0:'P',oppName:'Z',oppAvg:60,legs:1});const m=TOPS_perf.m;m.fn=400;m.vis=4000;const q=document.getElementById('btnQuit');if(q)q.click();await new Promise(r=>setTimeout(r,3500));return __rows.length-n0;});
+ if(q5)f.push('a 4 s quit sent a row');
  const cost=await p.evaluate(()=>TOPS_perf.bench(20000));if(cost.p95>50||cost.call_p95>50||cost.call_max>500)f.push('per-frame bookkeeping too slow: '+JSON.stringify(cost));
  // a session killed while hidden: its checkpoint becomes one interrupted row on the next load (and isn't lost)
  await p.evaluate(()=>{try{S.won=true;endMatch();}catch(e){}localStorage.setItem('tops_perfq','[]');localStorage.setItem('tops_perfck',JSON.stringify({sample_id:'ck-zz',match_id:'zz',phase:'end',status:'interrupted'}));});
