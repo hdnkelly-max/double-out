@@ -648,10 +648,13 @@
     if (seen && !opts.tcExh && (opts.tier | 0) < 6) return;
     try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {}
     const L = save.look || {}, title = L.title && D.COS[L.title], song = (window.TOPS_walk && save.walkon && TOPS_walk.WALK.find(w => w.id === save.walkon)) || null;
-    WK = { t0: performance.now() + 300, dur: 4800, fx: cel.walkon || null, fired: false, name: save.name || 'You' };
+    startWalk({ who: 'me', fx: cel.walkon || null, name: save.name || 'You', title: title && title.n, song: song && song.id !== 'off' ? song.n : '' });
+  }
+  function startWalk(o) {
+    WK = { t0: performance.now() + 300, dur: 4800, fx: o.fx, fired: false, name: o.name, who: o.who };
     window.TOPS_WALKFULL = true; document.body.classList.add('tc-walking');
     const ov = document.createElement('div'); ov.id = 'tcWalk';
-    ov.innerHTML = `<div class="tc-wk-bars"></div><div class="tc-wk-ban"><small>Now walking on</small><b>${esc(WK.name)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}${song && song.id !== 'off' ? `<span>♪ ${esc(song.n)}</span>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
+    ov.innerHTML = `<div class="tc-wk-bars"></div><div class="tc-wk-ban"><small>Now walking on</small><b>${esc(o.name)}</b>${o.title ? `<em>${esc(o.title)}</em>` : ''}${o.song ? `<span>♪ ${esc(o.song)}</span>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
     ov.onclick = () => { if (WK) WK.t0 = performance.now() - WK.dur; };
     document.body.appendChild(ov);
     WK.ov = ov;
@@ -661,15 +664,9 @@
     if (!opts || !opts.online || !S || !S.p || !S.p[1]) return 0;
     const P = S.p[1], L = P.look || {}, cel = L.cel || {};
     if (!cel.walkon) return 0;
-    const title = L.title && D.COS[L.title], nm = P.disp || P.name || 'Your opponent';
-    document.body.classList.add('tc-oppwalk');
-    const ov = document.createElement('div'); ov.id = 'tcOppWalk';
-    ov.innerHTML = `<div class="tc-wk-ban"><small>Now walking on</small><b>${esc(nm)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
-    let done = false; const end = () => { if (done) return; done = true; ov.classList.add('out'); document.body.classList.remove('tc-oppwalk'); setTimeout(() => ov.remove(), 400); };
-    ov.onclick = end; document.body.appendChild(ov);
-    setTimeout(() => { try { FX.run(cel.walkon, nm); } catch (e) {} }, 350);
-    setTimeout(end, 3200);
-    return 3500;
+    const title = L.title && D.COS[L.title];
+    startWalk({ who: 'opp', fx: cel.walkon, name: P.disp || P.name || 'Your opponent', title: title && title.n, song: '' });
+    return 300 + 4800 + 500;
   }
   function walkEnd() {
     walkLights(null);
@@ -692,14 +689,22 @@
     } catch (e) { console.warn('tc clip', e); return null; }
   }
   // re-apply the walk pose after the game's own posing, right before the frame renders
-  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
+  window.TOPS_WALKPOST = function () { if (WK && WK.who === 'opp' && WK.me && WK.pos) {   // the game poses the waiting opponent every frame: take him back
+    const m = WK.me; m.visible = true; m.rotation.set(0, WK.rotNow != null ? WK.rotNow : m.rotation.y, 0); if (WK.act && !WK.act.isRunning()) { try { WK.act.reset(); WK.act.play(); } catch (e) {} } }
+    if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
-    if (!WK || !v.me) return null;
-    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
-    const me = v.me, T3 = v.T.Vector3;
+    if (!WK) return null;
+    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE;
+    const fig = WK.who === 'opp' ? v.opp : v.me;
+    if (!fig) {   // no figure to walk (an older game build without the opp hook): banner and effect only
+      if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; try { FX.run(WK.fx, WK.name); } catch (e) {} }
+      if (k >= 1) { WK = null; walkEnd(); } return null;
+    }
+    if (k < 0) return { fov: 50 };
+    const me = fig, T3 = v.T.Vector3;
     if (!WK.home) {
-      WK.rot = me.rotation.y;
+      WK.rot = me.rotation.y; WK.orig = { p: me.position.clone(), r: me.rotation.y, vis: me.visible };
       // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
       // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
       const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37;
@@ -717,6 +722,8 @@
       WK.hidAt = now; WK.hid = WK.hid || new Set(); let root = me; while (root.parent) root = root.parent; const wp = new T3();
       // find figures by their hip bone (skinned meshes report the rig root, not the body), then hide the whole figure
       const within = (o, anc) => { let q = o; while (q) { if (q === anc) return true; q = q.parent; } return false; };
+      if (window.TC_WALK_DEBUG) { window.TC_WK_ROOT = root; window.TC_WK_V = v; window.TC_WK = WK; }
+      root.traverse(o => { if (o.userData && o.userData.spare && o.visible) { o.visible = false; WK.hid.add(o); } });   // spare darts float loose while the figure is walked
       root.traverse(o => { if (!o.isBone || !/Hips$/.test(o.name) || within(o, me) || (v.fpFig && within(o, v.fpFig))) return;
         o.getWorldPosition(wp);
         const ax = WK.start.x, az = WK.start.z, dx = WK.home.x - ax, dz = WK.home.z - az, t = Math.max(0, Math.min(1, ((wp.x - ax) * dx + (wp.z - az) * dz) / (dx * dx + dz * dz || 1)));
@@ -727,10 +734,12 @@
         if (fig !== root && fig.visible) { fig.visible = false; WK.hid.add(fig); }
         root.traverse(m => { if (m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0 && m.visible) { m.visible = false; WK.hid.add(m); } }); });
     }
+    { const dt = me.userData && me.userData.dt; if (dt && dt.isObject3D) { WK.hid = WK.hid || new Set(); dt.visible = false; WK.hid.add(dt); } }   // the dart in hand trails the walk pose, so it goes in the pocket
+    if (WK.who === 'opp' && v.me && v.me !== me) { WK.hid = WK.hid || new Set(); if (v.me.visible) { v.me.visible = false; WK.hid.add(v.me); } }
     if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
-      me.position.copy(WK.home); me.rotation.y = WK.rot;
+      if (WK.who === 'opp' && WK.orig) { me.position.copy(WK.orig.p); me.rotation.y = WK.orig.r; me.visible = WK.orig.vis; } else { me.position.copy(WK.home); me.rotation.y = WK.rot; }
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
@@ -742,7 +751,7 @@
     me.position.lerpVectors(WK.start, WK.home, ease); WK.pos = me.position.clone();
     const dir = new T3().subVectors(WK.home, WK.start), face = Math.atan2(dir.x, dir.z) + Math.PI;
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
-    me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
+    me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08); WK.rotNow = me.rotation.y;
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
     if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
