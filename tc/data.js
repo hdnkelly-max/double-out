@@ -130,6 +130,13 @@ window.TC_DATA = (function () {
     title_power:   { slot: 'title', n: 'Beat The Power', kind: 'title' },
     title_nuke:    { slot: 'title', n: 'Survived The Nuke', kind: 'title' },
     title_mvg:     { slot: 'title', n: 'Green Machine Slayer', kind: 'title' },
+    title_xprice:  { slot: 'title', n: 'Melted The Iceman', kind: 'title' },
+    title_xwright: { slot: 'title', n: 'Snake Charmer', kind: 'title' },
+    title_xsmith:  { slot: 'title', n: 'Bullied the Bully Boy', kind: 'title' },
+    title_xbarney: { slot: 'title', n: 'Beat Barney', kind: 'title' },
+    title_xsherlock: { slot: 'title', n: 'Dethroned the Queen', kind: 'title' },
+    title_xcool:   { slot: 'title', n: 'Cooled Cool Hand', kind: 'title' },
+    title_xanderson: { slot: 'title', n: 'Grounded the Flying Scotsman', kind: 'title' },
     title_sponsored: { slot: 'title', n: 'Shah Electrical Sponsored', kind: 'title' },
     title_dpnz:    { slot: 'title', n: 'DPNZ Regular', kind: 'title' },
     title_walkon:  { slot: 'title', n: 'Walk-On Merchant', kind: 'title' },
@@ -175,6 +182,13 @@ window.TC_DATA = (function () {
     { id: 'taylor', name: 'Phil Taylor', nick: 'The Power', avg: 101, card: 'taylor', cos: 'title_power', blurb: '16-time world champion. Still averages a ton at exhibitions.' },
     { id: 'littler', name: 'Luke Littler', nick: 'The Nuke', avg: 103, card: 'littler', cos: 'title_nuke', blurb: 'World champion at 17. He does not miss doubles.' },
     { id: 'mvg', name: 'Michael van Gerwen', nick: 'Mighty Mike', avg: 100, card: 'mvg', cos: 'title_mvg', blurb: 'Three world titles. Scores like a machine, celebrates louder.' },
+    { id: 'price', name: 'Gerwyn Price', nick: 'The Iceman', avg: 98, card: 'price', cos: 'title_xprice', blurb: 'Former rugby player, former world champion. Roars after every treble.' },
+    { id: 'wright', name: 'Peter Wright', nick: 'Snakebite', avg: 96, card: 'wright', cos: 'title_xwright', blurb: 'Two world titles and a new hairdo every night. Do not watch the mohawk.' },
+    { id: 'smith', name: 'Michael Smith', nick: 'Bully Boy', avg: 98, card: 'smith', cos: 'title_xsmith', blurb: 'Hit the greatest leg ever thrown on his way to the world title.' },
+    { id: 'barneveld', name: 'Raymond van Barneveld', nick: 'Barney', avg: 94, card: 'barneveld', cos: 'title_xbarney', blurb: 'Five world titles. The crowd will be on his side, all of it.' },
+    { id: 'sherlock', name: 'Fallon Sherlock', nick: 'Queen of the Palace', avg: 88, card: 'sherlock', cos: 'title_xsherlock', blurb: 'Beat the men at the Palace. Will not be taking it easy on you.' },
+    { id: 'humphries', name: 'Luke Humphries', nick: 'Cool Hand Luke', avg: 101, card: 'humphries', cos: 'title_xcool', blurb: 'World number one. Never looks rattled, never misses a big double.' },
+    { id: 'anderson', name: 'Gary Anderson', nick: 'The Flying Scotsman', avg: 97, card: 'anderson', cos: 'title_xanderson', blurb: 'Two world titles and the smoothest throw in the game.' },
   ];
 
   // one trophy per title. Tier index -> title

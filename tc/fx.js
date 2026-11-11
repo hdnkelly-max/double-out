@@ -17,6 +17,7 @@ window.TC_FX = (function () {
     // flashes (full-screen tints / radial glows)
     flashes = flashes.filter(f => (f.age += dt) < f.life);
     flashes.forEach(f => {
+      if (f.age < 0) return;   // delayed strike
       const k = f.age / f.life, a = f.a * (k < .15 ? k / .15 : 1 - (k - .15) / .85);
       if (f.kind === 'radial') { const g = cx.createRadialGradient(W * f.x, H * f.y, 0, W * f.x, H * f.y, Math.max(W, H) * f.r * (0.6 + k * .5)); g.addColorStop(0, rgba(f.c, a)); g.addColorStop(1, rgba(f.c, 0)); cx.fillStyle = g; cx.fillRect(0, 0, W, H); }
       else if (f.kind === 'vignette') { const g = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .25, W / 2, H / 2, Math.max(W, H) * .75); g.addColorStop(0, rgba(f.c, 0)); g.addColorStop(1, rgba(f.c, a)); cx.fillStyle = g; cx.fillRect(0, 0, W, H); }
@@ -49,11 +50,22 @@ window.TC_FX = (function () {
   function kick() { ensure(); if (!raf) raf = requestAnimationFrame(loop); }
   const HEX = {}; function rgb(h) { if (HEX[h]) return HEX[h]; const n = parseInt(h.slice(1), 16); return HEX[h] = [n >> 16 & 255, n >> 8 & 255, n & 255]; }
   function rgba(h, a) { const c = rgb(h); return `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`; }
+  // lightning: wide blue bloom, white-hot core, and two or three forking branches
   function drawBolt(f, W, H, a) {
-    cx.strokeStyle = rgba('#EAF4FF', a); cx.lineWidth = 3; cx.shadowColor = rgba('#9CC8FF', a); cx.shadowBlur = 18;
-    cx.beginPath(); let x = W * f.x, y = 0; cx.moveTo(x, y); const seg = 9;
-    for (let i = 1; i <= seg; i++) { x += (f.seed[i] - .5) * W * .12; y = H * f.y * i / seg; cx.lineTo(x, y); }
-    cx.stroke(); cx.shadowBlur = 0;
+    const seg = 11, pts = [[W * f.x, 0]];
+    for (let i = 1; i <= seg; i++) pts.push([pts[i - 1][0] + (f.seed[i % f.seed.length] - .5) * W * .13, H * f.y * i / seg]);
+    if (f.tx != null) { const off = W * f.tx - pts[seg][0]; pts.forEach((q, i) => { q[0] += off * i / seg; }); }
+    const z = Math.max(1, W / 420), path = (P, w, col, blur) => { cx.strokeStyle = col; cx.lineWidth = w * z; cx.shadowColor = rgba('#7FB6FF', a); cx.shadowBlur = blur * z; cx.beginPath(); cx.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) cx.lineTo(P[i][0], P[i][1]); cx.stroke(); };
+    cx.lineCap = 'round'; cx.lineJoin = 'round';
+    const br = [];
+    for (let j = 0; j < 3; j++) { const at = 2 + ((f.seed[j + 3] * 7) | 0), s0 = pts[Math.min(at, seg - 1)], B = [s0], dirx = f.seed[j + 6] > .5 ? 1 : -1;
+      for (let i = 1; i <= 4; i++) B.push([B[i - 1][0] + dirx * W * (.03 + f.seed[(j + i) % f.seed.length] * .05), B[i - 1][1] + H * f.y * .055]); br.push(B); }
+    path(pts, 16, rgba('#5A8CFF', a * .3), 40); path(pts, 7, rgba('#8CC0FF', a * .55), 22);
+    br.forEach(B => path(B, 6, rgba('#7FB6FF', a * .45), 20));
+    path(pts, 3.5, rgba('#DDEBFF', a), 16);
+    br.forEach(B => path(B, 2.4, rgba('#EAF4FF', a * .9), 8));
+    path(pts, 1.4, rgba('#FFFFFF', a), 0);
+    cx.shadowBlur = 0;
   }
   const R = Math.random, cap = n => lowPerf() ? Math.round(n * .45) : n;
 
@@ -83,7 +95,14 @@ window.TC_FX = (function () {
     lasers() { lasers(['#C6F36B', '#7FD3C9', '#C9554A']); smoke(cap(12), .98); },
     cool() { for (let i = 0; i < 2; i++) flashes.push({ kind: 'vignette', c: '#7FD3FF', a: .45, life: .7, age: -i * .45 }); const W = innerWidth, H = innerHeight; for (let i = 0; i < cap(60); i++) parts.push({ kind: 'spark', x: W * R(), y: H * (.2 + R() * .5), vx: (R() - .5) * 40, vy: -20 - R() * 40, g: 30, drag: .4, life: 1.2 + R() * .5, age: -R() * .4, s: 1.2, a: .9, c: R() < .5 ? '#E6F7FF' : '#9ED8FF' }); chime(); },
     saltire() { beams.push({ x: 0, y: 0, a0: .85, a1: .65, life: 1.8, age: 0, w: 5, a: .9, c: '#FFFFFF' }, { x: 1, y: 0, a0: 2.3, a1: 2.5, life: 1.8, age: 0, w: 5, a: .9, c: '#FFFFFF' }); lasers(['#2F6BFF', '#FFFFFF']); smoke(cap(14), .98); },
-    power() { const seed = () => Array.from({ length: 10 }, R); flashes.push({ kind: 'bolt', x: .3, y: .7, seed: seed(), a: 1, life: .5, age: 0 }, { kind: 'bolt', x: .72, y: .6, seed: seed(), a: 1, life: .5, age: -.25 }, { kind: 'fill', c: '#DDEBFF', a: .4, life: .25, age: 0 }, { kind: 'fill', c: '#DDEBFF', a: .3, life: .25, age: -.25 }); thunder(); smoke(cap(10), .98); },
+    power() {
+      const seed = () => Array.from({ length: 10 }, R), A = window.TC_FX_ANCHOR;
+      if (A) {   // walk-on: strike the board, then an electric afterglow around it
+        flashes.push({ kind: 'bolt', x: A.x - .2, tx: A.x - .04, y: A.y, seed: seed(), a: 1, life: .38, age: 0 }, { kind: 'bolt', x: A.x + .22, tx: A.x + .05, y: A.y, seed: seed(), a: 1, life: .38, age: -.14 }, { kind: 'bolt', x: A.x + .02, tx: A.x, y: A.y, seed: seed(), a: .9, life: .3, age: -.22 },
+          { kind: 'fill', c: '#EEF5FF', a: .6, life: .1, age: 0 }, { kind: 'fill', c: '#EEF5FF', a: .45, life: .1, age: -.14 }, { kind: 'radial', c: '#7FB6FF', x: A.x, y: A.y, r: .32, a: .55, life: .6, age: -.05 }, { kind: 'ring', c: '#BFDBFF', x: A.x, y: A.y, r: .35, a: .7, life: .45, age: -.06 });
+        thunder(); smoke(cap(8), .98); return;
+      }
+      flashes.push({ kind: 'bolt', x: .3, y: .7, seed: seed(), a: 1, life: .5, age: 0 }, { kind: 'bolt', x: .72, y: .6, seed: seed(), a: 1, life: .5, age: -.25 }, { kind: 'fill', c: '#EEF5FF', a: .62, life: .12, age: 0 }, { kind: 'fill', c: '#DDEBFF', a: .25, life: .3, age: -.05 }, { kind: 'fill', c: '#EEF5FF', a: .5, life: .12, age: -.25 }, { kind: 'bolt', x: .5, y: .45, seed: seed(), a: .8, life: .35, age: -.12 }); thunder(); smoke(cap(10), .98); },
   };
   const MAP = { cel_pyro: 'pyro', cel_nuke: 'nuke', cel_confetti: 'confetti', cel_chant: 'chant', cel_goldflash: 'goldflash', cel_green: 'green', walk_smoke: 'smoke', walk_lasers: 'lasers', walk_power: 'power', cel_cool: 'cool', walk_saltire: 'saltire' };
   function run(cosId, name) { const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }

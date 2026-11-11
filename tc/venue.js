@@ -44,8 +44,8 @@
   'use strict';
   //        wear: pinhole multiplier · fade: colour washed out · dirt: grime + stains · fresh: vivid colours + white numbers
   const LOOK = [
-    { wear: 3.2, fade: .34, dirt: 1,   brand: 'KAURI ARMS',      ring: 'rgba(233,228,216,.42)', holes: 220 },
-    { wear: 2.0, fade: .2,  dirt: .6,  brand: 'RSA DARTS CLUB',  ring: 'rgba(233,228,216,.5)',  holes: 120 },
+    { wear: 1.5, fade: .34, dirt: 1,   brand: 'KAURI ARMS',      ring: 'rgba(233,228,216,.42)', holes: 220 },
+    { wear: 1.1, fade: .2,  dirt: .6,  brand: 'RSA DARTS CLUB',  ring: 'rgba(233,228,216,.5)',  holes: 120 },
     { wear: .9,  fade: .06, dirt: .2,  brand: 'SUPER LEAGUE',    ring: 'rgba(240,240,236,.6)',  holes: 40 },
     { wear: .4,  fade: 0,   dirt: 0,   brand: 'DPNZ PROTOUR',    ring: '#e8382c',               holes: 10, fresh: .5 },
     { wear: .15, fade: 0,   dirt: 0,   brand: 'TRANS-TASMAN',    ring: '#ffb000',               holes: 0,  fresh: .8 },
@@ -54,7 +54,7 @@
   ];
   const cache = {}, scache = {};
   let cur = -1;
-  window.TOPS_BOARD_LOOK = LOOK;
+  window.TOPS_BOARD_LOOK = LOOK; window.TOPS_BOARD_CACHE = cache;
   window.TOPS_BOARD = function (t, G) {
     const L = LOOK[Math.max(0, Math.min(6, t | 0))]; if (cur === t) return; cur = t;
     // board face: regenerate the base with this venue's wear, then grade it
@@ -79,6 +79,8 @@
       x.save(); face(); x.clip();
       x.globalCompositeOperation = 'saturation'; x.fillStyle = `rgba(128,128,128,${L.fade})`; x.fillRect(-512, -512, 1024, 1024);
       x.globalCompositeOperation = 'multiply'; x.fillStyle = `rgba(214,188,140,${L.fade * .9})`; x.fillRect(-512, -512, 1024, 1024);
+      x.globalCompositeOperation = 'lighten'; x.fillStyle = `rgba(52,44,36,${Math.min(1, L.fade * 2.6)})`; x.fillRect(-512, -512, 1024, 1024);   // no true black left on an old board
+      x.globalCompositeOperation = 'source-over'; x.fillStyle = `rgba(150,140,120,${L.fade * .16})`; x.fillRect(-512, -512, 1024, 1024);
       x.restore();
     }
     if (L.dirt) {           // grime toward the rim, a beer splash, chalk dust and frayed sisal round the trebles
@@ -88,12 +90,26 @@
       x.fillStyle = `rgba(240,240,232,${.05 * L.dirt})`; for (let k = 0; k < 900 * L.dirt; k++) { const a = Math.random() * 6.28, r = Math.random() * R.dOut * mm; x.fillRect(Math.cos(a) * r, Math.sin(a) * r, 1.2, 1.2); }
       const segA = n => ((ORDER.indexOf(n) * 18 - 90) * Math.PI / 180);
       [20, 19, 1, 5, 16, 3].forEach((n, j) => { for (let k = 0; k < 140 * L.dirt / (j + 1); k++) { const a = segA(n) + (Math.random() - .5) * .3, r = (R.tIn + Math.random() * (R.tOut - R.tIn)) * mm; x.fillStyle = `rgba(${Math.random() < .5 ? '255,248,230' : '30,20,10'},${.12 + Math.random() * .18})`; x.fillRect(Math.cos(a) * r, Math.sin(a) * r, .8 + Math.random() * 1.6, .6); } });
-      // the 20, 19 and bull beds get chewed: pale fuzzy sisal and dense dark holes
-      const bed = (n, r0, r1, spread, k, pale) => { const a0 = n === 'bull' ? 0 : segA(n); for (let i = 0; i < k; i++) { const a = n === 'bull' ? Math.random() * 6.28 : a0 + (Math.random() - .5) * spread, r = (r0 + Math.random() * (r1 - r0)) * mm;
-        if (pale && Math.random() < .55) { x.fillStyle = `rgba(250,240,215,${.03 + Math.random() * .06})`; x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, 1.5 + Math.random() * 3, 0, 7); x.fill(); }
-        else { x.fillStyle = `rgba(14,10,6,${.35 + Math.random() * .4})`; x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, .45 * mm + Math.random() * .35 * mm, 0, 7); x.fill(); } } };
-      bed(20, R.tIn - 6, R.tOut + 6, .34, 900 * L.dirt, true); bed(19, R.tIn - 4, R.tOut + 4, .3, 420 * L.dirt, true); bed(5, R.tIn, R.tOut, .28, 260 * L.dirt, true); bed(1, R.tIn, R.tOut, .28, 260 * L.dirt, true);
-      bed(20, R.dIn - 3, R.dOut + 2, .3, 300 * L.dirt, true); bed(16, R.dIn, R.dOut, .3, 240 * L.dirt, true); bed(8, R.dIn, R.dOut, .3, 160 * L.dirt, false); bed('bull', 0, R.obull + 2, 0, 160 * L.dirt, false);
+      // Wear over the whole face, weighted by how often each spot is hit. A real pub board is tired everywhere
+      // (fuzzy sisal, greyed blacks, tan whites, pinholes all over), just heaviest round 20, 1, 5, 19 and the bull.
+      const top = a => Math.exp(-Math.pow(Math.atan2(Math.sin(a + Math.PI / 2), Math.cos(a + Math.PI / 2)) / .55, 2)),
+        bot = a => Math.exp(-Math.pow(Math.atan2(Math.sin(a - Math.PI / 2 - .3), Math.cos(a - Math.PI / 2 - .3)) / .45, 2));
+      const heat = (a, r) => { const ring = (r > R.tIn - 4 && r < R.tOut + 4) || (r > R.dIn - 3 && r < R.dOut + 2) ? .5 : 0, bull = r < R.obull + 6 ? .9 : 0;
+        return .3 + 1.1 * top(a) * (r > 40 ? 1 : .4) + .55 * bot(a) * (r > 40 ? 1 : .4) + ring * (.4 + top(a)) + bull; };
+      const pick = () => { for (;;) { const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * (R.dOut + 2), h = heat(a, r); if (Math.random() * 3.2 < h) return [a, r * mm, h]; } };
+      // 1) blotchy unevenness: soft light and dark mottles everywhere
+      for (let i = 0; i < 70 * L.dirt; i++) { const [a, r, h] = pick(); const lite = Math.random() < .5; x.fillStyle = lite ? `rgba(235,222,196,${.035 + .03 * h})` : `rgba(38,26,14,${.04 + .035 * h})`; x.beginPath(); x.ellipse(Math.cos(a) * r, Math.sin(a) * r, 10 + Math.random() * 26, 6 + Math.random() * 16, Math.random() * 3, 0, 7); x.fill(); }
+      // 2) frayed sisal: short fibre strokes across the face, pale ones show up on the blacks, dark ones on the creams
+      x.lineCap = 'round';
+      for (let i = 0; i < 9000 * L.dirt; i++) { const [a, r, h] = pick(), px = Math.cos(a) * r, py = Math.sin(a) * r, d = Math.random() * 6.28, l = 1.2 + Math.random() * 2.6 * (.6 + h * .5);
+        x.strokeStyle = Math.random() < .55 ? `rgba(226,210,178,${.07 + .07 * h})` : `rgba(26,18,10,${.06 + .06 * h})`; x.lineWidth = .5 + Math.random() * .5;
+        x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(d) * l, py + Math.sin(d) * l); x.stroke(); }
+      // 3) pinholes all over, denser where it gets hit, never a solid patch
+      for (let i = 0; i < 5200 * L.dirt; i++) { const [a, r, h] = pick(); x.fillStyle = `rgba(12,8,4,${.18 + Math.random() * .22})`; x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, .28 * mm + Math.random() * .22 * mm, 0, 7); x.fill(); }
+      // 3b) extra holes only where it really gets hammered
+      for (let i = 0; i < 6000 * L.dirt; i++) { const [a, r, h] = pick(); if (h < 1.3) continue; x.fillStyle = `rgba(12,8,4,${.2 + Math.random() * .25})`; x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, .26 * mm + Math.random() * .2 * mm, 0, 7); x.fill(); }
+      // 4) the most-hit beds go fuzzy and pale (sisal pushed out), not black
+      for (let i = 0; i < 5000 * L.dirt; i++) { const [a, r, h] = pick(); if (h < 1.1) continue; x.fillStyle = `rgba(232,218,190,${.03 + .035 * h})`; x.beginPath(); x.arc(Math.cos(a) * r, Math.sin(a) * r, .7 + Math.random() * 1.5, 0, 7); x.fill(); }
       x.restore();
     }
     if (L.fresh) {          // tournament board: punchy colours, bright white numbers

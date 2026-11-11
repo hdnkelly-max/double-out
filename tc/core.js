@@ -306,6 +306,14 @@
       row.innerHTML = `${L ? `<button type="button" class="tc-tile tc-exh" id="tcExhTile"><img src="assets/cards/exh_poster.webp" alt=""><span><small>Exhibition night · ${ex.tries} ${ex.tries === 1 ? 'chance' : 'chances'} left</small><b>${esc(L.name)}</b><em>is coming to ${esc(ex.venue)}</em></span></button>` : ''}
         ${np ? `<button type="button" class="tc-tile tc-picks" id="tcPicksTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><b>${np} card pick${np > 1 ? 's' : ''}</b><small>Ready to open</small></span><i class="tc-chev">›</i></button>` : ''}`;
       row.hidden = !L && !np;
+      // incoming trade offers: a tile on the Play tab so mates see them without opening the binder
+      if (t.srv && sbOk()) tradeCount().then(n => {
+        let tt = $id('tcTradeTile');
+        if (!n) { if (tt) tt.remove(); row.hidden = !L && !np; return; }
+        if (!tt) { tt = document.createElement('button'); tt.type = 'button'; tt.id = 'tcTradeTile'; tt.className = 'tc-tile tc-trade-tile'; row.appendChild(tt); }
+        tt.innerHTML = `<i class="tc-trade-ic">⇄</i><span><b>${n} trade offer${n > 1 ? 's' : ''}</b><small>A mate wants to swap legendaries</small></span><i class="tc-chev">›</i>`;
+        tt.onclick = () => trades(); row.hidden = false;
+      });
       if (L) $id('tcExhTile').onclick = () => poster(ex, L);
       if (np) $id('tcPicksTile').onclick = () => openPack(openPicks(), () => hubTiles());
     }
@@ -415,7 +423,14 @@
     try { const rows = (typeof mpFetch === 'function') ? await mpFetch() : []; (rows || []).forEach(r => (r.players || []).forEach(pl => { const id = String(pl.pid || '').replace(/^u:/, ''); if (/^[0-9a-f-]{36}$/.test(id) && id !== me && !m[id]) m[id] = pl.name || 'Mate'; })); } catch (e) {}
     return m;
   }
-  async function tradeCount() { try { if (!sbOk()) return 0; const l = await rpc('tc_my_trades'); return (l || []).filter(x => x.open && x.dir === 'in').length; } catch (e) { return 0; } }
+  const TC_ = { n: 0, at: 0, p: null };
+  async function tradeCount(fresh) {
+    if (!sbOk()) return 0;
+    if (!fresh && Date.now() - TC_.at < 30000) return TC_.n;
+    if (TC_.p) return TC_.p;
+    TC_.p = rpc('tc_my_trades').then(l => { TC_.n = (l || []).filter(x => x.open && x.dir === 'in').length; TC_.at = Date.now(); return TC_.n; }).catch(() => TC_.n).finally(() => { TC_.p = null; });
+    return TC_.p;
+  }
   function miniCard(id, extra) {
     const c = CARD[id]; const w = document.createElement('button'); w.type = 'button'; w.className = 'tc-tcard' + (extra ? ' ' + extra : '');
     if (c) { const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini'); w.appendChild(k); w.insertAdjacentHTML('beforeend', `<small>${esc(c.name)}</small>`); }
@@ -436,7 +451,7 @@
       draw();
     };
     const act = async (fn, args, okMsg) => {
-      try { const r = await rpc(fn, args); if (okMsg) toast('Trades', okMsg(r), '', 'legendary'); sel = { mate: null, want: null, give: null }; await srvSync(); }
+      try { const r = await rpc(fn, args); if (okMsg) toast('Trades', okMsg(r), '', 'legendary'); sel = { mate: null, want: null, give: null }; TC_.at = 0; await srvSync(); }
       catch (e) { toast('Trades', 'That didn\'t go through', String((e && e.message) || e).replace(/^.*?:\s*/, ''), 'common'); }
       await load();
     };
@@ -571,14 +586,22 @@
       g.rotation.set(.5, .55, 0); g.position.set(.018, bx.y0 + h * .15, front - .004); g.scale.setScalar(sc); add(g);
     }
     if (W.hat === 'wear_flatcap') {
-      const g = new T.Group(), tw = M(0x5b4a3a, { roughness: .95 });
-      const crown = new T.Mesh(new T.SphereGeometry(.1, 28, 12, 0, Math.PI * 2, 0, Math.PI * .5), tw); crown.scale.set(1.04, .66, 1.12); g.add(crown);
-      const rim = new T.Mesh(new T.CylinderGeometry(.104, .104, .02, 28, 1, true), tw); rim.scale.set(1, 1, 1.08); rim.position.y = -.008; g.add(rim);
-      const peak = new T.Mesh(new T.CylinderGeometry(.08, .08, .007, 24, 1, false, -Math.PI / 2, Math.PI), tw); peak.scale.set(1, 1, .6); peak.position.set(0, -.012, .088); peak.rotation.x = .2; g.add(peak);
-      g.position.set(0, bx.y1 - h * .36 + .01, (bx.z0 + bx.z1) / 2 + .01); g.rotation.x = -.09; g.scale.setScalar(sc); add(g);
+      // hide hair that would poke through the crown (the model's own hair, and attached styles that sit high on the head)
+      fig && fig.traverse(o => { if (o.isMesh && /Hair/i.test(o.name) && !/Eyelash|Brow/i.test(o.name)) o.visible = false; });
+      B.Head.children.forEach(o => { if (!o.isMesh || !o.geometry) return; o.geometry.computeBoundingBox(); const top = o.geometry.boundingBox.max.y * o.scale.y + o.position.y, bot = o.geometry.boundingBox.min.y * o.scale.y + o.position.y; if (top > bx.y0 + h * .8 && bot > bx.y0 + h * .35) o.visible = false; });
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const cx = cv.getContext('2d'); cx.fillStyle = '#3d3329'; cx.fillRect(0, 0, 64, 64);
+      for (let y = 0; y < 64; y += 4) for (let x = 0; x < 64; x += 8) { cx.fillStyle = (x / 8 + y / 4) % 2 ? 'rgba(160,140,110,.28)' : 'rgba(0,0,0,.25)'; cx.fillRect(x + ((y / 4) % 2 ? 4 : 0), y, 4, 2); }
+      const tt = new T.CanvasTexture(cv); tt.wrapS = tt.wrapT = T.RepeatWrapping; tt.repeat.set(5, 3);
+      const tw = new T.MeshStandardMaterial({ map: tt, color: 0xffffff, roughness: .98 });
+      const g = new T.Group();
+      const crown = new T.Mesh(new T.SphereGeometry(.1, 32, 14, 0, Math.PI * 2, 0, Math.PI * .5), tw); crown.scale.set(1.1, .6, 1.2); crown.position.z = .008; crown.rotation.x = .12; g.add(crown);
+      const band = new T.Mesh(new T.CylinderGeometry(.11, .112, .03, 32, 1, true), tw); band.scale.set(1, 1, 1.1); band.position.y = -.01; g.add(band);
+      const peak = new T.Mesh(new T.CylinderGeometry(.09, .09, .008, 28, 1, false, -Math.PI / 2, Math.PI), tw); peak.scale.set(1, 1, .62); peak.position.set(0, -.016, .1); peak.rotation.x = .16; g.add(peak);
+      const btn = new T.Mesh(new T.SphereGeometry(.009, 10, 6), tw); btn.position.set(0, .058, .01); g.add(btn);
+      g.position.set(0, bx.y1 - h * .33 + .006, (bx.z0 + bx.z1) / 2 + .006); g.rotation.x = -.06; g.scale.setScalar(sc); add(g);
     }
     if (W.hair === 'wear_mullet') {
-      const col = (L.hairCol && new T.Color(L.hairCol)) || new T.Color(0x3b2a1a);
+      const col = (L.hairCol && new T.Color(L.hairCol)) || new T.Color(0x2b2119);
       const g = new T.Group(), hm = M(col.getHex(), { roughness: .7 });
       for (let i = 0; i < 11; i++) { const s = new T.Mesh(new T.SphereGeometry(.028, 10, 8), hm); const a = (i - 5) / 5; s.position.set(a * .058, -(i % 2) * .018 - Math.abs(a) * .012, -(i % 3) * .006); s.scale.set(1, 3.3 - Math.abs(a) * 1.1, .75); s.rotation.z = a * .25; g.add(s); }
       g.position.set(0, bx.y0 + h * .18, bx.z0 + .03); g.scale.setScalar(sc); add(g);
@@ -586,15 +609,23 @@
     if (W.shoulder === 'wear_towel') {
       const par = B.Spine2 || B.Spine1 || B.Neck; if (!par) return;
       const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#efe9dc'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#9b3b32'; for (let i = 0; i < 64; i += 16) { x.fillRect(i, 0, 5, 64); x.fillRect(0, i, 64, 5); }
-      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 3);
+      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 4);
       const mat = new T.MeshStandardMaterial({ map: tex, roughness: 1, side: T.DoubleSide });
-      const g = new T.Group();
-      const top = new T.Mesh(new T.BoxGeometry(.11, .018, .2), mat); g.add(top);
-      const seam = new T.Mesh(new T.BoxGeometry(.112, .004, .006), new T.MeshStandardMaterial({ color: 0x9b3b32, roughness: 1 })); seam.position.set(0, -.19, .104); g.add(seam);
-      const front = new T.Mesh(new T.BoxGeometry(.11, .2, .016), mat); front.position.set(0, -.1, .1); front.rotation.x = -.12; g.add(front);
-      const back = new T.Mesh(new T.BoxGeometry(.11, .16, .016), mat); back.position.set(0, -.08, -.1); back.rotation.x = .1; g.add(back);
+      // one strip bent over the shoulder: hangs down the front, curls over the top, hangs longer down the back
+      const W0 = .11, F = .16, R = .092, Bk = .22, Ltot = F + Math.PI * R + Bk;
+      const geo = new T.PlaneGeometry(W0, Ltot, 6, 40), pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const u = pos.getX(i), sAlong = Ltot / 2 - pos.getY(i); let y, z;
+        if (sAlong < F) { y = -(F - sAlong); z = R; }
+        else if (sAlong < F + Math.PI * R) { const th = (sAlong - F) / R; y = Math.sin(th) * R; z = Math.cos(th) * R; }
+        else { y = -(sAlong - F - Math.PI * R); z = -R; }
+        const wob = Math.sin(sAlong * 38 + u * 20) * .003 + (y < 0 ? -y * .06 : 0);
+        pos.setXYZ(i, u * (1 + (y < 0 ? -y * .8 : 0)), y, z + Math.sign(z || 1) * wob);
+      }
+      geo.computeVertexNormals();
+      const g = new T.Group(), cloth = new T.Mesh(geo, mat); g.add(cloth);
       g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
-      g.position.set(-.095, .13, .0); g.rotation.z = -.32; g.scale.setScalar(.92); par.add(g);
+      g.position.set(.115, .11, -.012); g.rotation.set(0, 0, -.3); g.scale.setScalar(1); par.add(g);
     }
   };
 
@@ -605,7 +636,7 @@
   };
   // ---------- walk-on: character walks to the oche, effect fires on arrival ----------
   // Hook in the viewer's frame loop calls TOPS_WALKFX each frame; we own the camera while walking.
-  let WK = null;
+  let WK = null; const WA = .5;   // walk arrives at half time
   function walkOnStart(opts) {
     if (!opts || opts.practice || opts.money) return;
     const stage = opts.online || (opts.mode === 'career' && (opts.tier | 0) >= 1) || opts.tcExh;
@@ -641,6 +672,7 @@
     return 3500;
   }
   function walkEnd() {
+    walkLights(null);
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
     const ov = $id('tcWalk'); if (ov) { ov.classList.add('out'); setTimeout(() => ov.remove(), 400); }
   }
@@ -660,45 +692,101 @@
     } catch (e) { console.warn('tc clip', e); return null; }
   }
   // re-apply the walk pose after the game's own posing, right before the frame renders
-  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; };
+  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
-      WK.home = me.position.clone(); WK.rot = me.rotation.y;
-      // derive the room's axes from the normal player camera: it sits behind the player looking at the board
-      const fwd = new T3().subVectors(v.look, v.pos); fwd.y = 0; fwd.normalize(); const side = new T3(fwd.z, 0, -fwd.x);
+      WK.rot = me.rotation.y;
+      // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
+      // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
+      const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37;
+      const fwd = new T3(0, 0, -1), side = new T3(fwd.z, 0, -fwd.x), spot = new T3(0, me.position.y || 0, OZ + .08);
+      const mp = me.position.clone(); WK.home = Math.hypot(mp.x - spot.x, mp.z - spot.z) < .8 ? mp : spot;
+      if (Math.abs(WK.rot) > 3.5 || WK.home === spot) WK.rot = Math.PI;   // face the board
       WK.fwd = fwd; WK.side = side;
       WK.start = WK.home.clone().addScaledVector(fwd, -2.4).addScaledVector(side, 1.0);   // walk in from the room behind the oche
       WK.cam = WK.home.clone().addScaledVector(fwd, .15).addScaledVector(side, 1.3); WK.cam.y = 1.5;   // beside the oche, facing back at you
     }
-    if (!WK.walking && k < .78) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
-    me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; } if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
+    if (!WK.walking && k < WA) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
+    me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; }
+    // clear the stage: other figures (opponent, crowd) near the walk path hide until the walk-on ends
+    if (me.parent && (!WK.hidAt || now - WK.hidAt > 500)) {
+      WK.hidAt = now; WK.hid = WK.hid || new Set(); let root = me; while (root.parent) root = root.parent; const wp = new T3();
+      // find figures by their hip bone (skinned meshes report the rig root, not the body), then hide the whole figure
+      const within = (o, anc) => { let q = o; while (q) { if (q === anc) return true; q = q.parent; } return false; };
+      root.traverse(o => { if (!o.isBone || !/Hips$/.test(o.name) || within(o, me) || (v.fpFig && within(o, v.fpFig))) return;
+        o.getWorldPosition(wp);
+        const ax = WK.start.x, az = WK.start.z, dx = WK.home.x - ax, dz = WK.home.z - az, t = Math.max(0, Math.min(1, ((wp.x - ax) * dx + (wp.z - az) * dz) / (dx * dx + dz * dz || 1)));
+        if (Math.hypot(wp.x - (ax + dx * t), wp.z - (az + dz * t)) > 1.6) return;
+        // climb to the node that also holds the body mesh skinned to this hip bone, so the whole figure hides
+        const skinnedTo = n => { let hit = false; n.traverse(m => { if (!hit && m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0) hit = true; }); return hit; };
+        let fig = o; while (fig.parent && fig.parent !== root && !skinnedTo(fig)) fig = fig.parent;
+        if (fig !== root && fig.visible) { fig.visible = false; WK.hid.add(fig); }
+        root.traverse(m => { if (m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0 && m.visible) { m.visible = false; WK.hid.add(m); } }); });
+    }
+    if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
       me.position.copy(WK.home); me.rotation.y = WK.rot;
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
+      if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
+      walkLights(null);
       WK = null; walkEnd(); return null;
     }
-    const e = Math.min(1, k / .78), ease = 1 - Math.pow(1 - e, 2);
+    // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold
+    const e = Math.min(1, k / WA), ease = 1 - Math.pow(1 - e, 2.2);
     me.position.lerpVectors(WK.start, WK.home, ease); WK.pos = me.position.clone();
     const dir = new T3().subVectors(WK.home, WK.start), face = Math.atan2(dir.x, dir.z) + Math.PI;
-    me.rotation.y = k < .78 ? face : face + (WK.rot - face) * Math.min(1, (k - .78) / .12);
-    if (k >= .78 && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .8 && !WK.fired && WK.fx) { WK.fired = true; FX.run(WK.fx, WK.name); }
-    // three deliberate shots with hard cuts: entrance (low 3/4 front), walk (tracking alongside), arrival (rear 3/4 to the board)
+    const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
+    me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
+    if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
+    if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
+    walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
     let cam, tgt, fov;
-    if (k < .7) { cam = up(WK.home.clone().addScaledVector(F, -.55).addScaledVector(Sd, -1.7), 1.5); tgt = up(p0.clone(), 1.3); fov = k < .3 ? 38 : 44; }
-    else { cam = up(WK.home.clone().addScaledVector(F, -2.3).addScaledVector(Sd, -.9), 1.5); tgt = up(WK.home.clone().addScaledVector(F, 1.4), 1.35); fov = 46; }
-    const shot = k < .22 ? 0 : k < .7 ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
-    const blend = k < .93 ? 1 : 1 - (k - .93) / .07;
+    if (k < .29) {          // low front 3/4, pushing in as you come through the crowd
+      const q = k / .29;
+      cam = up(p0.clone().addScaledVector(F, 1.9 - q * .5).addScaledVector(Sd, -1.5 + q * .3), 1.05); tgt = up(p0.clone(), 1.25); fov = 50 - q * 6;
+    } else if (k < WA) {    // tracking close-up alongside: face and chest
+      cam = up(p0.clone().addScaledVector(F, .55).addScaledVector(Sd, -1.15), 1.5); tgt = up(p0.clone().addScaledVector(F, .1), 1.4); fov = 41;
+    } else {                // low rear 3/4 at the oche, board in frame, slow push
+      // slow 10° orbit round the player and a 5% push until the hero hold (last .5 s)
+      const q = Math.min(1, (k - WA) / (.9 - WA)), qe = q * q * (3 - 2 * q), ang = -qe * .175;
+      const off = new T3().addScaledVector(F, -2.2).addScaledVector(Sd, -.9), c = Math.cos(ang), sn = Math.sin(ang);
+      cam = up(new T3(off.x * c - off.z * sn, 0, off.x * sn + off.z * c).multiplyScalar(1 - qe * .08).add(WK.home), 1.12 + qe * .06);
+      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .6), 1.45); fov = 50 - qe * 2.5;
+      // where the board sits on screen, so the lightning strikes it (board at the origin, ~1.73 m up)
+      { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
+        if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
+    }
+    // lightning shake: 2–3 px for a quarter second
+    if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
+    const shot = k < .29 ? 0 : k < WA ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
+    const blend = k < .94 ? 1 : 1 - (k - .94) / .06;
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
     return { fov: fov + (1 - blend) * 4 };
   };
+  // walk-on lighting: a warm follow spot above the player and a cool rim light behind; the lightning flashes the rim
+  function walkLights(v, me, now) {
+    const L = walkLights.L;
+    if (!v) { if (L) { L.forEach(l => { if (l.parent) l.parent.remove(l); if (l.target && l.target.parent) l.target.parent.remove(l.target); }); walkLights.L = null; } return; }
+    let root = me; while (root.parent) root = root.parent; if (root === me) return;
+    if (!L || L[0].parent !== root) {
+      if (L) walkLights(null);
+      const T = v.T, spot = new T.SpotLight(0xffd9a8, 9, 7, .42, .55, 1.4), rim = new T.PointLight(0x9cc8ff, 3, 4.5, 1.6), fill = new T.PointLight(0xffe7cc, 1.4, 3.2, 1.8);
+      root.add(spot); root.add(spot.target); root.add(rim); root.add(fill); walkLights.L = [spot, rim, fill];
+    }
+    const [spot, rim, fill] = walkLights.L, p = me.position, F = WK.fwd, Sd = WK.side;
+    spot.position.set(p.x + Sd.x * -.4, p.y + 3.6, p.z + Sd.z * -.4 + .3); spot.target.position.set(p.x, p.y + 1.1, p.z);
+    rim.position.set(p.x - F.x * 1.1 + Sd.x * .6, p.y + 1.9, p.z - F.z * 1.1 + Sd.z * .6);
+    fill.position.set(p.x + F.x * 1.2 + Sd.x * -1, p.y + 1.5, p.z + F.z * 1.2 + Sd.z * -1);
+    const dtf = WK.flash ? now - WK.flash : 1e9, fl = Math.max(0, 1 - dtf / 110, 1 - Math.abs(dtf - 190) / 90) + (dtf < 600 ? .25 * (1 - dtf / 600) : 0);   // two strikes then a fading afterglow
+    rim.intensity = 3 + fl * 40; rim.color.setHex(fl > .1 ? 0xe8f2ff : 0x9cc8ff); fill.intensity = 1.4 + fl * 10;
+  }
 
   // ---------- trophy cabinet ----------
   function trophyCheck(snap) {
