@@ -10,7 +10,7 @@ create table if not exists public.tops_perf (
   phase text check (phase in ('30s','end')),
   status text check (status in ('partial','complete','quit','closed','interrupted')),
   mode text, tier text,
-  secs int, visible_secs real, frame_n int, refresh_hz int,
+  secs int, visible_secs real, frame_n int, refresh_hz int,   -- refresh_hz: observed cadence from the median frame, not the display's setting
   fps real, p50 real, p95 real, p99 real, pct33 real, pct50 real, stalls100 int, max_ms int,
   render_p95 real,
   reticle_p50 real, reticle_p95 real, reticle_max int, reticle_n int, reticle_slow int,
@@ -23,12 +23,14 @@ create table if not exists public.tops_perf (
   app_secs int,             -- seconds since the app opened, at match start
   geometries int, textures int, programs int,   -- three.js renderer.info at the time of the row
   tex_mb real,              -- texture uploads since telemetry started (level 0, 4 B/px), minus deleted textures
-  mem jsonb                 -- {now:{geo,tex,prog,tex_mb,heap_mb}, start:{...}} so growth within a match is visible
+  mem jsonb,                -- {now:{geo,tex,prog,tex_mb,heap_mb}, start:{...}} so growth within a match is visible
+  frames_over200 int, q_dropped int
 );
 -- if the table already exists from an earlier draft of this migration
 alter table public.tops_perf add column if not exists match_index int, add column if not exists app_secs int,
   add column if not exists geometries int, add column if not exists textures int, add column if not exists programs int,
-  add column if not exists tex_mb real, add column if not exists mem jsonb;
+  add column if not exists tex_mb real, add column if not exists mem jsonb,
+  add column if not exists frames_over200 int, add column if not exists q_dropped int;
 create index if not exists tops_perf_ver_at on public.tops_perf (ver, at);
 alter table public.tops_perf enable row level security;
 drop policy if exists tops_perf_insert_own on public.tops_perf;
