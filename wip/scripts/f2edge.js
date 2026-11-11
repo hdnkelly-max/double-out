@@ -42,5 +42,6 @@ s=await p.evaluate(()=>{showShop('barrel');const bad=[...document.querySelectorA
 ok('every row id matches its title',s==='ok',s);
 // 8) not in career (The Run / no career): no gates, no strip
 s=await p.evaluate(()=>{const c=save.career;save.career=null;let g;try{g=TOPS_GATE.gateBarrel(BARRELS.find(b=>b.id==='power'));}finally{save.career=c;}return g===null;});ok('no gates outside a career',s);
+s=await p.evaluate(()=>{const c=career();const had=c.run;c.run={stage:0};let g;try{g=['mvg','littler','iceman','power'].map(id=>TOPS_GATE.gateBarrel(BARRELS.find(b=>b.id===id)));}finally{c.run=had;}return g.every(x=>x===null);});ok('The Run: sponsor sets and level-locked barrels all open',s);
 ok('no page errors',errs.length===0,errs.slice(0,3).join(' || '));
 console.log(res.join('\n'));await b.close();process.exit(res.some(r=>r.startsWith('FAIL'))?1:0);})();

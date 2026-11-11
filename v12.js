@@ -107,7 +107,7 @@ const _os12=offerSponsors;offerSponsors=function(done){try{const sh=SPONSORS.fin
  return _os12.call(this,()=>{const got=syncReserve(true);if(got.length){try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}}done&&done();});};
 const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};persist();}catch(e){}return r;};
 // gate for an item you don't own: null (open) | {lv} | {sp}
-function gateBarrel(b){if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
+function gateBarrel(b){if(lvNow()==null)return null;/* outside a career (The Run, no career) nothing is gated, sponsor sets included (QA 02:29, Overseer 03:16) */if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
 function gatePart(key,id){const need=PART_LV[key+':'+id];if(!need)return null;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
 window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart};
 // migration: a player already signed with Red Dragon, Target or Winmau gets that deal's exclusive set (not equipped). Owned barrels are never taken away.
