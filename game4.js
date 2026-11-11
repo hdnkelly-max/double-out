@@ -2156,12 +2156,10 @@ confetti=function(strength){if(LOOK.rm||strength<.4)return;const P=V.lkRects().p
 #routes .rt-rail .rt.on{background:#C6F36B;border-color:#C6F36B;color:#10191A;box-shadow:0 6px 16px rgba(198,243,107,.28)}
 #routes .rt-rail .rt.on .rc.d{color:#10191A!important;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 #routes .rt-rail .rt em{display:none}
-#routes.routes.rail-on{top:calc(var(--lk-hdr) + var(--lk-bh) - 52px)!important;left:calc(8px + 96px)!important;right:8px!important;width:auto!important;bottom:auto!important}
+#routes.routes.rail-on{top:calc(var(--lk-hdr) + var(--lk-bh) + 8px)!important;left:8px!important;right:8px!important;width:auto!important;bottom:auto!important}
 #routes.rail-on .rt-bar{width:100%!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;min-height:44px;gap:5px!important}
 #routes.rail-on .rt-bar .rt-rem,#routes.rail-on .rt-bar .rt-sel,#routes.rail-on .rt-bar .rt-tog{display:none!important}
-body.lk-rail .pulse{width:88px!important}
-body.lk-rail .pulse .hr canvas,body.lk-rail .pulse .hr small{display:none!important}
-#routes .rt-upd{position:absolute;left:0;top:-18px;font:800 10px/1 Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#D9AD52;text-shadow:0 1px 3px #000}
+#routes .rt-upd{position:absolute;left:4px;top:auto;bottom:-16px;font:800 10px/1 Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#D9AD52;text-shadow:0 1px 3px #000}
 `;document.head.appendChild(RS);}
 {const _rr=renderRoutes;renderRoutes=function(){_rr();const host=$('routes');if(host&&(host.hidden||!S)){host.classList.remove('rail-on');document.body.classList.remove('lk-rail');}if(!host||host.hidden||!S)return;const me=S.p[S.cur];if(!me)return;
  host.classList.remove('rail-on');document.body.classList.remove('lk-rail');const lst=host.querySelector('.rt-list');const bar=host.querySelector('.rt-bar');if(!bar||!lst)return;const btns=[...lst.querySelectorAll('.rt')].slice(0,3);if(btns.length<2)return;
