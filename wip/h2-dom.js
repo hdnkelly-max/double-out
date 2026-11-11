@@ -33,10 +33,9 @@ const log = o => { fs.appendFileSync(OUT, JSON.stringify(o) + '\n'); };
   const playToEnd = async (maxMs, midTag) => { let mid = false; const t0 = Date.now();
     while (Date.now() - t0 < maxMs) { const st = await p.evaluate(() => { try { if (!S) return 'noS'; if (S.done) return 'done';
         if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(gauss() * 30, gauss() * 30); } return 'bull'; }
-        if (S.cur === 1 && S.visit && S.visit.length === 0 && S.p[1].score > 40) S.p[1].score = 40;
-        if (S.cur === 0 && !S.busy && S.visit.length < 3 && !S.p[0].ai) { S.busy = true; land(400 + Math.random() * 50, 400); } return 'play'; } catch (e) { return 'ERR ' + e.message; } });
+        if (S.cur === 0 && !S.busy && S.visit.length < 3 && !S.p[0].ai) { if (S.p[0].score > 61 && S.visit.length === 0) S.p[0].score = 61; const t = targetPoint(aimFor(S.p[0].score, 4 - S.dart)); S.busy = true; land(t.x + gauss() * 6, t.y + gauss() * 6); } return 'play'; } catch (e) { return 'ERR ' + e.message; } });
       if (st === 'noS' && Date.now() - t0 > 20000) return 'noS';
-      if (!mid && midTag && st === 'play' && Date.now() - t0 > 12000) { mid = true; log(await measure(midTag)); }
+      if (!mid && midTag && st === 'play' && Date.now() - t0 > 8000) { mid = true; log(await measure(midTag)); }
       if (st === 'done' || /^ERR/.test(st)) return st; await p.waitForTimeout(600); }
     return 'timeout'; };
   const startFromHub = async () => { await p.evaluate(() => { try { showHub(); } catch (e) {} }); await p.waitForTimeout(800);
