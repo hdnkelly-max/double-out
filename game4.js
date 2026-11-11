@@ -703,6 +703,8 @@ const V=(function(){try{return (()=>{
  function keepAssets(root){try{root.traverse(o=>{if(o.geometry)KEEP.add(o.geometry);if(o.isSkinnedMesh&&o.skeleton)KEEP.add(o.skeleton);const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(!m)return;KEEP.add(m);TEX_KEYS.forEach(k=>{if(m[k])KEEP.add(m[k]);});});});}catch(e){}return root;}
  // GFX: character registry. Every Mixamo model shares the skeleton; bones get a per-model prefix so rest poses never collide.
  const CHARS=['brian','bryce','pete','lewis','david','leonard','megan','elizabeth'],CHAR_F={megan:1,elizabeth:1},RIGS={},RIG_WAIT={};
+ // #15 (Art): read-only stats on the character template cache, for tests: cached keys and estimated GPU MB per template
+ window.TOPS_RIGSTAT=()=>{const out={};Object.keys(RIGS).forEach(k=>{const g=new Set(),t=new Set();let gb=0,tb=0;RIGS[k].base.traverse(o=>{if(o.geometry&&!g.has(o.geometry)){g.add(o.geometry);Object.values(o.geometry.attributes).forEach(a=>{gb+=(a.array&&a.array.byteLength)||0;});if(o.geometry.index)gb+=o.geometry.index.array.byteLength;}(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!m)return;TEX_KEYS.forEach(q=>{const x=m[q];if(x&&!t.has(x)&&x.image){t.add(x);tb+=(x.image.width||0)*(x.image.height||0)*4*4/3;}});});});out[k]={geoMB:+(gb/1048576).toFixed(1),texMB:+(tb/1048576).toFixed(1)};});return out;};
  function rigFrom(gltf,key){if(!RIG.rest)RIG.rest={};const sc=gltf.scene;sc.traverse(o=>{if(o.isBone)o.name=key+'_'+o.name.replace(/^mixamorig\d*:?/,'');});sc.updateMatrixWorld(true);
   if(key==='remy'){const box=new T.Box3().setFromObject(sc);const h=box.max.y-box.min.y;const k=(h>1.45&&h<2.1)?1:1.78/h;sc.scale.setScalar(k);sc.position.y=-box.min.y*k;}sc.updateMatrixWorld(true); /* Mixamo cast: metric, feet at the origin (bbox is unreliable on quantised meshes) */
   const root=new T.Group();sc.rotation.y=Math.PI;root.add(sc);root.updateMatrixWorld(true);
@@ -960,7 +962,15 @@ const V=(function(){try{return (()=>{
  let opp=null;const O={};
  let lastOpp=null,lastMe=null;
  let _chT=0;function charsChanged(){clearTimeout(_chT);_chT=setTimeout(()=>{try{if(lastMe)setPlayerLook(...lastMe);if(lastOpp)setOpponentLook(...lastOpp);if(lastTier>=0)buildVenue(lastTier);}catch(e){console.warn('chars',e);}try{if(window.__avPending){window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}}catch(e){}},120);}
- function setOpponentLook(look,name,tier){lastOpp=[look,name,tier];if(lastMe&&!window.GFX_LEGACY){const mk=charKey(lastMe[0],lastMe[2]),ok=charKey(look,name);if(ok===mk){const fem=CHAR_F[ok],pool=CHARS.filter(c=>!!CHAR_F[c]===!!fem&&c!==mk);look=Object.assign({},look,{model:pool[(String(name||'').length)%pool.length]});}}if(opp){scene.remove(opp);disposeTree(opp);}opp=makeFigure(look,name,tier);Object.assign(O,opp.userData);opp.position.set(-.06,0,OCHE_Z+.08);opp.rotation.y=1.0;stance(opp);opp.visible=false;scene.add(opp);poseOpp(0,0);}
+ // #15 (Art, prototype for Polish): the character template cache keeps every opponent's model pinned in KEEP for the
+// session. Keep the fallback rig (remy), the player's and the current opponent's templates, and any template a figure in
+// the scene still uses; unpin and dispose the rest. Runs after each opponent change, once the new figures exist.
+function pruneRigs(){try{if(window.TOPS_RIG_LRU===false)return;const keep=new Set(['remy']);if(lastMe)keep.add(charKey(lastMe[0],lastMe[2]));if(lastOpp)keep.add(charKey(lastOpp[0],lastOpp[1]));
+ scene.traverse(o=>{if(o.userData&&o.userData.ck)keep.add(o.userData.ck);});
+ Object.keys(RIGS).forEach(k=>{if(keep.has(k)||RIG_WAIT[k])return;const base=RIGS[k].base;delete RIGS[k];
+  base.traverse(o=>{if(o.geometry)KEEP.delete(o.geometry);if(o.skeleton)KEEP.delete(o.skeleton);(Array.isArray(o.material)?o.material:(o.material?[o.material]:[])).forEach(m=>{if(!m)return;KEEP.delete(m);TEX_KEYS.forEach(q=>{if(m[q])KEEP.delete(m[q]);});});});
+  disposeTree(base);Object.keys(ANIM_CACHE).forEach(c=>{if(c.indexOf(k+'|')===0)delete ANIM_CACHE[c];});});}catch(e){console.warn('pruneRigs',e);}}
+function setOpponentLook(look,name,tier){setTimeout(pruneRigs,0);lastOpp=[look,name,tier];if(lastMe&&!window.GFX_LEGACY){const mk=charKey(lastMe[0],lastMe[2]),ok=charKey(look,name);if(ok===mk){const fem=CHAR_F[ok],pool=CHARS.filter(c=>!!CHAR_F[c]===!!fem&&c!==mk);look=Object.assign({},look,{model:pool[(String(name||'').length)%pool.length]});}}if(opp){scene.remove(opp);disposeTree(opp);}opp=makeFigure(look,name,tier);Object.assign(O,opp.userData);opp.position.set(-.06,0,OCHE_Z+.08);opp.rotation.y=1.0;stance(opp);opp.visible=false;scene.add(opp);poseOpp(0,0);}
  function stance(fig){const u=fig.userData;if(u.rigged){stanceRigged(fig);fig.rotation.x=.03;return;}if(u.hips){u.hips.forEach(h=>{const right=h.position.x>0;h.rotation.set(right?.14:-.06,0,right?.03:-.05);});}fig.rotation.x=.04;}
  function poseOpp(oa){if(!opp)return;poseFigure(opp,oa||{phase:'idle'},boardC);}
  // --- player preview figure
