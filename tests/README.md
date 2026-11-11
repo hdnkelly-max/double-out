@@ -7,7 +7,7 @@ Run one browser test at a time on a 2-core box; two at once can fail with "did n
 ## Ship gate
 | Script | What it checks | Usage |
 |---|---|---|
-| `regress.js` | Real matches: 3 darts a turn, points match score, legal scores, opponent pose, spare darts, card picks, no page errors | `node tests/regress.js 2` |
+| `regress.js` | Real matches on the real characters (fails if the rig isn't loaded): 3 darts a turn, points match score, legal scores, opponent pose, spare darts, card picks, no page errors. Two matches at once on 4+ cores, one at a time otherwise (`REGRESS_PAR=n` overrides) | `node tests/regress.js 2` (~4.5 min on 2 cores) |
 | `regress_assets.js` | Back-to-back Club and Pub matches at 390 px and desktop: board face and on-screen board have colour, every shirt texture drawn, GPU textures/geometries flat, and a pass with character models failing to load. Runs the standalone build (real rig). Add for rendering or loading changes | `node tests/regress_assets.js` · `TOPS_QA_SABOTAGE=1` blanks canvases to prove it fails |
 | `sim-ai.js` | Opponent averages per tier and setting inside the rule 11 bands, The Run climbs stage to stage, 180 rates. Required for throw, AI or tuning changes | `node tests/sim-ai.js 200` · `--report-only` |
 

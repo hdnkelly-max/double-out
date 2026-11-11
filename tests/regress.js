@@ -2,6 +2,9 @@
 // Usage: node tests/regress.js [matches=6]   exits 1 on any failure.
 const {chromium}=require('playwright');
 const N=+process.argv[2]||6;
+// B7 (QA, 11 Nov): matches run in parallel when the machine can take it; every check is unchanged. Headless rendering is
+// CPU-bound (SwiftShader), so on a 2-core box two pages starve each other and time out: default 2 at a time on 4+ cores, else 1.
+const PAR=Math.max(1,+process.env.REGRESS_PAR||(require('os').cpus().length>=4?2:1));
 (async()=>{
  const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
  const fails=[];const stats=[];
@@ -10,6 +13,10 @@ const one=async(m)=>{
   const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.addInitScript(()=>{const st=window.setTimeout;window.setTimeout=(f,ms,...a)=>st(f,Math.max(0,(ms||0)*0.06),...a);});
   await p.goto('file://'+require('path').resolve(__dirname,'../index.html'));await p.waitForTimeout(3500);
+  // B7: the gate must play with the real characters. index.html loads remy.glb (tests/setup.sh decodes it); without it the
+  // game silently falls back to placeholder figures and the pose, spare-dart and rendering checks test the wrong thing.
+  {let rig=false;for(let i=0;i<40&&!rig;i++){rig=await p.evaluate(()=>!!(typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady())).catch(()=>false);if(!rig)await p.waitForTimeout(500);}
+   if(!rig){fails.push(`match ${m}: real characters not loaded (remy.glb missing? run tests/setup.sh)`);await p.close();return;}}
   const setup=await p.evaluate((m)=>{try{save.authSeen=true;$('login').hidden=true;newCareer();const n=nextOpponent();V.walkOn=()=>{};
    const tier=m%3,start=301;
    beginMatch({mode:'career',tier,p0:'Test',oppKey:n.oppKey,oppName:n.oppName,oppAvg:[42,55,70][tier],legs:1,start});
@@ -42,7 +49,7 @@ const one=async(m)=>{
   stats.push(r.p.map(q=>(q.ai?'AI ':'P ')+q.avg+'/'+q.legs).join(' vs '));
   await p.close();
  };
- for(let m=0;m<N;m++){await one(m);}
+ for(let m=0;m<N;m+=PAR){const batch=[];for(let k=m;k<Math.min(N,m+PAR);k++)batch.push(one(k));await Promise.all(batch);}
  await b.close();
  console.log('regress: '+N+' matches · '+stats.join(' | '));
  if(fails.length){console.log('REGRESSION FAILED\n- '+fails.join('\n- '));process.exit(1);}
