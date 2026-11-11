@@ -12,7 +12,7 @@ const one=async(m)=>{
   const p=await b.newPage({viewport:{width:390,height:844}});
   const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.addInitScript(()=>{const st=window.setTimeout;window.setTimeout=(f,ms,...a)=>st(f,Math.max(0,(ms||0)*0.06),...a);});
-  await p.goto('file://'+require('path').resolve(__dirname,'../index.html'));await p.waitForTimeout(3500);
+  await p.goto('file://'+require('path').resolve(__dirname,'../index.html'),{waitUntil:'domcontentloaded',timeout:180000});await p.waitForTimeout(3500);
   // B7: the gate must play with the real characters. index.html loads remy.glb (tests/setup.sh decodes it); without it the
   // game silently falls back to placeholder figures and the pose, spare-dart and rendering checks test the wrong thing.
   {let rig=false;for(let i=0;i<40&&!rig;i++){rig=await p.evaluate(()=>!!(typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady())).catch(()=>false);if(!rig)await p.waitForTimeout(500);}
