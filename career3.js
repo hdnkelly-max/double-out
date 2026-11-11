@@ -222,6 +222,8 @@ const _sp=showPlayer;showPlayer=function(){const r=_sp.apply(this,arguments);ren
 const _gx=gainXP;gainXP=function(id,amt,mult){const c=career();if(c&&!c.run&&amt>0){const cap=attrCap();const r=cap?lvOf(id)/cap:0;const k=r<.6?1.25:r<.8?1:r<.95?.65:.35;amt*=k;}return _gx.call(this,id,amt,mult);};
 // title-card / creator pick up unlocked colours on load
 try{applyUnlocks();}catch(e){}
-window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,showRewardTest:p=>{pre=p;showReward();}};
+// every flight colour a level you've reached has awarded stays yours, equipped or not (needed once 'Keep current flights' exists); derived from your level, so nothing extra is stored
+const lvFlights=()=>{const out=[];try{const lv=V3().lv;for(let L=2;L<=lv;L++){const r=rewardAt(L);if(r&&r.k==='flight'&&!out.includes(r.v))out.push(r.v);}}catch(e){}return out;};
+window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
