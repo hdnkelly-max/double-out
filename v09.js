@@ -88,7 +88,12 @@ function st(){if(!save.st2){const z=()=>({sc:0,fi:0,ct:0,rh:0,co:0});const lv=lv
   save.perks={};save.attr={};try{_SK=null;}catch(e){}persist();}
  return save.st2;}
 window.TOPS_st=()=>save.st2;
-function capNow(){const c=career();if(!c)return 85;const t=c.tier||0;if(t<6)return CAPS[t];return (c.seasonN||1)>=2?85:82;}
+// caps +10 (Overseer 00:36, Hayden's delegated OK): a player still at a tier after a season keeps improving. Each extra season at the
+// same tier lifts that chapter's stat cap by 5, up to +10 (the same rule already ran at the Worlds: 82, then 85). Players who promote
+// in their first season never see it, so it doesn't make strong players stronger; it's time at the tier, never anyone's average.
+function capBoost(){const c=career();if(!c)return 0;return 5*Math.max(0,Math.min(2,(c.seasonN||1)-1));}
+function capNow(){const c=career();if(!c)return 85;const t=c.tier||0;if(t<6)return Math.min(85,CAPS[t]+capBoost());return (c.seasonN||1)>=2?85:82;}
+window.TOPS_capNow=capNow;
 function gainAt(v){return Math.max(2,Math.min(6,Math.round((100-v)/9)));}
 // kit points: equipment shown as stat points on top of yours
 function kitPts(){const k={sc:0,fi:0,ct:0,rh:0,co:0};try{const b=barrel();const acc=Math.round((5.6-b.base)/1.8*7);k.sc+=acc;k.fi+=acc;k.rh+=Math.round((b.tol-1)/.15*6);k.ct+=Math.round((1.25-b.sway)/.6*7);
@@ -197,7 +202,7 @@ function barHTML(id,opt){opt=opt||{};const s=st();const v=s.v[id],k=kitPts()[id]
 function rowHTML(x){const s=st();const k=kitPts()[x.id];const fp=Math.min(100,s.form[x.id]/formSize(x.id)*100);
  return `<div class="st2r"><b>${s.flame[x.id]?'🔥':''}${x.n}</b>${barHTML(x.id)}<span class="num">${s.v[x.id]}${k?`<i class="${k<0?'neg':''}">${k>0?'+':''}${k}</i>`:''}</span><div class="st2fm" title="Form"><i style="width:${fp.toFixed(0)}%"></i></div></div>`;}
 function cardHTML(){const s=st();const cap=Math.min(85,capNow());const lv=lvNow();const t=TRAITS.find(x=>x.id===s.trait);
- return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap} · max 85</span></div></div>
+ return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap}${capBoost()&&cap<85?` (+${capBoost()} for another season here)`:''} · max 85</span></div></div>
  ${STATS.map(rowHTML).join('')}
  <div class="st2key"><span><i style="background:#C6F36B"></i>You</span><span><i style="background:#5f9fe8"></i>Kit</span><span><i style="background:#e2362f"></i>Kit penalty</span><span><i style="background:#ffb13b"></i>Form</span></div>
  <div class="st2act">${s.bank>0?`<button type="button" class="st2pts" id="st2Spend">${canSpend()?`Spend ${s.bank} point${s.bank>1?'s':''}`:`${s.bank} banked · promote to use`}</button>`:`<button type="button" class="ghost" id="st2How">How stats grow</button>`}<button type="button" class="ghost" id="st2Kit">Change darts</button></div>
