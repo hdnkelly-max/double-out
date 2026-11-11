@@ -16,7 +16,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   // 1: switch on from boot, play a short match (darts land, a visit completes)
   await p.evaluate(() => { const n = nextOpponent(); beginMatch({ mode: 'career', tier: 1, p0: 'T', oppKey: n.oppKey, oppName: n.oppName, oppAvg: 50, legs: 1, start: 501 }); });
   await p.waitForTimeout(8000);
-  for (let i = 0; i < 3; i++) { await p.mouse.click(195, 380); await p.waitForTimeout(350); await p.mouse.click(195, 380); await p.waitForTimeout(1500); }
+  /* drive real landings through land() the way tests/match-growth.js does (bull-up first, then our visits), up to 3 darts */
+  for (let t0 = Date.now(); Date.now() - t0 < 60000;) {
+    const st = await p.evaluate(() => { try { if (S.done) return 'done'; if (S.p[0].darts >= 3) return 'ok';
+      if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(gauss() * 30, gauss() * 30); } return 'bull'; }
+      if (S.cur === 0 && !S.busy && S.visit.length < 3 && !S.p[0].ai) { const t = targetPoint(aimFor(S.p[0].score, 4 - S.dart)); S.busy = true; land(t.x + gauss() * 6, t.y + gauss() * 6); } return 'play'; } catch (e) { return 'ERR ' + e.message; } });
+    if (st === 'ok' || st === 'done' || /^ERR/.test(st)) { if (/^ERR/.test(st)) fails.push('driver: ' + st); break; } await p.waitForTimeout(700);
+  }
   const a = Object.assign({ step: 'on from boot', glbRequests: glb.slice(), dartsThrown: await p.evaluate(() => (S && S.p && S.p[0] && S.p[0].darts) || 0) }, await figs()); console.log(JSON.stringify(a));
   if (a.glbRequests.length) fails.push('character GLBs requested with the switch on: ' + a.glbRequests.join(', '));
   if (a.rigged || a.skinned) fails.push(`rigged figures with the switch on (rigged ${a.rigged}, skinned ${a.skinned})`);

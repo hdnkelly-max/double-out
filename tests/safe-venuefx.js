@@ -16,7 +16,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.waitForFunction(() => { let n = 0; V._qa.scene.traverse(o => { if (o.isMesh && /^bake_/.test(o.name)) n++; }); return n >= 5; }, null, { timeout: 120000, polling: 1000 });
     await p.waitForTimeout(4000);
     const r = await p.evaluate(() => { let pl = 0; V._qa.scene.traverse(o => { if (o.isPointLight && Math.abs(o.distance - 3.6) < 1e-6) pl++; });
-      const progs = V._qa.renderer.info.programs; return { venueProg: progs.some(x => /topsVenue/.test(x.cacheKey)), light: pl, programs: progs.length }; });
+      const R = V._qa.renderer, progs = R.info.programs; let inUse = false, vfx = 0, obc = 0, keys = {}; V._qa.scene.traverse(o => { const m = o.isMesh && o.material; if (!m || !m.userData.vfx) return; vfx++; if (m.onBeforeCompile === m.userData.vfx.obc) obc++; const P = R.properties.get(m), pr = P.currentProgram || P.program; const k = pr ? (/topsVenue\d*/.exec(pr.cacheKey) || ['plain'])[0] : 'none'; keys[k] = (keys[k] || 0) + 1; if (/topsVenue/.test(k)) inUse = true; });
+      /* the program each baked material is drawn with now (renderer.info.programs keeps released programs a while) */
+      return { venueProg: inUse, light: pl, programs: progs.length, vfx, obc, keys }; });
     r.match = i; r.switchOn = on; rows.push(r); console.log(JSON.stringify(r));
     if (on && (r.venueProg || r.light)) fails.push(`match ${i}: switch on but shader ${r.venueProg} / light ${r.light}`);
     if (!on && (!r.venueProg || !r.light)) fails.push(`match ${i}: switch off but shader ${r.venueProg} / light ${r.light}`);
