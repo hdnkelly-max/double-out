@@ -149,11 +149,15 @@ function trait(){const s=st();if(!on()||!s.trait||lvNow()<15)return null;const t
 window.TOPS_trait=trait;
 function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)/2);return {need,me,op,dec:op&&me.legs===need-1&&op.legs===need-1,md:me.legs===need-1&&me.score<=170,trail:op&&op.legs>me.legs};}
 // ---------- engine ----------
+// Timing-window calibration (Hayden 22:28): the perfect window is the lever. Starter 6 ms at Rhythm 20 (plus a 6 ms soft edge), growing to 21 ms
+// at Rhythm 95 on a convex curve (e), so early stat points matter less than late ones; Control and Scoring/Finishing move sway
+// and scatter only part of the way along the throw table (ka, ks). Fitted on testers' real darts (tests/sim-player.js).
+const CAL_W={p0:5.25,pk:11,e:1.9};window.TOPS_CAL_W=CAL_W;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
- const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
+ const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
- const Lr=Lof('rh');tp.P*=(20+14*Lr)/(q0.P*tolMult()*.85);
+ const Lr=Lof('rh');const CW=window.TOPS_CALW||CAL_W;tp.P*=(CW.p0+CW.pk*Math.pow(Lr,CW.e!=null?CW.e:1))/(q0.P*tolMult()*.85); /* perfect window (ms) at Rhythm 20 and its growth to Rhythm 95 (calibration, Hayden 22:28) */
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -162,6 +166,7 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  if(tr==='steady')tp.w/=(1+.08*nv);
  if(tr==='metro')tp.P+=Math.min(6,3*(S.visPerf||0));
  tp.s0=Math.max(4.2,qs.s0*m);
+ tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8; /* a perfect release lands inside a 5 mm ring, from day one (Hayden 22:28) */
 }catch(e){}return tp;};
 const _ce9=compEff;compEff=function(){if(!on())return _ce9.apply(this,arguments);const c=career();return (eff('co')-20)/7.5+((c&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);};
 const _en9=effNerves;effNerves=function(){const n=_en9.apply(this,arguments);if(!n||!on()||!S||!S.p)return n;try{const t=trait();if(!t)return n;const L=lastLegs();if(t==='clutch'&&(L.dec||L.md))return n*.5;if(t==='comeback'&&L.trail)return n*.65;}catch(e){}return n;};
