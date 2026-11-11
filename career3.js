@@ -96,7 +96,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   <div class="c3rw-cash${P.cash>0?'':' none'}"><b class="c3-cash" id="c3rwCash">+$0</b><small>${P.cash>0?(P.m.won?'prize & bonuses':'appearance & bonuses'):'no prize this time'}</small></div>
   <div class="c3rw-xp"><b id="c3rwXp">+0 career XP</b><div class="c3-lvrow"><span class="c3-lvn" id="c3rwLv">Lv ${P.before.lv}</span><div class="c3-bar"><i id="c3rwBar" style="width:${pct0}%"></i></div><span class="c3-lvn dim" id="c3rwLv2">${P.before.lv+1}</span></div>
    <p class="c3rw-src">${top.map(([n,x])=>`${n} <b>+${x}</b>`).join(' · ')}${rest>0?` · +${rest} more`:''}</p></div>
-  ${hero?'':'<!--nohero-->'}<div class="c3rw-unl" id="c3rwUnl" hidden>${hero?`<small>Level ${hero.lv} unlocked</small><b>${hero.n}</b>${P.ups.length>1?`<span>Plus ${P.ups.length-1} more · see Player</span>`:''}${rIco(hero)}`:''}</div>
+  ${hero?'':'<!--nohero-->'}${(()=>{const ic=hero?rIco(hero):'';/* rule 22: the tile knows when its image is the floating dart, so its text cap applies only then */return `<div class="c3rw-unl${/ri-dart/.test(ic)?' is-dart':''}" id="c3rwUnl" hidden>${hero?`<small>Level ${hero.lv} unlocked</small><b>${hero.n}</b>${P.ups.length>1?`<span>Plus ${P.ups.length-1} more · see Player</span>`:''}${ic}`:''}</div>`;})()}
   ${achs.map(a=>`<div class="c3rw-ach t-${a.t}"><i>${achIco(a)}</i><div><small>Achievement \u00b7 ${(ACHR[a.t]||ACHR.R).lab}</small><b>${a.n}</b><span>${a.d}</span></div><em>+${a._xp} XP<br>+${money(a._cash)}</em></div>`).join('')}
   ${P.done.length?`<div class="c3rw-con" id="c3rwCon">${P.done.map(k=>`<span><i>✓</i>${k.t} <em>${money(k.cash)}</em></span>`).join('')}</div>`:''}
   ${hook?`<p class="c3rw-hook" id="c3rwHook">${hook}</p>`:''}
