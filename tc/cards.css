@@ -243,7 +243,7 @@ body.tc-gyro .tc[data-r]{animation:none}
 .tc__name.is-xlong{font-size:calc(var(--card-w)*.066)}
 .tcpk__pull b{font-size:40px}.tcpk__pull.is-legendary b{font-size:46px}
 /* deal: a bigger fanned hand that fills the screen, with a gentle invite bob (build chat note: dead space under the backs) */
-.tcpk__row .tc:not(.is-hero):not(.is-behind){--sc:.64;--tx:calc((var(--d,1) - 1) * 104px);--rot:calc((var(--d,1) - 1) * 6deg);--ty:calc(abs(var(--d,1) - 1) * 18px + 24px)}
+.tcpk__row .tc:not(.is-hero):not(.is-behind){--sc:.74;--tx:calc((var(--d,1) - 1) * 112px);--rot:calc((var(--d,1) - 1) * 6deg);--ty:calc(abs(var(--d,1) - 1) * 18px + 84px)}
 @supports not (top:abs(1px)){.tcpk__row .tc:not(.is-hero):not(.is-behind){--ty:24px}.tcpk__row .tc[style*="--d: 0"]:not(.is-hero):not(.is-behind),.tcpk__row .tc[style*="--d: 2"]:not(.is-hero):not(.is-behind){--ty:42px}}
 .tcpk__row .tc:not(.is-hero):not(.is-behind):not(.is-dealing) .tc__back{animation:tc-invite 2.6s ease-in-out infinite;animation-delay:calc(var(--d,0) * .25s)}
 @keyframes tc-invite{0%,100%{box-shadow:0 14px 30px rgba(0,0,0,.55),0 0 0 1px rgba(198,243,107,.15)}50%{box-shadow:0 18px 36px rgba(0,0,0,.6),0 0 22px rgba(198,243,107,.28),0 0 0 1px rgba(198,243,107,.4)}}
