@@ -11,6 +11,8 @@ header h1{font:900 italic 44px/1 var(--display);text-transform:uppercase;letter-
 header p{color:var(--muted);font-size:15px;line-height:1.5;max-width:68ch;margin-top:8px}
 .row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 @media (max-width:1000px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.row.r3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1000px}
+@media (max-width:760px){.row.r3{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:560px){.row{grid-template-columns:minmax(0,1fr)}}
 figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
 figure img{width:100%;max-width:100%;aspect-ratio:390/844;object-fit:cover;border-radius:18px;border:1px solid var(--line)}
@@ -26,7 +28,19 @@ footer{color:var(--muted);font-size:13px;line-height:1.5;max-width:80ch}
 <div class="wrap">
   <header>
     <h1>Your next home screen</h1>
-    <p>Three directions for the career hub, mocked at phone size (390×844) with a mid-career save: Club League week 5 of 8, 3rd of 8, level 14. Everything uses the game's own art, type and colours. Concepts only: nothing has changed in the game. Scores are ChatGPT's, out of 10 for a phone player, after three review rounds.</p>
+    <p><strong style="color:var(--text)">Round 2:</strong> three different visual languages for the same screen (round 1 kept further down). Same mid-career save, phone size 390×844. Concepts only: nothing has changed in the game. Scores are ChatGPT's, out of 10 for a phone player.</p>
+  </header>
+  <div class="row r3">
+    <figure><img src="r2_prime-time.png" alt="Prime Time, sports broadcast home screen"><div class="lab"><b>Prime Time</b><span class="sc">9.1</span></div>
+      <figcaption><strong>Tonight as a darts broadcast going live.</strong> Black, red and white, heavy condensed type, skewed TV panels, your player as the hero cut-out, the tale of the tape as a broadcast graphic and a NEXT ticker.<br><span class="cost">Build: medium · ~1.5 days</span></figcaption></figure>
+    <figure><img src="r2_black-label.png" alt="Black Label, dark luxury home screen"><div class="lab"><b>Black Label</b><span class="sc">9.0</span></div>
+      <figcaption><strong>Calm, premium, one decision.</strong> Near-black and brass, a huge serif "Big Mal.", "Win, and you're second.", three stats and a solid brass Walk on. No cards at all.<br><span class="cost">Build: low · ~1 day</span></figcaption></figure>
+    <figure><img src="r2_chalk-and-ink.png" alt="Chalk and Ink, pub materials home screen"><div class="lab"><b>Chalk &amp; Ink</b><span class="sc">9.2</span></div>
+      <figcaption><strong>Your local's fixture board, made of real things.</strong> Chalk on a framed board, a typewritten ticket, a stencil-painted Walk on sign and enamel plaques under warm pub light.<br><span class="cost">Build: medium · ~2 days</span></figcaption></figure>
+  </div>
+  <header style="margin-top:18px">
+    <h1 style="font-size:30px">Round 1 · layouts in today's style</h1>
+    <p>Not picked. Three layouts for the career hub, mocked at phone size (390×844) with a mid-career save: Club League week 5 of 8, 3rd of 8, level 14. Everything uses the game's own art, type and colours. Concepts only: nothing has changed in the game. Scores are ChatGPT's, out of 10 for a phone player, after three review rounds.</p>
   </header>
   <div class="row">
     <figure><img src="tops-home-today.png" alt="Today's live career hub"><div class="lab"><b>Today</b><span class="sc base">7.2</span></div>
