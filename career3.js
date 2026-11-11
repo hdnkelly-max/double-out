@@ -102,7 +102,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   ${hook?`<p class="c3rw-hook" id="c3rwHook">${hook}</p>`:''}
   <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip new '+(hero.k==='flight'?'flights':'shirt'):'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep current '+(hero.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
  const R=$('result');if(R)R.classList.add('c3-dim');
- el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
+ el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');try{if(window.TOPS_REWARD)TOPS_REWARD(el);}catch(e){console.warn('reward hook',e);}
  const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const big=!!P.ups.length;
  const cashN=$('c3rwCash'),xpN=$('c3rwXp'),bar=$('c3rwBar'),lvN=$('c3rwLv'),lv2=$('c3rwLv2');const T=[];const at=(ms,f)=>T.push(setTimeout(f,rm?0:ms));
  sfxC('thud');
