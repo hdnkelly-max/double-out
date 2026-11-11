@@ -4,6 +4,8 @@ set -e
 MSG="$1"; SRC=/home/claude/oche-next; R=/home/claude/double-out
 # the release must be committed, so the src push below matches exactly what went live
 if [ -n "$(git -C $SRC status --porcelain --untracked-files=no)" ]; then echo "SHIP BLOCKED: uncommitted changes in $SRC"; exit 1; fi
+# always rebuild from the committed source, so the file that ships (and the gate tests) is never a stale build
+(cd $SRC && node build.js >/dev/null) || { echo "SHIP BLOCKED: build.js failed"; exit 1; }
 # regression gate: real matches in a headless browser; a failure blocks the ship (SKIP_REGRESS=1 to bypass in an emergency)
 # QA_PASSED=<commit>: skip the rerun only when the release is that QA-passed commit plus the version bump (rule 12);
 # any other difference (merge changes, extra commits) and the gate runs as normal
