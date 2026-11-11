@@ -108,18 +108,23 @@ function syncReserve(equipNow){const out=[];try{if(!save||!save.owned)return out
 window.TOPS_v12Res=syncReserve;
 const _os12=offerSponsors;offerSponsors=function(done){try{const sh=SPONSORS.find(x=>x.id==='shot');if(sh){const lv=lvNow();const need=LV[sh.v12gift]||1;sh.lines[1]=(lv!=null&&lv<need)?`We back Kiwi players coming through. A set of Zen Jutsu 23g is put aside for you, no charge, the day you hit level ${need}. 15% off anything in the range now.`:'We back Kiwi players coming through. Set of Zen Jutsu 23g on us, 15% off anything in the range.';}}catch(e){}
  return _os12.call(this,()=>{const got=syncReserve(true);if(got.length){try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}}done&&done();});};
-const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};persist();}catch(e){}return r;};
+const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};save.v12ent=[];save.v12pace=1;persist();}catch(e){}return r;};
+// Pacing (Overseer 05:58, ChatGPT 8.7): Asp moved 30 -> 33 and GA 32 -> 34. A career that had already reached the old level keeps the
+// barrel unlocked (one-time entitlement, decided the first time this version sees the career; never for a new career, never in The Run).
+const PACE_OLD={asp:30,ga:32};
+function paceEntitle(){try{if(save.v12pace)return;const lv=lvNow();if(lv==null)return;/* only decide inside a career (The Run and no-career wait) */
+ save.v12ent=Object.keys(PACE_OLD).filter(id=>lv>=PACE_OLD[id]&&lv<(LV[id]||1));save.v12pace=1;persist();}catch(e){}}
 // gate for an item you don't own: null (open) | {lv} | {sp}
-function gateBarrel(b){if(lvNow()==null)return null;/* outside a career (The Run, no career) nothing is gated, sponsor sets included (QA 02:29, Overseer 03:16) */if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
+function gateBarrel(b){if(lvNow()==null)return null;/* outside a career (The Run, no career) nothing is gated, sponsor sets included (QA 02:29, Overseer 03:16) */if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;if(save.v12ent&&save.v12ent.includes(b.id))return null;return {lv:need};}
 function gatePart(key,id){const need=PART_LV[key+':'+id];if(!need)return null;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
-window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart};
+window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart,paceEntitle};
 // migration: a player already signed with Red Dragon, Target or Winmau gets that deal's exclusive set (not equipped). Owned barrels are never taken away.
 function grantSponsorSet(){try{if(!save||!save.owned||!save.sponsor)return false;const id=Object.keys(EXCL).find(k=>EXCL[k]===save.sponsor);if(id&&!save.owned.includes(id)){save.owned.push(id);persist();return true;}}catch(e){}return false;}
 grantSponsorSet();syncReserve(false);
 // rule 17 (QA 21:55 #4): whenever the save is replaced (cloud copy at sign-in: netAdopt; a newer save from another device: adopt),
 // run the same F2 upkeep as page load: sponsor exclusive granted, due reserved gifts handed over. Owned barrels are never removed.
 // Reserved gifts (QA 21:55 #5): a set a sponsor put aside for you stays yours if you later change sponsor; it arrives at its level, no charge.
-{const _m=window.TOPS_v11Migrate;window.TOPS_v11Migrate=function(){let r;try{r=_m&&_m.apply(this,arguments);}catch(e){}grantSponsorSet();syncReserve(false);return r;};}
+{const _m=window.TOPS_v11Migrate;window.TOPS_v11Migrate=function(){let r;try{r=_m&&_m.apply(this,arguments);}catch(e){}grantSponsorSet();syncReserve(false);paceEntitle();return r;};}
 function spLabel(sid,top){return `<span class="v12sp" style="--bc:${bc(sid)}"><small>${top}</small><b>${brandOf(sid)}</b></span>`;}
 function gateHTML(g,short){if(short&&g.res)return spLabel(g.res,'Sponsor set');if(short&&g.sp)return spLabel(g.sp,'Sponsor only');if(g.res)return spLabel(g.res,'Sponsor set')+`<span class="v12sub">Unlocks for you at Lv ${g.lv} · no charge</span>`;
  if(short&&g.lv)return `<span class="v12gate">${LOCK}Lv ${g.lv}</span>`;
