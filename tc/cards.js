@@ -50,7 +50,7 @@
     c.innerHTML = `<div class="tc__tag"></div><div class="tc__inner">
       <div class="tc__face tc__back"></div>
       <div class="tc__face tc__front"><div class="tc__art"></div><div class="tc__foil"></div>
-        <div class="tc__frame"></div><div class="tc__sheen"></div><div class="tc__holo"></div><div class="tc__glare"></div><div class="tc__sweep"></div>
+        <div class="tc__frame"></div><div class="tc__sheen"></div><div class="tc__holo"></div><div class="tc__glare"></div><div class="tc__spark"></div><div class="tc__sweep"></div><div class="tc__edge"></div>
         <div class="tc__plate"><div class="tc__name"></div><div class="tc__meta"><span class="tc__set"></span><span class="tc__rar"></span></div></div>
       </div></div>`;
     if (def) fill(c, def);
@@ -61,7 +61,7 @@
     c.dataset.r = def.rarity; c.dataset.id = def.id;
     c.querySelector('.tc__art').style.backgroundImage = def.art ? `url(${def.art})` : '';
     if (def.foilMask) c.style.setProperty('--foil-mask', `url(${def.foilMask}) center/cover`);
-    const nm = c.querySelector('.tc__name'); nm.textContent = def.name; nm.classList.toggle('is-long', def.name.length > 13);
+    const nm = c.querySelector('.tc__name'); nm.textContent = def.name; nm.classList.toggle('is-long', def.name.length > 11); nm.classList.toggle('is-xlong', def.name.length > 16);
     c.querySelector('.tc__set').innerHTML = `No. ${String(def.no).padStart(3, '0')}<span class="tc__setname"> · ${esc(def.set)}</span>`;
     c.querySelector('.tc__rar').textContent = RAR[def.rarity];
   }
@@ -98,6 +98,68 @@
   }
   function tag(c, text, kind) { const t = c.querySelector('.tc__tag'); t.textContent = text; t.className = 'tc__tag' + (kind ? ' is-' + kind : ''); c.classList.add('show-tag'); }
 
+  /* ---------- reveal fanfare: rays, flash, sparks, banner, shake (rare: rays only) ---------- */
+  const FAN = {
+    rare: { col: ['#9FC6FF', '#E8F1FF', '#6FA0E8'], n: 0, word: '' },
+    epic: { col: ['#7FF5E4', '#C98BFF', '#FF7AD0', '#FFE68A', '#FFFFFF'], n: 90, word: 'Epic pull' },
+    legendary: { col: ['#FFE9A8', '#E2C27E', '#FFF7DA', '#C49A52', '#FFFFFF'], n: 170, word: 'Legendary' }
+  };
+  function fanfare(ov, row, hero, r, quick) {
+    if (reduce()) return;
+    const F = FAN[r], rr = row.getBoundingClientRect(), hr = hero.getBoundingClientRect();
+    const cx = hr.left + hr.width / 2 - rr.left, cy = hr.top + hr.height / 2 - rr.top;
+    const rays = el('div', 'tcpk__rays is-' + r); rays.style.left = cx + 'px'; rays.style.top = cy + 'px'; row.appendChild(rays);
+    const glow = el('div', 'tcpk__aura is-' + r); glow.style.left = cx + 'px'; glow.style.top = cy + 'px'; row.appendChild(glow);
+    hero.classList.add('is-pop');
+    if (r === 'rare') return;
+    const fl = el('div', 'tcpk__flash is-' + r); ov.appendChild(fl); setTimeout(() => fl.remove(), 900);
+    const ring = el('div', 'tcpk__ring is-' + r); ring.style.left = cx + 'px'; ring.style.top = cy + 'px'; row.appendChild(ring); setTimeout(() => ring.remove(), 1400);
+    ov.classList.remove('is-shake'); void ov.offsetWidth; ov.classList.add('is-shake'); setTimeout(() => ov.classList.remove('is-shake'), 600);
+    const ban = el('div', 'tcpk__pull is-' + r); ban.innerHTML = `<b>${F.word}</b>`; ban.style.top = (hr.bottom - rr.top + 14) + 'px'; row.appendChild(ban);
+    sparks(ov, hr.left + hr.width / 2, hr.top + hr.height / 2, F, quick ? .6 : 1, r === 'legendary');
+  }
+  function sparks(ov, x0, y0, F, k, fountain) {
+    const cv = el('canvas', 'tcpk__sparks'), d = Math.min(2, root.devicePixelRatio || 1);
+    cv.width = innerWidth * d; cv.height = innerHeight * d; ov.appendChild(cv);
+    const g = cv.getContext('2d'); g.scale(d, d);
+    const P = []; const add = (n, spd, up) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = spd * (.35 + Math.random() * .9); P.push({ x: x0, y: y0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - up, life: 1, dec: .55 + Math.random() * .6, s: 1.5 + Math.random() * 3.2, c: F.col[(Math.random() * F.col.length) | 0], star: Math.random() < .35 }); } };
+    add(Math.round(F.n * k), 640, 120);
+    let t0 = performance.now(), last = t0, extra = fountain ? 1.4 : 0;
+    const step = now => {
+      const dt = Math.min(.04, (now - last) / 1000); last = now;
+      if (extra > 0 && now - t0 < extra * 1000) add(3, 420, 380);
+      g.clearRect(0, 0, innerWidth, innerHeight); g.globalCompositeOperation = 'lighter';
+      let alive = 0;
+      for (const p of P) {
+        if (p.life <= 0) continue; alive++;
+        p.vy += 520 * dt; p.vx *= .985; p.vy *= .985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= p.dec * dt;
+        g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.c;
+        if (p.star) { const s = p.s * 2.2; g.fillRect(p.x - s, p.y - .6, s * 2, 1.2); g.fillRect(p.x - .6, p.y - s, 1.2, s * 2); }
+        else { g.beginPath(); g.arc(p.x, p.y, p.s * p.life + .4, 0, 6.283); g.fill(); }
+      }
+      if (alive || now - t0 < extra * 1000) requestAnimationFrame(step); else cv.remove();
+    };
+    requestAnimationFrame(step);
+  }
+  /* ---------- device tilt drives the foil on phones (iOS asks once, on the first pick tap) ---------- */
+  const Gyro = {
+    on: false, asked: false,
+    ask() {
+      if (this.asked) return; this.asked = true;
+      const D = root.DeviceOrientationEvent; if (!D) return;
+      const go = () => { root.addEventListener('deviceorientation', e => this.move(e)); };
+      if (typeof D.requestPermission === 'function') D.requestPermission().then(s => { if (s === 'granted') go(); }).catch(() => {});
+      else go();
+    },
+    move(e) {
+      if (e.gamma == null) return;
+      const x = Math.max(-1, Math.min(1, e.gamma / 25)), y = Math.max(-1, Math.min(1, ((e.beta || 45) - 45) / 25));
+      if (!this.on) { this.on = true; document.body.classList.add('tc-gyro'); }
+      const b = document.body.style;
+      b.setProperty('--fx', `${50 + x * 40}%`); b.setProperty('--fy', `${50 + y * 40}%`); b.setProperty('--gx', `${50 + x * 70}%`); b.setProperty('--gy', `${40 + y * 70}%`);
+    }
+  };
+
   /* ---------- pack screen ---------- */
   // opts: { picks:[{id, reason}], resolve(pickId,pos)->Promise, onDone(), onLater(), backdrop?:url }
   function openPack(opts) {
@@ -130,7 +192,7 @@
     }
     async function choose(cards, pos) {
       if (busy) return; busy = true;
-      Sfx.play('select'); buzz(8);
+      Sfx.play('select'); buzz(8); Gyro.ask();
       hint.hidden = true; btnLater.hidden = true;
       cards.forEach((c, k) => { c.classList.add(k === pos ? 'is-hero' : 'is-behind'); if (k !== pos) c.style.setProperty('--side', k < pos || (pos === 0 && k === 1 ? false : k < pos) ? -1 : 1); });
       { const o = [0, 1, 2].filter(k => k !== pos); cards[o[0]].style.setProperty('--side', -1); cards[o[1]].style.setProperty('--side', 1); }
@@ -141,14 +203,24 @@
       const mine = cards[pos], def = res.options[pos];
       const fms = quick ? T.quickFlip : T.flip;
       await wait(quick ? 0 : T.lift);
-      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) { Sfx.play('charge_' + def.rarity, .9); mine.classList.add('is-charging'); await wait(def.rarity === 'legendary' ? 620 : 460); mine.classList.remove('is-charging'); }
+      let blk = null;
+      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) {
+        // the room goes dark first: short for epic, long for legendary, so the two never feel the same
+        const L = def.rarity === 'legendary';
+        blk = el('div', 'tcpk__black is-' + def.rarity); ov.appendChild(blk); requestAnimationFrame(() => blk.classList.add('on'));
+        await wait(L ? 300 : 150);
+        Sfx.play('charge_' + def.rarity, .9); mine.classList.add('is-charging'); buzz(L ? [10, 60, 10, 60, 10] : 10);
+        await wait(L ? 820 : 460); mine.classList.remove('is-charging');
+      }
       Sfx.play('flip');
       await flip(mine, fms);
       const r = def.rarity;
-      if (r !== 'common') Sfx.play('rev_' + r, r === 'legendary' ? 1 : .85); if (r === 'epic') buzz(15); else if (r === 'legendary') buzz([20, 40, 30]);
+      if (r !== 'common') Sfx.play('rev_' + r, r === 'legendary' ? 1 : .85); if (r === 'epic') buzz([15, 30, 25]); else if (r === 'legendary') buzz([30, 40, 30, 40, 60]);
+      if (blk) { blk.classList.remove('on'); setTimeout(() => blk.remove(), 700); }
+      if (r === 'rare' || r === 'epic' || r === 'legendary') fanfare(ov, row, mine, r, quick);
       const owned = (res.owned && res.owned[def.id]) || 1;
       if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
-      else tag(mine, def.cosmetic ? `New · unlocks ${((window.TC_DATA && TC_DATA.COS && TC_DATA.COS[def.cosmetic]) || {}).n || 'a reward'}` : 'New', 'new');
+      else { const cs = def.cosmetic && root.TC_DATA && root.TC_DATA.COS[def.cosmetic]; tag(mine, def.cosmetic ? `New · unlocks ${cs ? cs.n : 'a reward'}` : 'New', 'new'); }
       mine.dataset.inspect = '1';
       got.push({ def, dupe: owned > 1 });
       await wait(quick ? 120 : T.react);
@@ -164,14 +236,17 @@
       const s = ov.querySelector('.tcpk__summary'); s.hidden = false;
       const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
       const sorted = got.slice().sort((a, b) => order.indexOf(a.def.rarity) - order.indexOf(b.def.rarity));
-      s.innerHTML = `<div class="tcpk__kicker">You kept</div><div class="tcpk__grid"></div><button class="tcpk__btn tcpk__btn--go tcpk__done">Done</button>`;
-      const g = s.querySelector('.tcpk__grid');
-      sorted.forEach(x => { const c = card(x.def); c.classList.add('is-flipped', 'is-mini'); if (x.dupe) tag(c, 'Dupe', 'dupe'); g.appendChild(c); });
+      const cnt = {}; got.forEach(x => cnt[x.def.rarity] = (cnt[x.def.rarity] || 0) + 1);
+      const brk = ['legendary', 'epic', 'rare'].filter(k => cnt[k]).map(k => `<b class="r-${k}">${cnt[k]} ${RAR[k]}</b>`);
+      const rest = got.length - ['legendary', 'epic', 'rare'].reduce((a, k) => a + (cnt[k] || 0), 0); if (rest) brk.push(`${rest} other${rest > 1 ? 's' : ''}`);
+      s.innerHTML = `<div class="tcpk__kicker">You kept</div><div class="tcpk__claimed">${got.length} card${got.length > 1 ? 's' : ''} claimed</div><div class="tcpk__brk">${brk.join(' · ')}</div><div class="tcpk__grid"></div><button class="tcpk__btn tcpk__btn--go tcpk__done">Done</button>`;
+      const g = s.querySelector('.tcpk__grid'); if (sorted.length > 6) g.classList.add('is-many'); btnSkip.hidden = true;
+      sorted.forEach((x, k) => { const c = card(x.def); c.classList.add('is-flipped', 'is-mini'); if (k === 0 && (x.def.rarity === 'legendary' || x.def.rarity === 'epic')) c.classList.add('is-best'); if (x.dupe) tag(c, 'Dupe', 'dupe'); g.appendChild(c); });
       s.querySelector('.tcpk__done').onclick = () => { close(); opts.onDone && opts.onDone(got); };
     }
     deal();
     return { close };
   }
 
-  root.TopsCards = { card, fill, flip, openPack, Sfx, TIMING: T };
+  root.TopsCards = { card, fill, flip, openPack, Sfx, Gyro, fanfare, TIMING: T };
 })(window);
