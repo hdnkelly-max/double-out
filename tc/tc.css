@@ -348,3 +348,5 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-introl b{font:800 15px/1.3 Manrope,system-ui,sans-serif;color:var(--text,#EDECE5)}
 .tc-introl span{font-size:14px;line-height:1.4;color:var(--muted,#9AA7A5)}
 .tc-introgo{width:100%}
+/* #13: short phones (360x640 and similar): shrink the card fan so Open picks fits without scrolling */
+@media (max-height:700px){.tc-welcome .tc-wel-fan{transform:scale(.64);transform-origin:50% 0;margin-bottom:-82px}.tc-welcome .tc-wel-big b{font-size:52px}}
