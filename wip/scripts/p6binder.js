@@ -18,11 +18,12 @@ await p.evaluate(()=>{save.authSeen=true;save.name='Lee';save.matches=5;$('login
 await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(1200);
 r0=await p.evaluate(()=>document.fonts.check('800 16px "Barlow Condensed"'));
 const measure=()=>p.evaluate(()=>{const res=[];document.querySelectorAll('.tc-grid .tc:not(.is-locked) *, .tc-sets .tc:not(.is-locked) *').forEach(e=>{if(!e.childNodes.length)return;const ownTxt=[...e.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();if(!ownTxt)return;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return;const r=e.getBoundingClientRect();if(!r.width)return;const fs=parseFloat(cs.fontSize);const pr=e.closest('.tc__plate');const pb=pr&&pr.getBoundingClientRect();const clip=(e.scrollWidth>e.clientWidth+1&&(cs.overflow!=='visible'||cs.textOverflow==='ellipsis'))||(pb&&(r.right>pb.right+1||r.left<pb.left-1))||(/tc__name/.test(e.className)&&e.scrollHeight>e.clientHeight+2);res.push({cls:String(e.className).slice(0,24),txt:ownTxt.slice(0,22),fs:+fs.toFixed(1),clip});});
- const card=document.querySelector('.tc-grid .tc');return {cardW:card&&card.getBoundingClientRect().width|0,small:res.filter(x=>x.fs<11),clipped:res.filter(x=>x.clip),n:res.length};});
+ let minClear=1e9,minWho='';document.querySelectorAll('.tc-grid .tc:not(.is-locked) .tc__rar').forEach(e=>{const pl=e.closest('.tc').getBoundingClientRect(),q=e.getBoundingClientRect();const rg=document.createRange();rg.selectNodeContents(e);const tr=rg.getBoundingClientRect();const c=pl.right-tr.right;if(c<minClear){minClear=c;minWho=e.textContent;}});
+ const card=document.querySelector('.tc-grid .tc');return {minClear:+minClear.toFixed(1),minWho,cardW:card&&card.getBoundingClientRect().width|0,small:res.filter(x=>x.fs<11),clipped:res.filter(x=>x.clip),n:res.length};});
 const r=await measure();r.realFont=r0;
 await p.evaluate(()=>document.querySelectorAll('.tc-sheet *').forEach(e=>e.style.animation='none'));await p.screenshot({path:out+tag+'_binder.png',animations:'disabled'});
 await p.evaluate(()=>{const e=document.querySelector('.tc-grid .tc:not(.is-locked) .tc__name.is-xlong');if(e)e.closest('.tc').scrollIntoView({block:'center'});});await p.waitForTimeout(500);await p.screenshot({path:out+tag+'_long.png',animations:'disabled'});
 const uniq=a=>[...new Map(a.map(x=>[x.cls+'|'+x.fs,x])).values()];
 r.small=uniq(r.small);r.clipped=uniq(r.clipped);
-const pass=r.n>0&&!r.small.length&&!r.clipped.length&&!pe.length;
+const pass=r.n>0&&r.minClear>=10&&!r.small.length&&!r.clipped.length&&!pe.length;
 console.log(tag,pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();
