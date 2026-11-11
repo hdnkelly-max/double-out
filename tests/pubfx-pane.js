@@ -4,8 +4,8 @@
 const { chromium } = require('playwright'); const path = require('path'); const root = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const fails = [];
-  for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
-    const p = await b.newPage({ viewport: vp }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (/pubfx/.test(m.text())) errs.push(m.text()); });
+  for (const vp of [{ width: 390, height: 844 }, { width: 360, height: 640 }, { width: 1280, height: 800 }]) {
+    const p = await b.newPage({ viewport: vp }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (/pubfx/.test(m.text())) errs.push(m.text()); }); if (process.env.PHONE && vp.width < 700) { const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 }); }   /* rule 26: phone profile */
     await p.route(/supabase\.co|fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     await p.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js/, r => r.fulfill({ path: root + '/node_modules/three/build/three.min.js', contentType: 'application/javascript' }));
     await p.goto('file://' + root + '/double-out-standalone.html', { waitUntil: 'domcontentloaded', timeout: 180000 }); await p.waitForTimeout(4000);
