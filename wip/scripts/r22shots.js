@@ -16,6 +16,12 @@ const small=()=>p.evaluate(()=>{const res={};document.querySelectorAll('body *')
  return {small:Object.keys(res).slice(0,25),smallN:Object.keys(res).length,tapsUnder44:taps.slice(0,20),tapsN:taps.length};});
 const shot=async name=>{await p.waitForTimeout(1200);await p.screenshot({path:out+tag+'_'+name+'.png',timeout:120000});return small();};
 const R={};
+const tapNav=async txt=>{const q=await p.evaluate(t=>{const e=[...document.querySelectorAll('button,a')].find(x=>x.offsetParent&&x.textContent.trim()===t&&x.getBoundingClientRect().top>innerHeight-90);if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};},txt);if(q){if(w<600)await p.touchscreen.tap(q.x,q.y);else await p.mouse.click(q.x,q.y);}return !!q;};
+if(process.env.SCREENS==='career'){
+ for(const t of ['Career','Practice']){R['nav_'+t+'_found']=await tapNav(t);await p.waitForTimeout(1500);R['tab_'+t]=await shot('tab_'+t.toLowerCase());
+  await p.evaluate(()=>{const sc=[...document.querySelectorAll('#hub *')].find(e=>{const cs=getComputedStyle(e);return (cs.overflowY==='auto'||cs.overflowY==='scroll')&&e.scrollHeight>e.clientHeight+50&&e.offsetParent;});if(sc)sc.scrollTop=sc.clientHeight*0.8;else window.scrollTo(0,innerHeight*0.8);});
+  R['tab_'+t+'_2']=await shot('tab_'+t.toLowerCase()+'_2');}
+ console.log(tag,JSON.stringify(R),pe.slice(0,3).join(' | '));await b.close();return;}
 await p.evaluate(()=>{try{hubTab('play');}catch(e){}});await p.waitForTimeout(800);await p.evaluate(()=>{const pn=document.querySelector('#hub .panel');if(pn)pn.scrollTop=420;});R.play_scrolled=await shot('play_scrolled');
 for(const t of ['play','kit','player']){await p.evaluate(t=>{try{hubTab(t);}catch(e){}},t);R['hub_'+t]=await shot('hub_'+t);}
 await p.evaluate(()=>{const b=document.getElementById('btnHubMenu');if(b)b.click();});R.menu=await shot('menu');
