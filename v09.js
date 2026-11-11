@@ -162,6 +162,8 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  if(tr==='steady')tp.w/=(1+.08*nv);
  if(tr==='metro')tp.P+=Math.min(6,3*(S.visPerf||0));
  tp.s0=Math.max(4.2,qs.s0*m);
+ /* calibration A/B (Overseer 21:24): opt-in wider sway for career throws; Control still shrinks it as before. Off by default. */
+ if(save.calSway)tp.A*=1.3;
 }catch(e){}return tp;};
 const _ce9=compEff;compEff=function(){if(!on())return _ce9.apply(this,arguments);const c=career();return (eff('co')-20)/7.5+((c&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);};
 const _en9=effNerves;effNerves=function(){const n=_en9.apply(this,arguments);if(!n||!on()||!S||!S.p)return n;try{const t=trait();if(!t)return n;const L=lastLegs();if(t==='clutch'&&(L.dec||L.md))return n*.5;if(t==='comeback'&&L.trail)return n*.65;}catch(e){}return n;};
@@ -641,5 +643,14 @@ setInterval(()=>{try{if(!AU.on||!AU.ctx){if(CB.gain)CB.gain.gain.setTargetAtTime
 try{const _cv=callVisit;callVisit=function(total,ctx){if(total===180&&!ctx&&window.__lee180&&AU.on&&AU.ctx){try{const s=AU.ctx.createBufferSource(),g=AU.ctx.createGain();s.buffer=window.__lee180;g.gain.value=1;s.connect(g);g.connect(AU.master);s.start();return;}catch(e){}}return _cv.apply(this,arguments);};}catch(e){}
 // the synthetic crowd hum steps back now there's a real crowd
 const _cs=crowdSet;crowdSet=function(level){return _cs.call(this,CB.bufs.length?level*.35:level);};
+// ---------- calibration A/B toggle (Overseer 21:24, opt-in, off by default) ----------
+// Hub menu button. Testers switch it on and off for blocks of darts; each dart logs 'cal_sway13' in its cards while it's on.
+(function(){const lbl=()=>save.calSway?'Sway test: on':'Sway test: off';
+ const sync=()=>{const b=document.getElementById('btnCalSway');if(b){b.textContent=lbl();b.setAttribute('aria-pressed',!!save.calSway);}};
+ const add=()=>{const pop=document.getElementById('hubPop');if(!pop||document.getElementById('btnCalSway'))return;const b=document.createElement('button');b.type='button';b.id='btnCalSway';
+  b.title='Wider aim sway in career and practice, for the calibration test';
+  b.onclick=e=>{e.stopPropagation();save.calSway=!save.calSway;persist();sync();try{trackEv('cal_sway',{on:!!save.calSway});}catch(x){}};
+  const t=document.getElementById('btnHubTitle');pop.insertBefore(b,t||null);sync();};
+ add();setInterval(add,1500);window.TOPS_calSwaySync=sync;})();
 })();
 </script>
