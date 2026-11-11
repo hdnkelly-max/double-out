@@ -7,7 +7,11 @@ const CONPAY=[15,40,120,350,1000,3000,8000];
 const FL_X=[['#ff8a00','Blaze'],['#1f1f1f','Blackout'],['#e9e4d8','Chalk'],['#ff3ea5','Hot pink'],['#00c2a8','Teal'],['#c0c0c0','Silver'],['#d4af37','Gold leaf'],['#7a0019','Claret'],['#2b59ff','Royal'],['#9be15d','Lime'],['#5b2a86','Grape'],['#ff2d2d','Signal'],['#00e5ff','Ice'],['#ffd400','Taxi'],['#ff7b9c','Flamingo'],['#3d3d3d','Gunmetal'],['#0a7d46','Bottle'],['#ff5500','Hi-vis'],['#a0d8ef','Sky'],['#f5f5dc','Ivory']];
 const SH_X=[['#0b3d2e','Racing green'],['#3a1f5c','Purple haze'],['#c9a227','Old gold'],['#5a5a5a','Slate'],['#0e6ba8','Ocean'],['#8a1c1c','Oxblood'],['#f4f1ea','Bone'],['#ff6b00','Hi-vis'],['#111a3a','Midnight'],['#d6336c','Raspberry'],['#2d6a4f','Fern'],['#b08968','Tan'],['#6c757d','Smoke'],['#e63946','Poppy'],['#1d3557','Navy'],['#ffb703','Amber'],['#023047','Deep sea'],['#9d0208','Blood'],['#4a4e69','Storm'],['#000000','Jet']];
 const TITLES={10:'The Fill-in',20:'Pub Hero',30:'Club Hustler',40:'Stage Ready',50:'Circuit Grinder',60:'Ditch Crosser',70:'Card Holder',80:'Floor Assassin',90:'Palace Bound',100:'Legend of the Oche'};
-function rIco(r){if(!r)return '';const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<span class="ri"><img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}</span>`;}
+function rIco(r){if(!r)return '';
+ // flights and shirts show the real thing in the colour you unlocked: the game's own dart render and player render
+ try{if(r.k==='flight'&&V.dartShot){const src=V.dartShot(r.v,Object.assign({barrel:barrel()},setupParts(),{custom:true}));if(src)return `<span class="ri ri-dart"><img src="${src}" alt=""></span>`;}
+  if(r.k==='shirt'&&V.heroShot){const src=V.heroShot(Object.assign({},save.look,{shirt:r.v,shirtTint:true}),save.name||'You',tierOf(),save.flight);if(src&&typeof src==='string')return `<span class="ri ri-hero"><img src="${src}" alt=""></span>`;}}catch(e){}
+ const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<span class="ri"><img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}</span>`;}
 function bigIco(r){if(!r)return '';const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}`;}
 function heroImg(cls){let u='';try{u=V.heroShot&&V.heroShot(save.look,save.name||'You',tierOf(),save.flight);}catch(e){}return u?`<img class="c3x-pl ${cls||''}" src="${u}" alt="">`:'';}
 function lvNeed(L){return Math.round(150+25*L+.6*L*L);}
@@ -96,7 +100,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   ${achs.map(a=>`<div class="c3rw-ach t-${a.t}"><i>${achIco(a)}</i><div><small>Achievement \u00b7 ${(ACHR[a.t]||ACHR.R).lab}</small><b>${a.n}</b><span>${a.d}</span></div><em>+${a._xp} XP<br>+${money(a._cash)}</em></div>`).join('')}
   ${P.done.length?`<div class="c3rw-con" id="c3rwCon">${P.done.map(k=>`<span><i>✓</i>${k.t} <em>${money(k.cash)}</em></span>`).join('')}</div>`:''}
   ${hook?`<p class="c3rw-hook" id="c3rwHook">${hook}</p>`:''}
-  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip &amp; continue':'Continue'}</button><button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
+  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip new '+(hero.k==='flight'?'flights':'shirt'):'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep current '+(hero.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
  const R=$('result');if(R)R.classList.add('c3-dim');
  el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
  const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const big=!!P.ups.length;
@@ -114,6 +118,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
  const close=then=>{finish();el.classList.remove('on');el.hidden=true;if(R)R.classList.remove('c3-dim');if(then)then();};
  el.querySelector('.c3rw-card').addEventListener('pointerdown',e=>{if(!e.target.closest('button'))finish();});
  $('c3rwGo').onclick=()=>{if(cos){if(hero.k==='flight'){save.flight=hero.v;save.flightCustom=true;}else{save.look.shirt=hero.v;save.look.shirtTint=true;}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};
+ {const kp=$('c3rwKeep');if(kp)kp.onclick=()=>close(()=>$('btnResultNext').click());}
  $('c3rwDet').onclick=()=>close();}
 const _em=endMatch;endMatch=function(){const r=_em.apply(this,arguments);if(pre&&ui.mode==='career')setTimeout(showReward,850);return r;};
 // ----- achievements pay out and show in the reward overlay -----
@@ -217,6 +222,8 @@ const _sp=showPlayer;showPlayer=function(){const r=_sp.apply(this,arguments);ren
 const _gx=gainXP;gainXP=function(id,amt,mult){const c=career();if(c&&!c.run&&amt>0){const cap=attrCap();const r=cap?lvOf(id)/cap:0;const k=r<.6?1.25:r<.8?1:r<.95?.65:.35;amt*=k;}return _gx.call(this,id,amt,mult);};
 // title-card / creator pick up unlocked colours on load
 try{applyUnlocks();}catch(e){}
-window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,showRewardTest:p=>{pre=p;showReward();}};
+// every flight colour a level you've reached has awarded stays yours, equipped or not (needed once 'Keep current flights' exists); derived from your level, so nothing extra is stored
+const lvFlights=()=>{const out=[];try{const lv=V3().lv;for(let L=2;L<=lv;L++){const r=rewardAt(L);if(r&&r.k==='flight'&&!out.includes(r.v))out.push(r.v);}}catch(e){}return out;};
+window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
