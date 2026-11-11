@@ -1,0 +1,17 @@
+testers' own stats + kit · knobs {"kP":1,"kS":1,"kR":1,"kA":1,"kD":1} · 1000 best-of-3 matches per cell
+tester (data)           tier  window  s0    sim avg  perfect%  win%   field avg
+Lee (QA row1 Club arrive st40)1     4.1     12    60.3     12.1      41     65  med land-aim perfect 8.7 other 18.3 lock-aim 6.6 | telemetry-style avg (bust darts keep points) 61.1 | 9-darters/1000 le
+Lee (QA row1 Club promote st50)1     4.3     11.6  64.2     12.7      52.8   65  med land-aim perfect 7.5 other 17.2 lock-aim 6.1 | telemetry-style avg (bust darts keep points) 64.9 | 9-darters/1000 l
+Lee (QA row1 Regional arrive st50)2     4.3     11.6  63.9     12.6      38.5   70  med land-aim perfect 7.4 other 17.3 lock-aim 6.1 | telemetry-style avg (bust darts keep points) 64.4 | 9-darters/100
+Lee (QA row1 Regional promote st60)2     4.9     11    69.4     16.8      57.5   70  med land-aim perfect 7.1 other 16.4 lock-aim 5.6 | telemetry-style avg (bust darts keep points) 69.8 | 9-darters/10
+Lee (QA row1 DPNZ arrive st60)3     4.9     11    68.9     16.5      40.1   76  med land-aim perfect 7 other 16.6 lock-aim 5.6 | telemetry-style avg (bust darts keep points) 69.3 | 9-darters/1000 legs
+Lee (QA row1 DPNZ promote st68)3     5.8     10.5  74.4     19.9      55.1   76  med land-aim perfect 6.7 other 15.8 lock-aim 5.2 | telemetry-style avg (bust darts keep points) 74.7 | 9-darters/1000 l
+Lee (QA row1 Trans-Tasman arrive st68)4     5.8     10.5  74.1     20.1      28     85  med land-aim perfect 6.5 other 15.7 lock-aim 5.2 | telemetry-style avg (bust darts keep points) 74.5 | 9-darters
+Lee (QA row1 Trans-Tasman promote st75)4     7.2     10    79.3     25.3      40.8   85  med land-aim perfect 6.5 other 15.2 lock-aim 4.9 | telemetry-style avg (bust darts keep points) 79.5 | 9-darter
+Lee (QA row1 Pro Tour arrive st75)5     7.2     10    79.6     25.7      23.9   94  med land-aim perfect 6.4 other 15.3 lock-aim 4.9 | telemetry-style avg (bust darts keep points) 79.9 | 9-darters/100
+Lee (QA row1 Pro Tour promote st80)5     8.5     9.6   83.4     28.1      28.9   94  med land-aim perfect 5.9 other 14.7 lock-aim 4.7 | telemetry-style avg (bust darts keep points) 83.6 | 9-darters/10
+Lee (QA row1 Worlds arrive st80)6     8.5     9.6   83       27.8      24.1   97  med land-aim perfect 6 other 14.8 lock-aim 4.7 | telemetry-style avg (bust darts keep points) 83.2 | 9-darters/1000 le
+Lee (QA row1 Worlds promote st85)6     10.2    9.3   88.2     33.1      33.9   97  med land-aim perfect 5.6 other 14.3 lock-aim 4.4 | telemetry-style avg (bust darts keep points) 88.4 | 9-darters/1000
+05:31
+
+[exited with code 0]
