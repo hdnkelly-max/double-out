@@ -202,3 +202,11 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 /* career standings: your row stands out */
 #hub tr.you,#hub .you-row,#hub [data-you="1"]{background:#263B32!important;box-shadow:inset 3px 0 0 #C6F36B}
 </style>
+<style>
+/* v1.66 result details polish (ChatGPT round 3 prep): objective chips were squeezed into a narrow column, next-fixture text unreadable on lime */
+#resObj{grid-column:1/-1!important;width:100%!important;max-width:none!important}
+#resObjChips{display:flex!important;flex-direction:column!important;gap:6px!important}
+#resObjChips .chip{display:block!important;width:100%!important;white-space:normal!important;word-break:normal!important;font:600 13px/1.35 Manrope,system-ui,sans-serif!important;padding:8px 10px!important;text-align:left!important}
+#btnResultNext:not(.v11rem),#btnResAction{color:#10191A!important}
+#btnResultNext:not(.v11rem) small,#btnResAction small{color:#24331f!important;opacity:.85}
+</style>
