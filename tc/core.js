@@ -40,10 +40,10 @@
 
   // ---------- awards ----------
   // kind: max | ton | ach | tier | nine | exh. key must be unique per real event.
-  function award(key, kind, reason) {
+  function award(key, kind, reason, fallback) {
     const t = st(); if (!t || t.paid[key]) return false;
     t.paid[key] = Date.now();
-    if (t.srv) { (t.q = t.q || []).push({ a: key, k: kind, r: reason }); keep(); srvSync(); return true; }
+    if (t.srv) { (t.q = t.q || []).push(Object.assign({ a: key, k: kind, r: reason }, fallback ? { fb: fallback } : {})); keep(); srvSync(); return true; }
     let pL = legChance(t.since); if (kind === 'nine') pL = Math.max(pL, .05);
     const opts = [rollOne(pL), rollOne(pL), rollOne(pL)];
     const p = { id: 'k' + (++t.seq) + '_' + Date.now().toString(36), reason, opts, keepAll: kind === 'nine', at: Date.now() };
@@ -116,7 +116,12 @@
       const j = t.q[0];
       try {
         if (j.g) await rpc('tc_grant', { p_source_key: j.g, p_card: j.c, p_cosmetic: j.cos || null });
-        else await rpc('tc_award', { p_source_key: j.a, p_kind: KIND[j.k] || 'achievement', p_reason: j.r });
+        else {
+          const n = await rpc('tc_award', { p_source_key: j.a, p_kind: KIND[j.k] || 'achievement', p_reason: j.r });
+          // online 180s are checked against the referee's dart log; the darts may still be on their way, so try again shortly
+          if (!n && /^ref\|/.test(j.a) && (j.tries = (j.tries || 0) + 1) < 8) { keep(); setTimeout(srvSync, 3000); break; }
+          if (!n && /^ref\|/.test(j.a) && j.fb) await rpc('tc_award', { p_source_key: j.fb, p_kind: KIND[j.k] || 'achievement', p_reason: j.r });
+        }
       } catch (e) { if (netErr(e)) throw e; console.warn('tc srv dropped', j, e); }
       t.q.shift(); keep();
     }
@@ -198,7 +203,11 @@
         if (R.won && vs0 >= 100 && cel.checkout) FX.run(cel.checkout, me.disp || me.name);
         if (!human(tc)) return r;
         const k = mkey(), v = ++S._tcv, base = `match:${k}:leg:${legIdx()}:visit:${v}`;
-        if (!R.bust && R.tot === 180) { award(base + ':180', 'max', '180'); bump('max'); }
+        if (!R.bust && R.tot === 180) {
+          const ref = S.online && window.TOPS_REF && TOPS_REF.mid && typeof NET !== 'undefined' && NET.myId;
+          if (ref) { S._tc180 = (S._tc180 || 0) + 1; award(`ref|${TOPS_REF.mid}|${NET.myId}|180|${S._tc180}`, 'max', '180', base + ':180'); } else award(base + ':180', 'max', '180');
+          bump('max');
+        }
         if (!R.bust && R.tot === 26 && R.labels.length === 3) bump('s26');
         if (R.won) {
           if (vs0 >= 100) { award(base + ':ton', 'ton', `${vs0} checkout`); bump('ton'); }
