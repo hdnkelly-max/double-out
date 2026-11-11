@@ -88,8 +88,8 @@
 .tcpk__count b{color:var(--text)}
 .tcpk__why{font-size:14px;color:var(--muted);margin-top:6px;min-height:1.2em}
 .tcpk__row{flex:1;width:100%;position:relative;min-height:340px}
-.tcpk__row .tc{position:absolute;left:50%;top:50%;--card-w:208px;margin:-156px 0 0 -104px;cursor:pointer;
-  --tx:calc((var(--d,1) - 1) * 122px);--sc:.56;--rot:0deg;--ty:0px;
+.tcpk__row .tc{position:absolute;left:50%;top:50%;--card-w:228px;margin:-171px 0 0 -114px;cursor:pointer;
+  --tx:calc((var(--d,1) - 1) * 122px);--sc:.51;--rot:0deg;--ty:0px;
   transform:translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(var(--sc));
   transition:transform .42s cubic-bezier(.2,.9,.25,1.12),opacity .3s ease-out;transition-delay:calc(var(--d,0)*60ms)}
 .tcpk__row .tc.is-dealing{--ty:36px;opacity:0}
