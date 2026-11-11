@@ -115,14 +115,22 @@ function LofT(id){const s=st();const b=Math.min(s.v[id],(tbOf()[id]!=null?tbOf()
  const v=b+k*Math.max(0,s.v[id]-b);const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(1,(Math.max(0,Math.min(100,v+kitPts()[id]+hot))-20)/75));}
 window.TOPS_LofT=LofT;
 // Touch-rate floor (Overseer 03:50, device fairness): a hold is measured from the press and release events' timestamps, which a touch
-// screen only produces once per sample (8.3 ms at 120 Hz, 16.7 ms at 60 Hz). A perfect window narrower than one sample can make some hold
-// lengths impossible to score perfect on that phone. So the window's half-width is never less than half this phone's measured touch
-// sample interval (from the coalesced touch events' own timestamps). It changes nothing on 240 Hz screens, mouse or keyboard.
-const TCH={d:[],ms:null};try{TCH.ms=save.touchMs||null;}catch(e){}
+// screen only produces once per sample (8.3 ms at 120 Hz, 16.7 ms at 60 Hz), so a window narrower than half a sample can leave some
+// hold lengths with no perfect at all on that phone.
+// The estimate is device configuration, kept in this browser only (never in the save or the cloud), snapped to a validated tier
+// (240 / 120 / 60 Hz: 0 / 8.3 / 16.7 ms) and capped at 16.7 ms; a match uses the tier it started with. Touch input only.
+// Equal outcomes, not just reachability (ChatGPT 04:0x): on a coarse screen a perfect covers one whole sample of real time, so the wide
+// window is used on a share of throws equal to (window / sample) and the normal window otherwise; that keeps the expected perfect rate
+// the same as on a fine screen while every hold length stays reachable.
+const TCH={d:[],ms:null};try{const v=+localStorage.getItem('tops_touchMs');if(v>0)TCH.ms=v;}catch(e){}
+const tierMs=m=>m==null?null:m<=5.5?0:m<=11?1000/120:1000/60;
 addEventListener('pointermove',e=>{if(e.pointerType!=='touch')return;const ev=(e.getCoalescedEvents&&e.getCoalescedEvents())||[];for(let i=1;i<ev.length;i++){const d=ev[i].timeStamp-ev[i-1].timeStamp;if(d>1.5&&d<40)TCH.d.push(d);}
- if(TCH.lt!=null&&TCH.lp===e.pointerId){const d=e.timeStamp-TCH.lt;if(d>1.5&&d<40&&ev.length<=1)TCH.d.push(d);}TCH.lt=e.timeStamp;TCH.lp=e.pointerId;
- if(TCH.d.length>=40){const a=TCH.d.slice(-120).sort((x,y)=>x-y);const m=a[Math.floor(a.length*.25)];TCH.ms=Math.round(m*10)/10;TCH.d=TCH.d.slice(-120);try{if(save.touchMs!==TCH.ms){save.touchMs=TCH.ms;}}catch(x){}}},{passive:true});
-function touchFloor(){if(window.TOPS_TOUCH_MS!=null)return window.TOPS_TOUCH_MS/2;if(!S||!(S.pullSrc==='pad'||S.pullSrc==='pane')||!TCH.ms)return 0;return TCH.ms/2;}
+ if(TCH.lt!=null&&TCH.lp===e.pointerId&&ev.length<=1){const d=e.timeStamp-TCH.lt;if(d>1.5&&d<40)TCH.d.push(d);}TCH.lt=e.timeStamp;TCH.lp=e.pointerId;
+ if(TCH.d.length>=40){const a=TCH.d.slice(-120).sort((x,y)=>x-y);const m=tierMs(a[Math.floor(a.length*.25)]);if(m!==TCH.ms){TCH.ms=m;try{localStorage.setItem('tops_touchMs',String(m));}catch(x){}}TCH.d=TCH.d.slice(-120);}},{passive:true});
+function touchFloor(P){const ms=window.TOPS_TOUCH_MS!=null?window.TOPS_TOUCH_MS:(S&&S.touchMs);if(!ms||!(window.TOPS_TOUCH_MS!=null||(S&&S.pullTouch)))return 0;const half=Math.min(1000/60,ms)/2;if(half<=P)return 0;
+ if(S&&S.pullStart!==S.tfAt){S.tfAt=S.pullStart;S.tfWide=window.TOPS_TF_ALWAYS?true:Math.random()<(2*P)/(2*half);}return (S&&S.tfWide)?half:0;}
+{const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.touchMs=TCH.ms;}catch(e){}return r;};}
+{const _sp=startPull;startPull=function(src,ev){try{if(S)S.pullTouch=!!(ev&&ev.pointerType==='touch');}catch(e){}return _sp.apply(this,arguments);};}
 window.TOPS_touch=TCH;
 function ovr(){let o=0;STATS.forEach(s=>o+=s.w*(st().v[s.id]+kitPts()[s.id]));return Math.round(o);}
 function ident(){const v=st().v;const arr=STATS.map(s=>v[s.id]);if(Math.max(...arr)-Math.min(...arr)<8)return 'All-Rounder';const top=STATS.slice().sort((a,b)=>v[b.id]-v[a.id])[0];return top.t;}
@@ -176,7 +184,7 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 // Finishing points earned from this version on count k=0.6 of a live point (LofT below); points already in a save keep today's effect.
 // Fitted on testers' real darts (tests/sim-player.js, JOINT=1), incl. Lee's and David's real Club and Regional darts.
 const CAL_W={p0:4,pk:11,e:4,k:.6};window.TOPS_CAL_W=CAL_W;
-const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(S&&!S.mp&&!career()&&!isRun()){try{const CW=window.TOPS_CAL_W;tp.P*=CW.p0/(ttAt(tp.L).P*tolMult()*.85);tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8;{const fl=touchFloor();if(fl>tp.P)tp.P=fl;}}catch(e){}return tp;}/* no career save (practice, friendlies): a new career's starter window and perfect release, so the throw is the same everywhere outside The Run and online */
+const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(S&&!S.mp&&!career()&&!isRun()){try{const CW=window.TOPS_CAL_W;tp.P*=CW.p0/(ttAt(tp.L).P*tolMult()*.85);tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8;{const fl=touchFloor(tp.P);if(fl>tp.P)tp.P=fl;}}catch(e){}return tp;}/* no career save (practice, friendlies): a new career's starter window and perfect release, so the throw is the same everywhere outside The Run and online */
  if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(LofT('ct')),qr=ttAt(Lof('rh')),qs=ttAt(LofT(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
@@ -190,7 +198,7 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  if(tr==='steady')tp.w/=(1+.08*nv);
  if(tr==='metro')tp.P*=1+Math.min(.5,.25*(S.visPerf||0)); /* scales with your window (QA 00:40: a flat +6 ms more than doubled a 3 ms window) */
  tp.s0=Math.max(4.2,qs.s0*m);
- {const fl=touchFloor();if(fl>tp.P)tp.P=fl;}tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8; /* a perfect release lands inside a 5 mm ring, from day one (Hayden 22:28) */
+ {const fl=touchFloor(tp.P);if(fl>tp.P)tp.P=fl;}tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8; /* a perfect release lands inside a 5 mm ring, from day one (Hayden 22:28) */
 }catch(e){}return tp;};
 const _ce9=compEff;compEff=function(){if(!on())return _ce9.apply(this,arguments);const c=career();return (eff('co')-20)/7.5+((c&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);};
 const _en9=effNerves;effNerves=function(){const n=_en9.apply(this,arguments);if(!n||!on()||!S||!S.p)return n;try{const t=trait();if(!t)return n;const L=lastLegs();if(t==='clutch'&&(L.dec||L.md))return n*.5;if(t==='comeback'&&L.trail)return n*.65;}catch(e){}return n;};
