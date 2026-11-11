@@ -30,3 +30,4 @@ Run one browser test at a time on a 2-core box; two at once can fail with "did n
 - `index.html` (dev build) loads `remy.glb`, which `setup.sh` decodes from `remy.b64.txt`. Without it, scripts run with placeholder figures.
 - `double-out-standalone.html` has the rig inlined but loads three.js from a CDN; `regress_assets.js` serves the local copy instead.
 - Assets (`img/`, `assets/`) live on `main`; `setup.sh` copies them in unstaged.
+- `tests/profiles/` — calibration rows 1, 1p, 2–9: `JOINT=1 PROFILES=tests/profiles/<row file> node tests/sim-player.js 1000` (table and saved outputs in `tests/profiles/README.md`)
