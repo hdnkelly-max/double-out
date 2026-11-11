@@ -13,7 +13,7 @@ const open=async id=>{const b=await chromium.launch({args});const p=await b.newP
 const a=await open('A'),bb=await open('B');const A=a.p,B=bb.p;
 const setup=(p,id,seat)=>p.evaluate(([id,seat])=>{save.authSeen=true;save.name=id==='A'?'Lee':'Dave';$('login').hidden=true;try{newCareer();}catch(e){}
  const D=TC_API.D;const wk=Object.keys(D.COS).find(k=>D.COS[k].slot==='walkon');save.look=Object.assign({},save.look,{cel:Object.assign({},(save.look||{}).cel,{walkon:wk})});persist();
- window.TC_WALK_TIMEOUT=600000;NET.myId=id;NET.seat=seat;NET.chan={send:o=>{window.__relay(o.payload);}};try{sessionStorage.clear();}catch(e){}return wk;},[id,seat]);
+ window.TC_WALK_TIMEOUT=600000;window.TC_WALK_CAP=900000;NET.myId=id;NET.seat=seat;NET.chan={send:o=>{window.__relay(o.payload);}};try{sessionStorage.clear();}catch(e){}return wk;},[id,seat]);
 const wk=await setup(A,'A',0);await setup(B,'B',1);
 const cfg=await A.evaluate(()=>({t:'start',legs:3,start:501,din:false,tier:1,level:1,first:0,teams:false,players:[{key:'A',name:'Lee',look:save.look},{key:'B',name:'Dave',look:Object.assign({},save.look)}]}));
 const st=p=>p.evaluate(()=>{const s=window.TOPS_walkState&&TOPS_walkState();return s&&Object.assign(s,{held:!!TOPS_walkHold(),wait:!!document.getElementById('tcWalkWait')});});

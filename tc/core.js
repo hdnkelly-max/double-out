@@ -667,7 +667,7 @@
     const P = S.p[1], L = P.look || {}, cel = L.cel || {};
     if (!cel.walkon) return 0;
     // once a session per opponent (QA 19:05): a rematch against the same mate goes straight to the darts
-    const seenKey = 'tcOppWalk:' + (P.key || P.name || ''); let seen = false; try { seen = sessionStorage.getItem(seenKey) === '1'; } catch (e) {}
+    const seenKey = 'tcOppWalk:' + (P.key ? String(P.key).slice(0, 8) : (P.disp || P.name || ''));   // QA 21:15: the id's suffix changes per room let seen = false; try { seen = sessionStorage.getItem(seenKey) === '1'; } catch (e) {}
     if (seen) return 0; try { sessionStorage.setItem(seenKey, '1'); } catch (e) {}
     const title = L.title && D.COS[L.title];
     startWalk({ who: 'opp', fx: cel.walkon, name: P.disp || P.name || 'Your opponent', title: title && title.n, song: '' });
@@ -675,7 +675,7 @@
   }
   // ---- online start barrier (QA 19:05): nobody throws until every phone's walk-ons have finished ----
   // Each phone sends 'wdone' when its own cinematics end (or none were due). Throwing is held by TOPS_walkHold (v09.js 'held',
-  // the same gate the card draft uses) until this phone is done and every live player's 'wdone' has arrived, or 16 s pass (yours + theirs is ~11 s).
+  // the same gate the card draft uses) until this phone is done and every live player's 'wdone' has arrived; at most 8 s after this phone's own cinematics end, 30 s from start.
   let WB = null, WSEQ = 0; const WBPRE = {};
   function wbToken() { try { return (window.TOPS_REF && TOPS_REF.mid) || ''; } catch (e) { return ''; } }
   function wbOthers() { const me = window.NET && NET.myId; return ((S && S.p) || []).filter(p => p && p.key && !p.left && p.key !== me); }
@@ -685,8 +685,14 @@
     WB = { t0: performance.now(), m: wbToken(), done: {}, mine: false, pend: false, re: 0 };
     Object.keys(WBPRE).forEach(k => { const x = WBPRE[k]; if (performance.now() - x.at < 15000 && (!x.m || !WB.m || x.m === WB.m)) WB.done[k] = 1; delete WBPRE[k]; });
   }
-  function wbMine() { if (!WB || WB.mine) return; WB.mine = true; WB.re = performance.now(); wbSend(); }
-  function wbHeld() { if (!WB || !S || !S.online || S.done) return false; if (performance.now() - WB.t0 > (window.TC_WALK_TIMEOUT || 16000)) return false;   // TC_WALK_TIMEOUT: test hook only if (!WB.mine) return true; return wbOthers().some(p => !WB.done[p.key]); }
+  function wbMine() { if (!WB || WB.mine) return; WB.mine = true; WB.mineAt = WB.re = performance.now(); wbSend(); }
+  function wbHeld() {
+    if (!WB || !S || !S.online || S.done) return false; const now = performance.now();
+    if (now - WB.t0 > (window.TC_WALK_CAP || 30000)) return false;   // hard cap from match start: a cinematic that never ends can't hold the match
+    if (!WB.mine) return true;
+    if (now - WB.mineAt > (window.TC_WALK_TIMEOUT || 8000)) return false;   // QA 21:15: wait at most 8 s after this phone's own cinematics end (TC_WALK_*: test hooks)
+    return wbOthers().some(p => !WB.done[p.key]);   // every live seat, teammates included; a leaver (p.left) drops out
+  }
   window.TOPS_walkHold = wbHeld;
   window.TOPS_walkState = () => WB && { mine: WB.mine, pend: WB.pend, m: WB.m, done: Object.keys(WB.done), age: Math.round(performance.now() - WB.t0), walk: WK ? WK.who : null, others: wbOthers().map(p => p.key), online: !!(S && S.online), sdone: !!(S && S.done) };
   if (typeof netRecv === 'function') {
