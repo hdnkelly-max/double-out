@@ -395,7 +395,14 @@
   // P6 (a11y): a Collection card is a real button for keyboard and screen-reader users (Tab to it, Enter or Space opens it)
   function kbCard(k, label) {
     k.tabIndex = 0; k.setAttribute('role', 'button'); k.setAttribute('aria-label', label);
-    k.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); k.click(); } });
+    k.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); k.click();
+      /* when the card view it opened closes, put keyboard focus back on this card (ChatGPT a11y review) */
+      const view = [...document.querySelectorAll('.tc-inspect')].pop(); if (!view) return;
+      const mo = new MutationObserver(() => { if (!view.isConnected) { mo.disconnect(); if (k.isConnected) k.focus({ preventScroll: true }); } });
+      mo.observe(view.parentNode || document.body, { childList: true });
+    });
   }
   // Collection binder
   function binder() {
