@@ -691,27 +691,48 @@
     } catch (e) { console.warn('tc clip', e); return null; }
   }
   // re-apply the walk pose after the game's own posing, right before the frame renders
-  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; };
+  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
-      WK.home = me.position.clone(); WK.rot = me.rotation.y;
-      // derive the room's axes from the normal player camera: it sits behind the player looking at the board
-      const fwd = new T3().subVectors(v.look, v.pos); fwd.y = 0; fwd.normalize(); const side = new T3(fwd.z, 0, -fwd.x);
+      WK.rot = me.rotation.y;
+      // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
+      // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
+      const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37;
+      const fwd = new T3(0, 0, -1), side = new T3(fwd.z, 0, -fwd.x), spot = new T3(0, me.position.y || 0, OZ + .08);
+      const mp = me.position.clone(); WK.home = Math.hypot(mp.x - spot.x, mp.z - spot.z) < .8 ? mp : spot;
+      if (Math.abs(WK.rot) > 3.5 || WK.home === spot) WK.rot = Math.PI;   // face the board
       WK.fwd = fwd; WK.side = side;
       WK.start = WK.home.clone().addScaledVector(fwd, -2.4).addScaledVector(side, 1.0);   // walk in from the room behind the oche
       WK.cam = WK.home.clone().addScaledVector(fwd, .15).addScaledVector(side, 1.3); WK.cam.y = 1.5;   // beside the oche, facing back at you
     }
     if (!WK.walking && k < .78) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
-    me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; } if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
+    me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; }
+    // clear the stage: other figures (opponent, crowd) near the walk path hide until the walk-on ends
+    if (me.parent && (!WK.hidAt || now - WK.hidAt > 500)) {
+      WK.hidAt = now; WK.hid = WK.hid || new Set(); let root = me; while (root.parent) root = root.parent; const wp = new T3();
+      // find figures by their hip bone (skinned meshes report the rig root, not the body), then hide the whole figure
+      const within = (o, anc) => { let q = o; while (q) { if (q === anc) return true; q = q.parent; } return false; };
+      root.traverse(o => { if (!o.isBone || !/Hips$/.test(o.name) || within(o, me) || (v.fpFig && within(o, v.fpFig))) return;
+        o.getWorldPosition(wp);
+        const ax = WK.start.x, az = WK.start.z, dx = WK.home.x - ax, dz = WK.home.z - az, t = Math.max(0, Math.min(1, ((wp.x - ax) * dx + (wp.z - az) * dz) / (dx * dx + dz * dz || 1)));
+        if (Math.hypot(wp.x - (ax + dx * t), wp.z - (az + dz * t)) > 1.6) return;
+        // climb to the node that also holds the body mesh skinned to this hip bone, so the whole figure hides
+        const skinnedTo = n => { let hit = false; n.traverse(m => { if (!hit && m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0) hit = true; }); return hit; };
+        let fig = o; while (fig.parent && fig.parent !== root && !skinnedTo(fig)) fig = fig.parent;
+        if (fig !== root && fig.visible) { fig.visible = false; WK.hid.add(fig); }
+        root.traverse(m => { if (m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0 && m.visible) { m.visible = false; WK.hid.add(m); } }); });
+    }
+    if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
       me.position.copy(WK.home); me.rotation.y = WK.rot;
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
+      if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
       WK = null; walkEnd(); return null;
     }
     const e = Math.min(1, k / .78), ease = 1 - Math.pow(1 - e, 2);
