@@ -636,7 +636,7 @@
   };
   // ---------- walk-on: character walks to the oche, effect fires on arrival ----------
   // Hook in the viewer's frame loop calls TOPS_WALKFX each frame; we own the camera while walking.
-  let WK = null;
+  let WK = null; const WA = .5;   // walk arrives at half time
   function walkOnStart(opts) {
     if (!opts || opts.practice || opts.money) return;
     const stage = opts.online || (opts.mode === 'career' && (opts.tier | 0) >= 1) || opts.tcExh;
@@ -672,6 +672,7 @@
     return 3500;
   }
   function walkEnd() {
+    walkLights(null);
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
     const ov = $id('tcWalk'); if (ov) { ov.classList.add('out'); setTimeout(() => ov.remove(), 400); }
   }
@@ -709,7 +710,7 @@
       WK.start = WK.home.clone().addScaledVector(fwd, -2.4).addScaledVector(side, 1.0);   // walk in from the room behind the oche
       WK.cam = WK.home.clone().addScaledVector(fwd, .15).addScaledVector(side, 1.3); WK.cam.y = 1.5;   // beside the oche, facing back at you
     }
-    if (!WK.walking && k < .78) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
+    if (!WK.walking && k < WA) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
     me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; }
     // clear the stage: other figures (opponent, crowd) near the walk path hide until the walk-on ends
     if (me.parent && (!WK.hidAt || now - WK.hidAt > 500)) {
@@ -733,24 +734,53 @@
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
+      walkLights(null);
       WK = null; walkEnd(); return null;
     }
-    const e = Math.min(1, k / .78), ease = 1 - Math.pow(1 - e, 2);
+    // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold
+    const e = Math.min(1, k / WA), ease = 1 - Math.pow(1 - e, 2.2);
     me.position.lerpVectors(WK.start, WK.home, ease); WK.pos = me.position.clone();
     const dir = new T3().subVectors(WK.home, WK.start), face = Math.atan2(dir.x, dir.z) + Math.PI;
-    me.rotation.y = k < .78 ? face : face + (WK.rot - face) * Math.min(1, (k - .78) / .12);
-    if (k >= .78 && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .8 && !WK.fired && WK.fx) { WK.fired = true; FX.run(WK.fx, WK.name); }
-    // three deliberate shots with hard cuts: entrance (low 3/4 front), walk (tracking alongside), arrival (rear 3/4 to the board)
+    const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
+    me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
+    if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
+    if (k >= .6 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; FX.run(WK.fx, WK.name); }
+    walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
     let cam, tgt, fov;
-    if (k < .7) { cam = up(WK.home.clone().addScaledVector(F, -.55).addScaledVector(Sd, -1.7), 1.5); tgt = up(p0.clone(), 1.3); fov = k < .3 ? 38 : 44; }
-    else { cam = up(WK.home.clone().addScaledVector(F, -2.3).addScaledVector(Sd, -.9), 1.5); tgt = up(WK.home.clone().addScaledVector(F, 1.4), 1.35); fov = 46; }
-    const shot = k < .22 ? 0 : k < .7 ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
-    const blend = k < .93 ? 1 : 1 - (k - .93) / .07;
+    if (k < .29) {          // low front 3/4, pushing in as you come through the crowd
+      const q = k / .29;
+      cam = up(p0.clone().addScaledVector(F, 1.9 - q * .5).addScaledVector(Sd, -1.5 + q * .3), 1.05); tgt = up(p0.clone(), 1.25); fov = 50 - q * 6;
+    } else if (k < WA) {    // tracking close-up alongside: face and chest
+      cam = up(p0.clone().addScaledVector(F, .55).addScaledVector(Sd, -1.15), 1.5); tgt = up(p0.clone().addScaledVector(F, .1), 1.4); fov = 41;
+    } else {                // low rear 3/4 at the oche, board in frame, slow push
+      const q = Math.min(1, (k - WA) / (1 - WA));
+      cam = up(WK.home.clone().addScaledVector(F, -2.2 + q * .35).addScaledVector(Sd, -.9), 1.12); tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .6), 1.45); fov = 50;
+    }
+    // lightning shake: 2–3 px for a quarter second
+    if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
+    const shot = k < .29 ? 0 : k < WA ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
+    const blend = k < .94 ? 1 : 1 - (k - .94) / .06;
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
     return { fov: fov + (1 - blend) * 4 };
   };
+  // walk-on lighting: a warm follow spot above the player and a cool rim light behind; the lightning flashes the rim
+  function walkLights(v, me, now) {
+    const L = walkLights.L;
+    if (!v) { if (L) { L.forEach(l => { if (l.parent) l.parent.remove(l); if (l.target && l.target.parent) l.target.parent.remove(l.target); }); walkLights.L = null; } return; }
+    let root = me; while (root.parent) root = root.parent; if (root === me) return;
+    if (!L || L[0].parent !== root) {
+      if (L) walkLights(null);
+      const T = v.T, spot = new T.SpotLight(0xffd9a8, 9, 7, .42, .55, 1.4), rim = new T.PointLight(0x9cc8ff, 3, 4.5, 1.6), fill = new T.PointLight(0xffe7cc, 1.4, 3.2, 1.8);
+      root.add(spot); root.add(spot.target); root.add(rim); root.add(fill); walkLights.L = [spot, rim, fill];
+    }
+    const [spot, rim, fill] = walkLights.L, p = me.position, F = WK.fwd, Sd = WK.side;
+    spot.position.set(p.x + Sd.x * -.4, p.y + 3.6, p.z + Sd.z * -.4 + .3); spot.target.position.set(p.x, p.y + 1.1, p.z);
+    rim.position.set(p.x - F.x * 1.1 + Sd.x * .6, p.y + 1.9, p.z - F.z * 1.1 + Sd.z * .6);
+    fill.position.set(p.x + F.x * 1.2 + Sd.x * -1, p.y + 1.5, p.z + F.z * 1.2 + Sd.z * -1);
+    const fl = WK.flash ? Math.max(0, 1 - (now - WK.flash) / 120) : 0;
+    rim.intensity = 3 + fl * 40; rim.color.setHex(fl > .1 ? 0xe8f2ff : 0x9cc8ff); fill.intensity = 1.4 + fl * 10;
+  }
 
   // ---------- trophy cabinet ----------
   function trophyCheck(snap) {

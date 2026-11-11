@@ -315,3 +315,15 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-trade-tile span{flex:1;display:flex;flex-direction:column;gap:3px}.tc-trade-tile b{font:800 19px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.05em}.tc-trade-tile small{color:var(--muted,#9AA5A0);font-size:13px}
 .tc-hub .tc-trade-tile{grid-column:1/-1;display:flex;flex-direction:row;align-items:center}
 .tc-trade-tile span{background:none;padding:0;width:auto}.tc-trade-tile small{text-transform:none;letter-spacing:0;font-weight:600}
+
+/* ===== walk-on round 4 (ChatGPT review 3): lighter vignette, broadcast lower third ===== */
+#tcWalk::before{background:radial-gradient(ellipse 62% 55% at 50% 50%,rgba(0,0,0,0) 0%,rgba(0,0,0,.12) 60%,rgba(0,0,0,.55) 100%)}
+#tcWalk::after{content:"";position:fixed;left:0;right:0;bottom:9vh;height:22vh;background:linear-gradient(0deg,rgba(6,8,12,.88),rgba(6,8,12,.55) 55%,rgba(6,8,12,0));pointer-events:none;opacity:0;transition:opacity .4s}
+#tcWalk[data-shot="2"]::after{opacity:1}
+.tc-wk-ban{left:18px;right:18px;align-items:flex-start;text-align:left;bottom:calc(9vh + 18px);z-index:1;animation:none}
+#tcWalk[data-shot="0"] .tc-wk-ban,#tcWalk[data-shot="1"] .tc-wk-ban{opacity:0;transform:translateX(-18px)}
+#tcWalk[data-shot="2"] .tc-wk-ban{opacity:1;transform:none;transition:opacity .45s .1s,transform .55s .1s cubic-bezier(.2,.9,.3,1)}
+.tc-wk-ban small{font-size:11px;letter-spacing:.26em}
+.tc-wk-ban b{font:800 34px/1 "Barlow Condensed",sans-serif;letter-spacing:.02em;padding-left:10px;border-left:3px solid var(--lime,#C6F36B);margin-top:4px}
+.tc-wk-ban em{font:800 12px Manrope,sans-serif;letter-spacing:.16em;margin:5px 0 0 13px}
+.tc-wk-ban span{font:600 11px Manrope,sans-serif;margin:3px 0 0 13px}
