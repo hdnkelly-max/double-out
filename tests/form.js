@@ -25,6 +25,12 @@ const {chromium}=require('playwright');const path=require('path');const fs=requi
  // a falling last 10 is shown without red and without a fake positive
  const down=await p.evaluate(()=>{save.mlog=[];for(let i=0;i<20;i++)save.mlog.push({id:'d'+i,t:i,tr:1,a:i<10?60:55,ca:5,ch:1,pf:1,th:10,w:0});TOPS_form.render();const el=document.getElementById('c3form');return el?el.textContent.replace(/\s+/g,' '):'';});
  if(!/Previous 10: 60\.0/.test(down))f.push('falling form text: '+down);
+ // 10–19 matches: no previous-10 comparison is implied; a promotion on the last match keeps its label on screen
+ const mid=await p.evaluate(()=>{save.mstart=null;save.mlog=[];for(let i=0;i<15;i++)save.mlog.push({id:'q'+i,t:i,tr:i<14?1:2,a:50+i,ca:2,ch:1,pf:1,th:10,w:1});TOPS_form.render();const el=document.getElementById('c3form');
+   const txt=el?el.textContent.replace(/\s+/g,' '):'';el.click();const o=document.querySelector('.c3formx');const lab=[...o.querySelectorAll('svg text')].find(t=>/Regional/.test(t.textContent));const svg=o.querySelector('.fx svg').getBoundingClientRect();
+   const lr=lab?lab.getBoundingClientRect():null;o.querySelector('button').click();return {txt,lab:!!lab,inside:lr?lr.right<=svg.right+1:false};});
+ if(/previous/i.test(mid.txt)||!/Your last 10 matches/.test(mid.txt))f.push('15 matches: card text implies a previous 10: '+mid.txt);
+ if(!mid.lab||!mid.inside)f.push('promotion label on the last match missing or off the chart');
  // the lifetime start survives the 200-match cap; Back (browser or phone) closes the full view; a new career starts a fresh log
  const life=await p.evaluate(async()=>{const c=career();c.tier=1;save.mstart=null;save.mlog=[];for(let i=0;i<199;i++)save.mlog.push({id:'l'+i,t:i,tr:1,a:i<10?40:60,ca:1,ch:0,pf:1,th:10,w:0});
    const play=()=>{beginMatch({mode:'career',tier:1,p0:'H',oppName:'D',oppAvg:58,legs:1});S.p[0].darts=45;S.p[0].pts=900;S.won=true;endMatch();};play();play();
