@@ -392,6 +392,11 @@
     return el;
   }
 
+  // P6 (a11y): a Collection card is a real button for keyboard and screen-reader users (Tab to it, Enter or Space opens it)
+  function kbCard(k, label) {
+    k.tabIndex = 0; k.setAttribute('role', 'button'); k.setAttribute('aria-label', label);
+    k.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); k.click(); } });
+  }
   // Collection binder
   function binder() {
     const t = st(); let filt = 'all';
@@ -405,8 +410,8 @@
       grid.innerHTML = '';
       D.CARDS.filter(c => filt === 'all' || c.set === filt).filter(c => !c.exclusive || t.own[c.id]).sort((a, b) => (!t.own[a.id]) - (!t.own[b.id]) || a.no - b.no).forEach(c => {
         const n = t.own[c.id] || 0; const k = TCC.card(c); k.classList.add('is-mini');
-        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); }
-        else { k.classList.add('is-locked'); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
+        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); kbCard(k, `${c.name}, ${c.rarity}${n > 1 ? `, ${n} owned` : ''}`); }
+        else { k.classList.add('is-locked'); k.setAttribute('role', 'img'); k.setAttribute('aria-label', `Card ${c.no}, not collected`); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno" aria-hidden="true">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
         grid.appendChild(k);
       });
       el.querySelector('#tcSets').innerHTML = `<div class="tcpk__kicker">Sets</div>` + sets.filter(s => !s.exclusive).map(s => {

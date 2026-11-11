@@ -330,3 +330,7 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-wk-ban span{font:600 11px Manrope,sans-serif;margin:3px 0 0 13px}
 #tcWalk::after{background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(4,6,10,.55) 55%,rgba(4,6,10,0))}
 .tc-wk-ban em{font-size:13px}.tc-wk-ban span{font-size:12px}
+
+/* keyboard focus on Collection cards (P6 a11y) */
+.tc-grid .tc[role="button"]:focus{outline:none}
+.tc-grid .tc[role="button"]:focus-visible{outline:3px solid var(--acc,#D8F25A);outline-offset:3px;border-radius:12px}
