@@ -19,10 +19,10 @@ await p.waitForSelector('.tc-welcome',{timeout:15000}).catch(()=>{});await p.eva
 r.later=await p.evaluate(()=>{const e=document.getElementById('tcWelLater');if(!e)return null;const q=e.getBoundingClientRect();return {h:q.height|0,w:q.width|0,fs:parseFloat(getComputedStyle(e).fontSize)};});
 r.welcome=(await measure('.tc-welcome')).filter(x=>x.fs<11);
 await clickSel('#tcWelGo');await p.waitForSelector('.tcpk',{timeout:15000}).catch(()=>{});await p.waitForTimeout(2500);
-await p.screenshot({path:out+tag+'_deal.png'});r.deal=(await measure('.tcpk')).filter(x=>x.fs<11);
+await p.screenshot({path:out+tag+'_deal.png',timeout:120000});r.deal=(await measure('.tcpk')).filter(x=>x.fs<11);
 // pick the middle card
 const cards=await p.$$('.tcpk__row .tc');if(cards[1]){const bb=await cards[1].boundingBox();await p.mouse.click(bb.x+bb.width/2,bb.y+bb.height/2);}
-await p.waitForTimeout(3500);await p.screenshot({path:out+tag+'_pick.png'});r.pick=(await measure('.tcpk')).filter(x=>x.fs<11);
+await p.waitForTimeout(3500);await p.screenshot({path:out+tag+'_pick.png',timeout:120000});r.pick=(await measure('.tcpk')).filter(x=>x.fs<11);
 // continue through the remaining picks to the summary
 r.steps=[];
 for(let i=0;i<30;i++){
@@ -32,6 +32,6 @@ for(let i=0;i<30;i++){
  if(st.fresh){const cs=await p.$$('.tcpk__row .tc:not(.is-hero):not(.is-behind)');const bb=await cs[Math.min(1,cs.length-1)].boundingBox();if(bb)await p.mouse.click(bb.x+bb.width/2,bb.y+bb.height/2);await p.waitForTimeout(3500);continue;}
  await p.waitForTimeout(1500);}
 r.summaryShown=await p.evaluate(()=>{const s=document.querySelector('.tcpk__summary');return !!s&&!s.hidden;});
-if(r.summaryShown){r.layout=await p.evaluate(()=>{const s=document.querySelector('.tcpk__summary');const kids=[...s.parentElement.children].map(e=>{const q=e.getBoundingClientRect();return e.className.slice(0,22)+':'+(q.top|0)+'-'+(q.bottom|0)+(getComputedStyle(e).display==='none'||e.hidden?'(h)':'');});const ins=[...s.children].map(e=>{const q=e.getBoundingClientRect();return e.className.slice(0,18)+':'+(q.top|0)+'-'+(q.bottom|0);});return {parent:s.parentElement.className.slice(0,30),kids,ins,ph:getComputedStyle(s.parentElement).paddingTop};});await p.screenshot({path:out+tag+'_summary.png'});r.summary=(await measure('.tcpk__summary')).filter(x=>x.fs<11||x.clip);}
+if(r.summaryShown){r.layout=await p.evaluate(()=>{const s=document.querySelector('.tcpk__summary');const kids=[...s.parentElement.children].map(e=>{const q=e.getBoundingClientRect();return e.className.slice(0,22)+':'+(q.top|0)+'-'+(q.bottom|0)+(getComputedStyle(e).display==='none'||e.hidden?'(h)':'');});const ins=[...s.children].map(e=>{const q=e.getBoundingClientRect();return e.className.slice(0,18)+':'+(q.top|0)+'-'+(q.bottom|0);});return {parent:s.parentElement.className.slice(0,30),kids,ins,ph:getComputedStyle(s.parentElement).paddingTop};});await p.screenshot({path:out+tag+'_summary.png',timeout:120000});r.summary=(await measure('.tcpk__summary')).filter(x=>x.fs<11||x.clip);}
 const pass=r.later&&r.later.h>=44&&!r.welcome.length&&!r.deal.length&&!r.pick.length&&(!r.summary||!r.summary.length)&&!pe.length;
 console.log(tag,pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();

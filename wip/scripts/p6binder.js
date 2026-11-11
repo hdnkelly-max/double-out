@@ -21,8 +21,8 @@ const measure=()=>p.evaluate((SC)=>{if(SC!==1){document.querySelectorAll('.tc-gr
  let minClear=1e9,minWho='';document.querySelectorAll('.tc-grid .tc:not(.is-locked) .tc__rar').forEach(e=>{const pl=e.closest('.tc').getBoundingClientRect(),q=e.getBoundingClientRect();const rg=document.createRange();rg.selectNodeContents(e);const tr=rg.getBoundingClientRect();const c=pl.right-tr.right;if(c<minClear){minClear=c;minWho=e.textContent;}});
  const card=document.querySelector('.tc-grid .tc');return {minClear:+minClear.toFixed(1),minWho,cardW:card&&card.getBoundingClientRect().width|0,small:res.filter(x=>x.fs<11),clipped:res.filter(x=>x.clip),n:res.length};});
 const r=await measure(+(process.env.SCALE||1));r.mode=(process.env.FONTS||'real')+'@'+(process.env.SCALE||1);r.realFont=r0;
-await p.evaluate(()=>document.querySelectorAll('.tc-sheet *').forEach(e=>e.style.animation='none'));await p.screenshot({path:out+tag+'_binder.png',animations:'disabled'});
-await p.evaluate(()=>{const e=document.querySelector('.tc-grid .tc:not(.is-locked) .tc__name.is-xlong');if(e)e.closest('.tc').scrollIntoView({block:'center'});});await p.waitForTimeout(500);await p.screenshot({path:out+tag+'_long.png',animations:'disabled'});
+await p.evaluate(()=>document.querySelectorAll('.tc-sheet *').forEach(e=>e.style.animation='none'));await p.screenshot({path:out+tag+'_binder.png',animations:'disabled',timeout:120000});
+await p.evaluate(()=>{const e=document.querySelector('.tc-grid .tc:not(.is-locked) .tc__name.is-xlong');if(e)e.closest('.tc').scrollIntoView({block:'center'});});await p.waitForTimeout(500);await p.screenshot({path:out+tag+'_long.png',animations:'disabled',timeout:120000});
 const uniq=a=>[...new Map(a.map(x=>[x.cls+'|'+x.fs,x])).values()];
 r.small=uniq(r.small);r.clipped=uniq(r.clipped);
 const pass=r.n>0&&r.minClear>=10&&!r.small.length&&!r.clipped.length&&!pe.length;
