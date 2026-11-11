@@ -9,7 +9,8 @@
 //   kD  ms-to-tightest multiplier (timing penalty curve: lower = steeper)
 const {chromium}=require('playwright');const path=require('path');const fs=require('fs');
 const LEGS=+process.argv[2]||300;const K=Object.assign({kP:1,kS:1,kR:1,kA:1,kD:1},process.argv[3]?JSON.parse(process.argv[3]):{});
-const STARTER=!!process.env.STARTER;const REC=!!process.env.REC;const LAND=!!process.env.LAND;const JOINT=!!process.env.JOINT; // JOINT=1: sample whole real darts (timing, lock offset and nerves together) from tests/sim-player-joint.json where a tester has them
+const STARTER=!!process.env.STARTER;const REC=!!process.env.REC;const LAND=!!process.env.LAND;const JOINT=!!process.env.JOINT;const DIFF=process.env.DIFF||""; // DIFF=rookie|club|comp: the difficulty setting (default: none chosen = Club)
+ // JOINT=1: sample whole real darts (timing, lock offset and nerves together) from tests/sim-player-joint.json where a tester has them
 const JD=JSON.parse(fs.readFileSync(path.resolve(__dirname,'sim-player-joint.json'),'utf8'));Object.keys(JD).forEach(k=>{if(k!=='note')JD[k]=JD[k].split(',').map(r=>r.trim().split(' ').map(Number));});
  // LAND=1: replay the testers' real landing offsets from aim directly (checks aiming and scoring, bypasses the throw model)
  // REC=1: window and s0 as recorded on the testers' own pub darts (validates the model, tier 0 only)
@@ -18,7 +19,7 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
- const res=await p.evaluate(({LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD})=>{save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};delete save.diff;
+ const res=await p.evaluate(({LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD,DIFF})=>{save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};delete save.diff;if(DIFF)save.diff={lv:DIFF,darts:0,pts:0,place:0};
   const smp=q=>{const u=Math.random()*(q.length-1);const i=Math.floor(u);return q[i]+(q[i+1]-q[i])*(u-i);};
   // the field at tier t (default setting), through the game's own opponent pipeline
   const field=t=>{newCareer();const c=career();c.tier=t;c.stage=null;c.season=null;const a=[];for(let k=0;k<30;k++){c.next=null;const n=nextOpponent();if(n&&n.oppAvg>0)a.push(n.oppAvg);}return a;};
@@ -29,8 +30,9 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
    save.owned=Array.from(new Set((save.owned||[]).concat(pr.barrel)));save.barrel=pr.barrel;save.setup=Object.assign({},pr.setup);
    beginMatch({mode:'career',tier:t,p0:'P',oppName:'X',oppAvg:50,legs:1});S.adren=0;S.calm=99;
    const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}try{S.done=true;}catch(e){}return tp;};
-  const one=(tp0,pr)=>{const jd=JOINT&&JD[pr.jd||pr.who];const row=jd?jd[Math.floor(Math.random()*jd.length)]:null;const nv=row?row[3]:smp(pr.nvq);const tp={P:tp0.P*K.kP*(REC?1:(1-.3*Math.min(1,nv/2))),/* REC: the recorded window already includes nerves */s0:tp0.s0*K.kS,D:tp0.D*K.kD*(1-.08*Math.min(1,nv)),R0:tp0.R0*K.kR*(1+.1*nv),kv:(tp0.kv||1)*(1+.1*nv)};
-   if(row)return {tp,dt:row[0],lx:row[1]*K.kA,ly:row[2]*K.kA};const dt=smp(pr.dtq);return {tp,dt,lx:smp(pr.lxq)*K.kA,ly:smp(pr.lyq)*K.kA};};
+  const kAof=pr=>{if(K.kA60==null)return K.kA;const c=Math.max(20,Math.min(60,(pr.st2v&&pr.st2v.ct)||20));return K.kA+(K.kA60-K.kA)*(c-20)/40;}; // kA60: sway multiplier tapering linearly from kA at Control 20 to kA60 at Control 60
+  const one=(tp0,pr)=>{const kA=kAof(pr);const jd=JOINT&&JD[pr.jd||pr.who];const row=jd?jd[Math.floor(Math.random()*jd.length)]:null;const nv=row?row[3]:smp(pr.nvq);const tp={P:tp0.P*K.kP*(REC?1:(1-.3*Math.min(1,nv/2))),/* REC: the recorded window already includes nerves */s0:tp0.s0*K.kS,D:tp0.D*K.kD*(1-.08*Math.min(1,nv)),R0:tp0.R0*K.kR*(1+.1*nv),kv:(tp0.kv||1)*(1+.1*nv)};
+   if(row)return {tp,dt:row[0],lx:row[1]*kA,ly:row[2]*kA};const dt=smp(pr.dtq);return {tp,dt,lx:smp(pr.lxq)*kA,ly:smp(pr.lyq)*kA};};
   // a 501 leg for the player: real dart samples, game aiming and scoring; returns darts used and points
   const _t=targetPoint('T20');var tg0x=_t.x,tg0y=_t.y;const DBG=window.__DBG=window.__DBG||{pf:[],np:[],la:[],sp:0,sn:0,t20:0,dx:[],dy:[]};const pLeg=(tp0,pr)=>{let sc=501,darts=0,pts=0,perf=0;for(let v=0;v<40&&sc>0;v++){const st=sc;let vis=0,bust=false;
     for(let d=1;d<=3;d++){const lbl=aimFor(sc,4-d);const tg=targetPoint(lbl);const o=one(tp0,pr);const l=LAND?{x:tg.x+smp(pr.landxq),y:tg.y+smp(pr.landyq)}:landFrom({x:tg.x+o.lx,y:tg.y+o.ly},o.tp,o.dt);if(Math.abs(o.dt)<=o.tp.P)perf++;{const r=Math.hypot(l.x-tg.x,l.y-tg.y);(Math.abs(o.dt)<=o.tp.P?DBG.pf:DBG.np).push(r);DBG.la.push(Math.hypot(o.lx,o.ly));}
@@ -43,7 +45,7 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
      while(lw<2&&lo<2){const a=pLeg(tp0,pr),o=aiLeg(opp,t);used+=a.used;pts+=a.pts;perf+=a.perf;const pv=Math.ceil(a.darts/3),ov=Math.ceil(o/3);if(pv<ov||(pv===ov&&first))lw++;else lo++;first=!first;}
      if(lw===2)won++;}
     const md=a=>{const b=a.slice().sort((x,y)=>x-y);return b.length?+b[b.length>>1].toFixed(1):0;};const dbg={pf:md(DBG.pf),np:md(DBG.np),la:md(DBG.la),sc:+(3*DBG.sp/DBG.sn).toFixed(1),t20:+(100*DBG.t20/DBG.sn).toFixed(1),dx:md(DBG.dx),dy:md(DBG.dy),raw:+(3*DBG.rp/DBG.rn).toFixed(1),ax:+tg0x.toFixed(1),ay:+tg0y.toFixed(1)};Object.assign(DBG,{rp:0,rn:0,pf:[],np:[],la:[],sp:0,sn:0,t20:0,dx:[],dy:[]});out.push({dbg,who:pr.who,from:pr.from,tier:t,P:+tp0.P.toFixed(1),s0:+tp0.s0.toFixed(1),avg:+(pts/used*3).toFixed(1),perf:+(perf/used*100).toFixed(1),win:+(won/LEGS*100).toFixed(1),field:Math.round(fl.reduce((s,x)=>s+x,0)/fl.length)});}}
-  return out;},{LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD});
+  return out;},{LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD,DIFF});
  await b.close();
  const pad=(s,n)=>String(s).padEnd(n);console.log((REC?'RECORDED window + s0 (validation) · ':'')+(STARTER?'STARTER stats + kit · ':'testers\' own stats + kit · ')+'knobs '+JSON.stringify(K)+' · '+LEGS+' best-of-3 matches per cell');
  console.log(pad('tester (data)',24)+pad('tier',6)+pad('window',8)+pad('s0',6)+pad('sim avg',9)+pad('perfect%',10)+pad('win%',7)+'field avg');
