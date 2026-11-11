@@ -968,7 +968,7 @@ const V=(function(){try{return (()=>{
  let previewOn=false;function preview(on){previewOn=on;prevLight.visible=on;prevFill.visible=on;if(me){me.visible=on||idleOn;if(!on&&idleOn){idle(true);return;}me.position.set(0,0,OCHE_Z+1.5);me.rotation.y=-.35;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},me.localToWorld(new T.Vector3(.1,1.6,-3)));me.userData.dt.visible=true;}if(on){prevLight.position.set(1.0,2.4,OCHE_Z-.4);prevFill.position.set(-1.4,1.3,OCHE_Z+.6);}}
  let idleOn=false,titleOn=false;function title(on){titleOn=on;if(me&&idleOn&&!previewOn)me.visible=!on;}function idle(on){idleOn=on;if(me&&!previewOn){me.visible=on&&!titleOn;if(on){me.position.set(-.06,0,OCHE_Z+.08);me.rotation.y=1.0;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},boardC);}}}
  // --- crowd
- let crowd=null;
+ let crowd=null,SIDE_C=null;
  let cheerT0=-1e9,cheerStrength=0;function cheer(strength){cheerT0=performance.now();cheerStrength=strength;if(strength>=1&&venueTier>=3&&!RM)try{pyro();}catch(e){}}
  // LOOK v1.22: stage pyro, two spark fountains either side of the side-cam frame on 180s and game shots at TV venues
  const sparks=[];let sparkMat=null;function pyro(){if(!sparkMat)sparkMat=new T.SpriteMaterial({map:glowTex,color:0xffc860,transparent:true,blending:T.AdditiveBlending,depthWrite:false});const X=(venueTier>=4?3.4:3.1)-1.1,now=performance.now();
@@ -1007,7 +1007,7 @@ const V=(function(){try{return (()=>{
    m.compose(new T.Vector3(s[0],s[1]+1.1*s.h,s[2]),new T.Quaternion(),new T.Vector3(1,.45,.8));sm.setMatrixAt(i,m);sm.setColorAt(i,col);
    m.makeTranslation(s[0],s[1]+1.27*s.h,s[2]);hr.setMatrixAt(i,m);hr.setColorAt(i,col.set(hairs[(i*7)%5]));});
   [hm,bm,sm,hr].forEach(x=>{x.instanceMatrix.needsUpdate=true;if(x.instanceColor)x.instanceColor.needsUpdate=true;x.castShadow=false;venue.add(x);});crowd=[hm,bm,sm,hr];crowd.spots=spots;}
- function crowdBob(t){if(crowd&&crowd.C){const C=crowd.C;const ch=Math.max(0,1-(performance.now()-cheerT0)/1400)*cheerStrength;C.meta.forEach((q,i)=>{const want=ch>.15&&((i*7)%10)/10<ch+.2?(i%3===0?2:1):0;q.pose=want;});spriteLayout(C,t);return;}if(!crowd||!crowd.spots)return;const [hm,bm,sm,hr]=crowd,m=new T.Matrix4();const sp=crowd.spots;const ch=Math.max(0,1-(performance.now()-cheerT0)/1400)*cheerStrength;
+ function crowdBob(t){if(SIDE_C){const ch=Math.max(0,1-(performance.now()-cheerT0)/1400)*cheerStrength;SIDE_C.meta.forEach((q,i)=>{q.pose=ch>.15&&((i*7)%10)/10<ch+.2?(i%3===0?2:1):(q.idle||0);});spriteLayout(SIDE_C,t);}if(crowd&&crowd.C){const C=crowd.C;const ch=Math.max(0,1-(performance.now()-cheerT0)/1400)*cheerStrength;C.meta.forEach((q,i)=>{const want=ch>.15&&((i*7)%10)/10<ch+.2?(i%3===0?2:1):0;q.pose=want;});spriteLayout(C,t);return;}if(!crowd||!crowd.spots)return;const [hm,bm,sm,hr]=crowd,m=new T.Matrix4();const sp=crowd.spots;const ch=Math.max(0,1-(performance.now()-cheerT0)/1400)*cheerStrength;
   for(let i=0;i<sp.length;i++){const s=sp[i];const jump=ch>0?Math.abs(Math.sin(t*9+i*1.7))*.12*ch:0;const bob=Math.sin(t*1.3+i)*.012+jump;
    m.makeTranslation(s[0],s[1]+1.25*s.h+bob,s[2]);hm.setMatrixAt(i,m);m.makeTranslation(s[0],s[1]+1.27*s.h+bob,s[2]);hr.setMatrixAt(i,m);
    if(ch>0){m.makeTranslation(s[0],s[1]+.9*s.h+jump,s[2]);bm.setMatrixAt(i,m);m.compose(new T.Vector3(s[0],s[1]+1.1*s.h+jump,s[2]),new T.Quaternion(),new T.Vector3(1,.45,.8));sm.setMatrixAt(i,m);}}
@@ -1075,7 +1075,7 @@ const V=(function(){try{return (()=>{
   if(PLATE5){pm.map=PLATE5;pm.color.setRGB(1,1,1);pm.needsUpdate=true;return;}   // Art: the hall plate is loaded once and kept, so a venue rebuild (e.g. when character models finish loading) no longer blinks it black
   try{new T.TextureLoader().load('assets/venue/plate_5.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());KEEP.add(tx);PLATE5=tx;pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x0a1d3a);});}catch(e){}}
  let PLATE5=null;
- function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:(window.TOPS_PLATE6?{6:'plate_6.webp'}:{})[t];
+ function sideDress(t){sideLed=null;SIDE_C=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:(window.TOPS_PLATE6?{6:'plate_6.webp'}:{})[t];
   const big=t>=4,X=big?3.4:3.1,Z0=OCHE_Z;const NAMES={2:['AUCKLAND','REGIONAL OPEN'],3:['DPNZ','NATIONAL SERIES'],4:['TRANS-TASMAN','DARTS CUP'],5:['PDC','PRO TOUR'],6:['WORLD','CHAMPIONSHIP']};const N=NAMES[t]||NAMES[4];
   const ACC={2:'#2fa046',3:'#e8382c',4:'#ffb000',5:'#2c8cff',6:'#D7B45C'}[t]||'#C6F36B';
   // LED event wall (canvas, gently animated on the big stages)
@@ -1129,6 +1129,22 @@ const V=(function(){try{return (()=>{
    [[-.55,0,.06],[.05,3,-.08],[3.05,5,.1],[3.5,1,-.05],[4.0,6,.04]].forEach(([z,c,jx],k)=>person(5.25+jx,.3,z,c,2,back,.95+((k*7)%5)*.025));   // standing at the back, clapping
    [[-.85,2,.1],[-.25,4,-.12],[.35,7,.05],[3.2,0,-.06],[3.65,6,.12],[4.1,5,0]].forEach(([z,c,jx],k)=>person(4.72+jx,0,z,c,0,front,.95+((k*3)%5)*.025));   // seated in front, staggered
    G.userData.ttDim=1;}
+  else if(t===6&&rows&&CROWD_TEX){   // Art (Worlds, QA audit: 'sphere crowd'): the same seven stepped rows, packed with people from the crowd atlas instead of box bodies and ball heads.
+   // Front rows a touch lighter, back rows falling into the haze, so the thrower stays the brightest thing; they sit, clap and stand to cheer with the main crowd (crowdBob).
+   const seat=new T.MeshStandardMaterial({color:0x101216,roughness:.7}),edgeM=new T.MeshBasicMaterial({color:new T.Color(ACC).multiplyScalar(.45),toneMapped:false});
+   const spots=[],phones=[];
+   for(let r=0;r<rows;r++){const x=X+1.6+r*.62,y=r*.4;
+    const st=new T.Mesh(new T.BoxGeometry(.62,.4,per*.48+.6),seat);st.position.set(x,y-.2+.001,Z0+.4);G.add(st);
+    const ed=new T.Mesh(new T.BoxGeometry(.02,.02,per*.48+.6),edgeM);ed.position.set(x-.31,y,Z0+.4);G.add(ed);
+    for(let c=0;c<per;c++){if(((r*31+c*17)%13)===0)continue;const z=Z0+.4-(per*.48)/2+c*.48+(r%2)*.24+(((r*7+c*11)%9)/9-.5)*.1;spots.push([x+.08,y,z,r]);
+     if(((r*13+c*7)%7)===0)phones.push([x-.12,y+.95+((c*3)%5)*.05,z]);}}
+   const n=spots.length,pos=new Float32Array(n*12),uv=new Float32Array(n*8),cl=new Float32Array(n*12),idx=[],meta=[];
+   spots.forEach(([x,y,z,r],i)=>{const hs=((i*2654435761)>>>0)/4294967296,h=(.9+((i*37)%11)/110)*1.02,band=Math.max(0,1-Math.abs(z-2.0)/1.1),k=(.42-.035*r-(r>=4?.03*(r-3):0))*(1-.28*band*(r<4?1:.5));meta.push({ch:((hs*8)|0)%8,base:y-.02,h:2.1*h*.98,w:1.05*h*.98,cx:0,sx:(i*7)%2?-1:1,x,z,pose:0,idle:band<.5&&r<3&&hs>.88?2:0,ph:i*1.7});
+    for(let v=0;v<4;v++)cl.set([k*.86,k*.88,k],i*12+v*3);idx.push(i*4,i*4+1,i*4+2,i*4,i*4+2,i*4+3);});
+   const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(pos,3));g.setAttribute('uv',new T.BufferAttribute(uv,2));g.setAttribute('color',new T.BufferAttribute(cl,3));g.setIndex(idx);
+   const mesh=new T.Mesh(g,new T.MeshBasicMaterial({map:CROWD_TEX,transparent:true,alphaTest:.45,side:T.DoubleSide,vertexColors:true}));mesh.frustumCulled=false;G.add(mesh);
+   SIDE_C={sprite:mesh,meta};SIDE_C.meta.forEach(q=>q.pose=q.idle);spriteLayout(SIDE_C,0);
+   if(phones.length){const pg=new T.BufferGeometry();pg.setAttribute('position',new T.Float32BufferAttribute(phones.flat(),3));G.add(new T.Points(pg,new T.PointsMaterial({color:0xfff6e0,size:.05,sizeAttenuation:true,transparent:true,opacity:.85})));}}
   else if(rows){const SH=[0x2a3550,0x5a1f22,0x1f3a2a,0x3c3c44,0x50402a,0x223048,0x472447,0x606068,0x1a1a1e,0x6a4a20];
    const body=new T.MeshStandardMaterial({color:0xffffff,roughness:.85}),skin=new T.MeshStandardMaterial({color:0x3a2c26,roughness:.85});
    const rim=new T.MeshBasicMaterial({color:new T.Color(ACC).multiplyScalar(.7),toneMapped:false});
