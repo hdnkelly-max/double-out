@@ -310,3 +310,8 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 #tcOppWalk .tc-wk-ban em{font-size:22px;margin-top:6px}
 #tcOppWalk .tc-wk-skip{font-size:11px;opacity:.6}
 #tcOppWalk{background:linear-gradient(180deg,rgba(6,9,9,.25) 0,rgba(6,9,9,.25) calc(100% - 380px),rgba(6,9,9,.95) calc(100% - 250px),rgba(6,9,9,.98))!important}
+.tc-trade-tile{align-items:center;gap:12px;padding:14px;min-height:72px;border-color:rgba(196,154,82,.55);background:linear-gradient(100deg,rgba(196,154,82,.18),rgba(196,154,82,.03) 70%),var(--surface,#192426)}
+.tc-trade-tile .tc-trade-ic{font-style:normal;font-size:24px;color:var(--gold,#C49A52);width:30px;text-align:center;animation:tc-pulse 1.6s ease-in-out infinite}
+.tc-trade-tile span{flex:1;display:flex;flex-direction:column;gap:3px}.tc-trade-tile b{font:800 19px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.05em}.tc-trade-tile small{color:var(--muted,#9AA5A0);font-size:13px}
+.tc-hub .tc-trade-tile{grid-column:1/-1;display:flex;flex-direction:row;align-items:center}
+.tc-trade-tile span{background:none;padding:0;width:auto}.tc-trade-tile small{text-transform:none;letter-spacing:0;font-weight:600}

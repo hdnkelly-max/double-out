@@ -304,6 +304,14 @@
       row.innerHTML = `${L ? `<button type="button" class="tc-tile tc-exh" id="tcExhTile"><img src="assets/cards/exh_poster.webp" alt=""><span><small>Exhibition night · ${ex.tries} ${ex.tries === 1 ? 'chance' : 'chances'} left</small><b>${esc(L.name)}</b><em>is coming to ${esc(ex.venue)}</em></span></button>` : ''}
         ${np ? `<button type="button" class="tc-tile tc-picks" id="tcPicksTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><b>${np} card pick${np > 1 ? 's' : ''}</b><small>Ready to open</small></span><i class="tc-chev">›</i></button>` : ''}`;
       row.hidden = !L && !np;
+      // incoming trade offers: a tile on the Play tab so mates see them without opening the binder
+      if (t.srv && sbOk()) tradeCount().then(n => {
+        let tt = $id('tcTradeTile');
+        if (!n) { if (tt) tt.remove(); row.hidden = !L && !np; return; }
+        if (!tt) { tt = document.createElement('button'); tt.type = 'button'; tt.id = 'tcTradeTile'; tt.className = 'tc-tile tc-trade-tile'; row.appendChild(tt); }
+        tt.innerHTML = `<i class="tc-trade-ic">⇄</i><span><b>${n} trade offer${n > 1 ? 's' : ''}</b><small>A mate wants to swap legendaries</small></span><i class="tc-chev">›</i>`;
+        tt.onclick = () => trades(); row.hidden = false;
+      });
       if (L) $id('tcExhTile').onclick = () => poster(ex, L);
       if (np) $id('tcPicksTile').onclick = () => openPack(openPicks(), () => hubTiles());
     }
@@ -413,7 +421,14 @@
     try { const rows = (typeof mpFetch === 'function') ? await mpFetch() : []; (rows || []).forEach(r => (r.players || []).forEach(pl => { const id = String(pl.pid || '').replace(/^u:/, ''); if (/^[0-9a-f-]{36}$/.test(id) && id !== me && !m[id]) m[id] = pl.name || 'Mate'; })); } catch (e) {}
     return m;
   }
-  async function tradeCount() { try { if (!sbOk()) return 0; const l = await rpc('tc_my_trades'); return (l || []).filter(x => x.open && x.dir === 'in').length; } catch (e) { return 0; } }
+  const TC_ = { n: 0, at: 0, p: null };
+  async function tradeCount(fresh) {
+    if (!sbOk()) return 0;
+    if (!fresh && Date.now() - TC_.at < 30000) return TC_.n;
+    if (TC_.p) return TC_.p;
+    TC_.p = rpc('tc_my_trades').then(l => { TC_.n = (l || []).filter(x => x.open && x.dir === 'in').length; TC_.at = Date.now(); return TC_.n; }).catch(() => TC_.n).finally(() => { TC_.p = null; });
+    return TC_.p;
+  }
   function miniCard(id, extra) {
     const c = CARD[id]; const w = document.createElement('button'); w.type = 'button'; w.className = 'tc-tcard' + (extra ? ' ' + extra : '');
     if (c) { const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini'); w.appendChild(k); w.insertAdjacentHTML('beforeend', `<small>${esc(c.name)}</small>`); }
@@ -434,7 +449,7 @@
       draw();
     };
     const act = async (fn, args, okMsg) => {
-      try { const r = await rpc(fn, args); if (okMsg) toast('Trades', okMsg(r), '', 'legendary'); sel = { mate: null, want: null, give: null }; await srvSync(); }
+      try { const r = await rpc(fn, args); if (okMsg) toast('Trades', okMsg(r), '', 'legendary'); sel = { mate: null, want: null, give: null }; TC_.at = 0; await srvSync(); }
       catch (e) { toast('Trades', 'That didn\'t go through', String((e && e.message) || e).replace(/^.*?:\s*/, ''), 'common'); }
       await load();
     };
