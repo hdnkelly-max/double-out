@@ -30,9 +30,9 @@ if(shown){await p.waitForTimeout(2000);
  r.open=await p.evaluate(()=>{const o=document.getElementById('c3rw'),c=o.querySelector('.c3rw-card'),res=o.querySelector('.c3rw-top')||o.querySelector('#c3rwRes');const q=c.getBoundingClientRect(),t=res.getBoundingClientRect();return {cardH:q.height|0,cardTop:q.top|0,resTop:t.top|0,resBottom:t.bottom|0,scrolls:o.scrollHeight>o.clientHeight+1,ov:getComputedStyle(o).overflowY};});
  await p.screenshot({path:out+tag+'_open.png',timeout:120000});
  // try to reach the top: scroll every scroller to 0, then where is the result?
- r.top=await p.evaluate(()=>{const o=document.getElementById('c3rw');[o,...o.querySelectorAll('*')].forEach(e=>{if(e.scrollHeight>e.clientHeight)e.scrollTop=0;});const t=(o.querySelector('.c3rw-top')||o.querySelector('#c3rwRes')).getBoundingClientRect();return {resTop:t.top|0,onScreen:t.top>=0&&t.bottom<=innerHeight};});
+ r.top=await p.evaluate(()=>{const o=document.getElementById('c3rw');[o,...o.querySelectorAll('*')].forEach(e=>{if(e.scrollHeight>e.clientHeight)e.scrollTop=0;});const t=(o.querySelector('.c3rw-top')||o.querySelector('#c3rwRes')).getBoundingClientRect();const hi=o.querySelector('.rwhero');const hr=hi&&getComputedStyle(hi).display!=='none'?hi.getBoundingClientRect():null;return {resTop:t.top|0,onScreen:t.top>=0&&t.bottom<=innerHeight,hero:hr?{top:hr.top|0,h:hr.height|0}:null,heroWhole:!hr||hr.top>=-1};});
  // and the bottom: scroll to the end, then where are the buttons?
  r.bottom=await p.evaluate(()=>{const o=document.getElementById('c3rw');[o,...o.querySelectorAll('*')].forEach(e=>{if(e.scrollHeight>e.clientHeight)e.scrollTop=e.scrollHeight;});const bs=[...o.querySelectorAll('.c3rw-act button, .c3rw-act a')].filter(x=>x.offsetParent||x.getClientRects().length);const last=bs[bs.length-1];const q=last&&last.getBoundingClientRect();return {n:bs.length,lastTxt:last&&last.textContent.trim().slice(0,22),lastBottom:q&&q.bottom|0,onScreen:!!q&&q.top>=0&&q.bottom<=innerHeight};});
  await p.screenshot({path:out+tag+'_end.png',timeout:120000});}
-const pass=r.shown&&r.open.resTop>=0&&r.top.onScreen&&r.bottom.onScreen&&!pe.length;
+const pass=r.shown&&r.open.resTop>=0&&r.top.onScreen&&r.top.heroWhole&&r.bottom.onScreen&&!pe.length;
 console.log(tag,pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();

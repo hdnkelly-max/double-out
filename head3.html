@@ -6551,8 +6551,12 @@ body.lk-phone.lk-match .visit{border-top:1px solid rgba(237,236,229,.06)}
    and lets a tall one open at its top. Top padding keeps room for the hero render that peeks ~204px above the card. */
 .c3rw{overflow-y:auto;overscroll-behavior:contain;align-items:flex-start}
 .c3rw-card{margin:auto auto 0;flex:none}
-@media (max-width:760px){.c3rw{padding-top:204px}}
+/* headroom and hero scale together on short screens (ChatGPT: 204px is 37% of an SE screen; a smaller gap alone would cut the hero's head) */
+.c3rw{--rwh:clamp(96px,24vh,204px);--rwh:clamp(96px,24dvh,204px)}
+.c3rw .c3x-pl.rwhero{height:calc(var(--rwh) + 46px)}
+@media (max-width:760px){.c3rw{padding-top:var(--rwh)}}
 @media (min-width:761px){.c3rw{padding:24px 0}.c3rw-card{margin:auto}}
+@media (min-width:761px) and (min-height:901px){.c3rw{padding-top:var(--rwh)}}
 @keyframes c3hero{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .c3rw-card.w .c3rw-res{color:#EDECE5!important;text-shadow:0 0 30px rgba(198,243,107,.35),0 4px 18px rgba(0,0,0,.6)}
 .c3rw-res{font-size:84px!important;letter-spacing:-.02em!important}
