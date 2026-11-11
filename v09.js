@@ -346,7 +346,7 @@ body.mp-strip .sbrow{display:block!important;padding:0!important}
  setInterval(()=>{try{const mine=S&&S.online&&!S.done&&S.cur===0&&S.p&&S.p[0]&&!S.p[0].ai;if(!mine){SC.key=null;el.hidden=true;return;}
   const k=(S.pub?S.pub.visits:0)+':'+S.p.map(p=>p.legs||0).join('.');const now=performance.now();
   if(k!==SC.key){SC.key=k;SC.end=now+(window.TOPS_SHOT||60)*1000;SC.auto=0;}
-  const held=(window.TOPS_cardHold&&TOPS_cardHold())||(S.pub&&S.pub.wait)||(S.noPullUntil&&now<S.noPullUntil)||!$('cardDraft').hidden||S.busy;
+  const held=(window.TOPS_cardHold&&TOPS_cardHold())||(window.TOPS_walkHold&&TOPS_walkHold())||(S.pub&&S.pub.wait)||(S.noPullUntil&&now<S.noPullUntil)||!$('cardDraft').hidden||S.busy;
   if(held){SC.end+=250;}
   const left=Math.max(0,Math.ceil((SC.end-now)/1000));el.hidden=left>30;el.textContent='⏱ '+left+'s';el.classList.toggle('low',left<=10);
   if(left<=0&&!held&&now-SC.auto>1500){SC.auto=now;try{if(!S.pulling){S.aim={x:0,y:-460};S.shotMiss=true;try{xpPop('Shot clock · dart missed','tm');}catch(e){}startPull('auto');}setTimeout(()=>{try{if(S&&S.pulling)release({timeStamp:performance.now()},'auto');}catch(e){}},380);}catch(e){}}}catch(e){}},250);})();

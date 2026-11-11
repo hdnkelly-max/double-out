@@ -252,7 +252,9 @@
     const _bm = beginMatch;
     window.beginMatch = beginMatch = function (opts) {
       const r = _bm.apply(this, arguments);
-      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) setTimeout(() => { try { walkOnStart(opts); } catch (e) {} }, d); else walkOnStart(opts); } catch (e) { console.warn('tc begin', e); }
+      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; walkCancel(); wbBegin(opts); const seq = ++WSEQ; const d = oppWalk(opts);
+        const own = () => { if (seq !== WSEQ) return; if (WB) WB.pend = false; try { walkOnStart(opts); } catch (e) {} if (!WK) wbMine(); };
+        if (d) { if (WB) WB.pend = true; setTimeout(own, d); } else own(); } catch (e) { console.warn('tc begin', e); }
       return r;
     };
   }
@@ -664,11 +666,67 @@
     if (!opts || !opts.online || !S || !S.p || !S.p[1]) return 0;
     const P = S.p[1], L = P.look || {}, cel = L.cel || {};
     if (!cel.walkon) return 0;
+    // once a session per opponent (QA 19:05): a rematch against the same mate goes straight to the darts
+    const seenKey = 'tcOppWalk:' + (P.key || P.name || ''); let seen = false; try { seen = sessionStorage.getItem(seenKey) === '1'; } catch (e) {}
+    if (seen) return 0; try { sessionStorage.setItem(seenKey, '1'); } catch (e) {}
     const title = L.title && D.COS[L.title];
     startWalk({ who: 'opp', fx: cel.walkon, name: P.disp || P.name || 'Your opponent', title: title && title.n, song: '' });
     return 300 + 4800 + 500;
   }
-  function walkEnd() {
+  // ---- online start barrier (QA 19:05): nobody throws until every phone's walk-ons have finished ----
+  // Each phone sends 'wdone' when its own cinematics end (or none were due). Throwing is held by TOPS_walkHold (v09.js 'held',
+  // the same gate the card draft uses) until this phone is done and every live player's 'wdone' has arrived, or 16 s pass (yours + theirs is ~11 s).
+  let WB = null, WSEQ = 0; const WBPRE = {};
+  function wbToken() { try { return (window.TOPS_REF && TOPS_REF.mid) || ''; } catch (e) { return ''; } }
+  function wbOthers() { const me = window.NET && NET.myId; return ((S && S.p) || []).filter(p => p && p.key && !p.left && p.key !== me); }
+  function wbSend() { try { if (WB && typeof netSend === 'function') netSend('wdone', { m: WB.m }); } catch (e) {} }
+  function wbBegin(opts) {
+    WB = null; if (!opts || !opts.online) return;
+    WB = { t0: performance.now(), m: wbToken(), done: {}, mine: false, pend: false, re: 0 };
+    Object.keys(WBPRE).forEach(k => { const x = WBPRE[k]; if (performance.now() - x.at < 15000 && (!x.m || !WB.m || x.m === WB.m)) WB.done[k] = 1; delete WBPRE[k]; });
+  }
+  function wbMine() { if (!WB || WB.mine) return; WB.mine = true; WB.re = performance.now(); wbSend(); }
+  function wbHeld() { if (!WB || !S || !S.online || S.done) return false; if (performance.now() - WB.t0 > (window.TC_WALK_TIMEOUT || 16000)) return false;   // TC_WALK_TIMEOUT: test hook only if (!WB.mine) return true; return wbOthers().some(p => !WB.done[p.key]); }
+  window.TOPS_walkHold = wbHeld;
+  window.TOPS_walkState = () => WB && { mine: WB.mine, pend: WB.pend, m: WB.m, done: Object.keys(WB.done), age: Math.round(performance.now() - WB.t0), walk: WK ? WK.who : null, others: wbOthers().map(p => p.key), online: !!(S && S.online), sdone: !!(S && S.done) };
+  if (typeof netRecv === 'function') {
+    const _nr = netRecv;
+    window.netRecv = netRecv = function (m) {
+      if (m && m.t === 'wdone') { try { if (WB && (!m.m || !WB.m || m.m === WB.m)) WB.done[m.from] = 1; else if (!WB) WBPRE[m.from] = { m: m.m, at: performance.now() }; } catch (e) {} return; }
+      return _nr.apply(this, arguments);
+    };
+  }
+  // resend while still waiting (a lost broadcast must not cost the full timeout), and say who we're waiting on
+  setInterval(() => {
+    try {
+      const held = wbHeld(), wait = WB && WB.mine && held;
+      if (wait && performance.now() - WB.re > 2000) { WB.re = performance.now(); wbSend(); }
+      let el = $id('tcWalkWait');
+      if (wait && !WK) {
+        const who = wbOthers().filter(p => !WB.done[p.key]).map(p => p.disp || p.name).join(', ');
+        if (!el) { el = document.createElement('div'); el.id = 'tcWalkWait'; el.style.cssText = 'position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:60;padding:10px 16px;border-radius:12px;background:rgba(10,14,18,.82);color:#e9e4d8;font:700 14px Manrope,sans-serif;pointer-events:none'; document.body.appendChild(el); }
+        el.textContent = 'Waiting for ' + (who || 'your opponent') + '\u2026';
+      } else if (el) el.remove();
+    } catch (e) {}
+  }, 500);
+  // leave, rematch or a new match ends any walk in progress. The figure goes back to where the game had it; its visibility is
+  // left to the game's own posing (QA 19:05: not the visibility captured at the start). No 'wdone' from a cancelled walk.
+  function walkCancel() {
+    if (!WK) return; const w = WK; WK = null;
+    try {
+      if (w.me && w.who === 'opp' && w.orig) { w.me.position.copy(w.orig.p); w.me.rotation.y = w.orig.r; }
+      else if (w.me && w.home) { w.me.position.copy(w.home); if (w.rot != null) w.me.rotation.y = w.rot; }
+      if (w.act) w.act.fadeOut(.2);
+    } catch (e) {}
+    if (w.hid) w.hid.forEach(o => { o.visible = true; });
+    walkEnd(true);
+  }
+  ['onlineLeave', 'showHub', 'showTitle'].forEach(fn => {
+    if (typeof window[fn] !== 'function') return; const f = window[fn];
+    window[fn] = function () { try { walkCancel(); WB = null; WSEQ++; } catch (e) {} return f.apply(this, arguments); };
+  });
+  function walkEnd(cancelled) {
+    if (!cancelled && WB && !WB.pend) wbMine();
     walkLights(null);
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
     const ov = $id('tcWalk'); if (ov) { ov.classList.add('out'); setTimeout(() => ov.remove(), 400); }
@@ -739,7 +797,7 @@
     if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
-      if (WK.who === 'opp' && WK.orig) { me.position.copy(WK.orig.p); me.rotation.y = WK.orig.r; me.visible = WK.orig.vis; } else { me.position.copy(WK.home); me.rotation.y = WK.rot; }
+      if (WK.who === 'opp' && WK.orig) { me.position.copy(WK.orig.p); me.rotation.y = WK.orig.r; } else { me.position.copy(WK.home); me.rotation.y = WK.rot; }
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
