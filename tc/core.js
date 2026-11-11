@@ -670,6 +670,17 @@
     if (seen && !opts.tcExh && (opts.tier | 0) < 6) return;
     try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {}
     const L = save.look || {}, title = L.title && D.COS[L.title], song = (window.TOPS_walk && save.walkon && TOPS_walk.WALK.find(w => w.id === save.walkon)) || null;
+    // kill switch simpleFigures (safe rendering profile): code-built figures have no walk clip, so no 3D walk. Same banner +
+    // equipped effect as an online opponent's walk-on (oppWalk), never an empty stage or a sliding figure.
+    if (window.TOPS_SAFE_on && TOPS_SAFE_on('simpleFigures')) {
+      const nm = save.name || 'You'; document.body.classList.add('tc-oppwalk');
+      const ov = document.createElement('div'); ov.id = 'tcOppWalk';
+      ov.innerHTML = `<div class="tc-wk-ban"><small>Now walking on</small><b>${esc(nm)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
+      let done = false; const end = () => { if (done) return; done = true; ov.classList.add('out'); document.body.classList.remove('tc-oppwalk'); setTimeout(() => ov.remove(), 400); };
+      ov.onclick = end; document.body.appendChild(ov);
+      if (cel.walkon) setTimeout(() => { try { FX.run(cel.walkon, nm); } catch (e) {} }, 350);
+      setTimeout(end, 3200); return;
+    }
     WK = { t0: performance.now() + 300, dur: 4800, fx: cel.walkon || null, fired: false, name: save.name || 'You' };
     window.TOPS_WALKFULL = true; document.body.classList.add('tc-walking');
     const ov = document.createElement('div'); ov.id = 'tcWalk';
