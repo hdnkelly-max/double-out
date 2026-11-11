@@ -279,8 +279,25 @@
     openPack(openPicks(), () => { H.sess = []; H.bypass = true; try { b.click(); } finally { H.bypass = false; } });
   }, true);
 
+  // #13 (David 21:13): one-time "What are cards?" before the first pick, and from the Cards screen any time
+  function cardsIntro(then, skip) {
+    const el = sheet('tc-intro', `<div class="tcpk__kicker">Cards</div><h2 class="tc-h">What are cards?</h2>
+      <ol class="tc-introl">
+        <li><b>Earn picks</b><span>Hit 180s, check out 100+, or complete achievements.</span></li>
+        <li><b>Keep one of three</b><span>Three cards appear. Pick one to keep. Nine&#8209;darter? Keep all three.</span></li>
+        <li><b>Unlock rewards</b><span>Many cards unlock kit and celebrations. Equip them in Player · Loadout.</span></li>
+        <li><b>Find them</b><span>Your collection is in Career → Cards.</span></li>
+      </ol>
+      <button type="button" class="tcpk__btn tcpk__btn--go tc-introgo">${then ? 'Open my picks' : 'Got it'}</button>`);
+    const x = el.querySelector('.tc-x'); el.querySelector('.tc-sh-in').appendChild(x);
+    let gone = false; const close = fn => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 200); fn && fn(); };
+    /* the button opens the picks; X or a tap outside means "not now": the picks stay waiting and the calling flow carries on */
+    el.querySelector('.tc-introgo').onclick = () => close(then); x.onclick = () => close(skip); el.addEventListener('click', e => { if (e.target === el) close(skip); });
+    return el;
+  }
   function openPack(picks, after) {
     if (!picks.length) { after && after(); return; }
+    if (!save.tcIntro) { save.tcIntro = Date.now(); keep(); cardsIntro(() => openPack(picks, after), () => { after && after(); }); return; }
     H.inPack = true; try { TCC.Sfx.ctx || TCC.Sfx.init('assets/cards/sfx/'); } catch (e) {}
     const done = got => {
       H.inPack = false; badge();
@@ -323,7 +340,7 @@
       let row = $id('tcCareer'); if (!row) { row = document.createElement('div'); row.id = 'tcCareer'; row.className = 'tc-hub'; }
       if (row.parentNode !== car) car.insertBefore(row, car.firstChild);
       row.innerHTML = `<button type="button" class="tc-tile tc-cab" id="tcCabTile"><img src="assets/cards/hub_cabinet.webp" alt=""><span><small>Trophy cabinet</small><b>${t.troph.length ? t.troph.length + (t.troph.length === 1 ? ' title' : ' titles') : 'Empty'}</b></span></button>
-        <button type="button" class="tc-tile tc-col" id="tcColTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><small>Collection</small><b>${nOwn} / ${nAll}</b></span><em class="tc-pickbadge" hidden><b>0</b> picks</em></button>`;
+        <button type="button" class="tc-tile tc-col" id="tcColTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><small>Cards</small><b>${nOwn} / ${nAll}</b></span><em class="tc-pickbadge" hidden><b>0</b> picks</em></button>`;
       $id('tcCabTile').onclick = cabinet; $id('tcColTile').onclick = binder;
     }
     badge();
@@ -353,9 +370,11 @@
     const el = sheet('tc-welcome', `<div class="tc-wel"><div class="tc-wel-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><div class="tc-wel-peek"></div></div>
       <div class="tcpk__kicker">New in TOPS</div><h2 class="tc-h">Cards are here</h2>
       <div class="tc-wel-big"><b>${info.picks}</b><span>picks earned</span></div>
-      <p>${info.ach ? `From the ${info.ach} achievement${info.ach > 1 ? 's' : ''} you've already completed. ` : ''}From now on every 180, ton-plus checkout and achievement earns another.</p>
+      ${info.ach ? `<p>From the ${info.ach} achievement${info.ach > 1 ? 's' : ''} you've already completed.</p>` : ''}
+      <ul class="tc-wel-how"><li><b>Keep one of three.</b> Each pick deals three cards. You keep one.</li><li><b>Earn more.</b> 180s, 100+ checkouts and achievements.</li><li><b>Unlock rewards.</b> Many cards unlock kit and celebrations for Player · Loadout.</li><li><b>Find them</b> in Career → Cards.</li></ul>
       <button type="button" class="tcpk__btn tcpk__btn--go" id="tcWelGo">Open ${info.picks} picks</button><button type="button" class="tcpk__later" id="tcWelLater">Later</button></div>`);
     const pk = TCC.card(peek); pk.classList.add('is-flipped'); el.querySelector('.tc-wel-peek').appendChild(pk);
+    save.tcIntro = save.tcIntro || Date.now(); keep(); // #13: the welcome carries the explainer, so no second sheet before the first pick
     el.querySelector('#tcWelGo').onclick = () => { el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
     el.querySelector('#tcWelLater').onclick = () => { el.remove(); hubTiles(); };
   }
@@ -396,8 +415,9 @@
   function binder() {
     const t = st(); let filt = 'all';
     const nO = D.CARDS.filter(c => !c.exclusive && t.own[c.id]).length, nA = D.CARDS.filter(c => !c.exclusive).length;
-    const el = sheet('tc-binder', `<div class="tcpk__kicker">Collection</div><h2 class="tc-h">Your cards</h2><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
+    const el = sheet('tc-binder', `<div class="tcpk__kicker">Cards · Collection</div><h2 class="tc-h">Your cards</h2><button type="button" class="tc-whatbtn" id="tcWhat"><i>?</i>How cards work</button><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
     { const tb = el.querySelector('#tcTradeBtn'); if (tb) { tb.onclick = () => trades(); tradeCount().then(n => { const b = tb.querySelector('.tc-tradebadge'); if (n) { b.hidden = false; b.textContent = n + ' new'; } }); } }
+    el.querySelector('#tcWhat').onclick = () => cardsIntro(null);
     const chips = el.querySelector('#tcChips'), grid = el.querySelector('#tcGrid');
     const sets = D.SETS.filter(s => D.CARDS.some(c => c.set === s.id));
     chips.innerHTML = [['all', 'All']].concat(sets.map(s => [s.id, s.name])).map(([id, n]) => `<button type="button" data-s="${id}" aria-pressed="${id === filt}">${esc(n)}</button>`).join('');
@@ -892,5 +912,5 @@
     clearInterval(zoneTimer);
     if (want) zoneTimer = setInterval(() => { try { if (!zoneOn) return; sfxHeart(); } catch (e) {} }, 820);
   }
-  window.TC_API = { oppWalk, trades, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
+  window.TC_API = { oppWalk, trades, openPack, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
 })();
