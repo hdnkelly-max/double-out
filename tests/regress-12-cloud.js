@@ -12,7 +12,7 @@ const {chromium}=require('playwright');const path=require('path');
   const cloud=JSON.parse(JSON.stringify(save));cloud.diff={lv:'rookie',darts:600,pts:40000,place:14,placeAvg:74.6};cloud.season=SEASON;cloud.sv=(save.sv||0)+5;cloud.dev='other-device';
   // reset the local save to a fresh one so only the cloud copy carries the stale opponents
   newCareer();career().next=null;return cloud;});
- const read=()=>p.evaluate(()=>{const c=save.career;return {next:c&&c.next&&c.next.oppAvg,raw:c&&c.next&&c.next.oppRaw,rev:c&&c.v3&&c.v3.rev&&c.v3.rev.avg,revRaw:c&&c.v3&&c.v3.rev&&c.v3.rev.raw,revPlays:c&&c.v3&&c.v3.rev&&TOPS_OPP_SHIFT(c.v3.rev.avg,1),place:save.diff&&save.diff.place};});
+ const read=()=>p.evaluate(()=>{const c=save.career;return {next:c&&c.next&&c.next.oppAvg,raw:c&&c.next&&c.next.oppRaw,rev:c&&c.v3&&c.v3.rev&&c.v3.rev.avg,revRaw:c&&c.v3&&c.v3.rev&&c.v3.rev.raw,revPlays:c&&c.v3&&c.v3.rev&&(()=>{try{V.walkOn=()=>{};beginMatch({mode:'career',tier:1,p0:'P',oppName:c.v3.rev.name,oppAvg:c.v3.rev.avg,legs:1,revenge:true});const v=S.oppAvg;S.done=true;return v;}catch(e){return -1;}})(),revWant:c&&c.v3&&c.v3.rev&&TOPS_OPP_SHIFT(c.v3.rev.avg,1),place:save.diff&&save.diff.place};});
  const fails=[];const BAND=[56,64];
  // 1. sign-in: netAdopt (game4.js), "the cloud save always wins"
  let cloud=await stale();await p.evaluate(c=>netAdopt(c),cloud);const a=await read();console.log('netAdopt: '+JSON.stringify(a));
@@ -22,7 +22,7 @@ const {chromium}=require('playwright');const path=require('path');
   if(!(r.next>=BAND[0]-12&&r.next<=BAND[1]))fails.push(`${k}: stored Club opponent ${r.next} not in band (v1.75 stored 75)`);
   if(r.raw==null)fails.push(`${k}: stored opponent not migrated (no oppRaw)`);
   // revenge stores the raw rating (raw:1); the band shift happens when the match starts
-  if(!r.revRaw||!(r.revPlays<=BAND[1]+3)) /* v1.80: one setting (Club); a revenge opponent can be one of the tier's strongest (Club targets reach 67 at tier 1) */fails.push(`${k}: stored revenge not migrated (avg ${r.rev}, raw ${r.revRaw}, plays at ${r.revPlays}; v1.75 stored 79)`);
+  if(!r.revRaw||r.revPlays!==r.revWant||!(r.revPlays<=BAND[1]+5)) /* QA 22:27: the revenge match plays exactly the banded raw rating, inside the +5 hard cap */fails.push(`${k}: stored revenge not migrated (avg ${r.rev}, raw ${r.revRaw}, plays at ${r.revPlays}; v1.75 stored 79)`);
   if(r.place)fails.push(`${k}: placement ${r.place} not cleared`);});
  // 3. idempotent: adopting the already-migrated save again changes nothing
  const again=await p.evaluate(()=>{const c=JSON.parse(JSON.stringify(save));netAdopt(c);return save.career.next.oppAvg;});if(again!==d.next)fails.push(`second adopt moved the opponent ${d.next} -> ${again}`);
