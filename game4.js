@@ -2028,7 +2028,8 @@ if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if
  PAD.addEventListener('contextmenu',e=>e.preventDefault());}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelPull();breatheEnd();}});
 addEventListener('blur',()=>{cancelPull();breatheEnd();});
-function zoomSync(){window.__zoomOn=save.boardZoom!==false;const b=$('btnZoom');if(b){b.textContent=window.__zoomOn?'Whole board':'Zoom in';b.setAttribute('aria-pressed',window.__zoomOn);}}
+// zoomed-in board is the only view (Hayden 22:59: the same throw for everyone); an old save.boardZoom=false (this device, cloud or another device) is ignored
+function zoomSync(){window.__zoomOn=true;const b=$('btnZoom');if(b)b.remove();}
 function feelLayoutClass(){const ph=feelPhone();document.body.classList.toggle('feel-phone',ph);document.body.classList.toggle('feel-desk',!ph);}
 addEventListener('resize',()=>{feelLayoutClass();paWinKey='';});
 function feelMatchStart(){zoomSync();S.perfStreak=0;S.ghostQ=[];V.ghostsClear();feelLayoutClass();if(PA){PA.hidden=false;paState='';paWinKey='';}}
@@ -2154,7 +2155,7 @@ document.addEventListener('pointerdown',e=>{const tr=$('hudTr');if(tr.classList.
  if(S&&!S.done&&LOOK.bandUntil&&performance.now()<LOOK.bandUntil&&!e.target.closest('button'))LOOK.skip();},true);
 LOOK.syncMenu();
 
-{const zb=$('btnZoom');if(zb)zb.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();save.boardZoom=!(save.boardZoom!==false);persist();zoomSync();});}zoomSync();
+zoomSync();
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
 let lastBeat=0;
