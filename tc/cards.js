@@ -113,6 +113,7 @@
     hero.classList.add('is-pop');
     if (r === 'rare') return;
     const fl = el('div', 'tcpk__flash is-' + r); ov.appendChild(fl); setTimeout(() => fl.remove(), 900);
+    const ring = el('div', 'tcpk__ring is-' + r); ring.style.left = cx + 'px'; ring.style.top = cy + 'px'; row.appendChild(ring); setTimeout(() => ring.remove(), 1400);
     ov.classList.remove('is-shake'); void ov.offsetWidth; ov.classList.add('is-shake'); setTimeout(() => ov.classList.remove('is-shake'), 600);
     const ban = el('div', 'tcpk__pull is-' + r); ban.innerHTML = `<b>${F.word}</b>`; ban.style.top = (hr.bottom - rr.top + 14) + 'px'; row.appendChild(ban);
     sparks(ov, hr.left + hr.width / 2, hr.top + hr.height / 2, F, quick ? .6 : 1, r === 'legendary');
@@ -202,11 +203,20 @@
       const mine = cards[pos], def = res.options[pos];
       const fms = quick ? T.quickFlip : T.flip;
       await wait(quick ? 0 : T.lift);
-      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) { Sfx.play('charge_' + def.rarity, .9); mine.classList.add('is-charging'); await wait(def.rarity === 'legendary' ? 620 : 460); mine.classList.remove('is-charging'); }
+      let blk = null;
+      if (!quick && (def.rarity === 'epic' || def.rarity === 'legendary')) {
+        // the room goes dark first: short for epic, long for legendary, so the two never feel the same
+        const L = def.rarity === 'legendary';
+        blk = el('div', 'tcpk__black is-' + def.rarity); ov.appendChild(blk); requestAnimationFrame(() => blk.classList.add('on'));
+        await wait(L ? 300 : 150);
+        Sfx.play('charge_' + def.rarity, .9); mine.classList.add('is-charging'); buzz(L ? [10, 60, 10, 60, 10] : 10);
+        await wait(L ? 820 : 460); mine.classList.remove('is-charging');
+      }
       Sfx.play('flip');
       await flip(mine, fms);
       const r = def.rarity;
       if (r !== 'common') Sfx.play('rev_' + r, r === 'legendary' ? 1 : .85); if (r === 'epic') buzz([15, 30, 25]); else if (r === 'legendary') buzz([30, 40, 30, 40, 60]);
+      if (blk) { blk.classList.remove('on'); setTimeout(() => blk.remove(), 700); }
       if (r === 'rare' || r === 'epic' || r === 'legendary') fanfare(ov, row, mine, r, quick);
       const owned = (res.owned && res.owned[def.id]) || 1;
       if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
@@ -226,9 +236,12 @@
       const s = ov.querySelector('.tcpk__summary'); s.hidden = false;
       const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
       const sorted = got.slice().sort((a, b) => order.indexOf(a.def.rarity) - order.indexOf(b.def.rarity));
-      s.innerHTML = `<div class="tcpk__kicker">You kept</div><div class="tcpk__grid"></div><button class="tcpk__btn tcpk__btn--go tcpk__done">Done</button>`;
+      const cnt = {}; got.forEach(x => cnt[x.def.rarity] = (cnt[x.def.rarity] || 0) + 1);
+      const brk = ['legendary', 'epic', 'rare'].filter(k => cnt[k]).map(k => `<b class="r-${k}">${cnt[k]} ${RAR[k]}</b>`);
+      const rest = got.length - ['legendary', 'epic', 'rare'].reduce((a, k) => a + (cnt[k] || 0), 0); if (rest) brk.push(`${rest} other${rest > 1 ? 's' : ''}`);
+      s.innerHTML = `<div class="tcpk__kicker">You kept</div><div class="tcpk__claimed">${got.length} card${got.length > 1 ? 's' : ''} claimed</div><div class="tcpk__brk">${brk.join(' · ')}</div><div class="tcpk__grid"></div><button class="tcpk__btn tcpk__btn--go tcpk__done">Done</button>`;
       const g = s.querySelector('.tcpk__grid'); if (sorted.length > 6) g.classList.add('is-many'); btnSkip.hidden = true;
-      sorted.forEach(x => { const c = card(x.def); c.classList.add('is-flipped', 'is-mini'); if (x.dupe) tag(c, 'Dupe', 'dupe'); g.appendChild(c); });
+      sorted.forEach((x, k) => { const c = card(x.def); c.classList.add('is-flipped', 'is-mini'); if (k === 0 && (x.def.rarity === 'legendary' || x.def.rarity === 'epic')) c.classList.add('is-best'); if (x.dupe) tag(c, 'Dupe', 'dupe'); g.appendChild(c); });
       s.querySelector('.tcpk__done').onclick = () => { close(); opts.onDone && opts.onDone(got); };
     }
     deal();
