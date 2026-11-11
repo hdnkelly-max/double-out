@@ -5,12 +5,18 @@ create table if not exists public.tops_log (
   upload_id text not null unique,          -- client-made; the hidden + pagehide pair and retries never duplicate
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   at timestamptz not null default now(),
-  session_id text not null,
+  session_id text not null,                -- logical session (survives a reload in the same tab)
+  page_id text,                            -- this document load
+  schema_ver int,
   ver text,
   reason text check (reason in ('error','match_end','pagehide')),
-  dropped int, skipped int, trimmed int, bytes int,   -- dropped: pushed out of the ring; skipped: over the per-minute budget for noisy kinds
+  dropped int,                             -- events pushed out of the 300-slot ring this session
+  suppressed jsonb,                        -- per kind: noisy events over the 20-a-minute budget
+  seq_first int, seq_last int,             -- event sequence numbers in this row (rows overlap; use these to stitch)
+  trimmed_events int,                      -- oldest events cut to keep the body under 48 KiB
+  bytes int,
   events jsonb not null,
-  constraint tops_log_size check (octet_length(events::text) <= 60000)
+  constraint tops_log_size check (octet_length(events::text) <= 60000)  -- the client keeps the whole body under 48 KiB
 );
 create index if not exists tops_log_user_at on public.tops_log (user_id, at desc);
 alter table public.tops_log enable row level security;

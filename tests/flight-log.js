@@ -10,7 +10,7 @@ const {chromium}=require('playwright');const path=require('path');
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());const errs=[];p.on('pageerror',e=>{if(!/flight-test/.test(e.message))errs.push(e.message);});
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
  const f=[];
- const boot=await p.evaluate(()=>{const e=TOPS_LOG.events().find(x=>x.k==='boot');return e&&e.d;});if(!boot||!boot.v||!boot.dev)f.push('no boot event with version and device: '+JSON.stringify(boot));
+ const boot=await p.evaluate(()=>{const e=TOPS_LOG.events().find(x=>x.k==='boot');return e&&e.d;});if(!boot||!boot.v||!boot.os||!boot.br||boot.page==='<id>')f.push('no boot event with version and device: '+JSON.stringify(boot));
  // stub the signed-in client: inserts captured; keepalive fetches to tops_log captured
  await p.evaluate(()=>{window.__ins=[];window.__ka=[];NET.user={id:'u1'};NET.sb={supabaseUrl:'https://x.supabase.co',supabaseKey:'k',from:t=>({upsert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return Promise.resolve({error:window.__failIns?{message:'nope'}:null});}}),auth:{getSession:()=>Promise.resolve({data:{session:{access_token:'tok'}}})}};
   const f0=window.fetch;window.fetch=function(u,o){if(/tops_log/.test(String(u))){__ka.push({u:String(u),keepalive:o&&o.keepalive,n:o&&o.body?o.body.length:0,id:o&&o.body?JSON.parse(o.body).upload_id:null});return Promise.resolve(new Response(null,{status:201}));}return f0.apply(this,arguments);};
@@ -20,25 +20,43 @@ const {chromium}=require('playwright');const path=require('path');
  await p.evaluate(()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'Phil Taylor',oppAvg:60,legs:1});});await p.waitForTimeout(2500);
  await p.evaluate(()=>{if(S.bull)S.bull=null;S.busy=false;S.cur=0;const tg=targetPoint('T20');for(let i=0;i<3;i++){try{land(tg.x,tg.y);}catch(e){}}});
  await p.evaluate(()=>{setTimeout(()=>{throw new Error('flight-test boom');},0);});await p.waitForTimeout(300);
- const inc=await p.evaluate(()=>{const v=localStorage.getItem('tops_log_inc');return v?JSON.parse(v):null;});
+ const inc=await p.evaluate(()=>{const q=JSON.parse(localStorage.getItem('tops_logq')||'[]');return q.find(r=>r.reason==='error')||null;});
  if(!inc||!inc.events.some(e=>e.k==='error'&&/flight-test/.test(e.d&&e.d.m)))f.push('the error was not kept locally at once');
- await p.evaluate(()=>{console.error('flight-test console');console.error('flight-test again');});await p.waitForTimeout(4000);
- const up1=await p.evaluate(()=>__ins.filter(x=>x[0]==='tops_log'&&x[1].reason==='error').length);if(up1!==1)f.push('error uploads in the first minute: '+up1+' (want 1, coalesced)');
+ await p.evaluate(()=>{console.error('flight-test console');console.error('flight-test again');});
+ let up1=0;for(let i=0;i<20&&!up1;i++){await p.waitForTimeout(500);up1=await p.evaluate(()=>__ins.filter(x=>x[0]==='tops_log'&&x[1].reason==='error').length);}
+ const qLeft=await p.evaluate(()=>TOPS_LOG.queue().filter(r=>r.reason==='error').length);if(up1===1&&qLeft)f.push('the uploaded incident stayed queued (duplicate copy): '+qLeft);if(up1!==1)f.push('error uploads in the first minute: '+up1+' (want exactly 1, coalesced) '+JSON.stringify(await p.evaluate(()=>({e:TOPS_LOG._err(),ins:__ins.map(x=>[x[0],x[1].reason]),user:!!NET.user}))));
  await p.evaluate(()=>{S.won=true;endMatch();});await p.waitForTimeout(5500);
  const me=await p.evaluate(()=>{const r=__ins.filter(x=>x[0]==='tops_log'&&x[1].reason==='match_end').map(x=>x[1]);const last=r[r.length-1];return last?{n:r.length,ev:last.events,bytes:last.bytes}:null;});
  if(!me)f.push('no match_end upload');else{const k=me.ev.map(e=>e.k);for(const want of ['match_start','visit','error','console_error','match_end','res'])if(!k.includes(want))f.push('match_end upload has no '+want+' event');
   const rs=me.ev.filter(e=>e.k==='res').map(e=>e.d);if(!rs.some(r=>r.w==='start'&&r.chars!=null&&r.char_ids!=null&&r.geo!=null))f.push('resource snapshot lacks GPU counts or cached characters: '+JSON.stringify(rs[0]));
-  const vs=me.ev.find(e=>e.k==='visit');if(!vs||vs.d.s.length!==3)f.push('darts not summarised per visit: '+JSON.stringify(vs));
+  const vs=me.ev.find(e=>e.k==='visit');if(!vs||String(vs.d.s).split(' ').length!==3)f.push('darts not summarised per visit: '+JSON.stringify(vs));
   if(me.ev.some(e=>/tops_log/.test(JSON.stringify(e.d||''))))f.push("the recorder logged its own upload");}
  const after=await p.evaluate(async()=>{await new Promise(r=>setTimeout(r,1200));return TOPS_LOG.events().some(e=>e.k==='res'&&e.d.w==='after');});if(!after)f.push('no resource snapshot after leaving the match');
  // hidden: kept + keepalive; pagehide repeats with the same id
  const hid=await p.evaluate(async()=>{let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('pagehide'));await new Promise(r=>setTimeout(r,300));
-  const kept=!!localStorage.getItem('tops_log_ck');hidden=false;document.dispatchEvent(new Event('visibilitychange'));return {ka:__ka.slice(),kept};});
+  const kept=JSON.parse(localStorage.getItem('tops_logq')||'[]').some(r=>r.reason==='pagehide');hidden=false;document.dispatchEvent(new Event('visibilitychange'));return {ka:__ka.slice(),kept};});
  if(hid.ka.length<1||!hid.ka.every(x=>x.keepalive))f.push('hidden/pagehide: no keepalive send '+JSON.stringify(hid.ka));else if(new Set(hid.ka.map(x=>x.id)).size!==1)f.push('hidden and pagehide sent different upload ids (duplicates)');
  if(hid.ka.some(x=>x.n>48*1024))f.push('keepalive body over 48 KiB');
  // a failed upload stays in its slot and is retried
- const rt=await p.evaluate(async()=>{window.__failIns=true;TOPS_LOG.upload('match_end');await new Promise(r=>setTimeout(r,3500));const kept=!!localStorage.getItem('tops_log_ck');window.__failIns=false;const n0=__ins.length;TOPS_LOG.retry();await new Promise(r=>setTimeout(r,300));return {kept,retried:__ins.length>n0,gone:!localStorage.getItem('tops_log_ck')};});
+ const rt=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');window.__failIns=true;TOPS_LOG.upload('match_end');await new Promise(r=>setTimeout(r,3500));const kept=TOPS_LOG.queue().some(r=>r.reason==='match_end');window.__failIns=false;const n0=__ins.length;TOPS_LOG.retry();await new Promise(r=>setTimeout(r,300));return {kept,retried:__ins.length>n0,gone:!TOPS_LOG.queue().some(r=>r.reason==='match_end')};});
  if(!rt.kept)f.push('a failed upload lost its evidence');if(!rt.retried||!rt.gone)f.push('the kept row was not retried and released: '+JSON.stringify(rt));
+ // two incidents while uploads fail: the first is not replaced
+ const two=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');window.__failIns=true;TOPS_LOG.log('x','A marker');TOPS_LOG.incident(true);await new Promise(r=>setTimeout(r,200));const a=TOPS_LOG.queue().filter(r=>r.reason==='error').map(r=>r.upload_id);
+   TOPS_LOG.log('x','B marker');TOPS_LOG.incident(true);await new Promise(r=>setTimeout(r,200));const b=TOPS_LOG.queue().filter(r=>r.reason==='error');window.__failIns=false;return {a,b:b.map(r=>r.upload_id),aHasA:b.some(r=>JSON.stringify(r.events).includes('A marker'))};});
+ if(!two.a.length||!two.b.includes(two.a[0])||!two.aHasA)f.push('an unsent incident was replaced or lost: '+JSON.stringify(two));
+ // redaction before the ring
+ const red=await p.evaluate(()=>{console.error('login failed for joe@example.com token=abc123secret Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c');return JSON.stringify(TOPS_LOG.events().slice(-3));});
+ if(/joe@example|abc123secret|eyJhbGci/.test(red))f.push('secrets reached the ring: '+red.slice(0,200));
+ // strict body cap with huge unicode events
+ const big=await p.evaluate(()=>{for(let i=0;i<300;i++)TOPS_LOG.log('x',{m:'表'.repeat(400),i});const r=TOPS_LOG.row('error');return {bytes:new TextEncoder().encode(JSON.stringify(r)).length,claimed:r.bytes,trimmed:r.trimmed_events};});
+ if(big.bytes>48*1024)f.push('body over 48 KiB with unicode: '+JSON.stringify(big));if(Math.abs(big.bytes-big.claimed)>8)f.push('bytes field does not match the body: '+JSON.stringify(big));
+ // rapid transition: a match starting within 1.5 s gets no 'after' snapshot from the previous one
+ const rap=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));S.won=true;endMatch();beginMatch({mode:'career',tier:1,p0:'P',oppName:'B',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,2000));
+   const ev=TOPS_LOG.events();const startB=ev.filter(e=>e.k==='match_start').pop();const afterA=ev.filter(e=>e.k==='res'&&e.d.w==='after'&&e.q>startB.q);return {after:afterA.length};});
+ if(rap.after)f.push('a previous match\'s after-cleanup snapshot landed inside the next match');
+ // sign-out: no keepalive with the old token
+ const so=await p.evaluate(async()=>{const n0=__ka.length;NET.user=null;await new Promise(r=>setTimeout(r,100));let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));await new Promise(r=>setTimeout(r,200));hidden=false;document.dispatchEvent(new Event('visibilitychange'));NET.user={id:'u1'};return __ka.length-n0;});
+ if(so)f.push('sent with a token after sign-out');
  // ring cap, dropped count, size cap, fetch failures without query strings
  const cap=await p.evaluate(async()=>{for(let i=0;i<400;i++)TOPS_LOG.log('x','y'.repeat(150));try{await fetch('http://127.0.0.1:9/nowhere?token=secret');}catch(e){}const r=TOPS_LOG.row('error');return {n:TOPS_LOG.events().length,dropped:TOPS_LOG.dropped,bytes:r.bytes,q:JSON.stringify(TOPS_LOG.events()).includes('token=secret'),nf:TOPS_LOG.events().some(e=>e.k==='net_fail')};});
  if(cap.n!==300)f.push('ring not capped at 300: '+cap.n);if(cap.dropped<100)f.push('dropped count missing: '+cap.dropped);if(cap.bytes>48*1024)f.push('row over 48 KiB: '+cap.bytes);if(cap.q)f.push('a query string was logged');if(!cap.nf)f.push('fetch failure not logged');
