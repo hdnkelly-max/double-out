@@ -1,8 +1,17 @@
 #!/bin/bash
-# usage: ship.sh "v0.xx: message"   -> copies the build live + /next/, commits, pushes, watches the Pages deploy
+# usage: [QA_PASSED=<commit>] ship.sh "v1.xx: message"   -> copies the build live + /next/, commits, pushes, watches the Pages deploy
 set -e
 MSG="$1"; SRC=/home/claude/oche-next; R=/home/claude/double-out
+# the release must be committed, so the src push below matches exactly what went live
+if [ -n "$(git -C $SRC status --porcelain --untracked-files=no)" ]; then echo "SHIP BLOCKED: uncommitted changes in $SRC"; exit 1; fi
+# always rebuild from the committed source, so the file that ships (and the gate tests) is never a stale build
+(cd $SRC && node build.js >/dev/null) || { echo "SHIP BLOCKED: build.js failed"; exit 1; }
 # regression gate: real matches in a headless browser; a failure blocks the ship (SKIP_REGRESS=1 to bypass in an emergency)
+# QA_PASSED=<commit>: skip the rerun only when the release is that QA-passed commit plus the version bump (rule 12);
+# any other difference (merge changes, extra commits) and the gate runs as normal
+if [ -z "$SKIP_REGRESS" ] && [ -n "$QA_PASSED" ] && git -C $SRC diff --quiet "$QA_PASSED" HEAD -- . ':(exclude)v051.js'; then
+  echo "regress: skipped, release = QA-passed $QA_PASSED + version bump (QA ran regress.js on it)"; SKIP_REGRESS=1
+elif [ -n "$QA_PASSED" ]; then echo "regress: release differs from QA-passed $QA_PASSED beyond the version bump, running the gate"; fi
 if [ -z "$SKIP_REGRESS" ]; then set +e; OUT=$(node $SRC/tests/regress.js 2 2>&1); RC=$?; set -e; echo "$OUT" | grep -E "^regress|REGRESSION|^- (match|page)"; if [ $RC -ne 0 ]; then echo "SHIP BLOCKED by regression suite"; exit 1; fi; fi
 cp $SRC/double-out-standalone.html $R/index.html
 # preview shares the live assets: one base tag, no duplicate files
@@ -19,7 +28,7 @@ git add -A index.html version.json next assets img manifest.webmanifest sw.js ic
 git commit -qm "$MSG
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01WmQEKVWtrDN8rgTZ7Cjw6j" || echo "nothing to commit"
+Claude-Session: https://claude.ai/code/session_01WmQEKZ7N76uwtfmwPmhGWk" || echo "nothing to commit"
 git push -q
 SHA=$(git rev-parse --short=7 HEAD); echo "pushed $SHA"
 # watchdog: wait for this commit's Pages run; cancel + re-trigger if it sits queued > 3 min or fails
@@ -32,13 +41,13 @@ for attempt in 1 2 3; do
     # stuck older runs block the queue: cancel anything queued that isn't ours
     for old in $(gh run list --limit 6 --json status,headSha,databaseId -q ".[]|select(.status==\"queued\" and (.headSha|startswith(\"$SHA\")|not))|.databaseId"); do gh run cancel $old >/dev/null 2>&1 || true; done
     NOW=$(date +%s)
-    if [ "$ST" = "completed" ]; then echo "deploy $CO ($ID)"; [ "$CO" = "success" ] && { bash $SRC/tools_push_src.sh "$MSG" || echo "src push failed"; exit 0; }; break; fi
+    if [ "$ST" = "completed" ]; then echo "deploy $CO ($ID)"; [ "$CO" = "success" ] && { git -C $SRC push -q origin HEAD:src && echo "src pushed $(git -C $SRC rev-parse --short=7 HEAD)" || echo "src push failed (live is fine; push src by hand)"; exit 0; }; break; fi
     if [ "$ST" = "queued" ] && [ $((NOW-START)) -gt 180 ]; then echo "queued too long, cancelling $ID"; gh run cancel $ID >/dev/null 2>&1 || true; break; fi
     if [ $((NOW-START)) -gt 900 ]; then echo "timeout"; break; fi
   done
   git commit -q --allow-empty -m "Re-trigger Pages deploy
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01WmQEKVWtrDN8rgTZ7Cjw6j"; git push -q; SHA=$(git rev-parse --short=7 HEAD); echo "re-pushed $SHA"
+Claude-Session: https://claude.ai/code/session_01WmQEKZ7N76uwtfmwPmhGWk"; git push -q; SHA=$(git rev-parse --short=7 HEAD); echo "re-pushed $SHA"
 done
 exit 1
