@@ -51,11 +51,27 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
   out.idem=[want,g1,g2,g3,g4,g5];
   // (c) toughest opponent each tier on Competitive (deciders, Deano): simulate the max target on its own
   return out;},{LEGS});
+ // (e) The Run: every stage tougher than the one before, the boss above its stage's regulars, on every setting
+ const run=await p.evaluate(()=>{const out=[];for(const lv of ['rookie','club','comp']){save.diff={lv,darts:999,pts:0,place:0};newCareer();const c=career();c.run=true;c.stage=null;const row=[];
+  for(let t=0;t<7;t++){c.tier=t;const reg=[],boss=[];for(let w=0;w<2;w++){c.tierWins=w;for(let k=0;k<12;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}}
+   c.tierWins=2;for(let k=0;k<6;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}
+   row.push({t,reg:Math.max(...reg),regMin:Math.min(...reg),boss:boss.length?Math.max(...boss):null});}
+  c.run=false;out.push({lv,row});}return out;});
+ // (f) a save written by v1.75: next opponent already shifted (+8 Rookie/placement 14 style), revenge stored, placement set
+ await p.evaluate(()=>{save.diff={lv:'rookie',darts:600,pts:40000,place:14,placeAvg:74.6};newCareer();const c=career();c.tier=1;c.stage=null;c.next={oppName:'Old Stored',oppAvg:75,legs:3,_d:1};c.v3=c.v3||{};C3.V3().rev={name:'Rev Guy',avg:79,stake:45};persist();});
+ await p.reload();await p.waitForTimeout(4000);
+ const stale=await p.evaluate(()=>{const c=career();save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};const n=c.next;beginMatch({mode:'career',tier:1,p0:'T',oppName:n.oppName,oppAvg:n.oppAvg,legs:1});const got=S.oppAvg;try{S.done=true;}catch(e){}
+  const rv=C3.V3().rev;beginMatch({mode:'career',tier:1,p0:'T',oppName:rv.name,oppAvg:rv.avg,legs:1});const rev=S.oppAvg;try{S.done=true;}catch(e){}
+  save.diff.place=0;const fresh=TOPS_OPP_SHIFT(75-8,1);return {next:got,raw:n.oppRaw,rev,revRaw:rv.avg,fresh,place:save.diff.place};});
  // (d) legacy saves: placement -6, 0, +15 stored before the update, then the page reloads with the new code
  const legacy=[];for(const pl of [-6,0,15]){await p.evaluate(pl=>{save.diff={lv:'comp',darts:300,pts:21000,place:pl,placeAvg:70,placeNew:pl!==0};persist();},pl);await p.reload();await p.waitForTimeout(4000);
   legacy.push(await p.evaluate(()=>{const d=save.diff;save.authSeen=true;$('login').hidden=true;newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;const n=nextOpponent();return {place:d.place,placeNew:d.placeNew,opp:n.oppAvg,raw:n.oppRaw};}));}
  await b.close();
  const fails=[];
+ run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>=r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} below its regulars ${r.reg}`);});});
+ console.log('The Run: '+run.map(({lv,row})=>lv+' '+row.map(r=>r.reg+(r.boss!=null?'/B'+r.boss:'')).join(' > ')).join(' · '));
+ const BND=BANDS[1];if(stale.next>BND[1])fails.push(`stored v1.75 opponent still inflated after update: ${JSON.stringify(stale)}`);if(stale.rev>BND[1])fails.push(`stored v1.75 revenge still inflated: ${JSON.stringify(stale)}`);
+ console.log('stale v1.75 save: '+JSON.stringify(stale));
  if(edge.order.length)fails.push('difficulty order broken: '+edge.order.slice(0,3).join(' | '));
  const [want,...got]=edge.idem;if(got.some(g=>g!==want))fails.push(`opponent shifted more than once: wanted ${want}, got ${got.join(',')}`);
  legacy.forEach((l,i)=>{if(l.place!==0||l.placeNew)fails.push(`legacy save placement ${[-6,0,15][i]} not cleared: ${JSON.stringify(l)}`);});

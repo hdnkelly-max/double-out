@@ -119,8 +119,6 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // v1.77 (#12, rule 11): the 120-dart placement no longer touches opponent strength. Opponents come from tier, opponent and difficulty only.
  const placeEff=()=>0;
  const placeOff=()=>0;
- // save migration: clear any stored placement so nothing reads it as a shift again
- try{const d=save.diff;if(d&&(d.place||d.placeNew)){d.place=0;d.placeNew=false;d.placeCleared=1;persist();}}catch(e){}
  const totalOff=()=>{const d=D();if(!d)return 0;return (LVO[d.lv]!=null?LVO[d.lv]:0)+placeOff();};
  window.topsDiffOffset=totalOff;
  // shift opponent averages in career (not practice, drills or the intro tutorial)
@@ -139,19 +137,26 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   const top=hi+adj,bot=lo+adj-(lv==='comp'?0:16);   // Competitive stays inside the band; easier settings may sit below it, never above
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
+ // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
+ // Undo the old offset (level + placement, read before placement is cleared), then shift once with the new rule. New-code opponents carry oppRaw and _d=2.
+ const migrateSave=()=>{try{const d=save.diff,c=save.career;if(!c&&!d)return;let ch=false;
+  const oldOff=d?(({rookie:-6,club:0,comp:8})[d.lv]||0)+(d.place||0):0;
+  if(c&&c.next&&c.next.oppAvg>0&&c.next.oppRaw==null&&!c.next.intro){const raw=Math.max(20,c.next._d?c.next.oppAvg-oldOff:c.next.oppAvg);c.next.oppRaw=raw;c.next.oppAvg=shift(raw,c.tier);c.next._d=2;ch=true;}
+  const v=c&&c.v3;if(v&&v.rev&&v.rev.avg>0&&!v.rev.raw){if(d)v.rev.avg=Math.max(20,v.rev.avg-oldOff);v.rev.raw=1;ch=true;}
+  if(d&&(d.place||d.placeNew)){d.place=0;d.placeNew=false;d.placeCleared=1;ch=true;}
+  if(ch)persist();}catch(e){console.warn('v11 migrate',e);}};
+ migrateSave();window.TOPS_v11Migrate=migrateSave;
  // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
- const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
+ const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
  const SHIFTED=new WeakSet();
  const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
   else if(opts&&viaNext&&c.next.oppRaw!=null&&opts.oppRaw==null)opts=Object.assign({},opts,{oppRaw:c.next.oppRaw});}catch(e){}
   const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
-   if(false&&d.place==null&&d.darts>=120){ /* v1.77: placement retired (rule 11) */const a=d.pts/d.darts*3;const c=career();const par=c?TIERS[c.tier].avg:45;d.place=Math.max(-6,Math.min(15,Math.round((a-par)*0.6)));d.placeAvg=+a.toFixed(1);d.placeNew=true;try{trackEv('diff_place',{avg:d.placeAvg,place:d.place,lv:d.lv});}catch(e){}}}}catch(e){}return _em.apply(this,arguments);};
+   /* v1.77: 120-dart placement retired (rule 11) */}}catch(e){}return _em.apply(this,arguments);};
  const pick=(done,again)=>{const cur=D()&&D().lv;showMsg({from:'Kev Mercer',lines:[again?'Change how hard it is? It applies from your next match.':'Before you play: how hard do you want it? Rookie is a step below the pub, Club is the field as written, Competitive is for 60+ averages.','Each level up the ladder brings a tougher field. Change this any time from the hub.'],replies:[['Rookie','rookie'],['Club','club'],['Competitive','comp']]},a=>{save.diff=Object.assign(D()||{darts:0,pts:0,place:null},{lv:LV[a]?a:'club'});try{const c=career();if(c)c.next=null;}catch(e){}try{persist();trackEv('diff_pick',{lv:save.diff.lv,again:!!again});}catch(e){}done&&done();});};
  window.topsPickDiff=()=>pick(()=>{try{showHub();}catch(e){}},true);
- const placedMsg=done=>{const d=D();d.placeNew=false;try{const c=career();if(c)c.next=null;}catch(e){}try{persist();}catch(e){}const c=career();const par=c?TIERS[c.tier].avg:45;const up=d.place>0;
-   showMsg({from:'Kev Mercer',lines:[`120 darts in. You're averaging ${d.placeAvg} against a ${par} room.`,placeEff(d.place)===0?'That\'s right where the field is. No change.':up?`So the field gets a touch tougher from tonight (+${placeEff(d.place)}). Each level keeps its own standard, so you'll still feel the step up.`:`So I've eased the field a touch (${placeEff(d.place)}). Get the throw right, then we push.`,`You're on ${(LV[d.lv]||LV.club).n}. Change it any time from the hub.`],replies:[['Sweet','ok']]},done);};
  const _pn=playNext;playNext=function(){const args=arguments,self=this;try{const c=career();if(c&&!c.run&&c.stage!=='intro'){if(!D()){return pick(()=>_pn.apply(self,args));}}}catch(e){}return _pn.apply(self,args);};
  // a small difficulty chip on the career hub, tap to change
  setInterval(()=>{try{const d=D();const h=document.querySelector('#hub:not([hidden]) .hx-head');if(!d||!h||h.querySelector('.v11diff'))return;const b=document.createElement('button');b.type='button';b.className='v11diff';b.textContent=(LV[d.lv]||LV.club).n;b.onclick=e=>{e.stopPropagation();window.topsPickDiff();};const bk=h.querySelector('.bank');h.insertBefore(b,bk||null);}catch(e){}},1500);
