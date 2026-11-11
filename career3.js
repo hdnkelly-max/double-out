@@ -9,7 +9,7 @@ const SH_X=[['#0b3d2e','Racing green'],['#3a1f5c','Purple haze'],['#c9a227','Old
 const TITLES={10:'The Fill-in',20:'Pub Hero',30:'Club Hustler',40:'Stage Ready',50:'Circuit Grinder',60:'Ditch Crosser',70:'Card Holder',80:'Floor Assassin',90:'Palace Bound',100:'Legend of the Oche'};
 function rIco(r){if(!r)return '';
  // flights and shirts show the real thing in the colour you unlocked: the game's own dart render and player render
- try{if(r.k==='flight'&&V.dartShot){const src=V.dartShot(r.v,Object.assign({barrel:barrel()},setupParts()));if(src)return `<span class="ri ri-dart"><img src="${src}" alt=""></span>`;}
+ try{if(r.k==='flight'&&V.dartShot){const src=V.dartShot(r.v,Object.assign({barrel:barrel()},setupParts(),{custom:true}));if(src)return `<span class="ri ri-dart"><img src="${src}" alt=""></span>`;}
   if(r.k==='shirt'&&V.heroShot){const src=V.heroShot(Object.assign({},save.look,{shirt:r.v,shirtTint:true}),save.name||'You',tierOf(),save.flight);if(src&&typeof src==='string')return `<span class="ri ri-hero"><img src="${src}" alt=""></span>`;}}catch(e){}
  const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<span class="ri"><img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}</span>`;}
 function bigIco(r){if(!r)return '';const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}`;}
