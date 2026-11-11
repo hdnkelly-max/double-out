@@ -114,6 +114,7 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
+{const b0=build;build=function(){const r=b0.apply(this,arguments);try{window.TOPS_LOG_PERF&&TOPS_LOG_PERF(r);}catch(e){}return r;};}/* v14 flight recorder keeps a summary of each row */
 window.TOPS_perf={flush(){send([]);},kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>
