@@ -72,7 +72,7 @@ const TRAITS=[
  {id:'bull',n:'Bull Specialist',s:'Bull groups 12% tighter.',feat:'f_bullout',st:'fi',need:40},
  {id:'artist',n:'Checkout Artist',s:'Doubles 8% tighter on finishes of 100 or less.',feat:'f_co100',st:'fi',need:55},
  {id:'steady',n:'Steady Hand',s:'Sway no longer speeds up as your heart rate climbs.',feat:'f_avg60',st:'ct',need:50},
- {id:'metro',n:'Metronome',s:'Each perfect release adds 3 ms to your window, up to +6 ms a visit.',feat:'f_leg15',st:'rh',need:55},
+ {id:'metro',n:'Metronome',s:'Each perfect release widens your window by a quarter, up to half as wide again in a visit.',feat:'f_leg15',st:'rh',need:55},
  {id:'clutch',n:'Clutch',s:'Nerves 50% lower on match darts and in deciding legs.',feat:'f_dec',st:'co',need:50},
  {id:'comeback',n:'Comeback',s:'Trailing in legs: nerves 35% lower, so your heart rate climbs slower.',feat:'f_comeback',st:'co',need:40}];
 window.TOPS_TRAITS=TRAITS;
@@ -82,13 +82,18 @@ try{if(!FEATS.some(f=>f.id==='f_comeback'))FEATS.push({id:'f_comeback',n:'Comeba
 function on(){const c=career();return !!(c&&!c.run&&!(S&&S.mp));}
 window.TOPS_ST2=on;
 function lvNow(){try{const v=C3.V3();return v?v.lv:1;}catch(e){return 1;}}
-function st(){if(!save.st2){const z=()=>({sc:0,fi:0,ct:0,rh:0,co:0});const lv=lvNow();save.st2={v:{sc:20,fi:20,ct:20,rh:20,co:20},nat:z(),form:z(),flame:z(),bank:Math.max(0,lv-1),earned:0,lvSeen:lv,trait:null,respec:0};
+function st(){if(!save.st2){const z=()=>({sc:0,fi:0,ct:0,rh:0,co:0});const lv=lvNow();save.st2={tb:{sc:20,fi:20,ct:20},v:{sc:20,fi:20,ct:20,rh:20,co:20},nat:z(),form:z(),flame:z(),bank:Math.max(0,lv-1),earned:0,lvSeen:lv,trait:null,respec:0};
   // migration: retired perks become cash, attribute XP retires
   try{const c=career();const n=Object.values(save.perks||{}).reduce((a,v)=>a+(typeof v==='number'?v:(v?1:0)),0);if(c&&n){const cash=n*Math.max(10,Math.round(TIERS[c.tier||0].purse*.25));c.bank+=cash;save.st2.migCash=cash;}}catch(e){}
   save.perks={};save.attr={};try{_SK=null;}catch(e){}persist();}
  return save.st2;}
 window.TOPS_st=()=>save.st2;
-function capNow(){const c=career();if(!c)return 85;const t=c.tier||0;if(t<6)return CAPS[t];return (c.seasonN||1)>=2?85:82;}
+// caps +10 (Overseer 00:36, Hayden's delegated OK): a player still at a tier after a season keeps improving. Each extra season at the
+// same tier lifts that chapter's stat cap by 5, up to +10 (the same rule already ran at the Worlds: 82, then 85). Players who promote
+// in their first season never see it, so it doesn't make strong players stronger; it's time at the tier, never anyone's average.
+function capBoost(){const c=career();if(!c)return 0;return 5*Math.max(0,Math.min(2,(c.seasonN||1)-1));}
+function capNow(){const c=career();if(!c)return 85;const t=c.tier||0;if(t<6)return Math.min(85,CAPS[t]+capBoost());return (c.seasonN||1)>=2?85:82;}
+window.TOPS_capNow=capNow;
 function gainAt(v){return Math.max(2,Math.min(6,Math.round((100-v)/9)));}
 // kit points: equipment shown as stat points on top of yours
 function kitPts(){const k={sc:0,fi:0,ct:0,rh:0,co:0};try{const b=barrel();const acc=Math.round((5.6-b.base)/1.8*7);k.sc+=acc;k.fi+=acc;k.rh+=Math.round((b.tol-1)/.15*6);k.ct+=Math.round((1.25-b.sway)/.6*7);
@@ -102,6 +107,36 @@ function barrelPts(b){const acc=Math.round((5.6-b.base)/1.8*7);return {sc:acc,fi
 function ptsTxt(o){const parts=STATS.filter(s=>o[s.id]).map(s=>`<span class="${o[s.id]<0?'neg':''}">${SN(s.id)} ${o[s.id]>0?'+':''}${o[s.id]}</span>`);return parts.length?parts.join(' · '):'No stat change';}
 function eff(id){const s=st();const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(100,s.v[id]+kitPts()[id]+hot));}
 function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}
+// Taper (Overseer 01:40): Control, Scoring and Finishing points earned from v1.85 on move sway and scatter by CAL_W.k of a live point;
+// points already in a save (st2.tb, taken the first time this version sees the save) keep exactly today's effect. Never below 20, so
+// sway and scatter can only shrink as you improve: no save gets harder on update, and nobody is ever slower than a new player.
+function tbOf(){const s=st();if(!s.tb){s.tb={sc:s.v.sc,fi:s.v.fi,ct:s.v.ct};try{persist();}catch(e){}}return s.tb;}
+function LofT(id){const s=st();const b=Math.min(s.v[id],(tbOf()[id]!=null?tbOf()[id]:s.v[id]));const CW=window.TOPS_CAL_W;const k=CW.k!=null?CW.k:1;
+ const v=b+k*Math.max(0,s.v[id]-b);const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(1,(Math.max(0,Math.min(100,v+kitPts()[id]+hot))-20)/75));}
+window.TOPS_LofT=LofT;
+// Touch-rate floor (Overseer 03:50, device fairness): a hold is measured from the press and release events' timestamps, which a touch
+// screen only produces once per sample (8.3 ms at 120 Hz, 16.7 ms at 60 Hz), so a window narrower than half a sample can leave some
+// hold lengths with no perfect at all on that phone.
+// The estimate is device configuration, kept in this browser only (never in the save or the cloud), snapped to a validated tier
+// (240 / 120 / 60 Hz: 0 / 8.3 / 16.7 ms) and capped at 16.7 ms; a match uses the tier it started with. Touch input only.
+// Equal outcomes, not just reachability (ChatGPT 04:0x): on a coarse screen a perfect covers one whole sample of real time, so the wide
+// window is used on a share of throws equal to (window / sample) and the normal window otherwise; that keeps the expected perfect rate
+// the same as on a fine screen while every hold length stays reachable.
+const TCH={d:[],ms:null};try{const v=+localStorage.getItem('tops_touchMs');if(v>0)TCH.ms=v;}catch(e){}
+const tierMs=m=>m==null?null:m<=5.5?0:m<=11?1000/120:1000/60;
+/* Overseer 07:13 (1.97 rolled back for iPhone lag): the estimate is taken once per device, then the listener is gone. It listens only until
+   ~24 touch intervals have been seen (the first second of the first aim drag ever), stores the tier, and removes itself; on later loads
+   with a stored tier it is never attached. Nothing here runs per frame, and nothing runs per touch move once the tier is known. */
+function tchMove(e){if(e.pointerType!=='touch')return;const ev=(e.getCoalescedEvents&&e.getCoalescedEvents())||[];for(let i=1;i<ev.length;i++){const d=ev[i].timeStamp-ev[i-1].timeStamp;if(d>1.5&&d<40)TCH.d.push(d);}
+ if(TCH.lt!=null&&TCH.lp===e.pointerId&&ev.length<=1){const d=e.timeStamp-TCH.lt;if(d>1.5&&d<40)TCH.d.push(d);}TCH.lt=e.timeStamp;TCH.lp=e.pointerId;
+ if(TCH.d.length>=24){const a=TCH.d.slice().sort((x,y)=>x-y);const m=tierMs(a[Math.floor(a.length*.25)]);TCH.ms=m;try{localStorage.setItem('tops_touchMs',String(m));}catch(x){}TCH.d=[];removeEventListener('pointermove',tchMove,{passive:true});TCH.on=false;}}
+if(TCH.ms==null&&!window.TOPS_TCH_OFF){addEventListener('pointermove',tchMove,{passive:true});TCH.on=true;}
+window.TOPS_TCH=TCH;
+function touchFloor(P){let ms=window.TOPS_TOUCH_MS!=null?window.TOPS_TOUCH_MS:(S&&S.touchMs);if(ms==null&&S&&S.pullTouch)ms=TCH.ms!=null?TCH.ms:1000/120;/* no estimate yet (first aim drag gives one in ~0.3 s): assume the common 120 Hz screen rather than none */if(!ms||!(window.TOPS_TOUCH_MS!=null||(S&&S.pullTouch)))return 0;const half=Math.min(1000/60,ms)/2;if(half<=P)return 0;
+ if(S&&S.pullStart!==S.tfAt){S.tfAt=S.pullStart;S.tfWide=window.TOPS_TF_ALWAYS?true:Math.random()<(2*P)/(2*half);}return (S&&S.tfWide)?half:0;}
+{const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.touchMs=TCH.ms;}catch(e){}return r;};}
+{const _sp=startPull;startPull=function(src,ev){try{if(S)S.pullTouch=!!(ev&&ev.pointerType==='touch');}catch(e){}return _sp.apply(this,arguments);};}
+window.TOPS_touch=TCH;
 function ovr(){let o=0;STATS.forEach(s=>o+=s.w*(st().v[s.id]+kitPts()[s.id]));return Math.round(o);}
 function ident(){const v=st().v;const arr=STATS.map(s=>v[s.id]);if(Math.max(...arr)-Math.min(...arr)<8)return 'All-Rounder';const top=STATS.slice().sort((a,b)=>v[b.id]-v[a.id])[0];return top.t;}
 // ---------- points from levels ----------
@@ -149,19 +184,26 @@ function trait(){const s=st();if(!on()||!s.trait||lvNow()<15)return null;const t
 window.TOPS_trait=trait;
 function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)/2);return {need,me,op,dec:op&&me.legs===need-1&&op.legs===need-1,md:me.legs===need-1&&me.score<=170,trail:op&&op.legs>me.legs};}
 // ---------- engine ----------
-const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
+// Timing-window calibration (Hayden 22:28; Overseer 01:40, V4 03:33): the perfect window is the lever. 4 ms at Rhythm 20 (plus a 6 ms soft
+// edge; 4 ms is the smallest window a 120 Hz touch screen can always measure), widening late (e=4) to 15 ms at Rhythm 95. Control/Scoring/
+// Finishing points earned from this version on count k=0.6 of a live point (LofT below); points already in a save keep today's effect.
+// Fitted on testers' real darts (tests/sim-player.js, JOINT=1), incl. Lee's and David's real Club and Regional darts.
+const CAL_W={p0:4,pk:11,e:4,k:.6};window.TOPS_CAL_W=CAL_W;
+const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(S&&!S.mp&&!career()&&!isRun()){try{const CW=window.TOPS_CAL_W;tp.P*=CW.p0/(ttAt(tp.L).P*tolMult()*.85);tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8;{const fl=touchFloor(tp.P);if(fl>tp.P)tp.P=fl;}}catch(e){}return tp;}/* no career save (practice, friendlies): a new career's starter window and perfect release, so the throw is the same everywhere outside The Run and online */
+ if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
- const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
+ const q0=ttAt(tp.L),qc=ttAt(LofT('ct')),qr=ttAt(Lof('rh')),qs=ttAt(LofT(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
- const Lr=Lof('rh');tp.P*=(20+14*Lr)/(q0.P*tolMult()*.85);
+ const Lr=Lof('rh');const CW=window.TOPS_CAL_W;tp.P*=(CW.p0+CW.pk*Math.pow(Lr,CW.e!=null?CW.e:1))/(q0.P*tolMult()*.85); /* perfect window (ms) at Rhythm 20 and its growth to Rhythm 95 (calibration, Hayden 22:28) */
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
  if(tr==='bull'&&tgt.label==='BULL')m*=.88;
  if(tr==='artist'&&tgt.dbl&&me&&me.score<=100)m*=.92;
  if(tr==='steady')tp.w/=(1+.08*nv);
- if(tr==='metro')tp.P+=Math.min(6,3*(S.visPerf||0));
+ if(tr==='metro')tp.P*=1+Math.min(.5,.25*(S.visPerf||0)); /* scales with your window (QA 00:40: a flat +6 ms more than doubled a 3 ms window) */
  tp.s0=Math.max(4.2,qs.s0*m);
+ {const fl=touchFloor(tp.P);if(fl>tp.P)tp.P=fl;}tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8; /* a perfect release lands inside a 5 mm ring, from day one (Hayden 22:28) */
 }catch(e){}return tp;};
 const _ce9=compEff;compEff=function(){if(!on())return _ce9.apply(this,arguments);const c=career();return (eff('co')-20)/7.5+((c&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);};
 const _en9=effNerves;effNerves=function(){const n=_en9.apply(this,arguments);if(!n||!on()||!S||!S.p)return n;try{const t=trait();if(!t)return n;const L=lastLegs();if(t==='clutch'&&(L.dec||L.md))return n*.5;if(t==='comeback'&&L.trail)return n*.65;}catch(e){}return n;};
@@ -184,9 +226,9 @@ function barHTML(id,opt){opt=opt||{};const s=st();const v=s.v[id],k=kitPts()[id]
 function rowHTML(x){const s=st();const k=kitPts()[x.id];const fp=Math.min(100,s.form[x.id]/formSize(x.id)*100);
  return `<div class="st2r"><b>${s.flame[x.id]?'🔥':''}${x.n}</b>${barHTML(x.id)}<span class="num">${s.v[x.id]}${k?`<i class="${k<0?'neg':''}">${k>0?'+':''}${k}</i>`:''}</span><div class="st2fm" title="Form"><i style="width:${fp.toFixed(0)}%"></i></div></div>`;}
 function cardHTML(){const s=st();const cap=Math.min(85,capNow());const lv=lvNow();const t=TRAITS.find(x=>x.id===s.trait);
- return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap} · max 85</span></div></div>
+ return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap}${capBoost()&&cap<85?` (incl. +${capBoost()} season bonus)`:''} · max 85</span></div></div>
  ${STATS.map(rowHTML).join('')}
- <div class="st2key"><span><i style="background:#C6F36B"></i>You</span><span><i style="background:#5f9fe8"></i>Kit</span><span><i style="background:#e2362f"></i>Kit penalty</span><span><i style="background:#ffb13b"></i>Form</span></div>
+ <div class="st2key"><span><i style="background:#C6F36B"></i>You</span><span><i style="background:#5f9fe8"></i>Kit</span><span><i style="background:#e2362f"></i>Kit penalty</span><span><i style="background:#ffb13b"></i>Form</span></div>${(()=>{const t=tbOf();return (t.sc>20||t.fi>20||t.ct>20)?'<p class="help st2tn">New Scoring, Finishing and Control points count a little less toward sway and scatter. The points you had before this update keep their full effect.</p>':'';})()}
  <div class="st2act">${s.bank>0?`<button type="button" class="st2pts" id="st2Spend">${canSpend()?`Spend ${s.bank} point${s.bank>1?'s':''}`:`${s.bank} banked · promote to use`}</button>`:`<button type="button" class="ghost" id="st2How">How stats grow</button>`}<button type="button" class="ghost" id="st2Kit">Change darts</button></div>
  <div class="label">Signature trait</div>${lv<15?`<p class="help">Unlocks at level 15. You're level ${lv}.</p>`:`<button type="button" class="st2t ${t?'on':''}" id="st2Trait"><b>${t?t.n:'Choose a trait'}</b><em>${t?'Equipped':'Tap'}</em><small>${t?t.s:'Earn traits by doing a feat and reaching its stat.'}</small></button>`}
  <button type="button" class="ghost" id="st2Respec" style="min-height:40px">${s.respec?`Respec · ${money(respecCost())}`:'Respec · first one free'}</button></div>`;}
