@@ -192,5 +192,16 @@ function onReward(){const el=$('c3rw');if(!el||el.hidden)return;const card=el.qu
 window.TOPS_v12Reward=onReward;
 // career3 calls TOPS_REWARD(el) right after the reward overlay opens (no page-wide observer: older iPhones already struggle)
 {const prev=window.TOPS_REWARD;window.TOPS_REWARD=function(el){try{if(prev)prev(el);}catch(e){}try{onReward();}catch(e){console.warn('v12 reward',e);}};}
+// Rule 22 render review (ChatGPT 6.4): Store barrel rows show the whole dart level in a full-width strip above the text (fitted to the
+// dart, never cropped), and the weight moves to a chip by the name, off the dart.
+function stripRows(){const L=$('shopList');if(!L||showShop.tab!=='barrel')return;L.querySelectorAll('.opt.bopt').forEach(el=>{if(el.classList.contains('strip')||!el.querySelector('.n .bimg'))return;
+  el.classList.add('strip');const em=el.querySelector('.n em');if(em)em.remove();/* the weight is already in the name */});}
+const _ssS=showShop;showShop=function(){const r=_ssS.apply(this,arguments);try{stripRows();}catch(e){console.warn('v12 strip',e);}return r;};
+{const st=document.createElement('style');st.textContent=`
+#hub #shopList .opt.bopt.strip{grid-template-columns:1fr!important;row-gap:4px!important}
+#hub #shopList .opt.bopt.strip>.n{grid-column:1/-1!important;display:block!important;width:auto!important;height:64px;margin:-2px -4px 2px!important;border-radius:8px;background:radial-gradient(ellipse 70% 90% at 50% 55%,rgba(237,236,229,.07),transparent 70%)}
+#hub #shopList .opt.bopt.strip>.n .bimg{display:block;width:100%!important;height:64px!important;margin:0!important;object-fit:contain;transform:none!important}
+#hub #shopList .opt.bopt.strip .price{grid-column:1!important}
+#hub #shopList .opt.bopt.strip>span:not(.n):not(.price){grid-column:1!important}`;document.head.appendChild(st);}
 })();
 </script>
