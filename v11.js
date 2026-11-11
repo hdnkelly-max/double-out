@@ -87,10 +87,8 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  window.TOPS_scoreNum=scoreNum;
  const mine=p=>p&&!p.ai&&(!S.online||p.key===NET.myId);
  const _vc=visitCall;visitCall=function(gained,h,who){const r=_vc.apply(this,arguments);safe(()=>{
-   if(!S||S.done||S.bull)return;const me=S.p[who==null?S.cur:who];if(!me||gained>=180)return;
-   // opponents' visits too (Overseer 22:53, option b): same bands, their first name as the small label; no finish line
-   if(!mine(me)){if((S.visit||[]).some(v=>v.bust))return;let nm=String(me.disp||me.name||'Opponent');if(nm.length>14){const c=nm.lastIndexOf(' ',14);nm=(c>5?nm.slice(0,c):nm.slice(0,13))+'…';}scoreNum(gained,gained>=100?'gold':gained>=60?'silver':'white','',false,nm);scOpp=true;return;}
-   S.v11=S.v11||{ton:false,tre:false};const labs=(S.visit||[]).map(v=>v.label||'');const bust=(S.visit||[]).some(v=>v.bust);if(bust)return;
+   if(!S||S.done||S.bull)return;const me=S.p[who==null?S.cur:who];if(!mine(me)||gained>=180)return;
+      S.v11=S.v11||{ton:false,tre:false};const labs=(S.visit||[]).map(v=>v.label||'');const bust=(S.visit||[]).some(v=>v.bust);if(bust)return;
    const prev=save.pbVisit||0;const seasoned=(save.matches||0)>=3;
    if(!S.practice)save.pbVisit=Math.max(prev,gained);
    let left='';try{if(me.score>1&&me.score<=170&&route(me.score,3)&&S.visitStart>170)left=`${me.score} left · on a finish`;}catch(e){}
@@ -103,6 +101,13 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
    // the game's own #callout also flashes this number; today the 3D scene covers it (elementFromPoint = scene at 390 px and desktop), clear it so a layering change can never show it twice
    try{const c=document.getElementById('callout');if(c&&/^\d+$/.test((c.textContent||'').trim()))c.className='callout';}catch(e){}
  })();return r;};
+ // opponents' visits (Overseer 22:53, option b): same bands, their name as the small label, no finish line.
+ // land() calls visitReceipt() once per finished visit for every player (AI, remote darts replayed online, a pairs mate);
+ // a new S.lastRec means a visit just ended. Your own visits keep coming through visitCall above.
+ if(typeof visitReceipt==='function'){const _vr=visitReceipt;visitReceipt=function(tc){const before=S&&S.lastRec;const r=_vr.apply(this,arguments);safe(()=>{
+   const rec=S&&S.lastRec;if(!rec||rec===before||!S||S.bull)return;const me=S.p[tc];if(!me||mine(me))return;if(rec.bust||rec.won||rec.tot>=180)return;
+   let nm=String(me.disp||me.name||rec.who||'Opponent');if(nm.length>14){const c=nm.lastIndexOf(' ',14);nm=(c>5?nm.slice(0,c):nm.slice(0,13))+'…';}
+   const g=rec.tot;scoreNum(g,g>=100?'gold':g>=60?'silver':'white','',false,nm);scOpp=true;})();return r;};}
  const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.v11={ton:false,tre:false};}catch(e){}return r;};
 
  // ---- 2. post-match breakdown for every mode ----
