@@ -25,36 +25,32 @@ function post(t0,t1,counting){const pc=M.cpu;M.cpu=t1-t0;bump(M.rh,M.cpu);if(M.p
  if(M.pend){const lat=t1-M.pend;M.pend=0;if(lat<0)M.iNeg++;else{bump(M.ih,lat);M.iN++;M.lat=lat;if(lat>50)M.i50++;}}
  if(!M.sent30&&!M.want30&&M.vis>=(window.TOPS_PERF_30||30000)){M.want30=true;M.want30At=M.vis;}}
 if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf=V.frame;V.frame=function(now,st){
- if(!M||M.done||document.hidden)return vf.apply(this,arguments);
- const counting=pre(now);const t0=performance.now();try{return vf.apply(this,arguments);}finally{post(t0,performance.now(),counting);}};}
+ let on=false,counting=false,t0=0;try{on=!!(M&&!M.done&&!document.hidden);if(on){counting=pre(now);t0=performance.now();}}catch(e){on=false;}
+ const r=vf.apply(this,arguments);/* the game's frame always runs, outside any telemetry try */
+ if(on){try{post(t0,performance.now(),counting);}catch(e){}}return r;};}/* QA 08:23: a telemetry error can't stop or skip a frame */
 // cost bench for tests: the per-frame bookkeeping alone (pre + post), n calls in chunks of 100, per-call microseconds
 function bench(n){const keep=M;M=newM();const out=[];let t=1000;for(let c=0;c<n/100;c++){const a=performance.now();for(let i=0;i<100;i++){t+=16.7;const k=pre(t);post(t,t+3,k);}out.push((performance.now()-a)*10);}out.sort((x,y)=>x-y);const per=[],emp=[];for(let i=0;i<2000;i++){t+=16.7;let a=performance.now();emp.push(performance.now()-a);a=performance.now();const k=pre(t);post(t,t+3,k);per.push(performance.now()-a);}M=keep;per.sort((x,y)=>x-y);emp.sort((x,y)=>x-y);const e95=emp[Math.floor(emp.length*.95)]*1000;
  return {p50:+out[out.length>>1].toFixed(2),p95:+out[Math.floor(out.length*.95)].toFixed(2),max:+out[out.length-1].toFixed(2),call_p95:+Math.max(0,per[Math.floor(per.length*.95)]*1000-e95).toFixed(1),call_max:+(per[per.length-1]*1000).toFixed(1)};}
 function incident(d,now,prevCpu){const it={s:Math.round((now-M.t0)/1000),ph:phase(),f:Math.round(d),cpu:+M.cpu.toFixed(1),cpu_prev:+(prevCpu||0).toFixed(1),lat:Math.round(M.lat),au:M.auLast?Math.max(0,Math.round(now-M.auLast)):null};
  if(M.inc.length<10){M.inc.push(it);return;}let lo=0;for(let i=1;i<10;i++)if(M.inc[i].f<M.inc[lo].f)lo=i;if(it.f>M.inc[lo].f)M.inc[lo]=it;}
 // reticle: newest unrendered aim input (numbers only); latency recorded after the next frame's render submit
-addEventListener('pointermove',e=>{if(M&&!M.done&&e.target&&e.target.tagName==='CANVAS')M.pend=e.timeStamp;},{passive:true});/* newest unrendered aim move on the game canvas; latency = render submitted - that input */
-// live texture memory estimate (uploads after this script loads; renderer.info has the full counts): level-0 uploads x 4 bytes/pixel per texture (cube maps sum their faces), freed on deleteTexture
-let texBytes=0;const TEXB=new WeakMap();
-try{for(const C of [window.WebGLRenderingContext,window.WebGL2RenderingContext]){if(!C)continue;const P=C.prototype;
- const dims=a=>{if(typeof a[3]==='number'&&typeof a[4]==='number'&&a.length>=8)return [a[3],a[4]];const src=a[a.length-1];if(!src)return null;const w=src.videoWidth||src.naturalWidth||src.width,h=src.videoHeight||src.naturalHeight||src.height;return w&&h?[w,h]:null;};
- const note=function(gl,target,level,d,faceKey){if(level!==0||!d)return;const cube=target!==gl.TEXTURE_2D;const t=gl.getParameter(cube?gl.TEXTURE_BINDING_CUBE_MAP:gl.TEXTURE_BINDING_2D);if(!t)return;
-  let e=TEXB.get(t);if(!e){e={};TEXB.set(t,e);}const k=cube?String(target):'2d';const nb=d[0]*d[1]*4;texBytes+=nb-(e[k]||0);e[k]=nb;};
- for(const fn of ['texImage2D','compressedTexImage2D']){const o=P[fn];if(!o||o.__tp)continue;const w=function(){try{note(this,arguments[0],arguments[1],dims(arguments));}catch(e){}return o.apply(this,arguments);};w.__tp=true;P[fn]=w;}
- if(P.texStorage2D&&!P.texStorage2D.__tp){const o=P.texStorage2D;const w=function(target,levels,fmt,wd,ht){try{note(this,target===this.TEXTURE_CUBE_MAP?this.TEXTURE_CUBE_MAP_POSITIVE_X:target,0,[wd*(target===this.TEXTURE_CUBE_MAP?6:1),ht]);}catch(e){}return o.apply(this,arguments);};w.__tp=true;P.texStorage2D=w;}
- const od=P.deleteTexture;if(od&&!od.__tp){const w=function(t){try{const e=t&&TEXB.get(t);if(e){for(const k in e)texBytes-=e[k];TEXB.delete(t);}}catch(x){}return od.apply(this,arguments);};w.__tp=true;P.deleteTexture=w;}}}catch(e){}
-function mem(){const o={geo:null,tex:null,prog:null,tex_mb:+(texBytes/1048576).toFixed(1),heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1048576).toFixed(1):null};
+addEventListener('pointermove',e=>{try{if(M&&!M.done&&e.target&&e.target.tagName==='CANVAS')M.pend=e.timeStamp;}catch(x){}},{passive:true});/* newest unrendered aim move on the game canvas; latency = render submitted - that input */
+// (QA 08:23) no texture-upload patching: tex_mb is not estimated; renderer.info's geometry/texture/program counts are the memory signal
+function mem(){const o={geo:null,tex:null,prog:null,tex_mb:null,heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1048576).toFixed(1):null};
  try{const r=window.TOPS_R;if(r&&r.info){o.geo=r.info.memory.geometries;o.tex=r.info.memory.textures;o.prog=r.info.programs?r.info.programs.length:null;}}catch(e){}return o;}
 let MATCH_IX=0;
 // every funnel event carries the version (the gap found 07:10: match_exit rows had no version)
-if(typeof trackEv==='function'){const te=trackEv;trackEv=function(){const L0=(save.funnel||[]).length;const r=te.apply(this,arguments);try{const L=save.funnel;if(L&&L.length>L0)L[L.length-1].v=VER();}catch(e){}return r;};}
+if(typeof trackEv==='function'){const te=trackEv;trackEv=function(){let L0=-1;try{L0=(save.funnel||[]).length;}catch(e){}const r=te.apply(this,arguments);try{const L=save.funnel;if(L0>=0&&L&&L.length>L0)L[L.length-1].v=VER();}catch(e){}return r;};}
 // long tasks where supported (not iOS Safari)
 try{if(window.PerformanceObserver&&(PerformanceObserver.supportedEntryTypes||[]).includes('longtask')){ltObs=new PerformanceObserver(l=>{if(!M||M.done)return;for(const e of l.getEntries()){M.ltN++;M.ltMs+=e.duration;}});ltObs.observe({type:'longtask',buffered:false});}}catch(e){}
 // timer drift (main-thread stall proxy for iOS) + the safe-moment check for the 30 s upload; one 250 ms timer, idle when no match or hidden
 let exp=0,tickN=0;setInterval(()=>{const t=performance.now();if(!M||M.done||document.hidden){exp=0;return;}if(exp){const d=t-exp;if(d>M.drift)M.drift=d;if(d>100)M.driftN++;}exp=t+250;
- if(++tickN%40===0&&!(S&&S.pulling)&&typeof NET!=='undefined'&&NET.user&&NET.sb){if(!KA)prepKA();if(qGet().length)idle(()=>send([]));}
- if(M.want30&&!M.sent30&&(safe()||(M.vis-M.want30At>10000&&!(S&&S.pulling)))){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}watchAudio();},250);
-function safe(){try{return S&&!S.pulling&&!S.busy&&!S.bull;}catch(e){return false;}}/* preferred; after 10 s of play waiting, any moment the player isn't pulling */
+ watchAudio();},250);
+// QA 08:23: nothing is built or sent during aiming or a dart's flight. Flush points: a leg ending (the scoreboard between legs), the
+// match ending or being left, and the hub (a 15 s timer that only acts when no match is running).
+function legBreak(){try{if(!M||M.done)return;if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length)idle(()=>send([]));}catch(e){}}
+if(typeof endLeg==='function'){const el=endLeg;endLeg=function(){const r=el.apply(this,arguments);try{if(M&&!M.done)setTimeout(legBreak,600);/* after the leg's own scoring work */}catch(e){}return r;};}
+setInterval(()=>{try{if((M&&!M.done)||document.hidden)return;if(typeof NET!=='undefined'&&NET.user&&NET.sb){if(!KA)prepKA();if(qGet().length)idle(()=>send([]));}}catch(e){}},15000);
 const idle=f=>{try{if(window.requestIdleCallback)return requestIdleCallback(f,{timeout:3000});}catch(e){}setTimeout(f,1500);};
 // audio: the game's AudioContext state changes (incl. iOS 'interrupted') and playbackStats underruns where the browser has them
 function watchAudio(){try{const c=(typeof AU!=='undefined')&&AU&&AU.ctx;if(!c||c===auCtx)return;auCtx=c;let prev=c.state;c.addEventListener('statechange',()=>{const was=prev;prev=c.state;if(!M||M.done)return;M.auLast=performance.now();if(was==='running'&&c.state!=='running'&&!document.hidden)M.auN++;/* leaving 'running' mid-match while visible is the unexpected case */if(M.auStates.length<12)M.auStates.push(c.state+'@'+Math.round((M.auLast-M.t0)/1000));});}catch(e){}}
@@ -83,6 +79,7 @@ function qGet(){try{return JSON.parse(localStorage.getItem(Q_KEY)||'[]');}catch(
 function qSet(a){const drop=Math.max(0,a.length-Q_MAX);try{if(drop)localStorage.setItem(DROP_KEY,String((+localStorage.getItem(DROP_KEY)||0)+drop));localStorage.setItem(Q_KEY,JSON.stringify(a.slice(-Q_MAX)));return true;}catch(e){return false;}}
 function ckSet(row){try{if(row)localStorage.setItem(CK_KEY,JSON.stringify(row));else localStorage.removeItem(CK_KEY);}catch(e){}}
 function ckGet(){try{return JSON.parse(localStorage.getItem(CK_KEY)||'null');}catch(e){return null;}}
+function ckSave(row){try{const q=qGet();q.push(row);qSet(q);}catch(e){}}/* queue only; sent at the next flush point */
 function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
  if(typeof NET==='undefined'||!NET.user||!NET.sb){qSet(all);return;}
  qSet(all);try{NET.sb.from('tops_perf').upsert(all,{onConflict:'sample_id',ignoreDuplicates:true}).then(({error})=>{if(error){console.warn('tops_perf',error.message);return;}const ids=new Set(all.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}).catch(()=>{});}catch(e){}}
@@ -90,12 +87,12 @@ function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
 let KA=null;function prepKA(){try{if(typeof NET==='undefined'||!NET.sb||!NET.user)return;const u=NET.sb.supabaseUrl||(NET.sb.rest&&NET.sb.rest.url&&NET.sb.rest.url.replace(/\/rest\/v1$/,''));const k=NET.sb.supabaseKey;NET.sb.auth.getSession().then(({data})=>{const t=data&&data.session&&data.session.access_token;if(u&&k&&t)KA={u,k,t};}).catch(()=>{});}catch(e){}}
 function keepalive(rows){try{if(!KA||!rows.length)return false;fetch(KA.u+'/rest/v1/tops_perf?on_conflict=sample_id',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(rows)}).catch(()=>{});return true;}catch(e){return false;}}
 // --- lifecycle ---
-function finish(status){if(!M||M.done)return null;M.done=true;ckSet(null);if(M.fn<30&&M.vis<5000){M=null;return null;}/* too short to say anything (an instant quit) */const row=build('end',status);M=null;return row;}
-const _bm=beginMatch;beginMatch=function(){const prev=finish('interrupted');const r=_bm.apply(this,arguments);try{M=newM();prepKA();watchAudio();if(prev)idle(()=>send([prev]));}catch(e){}return r;};
-const _em=endMatch;endMatch=function(){const r=_em.apply(this,arguments);try{const row=finish('complete');if(row)idle(()=>send([row]));}catch(e){}return r;};
+function finish(status){if(!M||M.done)return null;M.done=true;ckSet(null);if(M.vis<5000){M=null;return null;}/* QA 08:23: under 5 s of play (an instant quit) sends nothing */const row=build('end',status);M=null;return row;}
+const _bm=beginMatch;beginMatch=function(){let prev=null;try{prev=finish('interrupted');}catch(e){M=null;}const r=_bm.apply(this,arguments);try{M=newM();prepKA();watchAudio();if(prev)ckSave(prev);/* the previous match's row is queued, sent at the next flush point */}catch(e){M=null;}return r;};
+const _em=endMatch;endMatch=function(){let row=null;try{row=finish('complete');}catch(e){M=null;}const r=_em.apply(this,arguments);try{if(row)idle(()=>send([row]));/* the match is over: off the throw path */}catch(e){}return r;};
 {const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>{try{const row=finish('quit');if(row)idle(()=>send([row]));}catch(e){}},true);}
 // hidden is a pause, not an exit: close the segment, store a checkpoint locally (no network); visible resumes the same match
-document.addEventListener('visibilitychange',()=>{if(!M||M.done)return;if(document.hidden){M.hid++;try{const ck=build('end','interrupted');ck.sample_id='ck-'+M.id;ckSet(ck);}catch(e){}}else{M.skip=true;M.last=0;exp=0;}});/* the recovery checkpoint is never uploaded while its match can still finish */
+document.addEventListener('visibilitychange',()=>{try{if(!M||M.done)return;if(document.hidden){M.hid++;try{const ck=build('end','interrupted');ck.sample_id='ck-'+M.id;ckSet(ck);}catch(e){}}else{M.skip=true;M.last=0;exp=0;}}catch(e){}});/* the recovery checkpoint is never uploaded while its match can still finish */
 addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears this match's checkpoint; with no match open, an older one is left for the next load */const q=qGet();if(row)q.push(row);qSet(q);keepalive(q);}catch(e){}});
 // flush anything queued once signed in (after load, off the hot path)
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
