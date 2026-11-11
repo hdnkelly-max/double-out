@@ -153,7 +153,7 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
- const Lr=Lof('rh');tp.P*=(20+14*Lr)/(q0.P*tolMult()*.85);
+ const Lr=Lof('rh');tp.P*=(12+8*Lr)/(q0.P*tolMult()*.85); // B4 (11 Nov): was 20+14*Lr; testers hit perfect on 30-51% of pub darts, target 15-25%
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -203,7 +203,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh')return `Perfect window ${Math.round(20+14*L(v0))} → ${Math.round(20+14*L(v1))} ms`;
+ if(id==='rh')return `Perfect window ${Math.round(12+8*L(v0))} → ${Math.round(12+8*L(v1))} ms`;
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';

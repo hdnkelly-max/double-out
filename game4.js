@@ -2,7 +2,7 @@
 ENGINE
 // ===== DATA =====
 const TIERS=[
- {n:'Pub league',s:'Thursday night at the local',venue:'The Kauri Arms',avg:52,purse:40,fee:0,need:3,legs:3,gap:2000,crowd:.18,caller:'pub',press:0},
+ {n:'Pub league',s:'Thursday night at the local',venue:'The Kauri Arms',avg:54,purse:40,fee:0,need:3,legs:3,gap:2000,crowd:.18,caller:'pub',press:0},
  {n:'Club singles',s:'RSA club championship',venue:'The RSA',avg:65,purse:150,fee:20,need:3,legs:3,gap:2000,crowd:.3,caller:'club',press:.3},
  {n:'Regional rep',s:'Regional super league',venue:'Regional Super League',avg:75,purse:600,fee:40,need:4,legs:5,gap:2200,crowd:.45,caller:'club',press:.6},
  {n:'DPNZ ProTour',s:'National circuit, all over the country',venue:'DPNZ ProTour',avg:85,purse:2500,fee:60,need:4,legs:5,gap:2200,crowd:.55,caller:'pro',press:.9},
