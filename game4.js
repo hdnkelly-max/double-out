@@ -1064,7 +1064,7 @@ const V=(function(){try{return (()=>{
   {const lm=new T.MeshBasicMaterial({color:0xe8eef8,toneMapped:false});for(let i=0;i<3;i++)for(let j=0;j<2;j++){const lp=new T.Mesh(new T.PlaneGeometry(.9,.35),lm);lp.rotation.x=Math.PI/2;lp.position.set(2.2+i*1.9,3.38,1.6+j*2.6);venue.add(lp);}}
   {const cf=new T.PointLight(0xc5d9e8,.28,6);cf.position.set(-1,2.2,OCHE_Z+.8);venue.add(cf);}
   try{new T.TextureLoader().load('assets/venue/plate_5.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x0a1d3a);});}catch(e){}}
- function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=null;
+ function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:(window.TOPS_PLATE6?{6:'plate_6.webp'}:{})[t];
   const big=t>=4,X=big?3.4:3.1,Z0=OCHE_Z;const NAMES={2:['AUCKLAND','REGIONAL OPEN'],3:['DPNZ','NATIONAL SERIES'],4:['TRANS-TASMAN','DARTS CUP'],5:['PDC','PRO TOUR'],6:['WORLD','CHAMPIONSHIP']};const N=NAMES[t]||NAMES[4];
   const ACC={2:'#2fa046',3:'#e8382c',4:'#ffb000',5:'#2c8cff',6:'#D7B45C'}[t]||'#C6F36B';
   // LED event wall (canvas, gently animated on the big stages)
@@ -1139,7 +1139,7 @@ const V=(function(){try{return (()=>{
   if(t===6){ // World Champs: overhead gold lighting ring + haze
    const ring=new T.Mesh(new T.TorusGeometry(2.4,.07,8,48),new T.MeshStandardMaterial({color:0x8a7440,metalness:.85,roughness:.3}));ring.rotation.x=Math.PI/2;ring.position.set(X+2.6,4.6,Z0+.4);G.add(ring);
    const lampM=new T.MeshBasicMaterial({color:0xffe6a8,toneMapped:false});for(let i=0;i<16;i++){const a=i/16*Math.PI*2;const lp=new T.Mesh(new T.SphereGeometry(.07,8,6),lampM);lp.position.set(X+2.6+Math.cos(a)*2.4,4.5,Z0+.4+Math.sin(a)*2.4);G.add(lp);}
-   glow(6,1.6,ACC,.16,X+2.4,4.4,Z0+.4);glow(9,2.4,0xffe6b0,.07,X+5,1.8,Z0+.4);}
+   if(!PLATE){glow(6,1.6,ACC,.16,X+2.4,4.4,Z0+.4);glow(9,2.4,0xffe6b0,.07,X+5,1.8,Z0+.4);}}
   // floor edge glow strip under the LED
   const strip=new T.Mesh(new T.BoxGeometry(.04,.04,ledW),new T.MeshBasicMaterial({color:new T.Color(ACC),toneMapped:false}));strip.position.set(led.position.x-.06,led.position.y-ledH/2-.08,led.position.z);G.add(strip);if(PLATE)strip.visible=false;
   const fill=new T.PointLight(new T.Color(ACC),big?1.1:.6,7);fill.position.set(X-.2,2.2,Z0+.4);G.add(fill);sideLed=led;}
@@ -1346,7 +1346,7 @@ const V=(function(){try{return (()=>{
   fpArm.visible=!fpFig&&!cine&&!previewOn&&!idleOn&&((camK<.5&&!state.p[state.cur].ai&&wk>=1)||state.done);
   if(fpArm.visible){let p=state.pulling?state.pull:0,tk=0;if(state.anim&&state.anim.kind==='throw'){tk=Math.min(1,(now-state.anim.t0)/state.anim.dur);}if(state.anim&&state.anim.kind==='pump'){const k=Math.min(1,(now-state.anim.t0)/state.anim.dur);poseArm(0,0,k);}else poseArm(p,tk);fpDart.visible=!(state.anim&&state.anim.kind==='throw'&&tk>.6)&&!state.flyingOwn;}
   // opponent
-  if(opp){const u=opp.userData;const waitOK=window.TOPS_WAIT!==false&&!state.online&&!previewOn&&!idleOn&&!cine&&!state.done&&!state.bull&&!(state.p[state.cur].ai||state.mateTurn)&&u.rigged&&u.ck&&u.ck!=='remy';
+  if(opp){const u=opp.userData;const waitOK=window.TOPS_WAIT===true&&!state.online&&!previewOn&&!idleOn&&!cine&&!state.done&&!state.bull&&!(state.p[state.cur].ai||state.mateTurn)&&u.rigged&&u.ck&&u.ck!=='remy';
    // LOOK v1.43: the opponent waits behind the oche on your visit, sipping, shifting, looking about (Mixamo clips), then walks back into the throw pose
    if(waitOK){opp.visible=true;if(!u.waiting){u.waiting=true;u.wT=t;try{playClip(opp,['drink','idle','breathe','look','drink'][Math.floor(Math.random()*5)],{t:Math.random()*3});}catch(e){}}
     const dtw=Math.min(.1,Math.max(0,t-(u.wT||t)));u.wT=t;if(u.mixer)u.mixer.update(dtw);{const wp=window.TOPS_WAITPOS||[1.8,.05];opp.position.set(wp[0],0,OCHE_Z+wp[1]);}opp.rotation.set(0,window.TOPS_WAITRY!=null?TOPS_WAITRY:Math.PI*.82,0);if(O.dt)O.dt.visible=false;}
