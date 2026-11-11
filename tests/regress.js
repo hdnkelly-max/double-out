@@ -9,7 +9,7 @@ const one=async(m)=>{
   const p=await b.newPage({viewport:{width:390,height:844}});
   const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.addInitScript(()=>{const st=window.setTimeout;window.setTimeout=(f,ms,...a)=>st(f,Math.max(0,(ms||0)*0.06),...a);});
-  await p.goto('file://'+require('path').resolve(__dirname,'../index.html'));await p.waitForTimeout(3500);
+  await p.goto('file://'+require('path').resolve(__dirname,'../index.html'),{waitUntil:'domcontentloaded',timeout:180000});await p.waitForTimeout(3500);
   const setup=await p.evaluate((m)=>{try{save.authSeen=true;$('login').hidden=true;newCareer();const n=nextOpponent();V.walkOn=()=>{};
    const tier=m%3,start=301;
    beginMatch({mode:'career',tier,p0:'Test',oppKey:n.oppKey,oppName:n.oppName,oppAvg:[42,55,70][tier],legs:1,start});
