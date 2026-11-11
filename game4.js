@@ -1925,7 +1925,7 @@ function renderPractice(){const host=$('hxPractice');if(!host)return;const c=car
  host.querySelectorAll('[data-list]').forEach(b=>b.onclick=()=>{PR.view=null;renderPractice();});
  host.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>{PR.view=null;showHub('play');});}
 function renderReceipt(c,posBefore,wasMoney){const host=$('resReceipt');if(!host)return;const show=ui.mode==='career'&&c&&!c.run&&!S.practice;host.hidden=!show;if(!show)return;
- const g=S.gains||{};const ups=S.lvUps||[];const skill=ATTRS.filter(a=>g[a.id]).map(a=>`+${g[a.id]} ${a.n}`).join(' · ')||'No XP this match';const upTxt=ups.length?ups.map(u=>`${ATTRS.find(a=>a.id===u.id).n} to ${u.lv}`).join(' · '):'';
+ const g=S.gains||{};const ups=S.lvUps||[];const skill=ATTRS.filter(a=>g[a.id]).map(a=>`+${g[a.id]} ${a.n}`).join(' · ')||'No skill XP this match';const upTxt=ups.length?ups.map(u=>`${ATTRS.find(a=>a.id===u.id).n} to ${u.lv}`).join(' · '):'';
  const tr=(!S.local&&!wasMoney&&c._lastTravel)||0;const earned=S.earned||0;const net=earned-tr;
  const moneyTxt=tr?`${money(earned)} earned − ${money(tr)} travel = <em class="${net<0?'dn':''}">${money(net)}</em>`:`${money(earned)} earned`;
  let standTxt='',standSub='';const sn=c.season;if(posBefore&&sn&&!sn.ko&&!S.local&&!wasMoney){const after=sn.done&&sn.pos?sn.pos:youPos(sn);const you=sn.table.find(r=>r.you);standTxt=`${ord(posBefore)} → <em class="${after<posBefore?'up':after>posBefore?'dn':''}">${ord(after)}</em>`;standSub=`${sn.done?'Season over':'Week '+Math.min(sn.week,sn.len)+' of '+sn.len} · ${you?you.pts+' pts':''}`;}

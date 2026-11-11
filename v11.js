@@ -206,7 +206,18 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 /* v1.66 result details polish (ChatGPT round 3 prep): objective chips were squeezed into a narrow column, next-fixture text unreadable on lime */
 #resObj{grid-column:1/-1!important;width:100%!important;max-width:none!important}
 #resObjChips{display:flex!important;flex-direction:column!important;gap:6px!important}
-#resObjChips .chip{display:block!important;width:100%!important;white-space:normal!important;word-break:normal!important;font:600 13px/1.35 Manrope,system-ui,sans-serif!important;padding:8px 10px!important;text-align:left!important}
+#resObjChips .chip{display:block!important;height:auto!important;min-height:0!important;margin:0!important;width:100%!important;white-space:normal!important;word-break:normal!important;font:600 13px/1.35 Manrope,system-ui,sans-serif!important;padding:8px 10px!important;text-align:left!important}
 #btnResultNext:not(.v11rem),#btnResAction{color:#10191A!important}
 #btnResultNext:not(.v11rem) small,#btnResAction small{color:#24331f!important;opacity:.85}
+</style>
+<style>
+/* v1.67 ChatGPT round 3 (match flow 7.7/10): result first on the details screen, pinned Next fixture, clear XP names */
+@media (max-width:700px){
+ #result .rx-left{display:flex!important;flex-direction:column}
+ #result .rx-left>*{order:3}
+ #result .rx-left>#resTitle{order:0}
+ #result .rx-left>#resSub{order:1}
+ #result .rx-left>.res-score{order:2;margin:8px 0 14px!important}
+ #btnResAction{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:0 -8px 24px rgba(16,25,26,.9)}
+}
 </style>

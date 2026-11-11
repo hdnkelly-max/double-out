@@ -90,7 +90,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   <div class="c3rw-top"><b class="c3rw-res" id="c3rwRes">${res}</b><span class="c3rw-sc">${sc}</span></div>
   ${(()=>{const me=S&&S.p[0];if(!me||!me.darts)return '';const avg=(me.pts/me.darts*3).toFixed(1);const co=me.coAtt?Math.round(me.coHit/me.coAtt*100)+'%':'–';const t=[['Average',avg],[me.t180>1?'180s':'Best visit',me.t180>1?me.t180:(me.bestVisit||'–')],[me.hf?'High out':'Checkout',me.hf?me.hf:co]];return `<div class="c3rw-stats">${t.map(([k,v])=>`<div><b>${v}</b><small>${k}</small></div>`).join('')}</div>`;})()}
   <div class="c3rw-cash${P.cash>0?'':' none'}"><b class="c3-cash" id="c3rwCash">+$0</b><small>${P.cash>0?(P.m.won?'prize & bonuses':'appearance & bonuses'):'no prize this time'}</small></div>
-  <div class="c3rw-xp"><b id="c3rwXp">+0 XP</b><div class="c3-lvrow"><span class="c3-lvn" id="c3rwLv">Lv ${P.before.lv}</span><div class="c3-bar"><i id="c3rwBar" style="width:${pct0}%"></i></div><span class="c3-lvn dim" id="c3rwLv2">${P.before.lv+1}</span></div>
+  <div class="c3rw-xp"><b id="c3rwXp">+0 career XP</b><div class="c3-lvrow"><span class="c3-lvn" id="c3rwLv">Lv ${P.before.lv}</span><div class="c3-bar"><i id="c3rwBar" style="width:${pct0}%"></i></div><span class="c3-lvn dim" id="c3rwLv2">${P.before.lv+1}</span></div>
    <p class="c3rw-src">${top.map(([n,x])=>`${n} <b>+${x}</b>`).join(' · ')}${rest>0?` · +${rest} more`:''}</p></div>
   ${hero?'':'<!--nohero-->'}<div class="c3rw-unl" id="c3rwUnl" hidden>${hero?`<small>Level ${hero.lv} unlocked</small><b>${hero.n}</b>${P.ups.length>1?`<span>Plus ${P.ups.length-1} more · see Player</span>`:''}${rIco(hero)}`:''}</div>
   ${achs.map(a=>`<div class="c3rw-ach t-${a.t}"><i>${achIco(a)}</i><div><small>Achievement \u00b7 ${(ACHR[a.t]||ACHR.R).lab}</small><b>${a.n}</b><span>${a.d}</span></div><em>+${a._xp} XP<br>+${money(a._cash)}</em></div>`).join('')}
@@ -104,13 +104,13 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
  sfxC('thud');
  at(180,()=>{$('c3rwRes').classList.add('in');buzz(12);});
  at(420,()=>{countUp(cashN,0,Math.max(0,P.cash),430,n=>'+'+money(n));sfxC('coin');});
- at(650,()=>{countUp(xpN,0,P.xp,450,n=>'+'+n+' XP');
+ at(650,()=>{countUp(xpN,0,P.xp,450,n=>'+'+n+' career XP');
   if(big){bar.style.transition=rm?'none':'width .3s ease-in';bar.style.width='100%';at(980,()=>{bar.style.transition='none';bar.style.width='0%';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);lvN.parentNode.classList.add('pop');sfxC('lvl');buzz([15,40,15]);requestAnimationFrame(()=>{bar.style.transition=rm?'none':'width .4s ease-out';bar.style.width=pct1+'%';});});}
   else{bar.style.transition=rm?'none':'width .45s ease-out';bar.style.width=pct1+'%';}});
  at(big?1100:1100,()=>{const k=$('c3rwCon');if(k){k.classList.add('in');sfxC('tick');}});
  at(big?1450:1250,()=>{const u=$('c3rwUnl');if(u&&hero)u.hidden=false;});
  at(big?2100:1400,()=>{const h=$('c3rwHook');if(h)h.classList.add('in');});
- const finish=()=>{T.forEach(clearTimeout);cashN._skip=xpN._skip=1;cashN.textContent='+'+money(Math.max(0,P.cash));xpN.textContent='+'+P.xp+' XP';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);bar.style.transition='none';bar.style.width=pct1+'%';$('c3rwRes').classList.add('in');const u=$('c3rwUnl');if(u&&hero)u.hidden=false;['c3rwCon','c3rwHook'].forEach(id=>{const e=$(id);if(e)e.classList.add('in');});};
+ const finish=()=>{T.forEach(clearTimeout);cashN._skip=xpN._skip=1;cashN.textContent='+'+money(Math.max(0,P.cash));xpN.textContent='+'+P.xp+' career XP';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);bar.style.transition='none';bar.style.width=pct1+'%';$('c3rwRes').classList.add('in');const u=$('c3rwUnl');if(u&&hero)u.hidden=false;['c3rwCon','c3rwHook'].forEach(id=>{const e=$(id);if(e)e.classList.add('in');});};
  const close=then=>{finish();el.classList.remove('on');el.hidden=true;if(R)R.classList.remove('c3-dim');if(then)then();};
  el.querySelector('.c3rw-card').addEventListener('pointerdown',e=>{if(!e.target.closest('button'))finish();});
  $('c3rwGo').onclick=()=>{if(cos){if(hero.k==='flight')save.flight=hero.v;else{save.look.shirt=hero.v;save.look.model='remy';}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};

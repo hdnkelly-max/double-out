@@ -91,3 +91,4 @@
 - SHIPPED v1.64: collectibles wave 3 + reveal round 4 (rarity fanfare and holo, scrollable pack summary, fanned deal, score medals for visits, worn venue boards and pub wall posters, Tangaroa Weekend set: 84 cards)
 - SHIPPED v1.65: fix Lee's pack freeze at pick 5: the server catalogue had Tangaroa cards his 1.63 build didn't know, so the reveal crashed. Unknown cards now show as 'New card' instead of hanging, and hub counts skip them
 - SHIPPED v1.66: result details: objective chips full width (were squeezed into a word-per-line column), Next fixture button text readable on lime
+- SHIPPED v1.67: ChatGPT round 3 (match flow 7.7/10): details screen opens on the score, Next fixture pinned to the bottom, 'career XP' on the reward card vs 'Skill XP' on details, objective chips no longer overlap
