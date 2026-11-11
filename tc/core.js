@@ -5,6 +5,8 @@
   'use strict';
   const D = window.TC_DATA, FX = window.TC_FX, TCC = window.TopsCards;
   const CARD = Object.fromEntries(D.CARDS.map(c => [c.id, c]));
+  // a card the server knows but this build doesn't (catalogue ahead of the app): never crash the reveal
+  const cardOf = id => CARD[id] || { id, no: 0, name: 'New card', set: '', setName: 'Refresh to see it', rarity: 'common', cosmetic: null, exclusive: false, art: 'assets/cards/back.webp' };
   const $id = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const H = { sess: [], inPack: false, bypass: false };
@@ -73,13 +75,13 @@
       if (p.chosen == null) {
         p.chosen = pos; p.done = Date.now();
         const kept = p.keepAll ? p.opts : [p.opts[pos]];
-        let gotLeg = false; kept.forEach(id => { grant(id, 'pick'); if (CARD[id].rarity === 'legendary') gotLeg = true; });
+        let gotLeg = false; kept.forEach(id => { grant(id, 'pick'); if (CARD[id] && CARD[id].rarity === 'legendary') gotLeg = true; });
         t.since = gotLeg ? 0 : t.since + 1;
         t.picks = t.picks.filter(x => x.chosen == null || x === p); // drop resolved history except this one
         keep();
       }
       const owned = {}; p.opts.forEach(id => owned[id] = ownedN(id));
-      setTimeout(() => res({ options: p.opts.map(id => CARD[id]), chosen: p.chosen, owned, keepAll: p.keepAll }), 60);
+      setTimeout(() => res({ options: p.opts.map(cardOf), chosen: p.chosen, owned, keepAll: p.keepAll }), 60);
     });
   }
   // ---------- server mode: signed-in players use the tc_ RPCs (collectibles/sql), save.tc mirrors them ----------
@@ -136,7 +138,7 @@
     kept.forEach(id => { const c = CARD[id]; if (!c) return; if (c.rarity === 'legendary') leg = true; if (c.cosmetic && !t.unl[c.cosmetic]) t.unl[c.cosmetic] = { at: Date.now(), src: 'card:' + id }; });
     t.since = leg ? 0 : t.since + 1; p.chosen = r.chosen;
     t.picks = t.picks.filter(x => x !== p); checkSets(); keep();
-    return { options: ids.map(id => CARD[id]), chosen: r.chosen, owned: r.owned || {}, keepAll: p.keepAll };
+    return { options: ids.map(cardOf), chosen: r.chosen, owned: r.owned || {}, keepAll: p.keepAll };
   }
   // link as soon as the player is signed in, then keep the queue drained
   setInterval(() => { try { const t = st(); if (t && sbOk() && (!SRV.seeded || (t.q && t.q.length))) srvSync(); } catch (e) {} }, 4000);
@@ -293,7 +295,7 @@
   function badge() { const n = openPicks().length; document.querySelectorAll('.tc-pickbadge').forEach(b => { b.hidden = !n; b.querySelector('b').textContent = n; }); }
   function hubTiles() {
     if (!st()) return;
-    const t = st(), nOwn = Object.keys(t.own).filter(id => !CARD[id].exclusive).length, nAll = D.CARDS.filter(c => !c.exclusive).length;
+    const t = st(), nOwn = Object.keys(t.own).filter(id => CARD[id] && !CARD[id].exclusive).length, nAll = D.CARDS.filter(c => !c.exclusive).length;
     const ex = activeExh(), L = ex && D.LEGENDS.find(l => l.id === ex.id), np = openPicks().length;
     // Play tab: exhibition poster + picks waiting, above Spare night
     const play = $id('c3play') || document.querySelector('#hub .htab.hx-main[data-t="play"]');
@@ -371,7 +373,7 @@
       try {
         const host = $id('plPerks'); if (!host) return r;
         let sec = $id('tcPlayer'); if (!sec) { sec = document.createElement('section'); sec.id = 'tcPlayer'; sec.className = 'tc-psec'; host.parentNode.insertBefore(sec, host); }
-        const t = st(), nOwn = Object.keys(t.own).filter(id => !CARD[id].exclusive).length, nAll = D.CARDS.filter(c => !c.exclusive).length;
+        const t = st(), nOwn = Object.keys(t.own).filter(id => CARD[id] && !CARD[id].exclusive).length, nAll = D.CARDS.filter(c => !c.exclusive).length;
         const title = save.look && save.look.title && D.COS[save.look.title];
         sec.innerHTML = `<div class="c3x-sh"><b>Collection and loadout</b><span>${title ? 'Title: ' + esc(title.n) : 'Cards unlock wearables, celebrations and walk-ons'}</span></div>
           <div class="tc-prow"><button type="button" class="tc-pbtn" id="tcPCol"><b>${nOwn}/${nAll}</b><small>Cards</small></button><button type="button" class="tc-pbtn" id="tcPLoad"><b>${Object.keys(t.unl).length}</b><small>Rewards</small></button><button type="button" class="tc-pbtn" id="tcPTier"><b>${Object.values(t.tiers).reduce((a, b) => a + b, 0)}/${D.TIERS.length * 3}</b><small>Tiers</small></button>${openPicks().length ? `<button type="button" class="tc-pbtn go" id="tcPPick"><b>${openPicks().length}</b><small>Open picks</small></button>` : ''}</div>`;
