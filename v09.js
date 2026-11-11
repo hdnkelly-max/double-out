@@ -124,9 +124,14 @@ window.TOPS_LofT=LofT;
 // the same as on a fine screen while every hold length stays reachable.
 const TCH={d:[],ms:null};try{const v=+localStorage.getItem('tops_touchMs');if(v>0)TCH.ms=v;}catch(e){}
 const tierMs=m=>m==null?null:m<=5.5?0:m<=11?1000/120:1000/60;
-addEventListener('pointermove',e=>{if(e.pointerType!=='touch')return;const ev=(e.getCoalescedEvents&&e.getCoalescedEvents())||[];for(let i=1;i<ev.length;i++){const d=ev[i].timeStamp-ev[i-1].timeStamp;if(d>1.5&&d<40)TCH.d.push(d);}
+/* Overseer 07:13 (1.97 rolled back for iPhone lag): the estimate is taken once per device, then the listener is gone. It listens only until
+   ~24 touch intervals have been seen (the first second of the first aim drag ever), stores the tier, and removes itself; on later loads
+   with a stored tier it is never attached. Nothing here runs per frame, and nothing runs per touch move once the tier is known. */
+function tchMove(e){if(e.pointerType!=='touch')return;const ev=(e.getCoalescedEvents&&e.getCoalescedEvents())||[];for(let i=1;i<ev.length;i++){const d=ev[i].timeStamp-ev[i-1].timeStamp;if(d>1.5&&d<40)TCH.d.push(d);}
  if(TCH.lt!=null&&TCH.lp===e.pointerId&&ev.length<=1){const d=e.timeStamp-TCH.lt;if(d>1.5&&d<40)TCH.d.push(d);}TCH.lt=e.timeStamp;TCH.lp=e.pointerId;
- if(TCH.d.length>=20){const a=TCH.d.slice(-120).sort((x,y)=>x-y);const m=tierMs(a[Math.floor(a.length*.25)]);if(m!==TCH.ms){TCH.ms=m;try{localStorage.setItem('tops_touchMs',String(m));}catch(x){}}TCH.d=TCH.d.slice(-120);}},{passive:true});
+ if(TCH.d.length>=24){const a=TCH.d.slice().sort((x,y)=>x-y);const m=tierMs(a[Math.floor(a.length*.25)]);TCH.ms=m;try{localStorage.setItem('tops_touchMs',String(m));}catch(x){}TCH.d=[];removeEventListener('pointermove',tchMove,{passive:true});TCH.on=false;}}
+if(TCH.ms==null&&!window.TOPS_TCH_OFF){addEventListener('pointermove',tchMove,{passive:true});TCH.on=true;}
+window.TOPS_TCH=TCH;
 function touchFloor(P){let ms=window.TOPS_TOUCH_MS!=null?window.TOPS_TOUCH_MS:(S&&S.touchMs);if(ms==null&&S&&S.pullTouch)ms=TCH.ms!=null?TCH.ms:1000/120;/* no estimate yet (first aim drag gives one in ~0.3 s): assume the common 120 Hz screen rather than none */if(!ms||!(window.TOPS_TOUCH_MS!=null||(S&&S.pullTouch)))return 0;const half=Math.min(1000/60,ms)/2;if(half<=P)return 0;
  if(S&&S.pullStart!==S.tfAt){S.tfAt=S.pullStart;S.tfWide=window.TOPS_TF_ALWAYS?true:Math.random()<(2*P)/(2*half);}return (S&&S.tfWide)?half:0;}
 {const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.touchMs=TCH.ms;}catch(e){}return r;};}
