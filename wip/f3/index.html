@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#1b2224}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script></head><body>
+<script type="module">
+import * as T from 'three';import {OBJLoader} from './node_modules/three/examples/jsm/loaders/OBJLoader.js';import {GLTFLoader} from './node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+const W=1200,H=900;const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W,H);r.outputEncoding=T.sRGBEncoding;document.body.appendChild(r.domElement);
+const sc=new T.Scene();sc.background=new T.Color(0x1b2224);const cam=new T.PerspectiveCamera(28,W/H,.1,100);
+sc.add(new T.HemisphereLight(0xffffff,0x334044,.7));const d=new T.DirectionalLight(0xffffff,1.1);d.position.set(2,4,5);sc.add(d);const d2=new T.DirectionalLight(0xffe2c0,.5);d2.position.set(-4,2,-2);sc.add(d2);
+const tl=new T.TextureLoader();const tex=p=>{const t=tl.load(p);t.encoding=T.sRGBEncoding;t.flipY=true;return t;};
+const ol=new OBJLoader();const load=(p,mat)=>new Promise(res=>ol.load(p,o=>{o.traverse(m=>{if(m.isMesh){m.material=mat;}});res(o);}));
+const mh=new T.Group();
+const parts=[['mh/proxymeshes/male_generic/male_generic.obj',new T.MeshStandardMaterial({map:tex('mh/skins/middleage_caucasian_male/middleage_lightskinned_male_diffuse.png'),roughness:.7})],
+ ['mh/clothes/male_casualsuit03/male_casualsuit03.obj',new T.MeshStandardMaterial({map:tex('mh/clothes/male_casualsuit03/male_casualsuit03_diffuse.png'),roughness:.85,side:T.DoubleSide})],
+ ['mh/clothes/shoes02/shoes02.obj',new T.MeshStandardMaterial({map:tex(window.SHOE||'mh/clothes/shoes02/shoes02_diffuse.png'),roughness:.6})],
+ ['mh/hair/short02/short02.obj',new T.MeshStandardMaterial({map:tex('mh/hair/short02/short02_diffuse.png'),transparent:true,alphaTest:.3,side:T.DoubleSide,roughness:.8})],
+ ['mh/eyebrows/eyebrow002/eyebrow002.obj',new T.MeshStandardMaterial({map:tex('mh/eyebrows/eyebrow002/eyebrow002.png'),transparent:true,alphaTest:.2})]];
+for(const [p,m] of parts){try{mh.add(await load(p,m));}catch(e){console.log('fail',p);}}
+const b1=new T.Box3().setFromObject(mh);const hmh=b1.max.y-b1.min.y;mh.scale.setScalar(1.78/hmh);mh.position.set(-.45,-b1.min.y*1.78/hmh,0);sc.add(mh);
+new GLTFLoader().load('remy.glb',g=>{const m=g.scene;const b=new T.Box3().setFromObject(m);const h=b.max.y-b.min.y;m.scale.setScalar(1.78/h);m.position.set(.45,-b.min.y*1.78/h,0);sc.add(m);
+ const v=window.VIEW||'full';if(v==='head'){cam.fov=18;cam.updateProjectionMatrix();cam.position.set(0,1.58,3.4);cam.lookAt(0,1.56,0);}else{cam.position.set(0,1.0,5.2);cam.lookAt(0,.92,0);}
+ setTimeout(()=>{r.render(sc,cam);window.DONE=1;},800);});
+</script></body></html>
