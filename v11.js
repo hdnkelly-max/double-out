@@ -7,13 +7,13 @@
 #vpop .vp small{display:block;font:600 11px/1.2 Manrope,system-ui,sans-serif;letter-spacing:.04em;text-transform:none;margin-top:3px;opacity:.85}
 @keyframes v11pop{0%{transform:translateY(8px) scale(.9)}45%{transform:translateY(0) scale(1.05)}100%{transform:none}}
 #vpop .vmed{display:flex;flex-direction:column;align-items:center;gap:6px;animation:v11med .45s cubic-bezier(.2,1.3,.4,1)}
-#vpop .vmed-c{position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;font-style:normal;box-shadow:0 0 0 2px rgba(0,0,0,.35),0 6px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -4px 8px rgba(0,0,0,.3)}
+#vpop .vmed-c{position:relative;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;font-style:normal;box-shadow:0 0 0 2px rgba(0,0,0,.35),0 6px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -4px 8px rgba(0,0,0,.3)}
 #vpop .vmed-c::before{content:"";position:absolute;inset:6px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35)}
-#vpop .vmed-c b{font:900 21px/1 "Barlow Condensed",Barlow,system-ui,sans-serif;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+#vpop .vmed-c b{font:900 24px/1 "Barlow Condensed",Barlow,system-ui,sans-serif;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(255,255,255,.35)}
 #vpop .vmed-c em{animation:v11pb .4s .25s cubic-bezier(.2,1.6,.4,1) both;position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font:800 10px/1 Barlow,system-ui,sans-serif;font-style:normal;letter-spacing:.14em;padding:3px 7px;border-radius:999px;background:#C6F36B;color:#0c1410;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 #vpop .vmed.bronze .vmed-c{background:radial-gradient(circle at 35% 28%,#F2C39A,#B87333 45%,#6E3E18);color:#2a1406}
 #vpop .vmed.silver .vmed-c{background:radial-gradient(circle at 35% 28%,#FFFFFF,#C9D1D6 42%,#7E8A92);color:#1b2228}
-#vpop .vmed.gold .vmed-c{background:radial-gradient(circle at 35% 28%,#FFF3C4,#E2B84F 42%,#9C6B19);color:#2a1a02;box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 10px rgba(246,210,120,.2),0 6px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -4px 8px rgba(0,0,0,.3)}
+#vpop .vmed.gold .vmed-c{background:radial-gradient(circle at 35% 28%,#FFF3C4,#E2B84F 42%,#9C6B19);color:#2a1a02;box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 14px rgba(246,210,120,.35),0 6px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -4px 8px rgba(0,0,0,.3)}
 #vpop .vmed small{white-space:nowrap;font:600 12px/1.2 Manrope,system-ui,sans-serif;color:#f1e6c8;background:rgba(14,16,20,.8);padding:4px 10px;border-radius:999px}
 @keyframes v11pb{0%{transform:translateX(-50%) scale(0)}100%{transform:translateX(-50%) scale(1)}}
 #vpop .vmed-c::after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,rgba(255,255,255,.07) 0 1px,rgba(0,0,0,.05) 1px 3px);mix-blend-mode:overlay}
