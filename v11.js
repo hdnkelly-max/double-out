@@ -129,12 +129,14 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const BAND=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
  // target that makes the simulated match average land mid-band: pub and club AIs finish less efficiently, and stage pressure widens the spread at higher tiers, so each centre sits above its band middle by the measured gap
  const CEN=[58,63,69,76,84,91,97];
+ // Competitive headroom over the Club top per tier: Trans-Tasman and Pro Tour fields have the widest spread (stage pressure), so their toughest opponents run hottest; less headroom there keeps them inside the +5 hard cap with margin (sim-ai 200 legs, 20:47)
+ const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
  const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,d=D();const lv=d&&LVO[d.lv]!=null?d.lv:'club';
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
   const tgt=CEN[k]+rel+LVO[lv];
-  const top=hi+adj+(lv==='comp'?3:0),bot=lo+adj-(lv==='rookie'?12:0);   // Club inside the band; Competitive targets at most 3 over (realised toughest opponents stay inside the +5 hard cap); Rookie below
+  const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // Club inside the band; Competitive targets at most 3 over (realised toughest opponents stay inside the +5 hard cap); Rookie below
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
  // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
