@@ -70,7 +70,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   const R=V.lkRects&&V.lkRects(),B=R&&R.board;const W=innerWidth,H=innerHeight;
   if(B&&B.w>0){scEl.style.right=Math.max(14,W-(B.x+B.w)+14)+'px';scEl.style.bottom=Math.max(14,H-(B.y+B.h)+14)+'px';scEl.style.left='auto';scEl.style.top='auto';}
   else{scEl.style.right='16px';scEl.style.bottom='45%';}
-  let desk=false;try{desk=!(V.lkPhone&&V.lkPhone());}catch(e){}scEl.className=band+(desk?' desk':'');scEl.innerHTML=`<div class="vs-n"><i>${n}</i></div>${pb?'<small class="vs-pb">New PB</small>':''}${sub?`<small class="vs-left">${sub}</small>`:''}`;
+  let desk=false;try{desk=!(V.lkPhone&&V.lkPhone());}catch(e){}scEl.className=band+(desk?' desk':'');scEl.innerHTML=`<div class="vs-n"><i>${n}</i></div>${sub?`<small class="vs-left">${sub}</small>`:''}`;
   // ChatGPT round 2: keep >=12 px between the finish label and the HR chip on narrow phones (the gap was 8 px at 360):
   // shorten to "120 LEFT · FINISH", and if that still doesn't fit, drop the label (the number stays)
   const sm=sub&&scEl.querySelector('small.vs-left'),hrE=document.getElementById('hr');
@@ -92,7 +92,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
    // visit score (Hayden 21:52, replaces the medals): just the number after every visit, white 0-59, silver 60-99, gold 100+; 180 keeps its own moment
    const pb=!S.practice&&seasoned&&prev>=60&&gained>prev;
    if(labs.some(l=>/^T/.test(l)))S.v11.tre=true;
-   // a PB plays the level sound, so say why on screen (QA 22:30 pre-review)
+   // a PB plays the level sound, as live (no on-screen 'new best' label: Hayden 11 Nov and product rule 4, plain numbers only)
    scoreNum(gained,gained>=100?'gold':gained>=60?'silver':'white',left,pb);if(pb){try{sfxLevel();}catch(e){}}
    // the game's own #callout also flashes this number; today the 3D scene covers it (elementFromPoint = scene at 390 px and desktop), clear it so a layering change can never show it twice
    try{const c=document.getElementById('callout');if(c&&/^\d+$/.test((c.textContent||'').trim()))c.className='callout';}catch(e){}
