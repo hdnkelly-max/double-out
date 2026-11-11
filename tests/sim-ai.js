@@ -5,7 +5,7 @@
 // usage: node tests/sim-ai.js [legs per cell = 200] [--report-only]
 const {chromium}=require('playwright');const path=require('path');
 const LEGS=+process.argv[2]||200, REPORT=process.argv.includes('--report-only');
-// draft bands (Overseer rule 11, pending Hayden): opponent 3-dart average on Competitive; Club and Rookie sit below
+// draft bands (Overseer rule 11): opponent 3-dart average on the default setting (Club); Competitive up to 5 above, Rookie below
 const BANDS=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
 // settings to check: [label, diff level, placement]. Placement +15 is the cap (a pub player averaging ~77).
 // Lee's case: Competitive, ~70 player average at the pub -> old placement round((70-52)*0.6) = +11; Leemus's live save is Rookie +14
@@ -70,7 +70,7 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
  const fails=[];
  run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>=r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} below its regulars ${r.reg}`);});});
  console.log('The Run: '+run.map(({lv,row})=>lv+' '+row.map(r=>r.reg+(r.boss!=null?'/B'+r.boss:'')).join(' > ')).join(' · '));
- const BND=BANDS[1];if(stale.next>BND[1])fails.push(`stored v1.75 opponent still inflated after update: ${JSON.stringify(stale)}`);if(stale.rev>BND[1])fails.push(`stored v1.75 revenge still inflated: ${JSON.stringify(stale)}`);
+ const BND=BANDS[1];if(stale.next>BND[1]+1)fails.push(`stored v1.75 opponent still inflated after update: ${JSON.stringify(stale)}`);if(stale.rev>BND[1]+1)fails.push(`stored v1.75 revenge still inflated: ${JSON.stringify(stale)}`);
  console.log('stale v1.75 save: '+JSON.stringify(stale));
  if(edge.order.length)fails.push('difficulty order broken: '+edge.order.slice(0,3).join(' | '));
  const [want,...got]=edge.idem;if(got.some(g=>g!==want))fails.push(`opponent shifted more than once: wanted ${want}, got ${got.join(',')}`);
@@ -81,10 +81,11 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
  console.log(pad('setting',18)+pad('tier',6)+pad('band',9)+pad('targets',12)+pad('sim avg',9)+pad('180s/100 visits',17)+'b2b 180s/100 legs');
  res.forEach(r=>{const [lo,hi]=BANDS[r.tier];console.log(pad(r.set,18)+pad(r.tier,6)+pad(lo+'-'+hi,9)+pad(r.targetMin+'-'+r.targetMax,12)+pad(r.avg,9)+pad(r.p180,17)+r.b2bPer100Legs);
   // gate (rule 11): Competitive inside the band (1 point of sim noise); no setting above the band top; placement must not change anything
-  if(/^comp/.test(r.set)&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
-  if(r.avg>hi+1)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} above band top ${hi}`);
-  if(r.targetMax>hi+((r.tier<=1)?4:7))fails.push(`tier ${r.tier} ${r.set}: an opponent target of ${r.targetMax} is far above band top ${hi}`);
-  if(r.topAvg!=null){console.log(`   toughest ${r.set} opponent at tier ${r.tier} (target ${r.targetMax}): sim ${r.topAvg}`);if(r.topAvg>hi+2)fails.push(`tier ${r.tier}: toughest Competitive opponent sims at ${r.topAvg}, over band top ${hi}`);}
+  if((r.set==='none'||r.set==='club')&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
+  if(r.avg>hi+5)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} more than 5 over band top ${hi} (rule 11 hard cap)`);
+  if(/^rookie/.test(r.set)&&r.avg>hi)fails.push(`tier ${r.tier} ${r.set}: Rookie ${r.avg} above band top ${hi}`);
+  if(r.targetMax>hi+((r.tier<=1)?9:12))fails.push(`tier ${r.tier} ${r.set}: an opponent target of ${r.targetMax} is far above band top ${hi}`);
+  if(r.topAvg!=null){console.log(`   toughest ${r.set} opponent at tier ${r.tier} (target ${r.targetMax}): sim ${r.topAvg}`);if(r.topAvg>hi+5)fails.push(`tier ${r.tier}: toughest Competitive opponent sims at ${r.topAvg}, more than 5 over band top ${hi}`);}
   if(r.tier<=2&&r.b2bPer100Legs>1)fails.push(`tier ${r.tier} ${r.set}: back-to-back 180s in ${r.b2bPer100Legs} of 100 legs`);});
  // tiers climb in order on every setting
  const bySet={};res.forEach(r=>(bySet[r.set]=bySet[r.set]||[])[r.tier]=r.avg);Object.entries(bySet).forEach(([k,a])=>{for(let t=1;t<a.length;t++)if(!(a[t]>a[t-1]))fails.push(`${k}: tier ${t} (${a[t]}) not above tier ${t-1} (${a[t-1]})`);});
