@@ -1,0 +1,14 @@
+// QA pre-review point 4: does the game's own #callout show a second number next to the visit score? node callchk.js <dir> <w> <h>
+const {chromium}=require('playwright');(async()=>{const dir=process.argv[2],w=+process.argv[3],h=+process.argv[4];
+const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
+const p=await b.newPage({viewport:{width:w,height:h}});await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
+await p.goto('file://'+dir+'/index.html');await p.waitForFunction(()=>window.TC_API&&typeof S!=='undefined',null,{timeout:180000});await p.waitForTimeout(1500);
+await p.evaluate(()=>{save.authSeen=true;save.name='Lee';save.matches=5;$('login').hidden=true;newCareer();V.walkOn=()=>{};const n=nextOpponent();beginMatch({mode:'career',tier:1,p0:'Lee',oppKey:n.oppKey,oppName:n.oppName,oppAvg:50,legs:1});});
+await p.waitForTimeout(9000);
+const look=who=>p.evaluate(who=>{S.bull=false;S.done=false;S.cur=who;const me=S.p[who];S.visitStart=501;me.score=361;S.visit=[{v:60,label:'T20'},{v:60,label:'T20'},{v:20,label:'S20'}];visitCall(140,null,who);
+ const vis=e=>{if(!e)return null;const cs=getComputedStyle(e),r=e.getBoundingClientRect();let a=e,hid=false;while(a&&a!==document.body){const c=getComputedStyle(a);if(c.display==='none'||c.visibility==='hidden'||+c.opacity===0)hid=true;a=a.parentElement;}return {cls:e.className,text:(e.innerText||'').trim().slice(0,30),op:cs.opacity,hidByAncestor:hid,x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height),parent:e.parentElement&&(e.parentElement.id||e.parentElement.className)};};
+ const vs=document.getElementById('vscore');return {who,callout:vis(document.getElementById('callout')),vscore:vs?{html:vs.innerHTML.slice(0,60)}:null};},who);
+const a=await look(0);await p.waitForTimeout(450);a.atPoint=await p.evaluate(()=>{const c=document.getElementById('callout');const r=c.getBoundingClientRect();const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);const m=c.parentElement;const ms=getComputedStyle(m);const ch=[];let x=c;while(x&&x!==document.body){const cs=getComputedStyle(x);ch.push((x.id||x.className)+':'+cs.opacity+'/'+cs.visibility+'/'+cs.display+'/z'+cs.zIndex+'/'+cs.clipPath);x=x.parentElement;}return {top:e&&(e.id||e.className||e.tagName),chain:ch,coCls:c.className};});await p.screenshot({path:'/home/claude/callchk_me_'+w+'.png'});
+await p.evaluate(()=>{const c=document.getElementById('callout');if(c)c.className='callout';const v=document.getElementById('vscore');if(v)v.innerHTML='';});
+await p.waitForTimeout(300);const o=await look(1);await p.screenshot({path:'/home/claude/callchk_opp_'+w+'.png'});
+console.log(JSON.stringify(a));console.log(JSON.stringify(o));console.log('errors',pe.slice(0,3).join(' | '));await b.close();})();
