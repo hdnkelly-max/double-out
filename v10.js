@@ -264,6 +264,24 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
  #friends .mpp{flex:0 0 78%;scroll-snap-align:start}
  #friends .on-join{flex-direction:column}#friends #btnOnJoin{width:100%}
 }
+/* ---- Art, online screens pass 1 (12 Nov; ChatGPT baseline phone 7.5 / desktop 8.2): text >= 11 px, taps >= 44 px, nothing clipped ---- */
+#friends .onp-av em{font-size:11px;min-width:18px;height:18px;line-height:16px}
+#friends .seg>button{min-height:44px}
+#friends #mpVenue{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))}
+#friends #mpVenue>button{min-width:0;white-space:nowrap}
+#friends .mpp-stat{grid-template-columns:80px minmax(0,1fr) 16px!important}
+#friends .mpp-stat small{white-space:nowrap;letter-spacing:.04em;font-size:11px}
+#friends .mp-note,#friends .mp-sub,#friends .on-wait span,#friends .mp-rules>summary small,#friends .mp-empty span{color:#b8c3be}
+#friends .on-lobby:not([hidden]){display:flex;flex-direction:column}
+#friends #cupStart{order:9;margin:14px 0 0;padding:10px 14px;text-align:left;border:1px solid #3a4a44;background:#121a19;color:#d9ad52;font-size:15px}
+#friends #cupStart small{font-size:12px;line-height:1.35;color:#aab6af}
+@media (max-width:640px){
+ #friends .mp-pros{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:dense;overflow:visible;gap:8px;padding:4px 0}
+ #friends .mpp{flex:none;min-width:0}
+ #friends .mpp.on{grid-column:1/-1}
+ #friends .mpp:not(.on) .mpp-stat{display:none}
+ #friends .mpp:not(.on) .mpp-line{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:0}
+}
 @media (prefers-reduced-motion:reduce){#cardDraft .cd-card,#cardSlam .cs,body.fx-shake canvas,body.fx-jolt canvas{animation:none!important}}
 </style>
 <script>
