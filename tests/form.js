@@ -25,5 +25,17 @@ const {chromium}=require('playwright');const path=require('path');const fs=requi
  // a falling last 10 is shown without red and without a fake positive
  const down=await p.evaluate(()=>{save.mlog=[];for(let i=0;i<20;i++)save.mlog.push({id:'d'+i,t:i,tr:1,a:i<10?60:55,ca:5,ch:1,pf:1,th:10,w:0});TOPS_form.render();const el=document.getElementById('c3form');return el?el.textContent.replace(/\s+/g,' '):'';});
  if(!/Previous 10: 60\.0/.test(down))f.push('falling form text: '+down);
+ // the lifetime start survives the 200-match cap; Back (browser or phone) closes the full view; a new career starts a fresh log
+ const life=await p.evaluate(async()=>{const c=career();c.tier=1;save.mstart=null;save.mlog=[];for(let i=0;i<199;i++)save.mlog.push({id:'l'+i,t:i,tr:1,a:i<10?40:60,ca:1,ch:0,pf:1,th:10,w:0});
+   const play=()=>{beginMatch({mode:'career',tier:1,p0:'H',oppName:'D',oppAvg:58,legs:1});S.p[0].darts=45;S.p[0].pts=900;S.won=true;endMatch();};play();play();
+   const L=TOPS_form.log();const out={n:L.length,first:L[0].id,start:TOPS_form.sum(L).start,ms:save.mstart};
+   document.querySelectorAll('.c3formx').forEach(e=>e.remove());showHub();hubTab('player');TOPS_form.render();document.getElementById('c3form').click();out.open=!!document.querySelector('.c3formx');
+   history.back();await new Promise(r=>setTimeout(r,400));out.afterBack=!!document.querySelector('.c3formx');
+   document.getElementById('c3form').click();document.querySelector('.c3formx button').click();await new Promise(r=>setTimeout(r,400));out.afterDone=!!document.querySelector('.c3formx');
+   newCareer();out.fresh=TOPS_form.log().length;out.freshStart=save.mstart;return out;});
+ if(life.n!==200)f.push('log not capped at 200: '+life.n);if(life.first==='l0')f.push('oldest match not rolled off');
+ if(life.ms!==40||life.start!==40)f.push('lifetime start lost at the cap: mstart '+life.ms+', start '+life.start+' (want 40)');
+ if(!life.open)f.push('full view did not open');if(life.afterBack)f.push('Back did not close the full view');if(life.afterDone)f.push('Done did not close the full view');
+ if(life.fresh!==0||life.freshStart!=null)f.push('new career kept the old form log');
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: form log once per career match (not practice), card on the Player tab: '+(card&&card.txt));})();
