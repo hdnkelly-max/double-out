@@ -73,8 +73,11 @@
 // ===== F2 (11 Nov): barrels unlock by player level, sponsor-only sets, level-gated kit parts =====
 // Ladder anchors set by the owner: Club Brass 1, Supergrip 8, Razor Edge 15, Zen Jutsu 25, Power 9Five 40.
 // Everything else is slotted by its kit points (2*accuracy + rhythm + control; see v09 kitPts):
-//  0 brass 1 · 7 neutron 4 · 9 core xl 6 · 12 supergrip 8 · 16 razor 15 · 17 vapor8 18 · 19 zen 25 · 22 asp 30 · 22 ga 32 · 27 power 40
-const LV={assassin:1,neutron:4,corexl:6,supergrip:8,razor:15,vapor8:18,zen:25,asp:30,ga:32,power:40};
+//  0 brass 1 · 7 neutron 4 · 9 core xl 6 · 12 supergrip 8 · 16 razor 15 · 17 vapor8 18 · 19 zen 25 · 22 asp 33 · 22 ga 34 · 27 power 40
+// Pacing (Overseer 05:58): Asp was 30, GA 32. Level 30 is where a typical player is promoted from Regional, so Asp landed exactly at
+// Regional promotion and DPNZ arrival (Lee's real Club darts, best barrel each level: Regional promotion 69%, target <=65). Asp 33 / GA 34
+// gives 66% and DPNZ arrival 48%; every other tier unchanged (tests/profiles/README.md, row 1p-pace). Owned barrels stay owned.
+const LV={assassin:1,neutron:4,corexl:6,supergrip:8,razor:15,vapor8:18,zen:25,asp:33,ga:34,power:40};
 // sponsor exclusives: never sold, only arrive with that deal; you keep them if the deal ends
 const EXCL={iceman:'rd',mvg:'winmau',littler:'target'};
 // kit parts that are straight upgrades get a level; trade-off parts (short/long shaft, slim/kite/pear) stay open
