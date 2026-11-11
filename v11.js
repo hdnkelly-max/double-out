@@ -27,7 +27,7 @@
 #vscore.silver .vs-n i{background:linear-gradient(180deg,#F1F4F5,#8C9BA3);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.55))}
 #vscore.gold .vs-n{box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(246,210,120,.35)}
 #vscore.gold .vs-n i{background:linear-gradient(180deg,#FFF1B8,#E9BF55 50%,#B07A1E);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45))}
-#vscore small{font:800 10.5px/1 Barlow,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#f1e6c8;background:rgba(10,13,16,.82);padding:5px 8px;border-radius:5px;white-space:nowrap;animation:v11sc 1.54s linear both}
+#vscore small{font:800 11px/1 Barlow,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#f1e6c8;background:rgba(10,13,16,.82);padding:5px 8px;border-radius:5px;white-space:nowrap;animation:v11sc 1.54s linear both}
 @keyframes v11sc{0%{opacity:0;transform:translateY(8px)}10.4%{opacity:1;transform:none}88.3%{opacity:1;transform:none}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#vscore .vs-n,#vscore small{animation:v11scr 1.54s linear both}@keyframes v11scr{0%,88%{opacity:1}100%{opacity:0}}}
 #hub b.nm{font-size:15px!important;line-height:1.05!important;letter-spacing:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block}
