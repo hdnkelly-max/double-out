@@ -5,11 +5,12 @@
 // usage: node tests/sim-ai.js [legs per cell = 200] [--report-only]
 const {chromium}=require('playwright');const path=require('path');
 const LEGS=+process.argv[2]||200, REPORT=process.argv.includes('--report-only');
-// draft bands (Overseer rule 11): opponent 3-dart average on the default setting (Club); Competitive up to 5 above, Rookie below
+// draft bands (Overseer rule 11): opponent 3-dart average. v1.80 (Hayden 21:52): one setting for everyone (Club); the old Rookie and
+// Competitive saves must play exactly like Club.
 const BANDS=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
 // settings to check: [label, diff level, placement]. Placement +15 is the cap (a pub player averaging ~77).
 // Lee's case: Competitive, ~70 player average at the pub -> old placement round((70-52)*0.6) = +11; Leemus's live save is Rookie +14
-const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','comp',0],['comp+11 (Lee)','comp',11],['rookie+14 (Leemus save)','rookie',14],['comp+15 (max)','comp',15]];
+const SETS=[['club','club',0],['none',null,null],['old rookie save','rookie',0],['old comp save','comp',0],['comp+11 (Lee)','comp',11],['rookie+14 (Leemus save)','rookie',14],['comp+15 (max)','comp',15]];
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});
  const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
@@ -36,13 +37,13 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
     let darts=0,pts=0,m180=0,b2b=0,visits=0;
     for(let i=0;i<LEGS;i++){const a=avgs[i%avgs.length];const r=leg(a,t,temps[i%temps.length],[20,16,18,12,10,8][i%6]);darts+=r.darts;pts+=r.pts;m180+=r.m180;b2b+=r.b2b;visits+=Math.ceil(r.darts/3);}
     avgs.sort((x,y)=>x-y);
-    let topAvg=null;if(lab==='comp'){let d2=0,p2=0;const mx=avgs[avgs.length-1];for(let i=0;i<LEGS;i++){const r=leg(mx,t,temps[i%temps.length],[20,16,18,12,10,8][i%6]);d2+=r.darts;p2+=r.pts;}topAvg=+(p2/d2*3).toFixed(1);}
+    let topAvg=null;if(lab==='club'){let d2=0,p2=0;const mx=avgs[avgs.length-1];for(let i=0;i<LEGS;i++){const r=leg(mx,t,temps[i%temps.length],[20,16,18,12,10,8][i%6]);d2+=r.darts;p2+=r.pts;}topAvg=+(p2/d2*3).toFixed(1);}
     out.push({set:lab,tier:t,targetMin:avgs[0],targetMax:avgs[avgs.length-1],targetMean:+(avgs.reduce((s,x)=>s+x,0)/avgs.length).toFixed(1),avg:+(pts/darts*3).toFixed(1),p180:+(m180/visits*100).toFixed(2),b2bPer100Legs:+(b2b/LEGS*100).toFixed(2),topAvg});}}
   delete save.diff;return out;},{LEGS,SETS});
  // ---- edge checks (ChatGPT 19:47) ----
  const edge=await p.evaluate(({LEGS})=>{const out={order:[],idem:[],top:[],legacy:null};const sh=window.TOPS_OPP_SHIFT;
-  // (a) every opponent: Rookie < Club < Competitive
-  for(let t=0;t<7;t++)for(let v=TIERS[t].avg-12;v<=TIERS[t].avg+12;v++){const r=[];for(const lv of ['rookie','club','comp']){save.diff={lv,darts:999,pts:0,place:0};r.push(sh(v,t));}if(!(r[0]<r[1]&&r[1]<r[2]))out.order.push(`t${t} raw ${v}: ${r.join(' / ')}`);}
+  // (a) one setting: every opponent is the same whatever level an old save carries
+  for(let t=0;t<7;t++)for(let v=TIERS[t].avg-12;v<=TIERS[t].avg+12;v++){const r=[];for(const lv of ['rookie','club','comp',null]){if(lv)save.diff={lv,darts:999,pts:0,place:0};else delete save.diff;r.push(sh(v,t));}if(new Set(r).size>1)out.order.push(`t${t} raw ${v}: ${r.join(' / ')}`);}
   // (b) shifted once: nextOpponent -> beginMatch, twice, same object and a rebuilt object
   save.diff={lv:'comp',darts:999,pts:0,place:0};newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;V.walkOn=()=>{};
   const n=nextOpponent();c.next=n;const want=n.oppAvg;const go=o=>{beginMatch(o);const got=S.oppAvg;try{S.done=true;}catch(e){}return got;};
@@ -51,8 +52,12 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
   out.idem=[want,g1,g2,g3,g4,g5];
   // (c) toughest opponent each tier on Competitive (deciders, Deano): simulate the max target on its own
   return out;},{LEGS});
+ // (g) a 1.79 save on Competitive (or Rookie) with a queued next opponent: reloads on Club, and the queued opponent plays at Club
+ const move=[];for(const lv of ['comp','rookie']){await p.evaluate(lv=>{save.diff={lv,darts:300,pts:21000,place:0};newCareer();const c=career();c.tier=2;c.stage=null;c.next={oppName:'Queued',oppRaw:70,oppAvg:lv==='comp'?76:63,legs:3,_d:2};persist();},lv);
+  await p.reload();await p.waitForTimeout(4000);
+  move.push(await p.evaluate(()=>{const c=career();save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};const want=TOPS_OPP_SHIFT(70,2);const stored=c.next.oppAvg;beginMatch({mode:'career',tier:2,p0:'T',oppName:c.next.oppName,oppAvg:c.next.oppAvg,legs:1});const got=S.oppAvg;try{S.done=true;}catch(e){}return {lv:save.diff.lv,was:save.diff.lvWas,stored,got,want};}));}
  // (e) The Run: every stage tougher than the one before, the boss above its stage's regulars, on every setting
- const run=await p.evaluate(()=>{const out=[];for(const lv of ['rookie','club','comp']){save.diff={lv,darts:999,pts:0,place:0};newCareer();const c=career();c.run=true;c.stage=null;const row=[];
+ const run=await p.evaluate(()=>{const out=[];for(const lv of ['club']){save.diff={lv,darts:999,pts:0,place:0};newCareer();const c=career();c.run=true;c.stage=null;const row=[];
   for(let t=0;t<7;t++){c.tier=t;const reg=[],boss=[];for(let w=0;w<2;w++){c.tierWins=w;for(let k=0;k<12;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}}
    c.tierWins=2;for(let k=0;k<6;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}
    row.push({t,reg:Math.max(...reg),regMin:Math.min(...reg),boss:boss.length?Math.max(...boss):null});}
@@ -68,11 +73,13 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
   legacy.push(await p.evaluate(()=>{const d=save.diff;save.authSeen=true;$('login').hidden=true;newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;const n=nextOpponent();return {place:d.place,placeNew:d.placeNew,opp:n.oppAvg,raw:n.oppRaw};}));}
  await b.close();
  const fails=[];
- run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>=r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} below its regulars ${r.reg}`);});});
+ run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} not above its regulars ${r.reg}`);});});
  console.log('The Run: '+run.map(({lv,row})=>lv+' '+row.map(r=>r.reg+(r.boss!=null?'/B'+r.boss:'')).join(' > ')).join(' · '));
- const BND=BANDS[1];if(stale.next>BND[1]+1)fails.push(`stored v1.75 opponent still inflated after update: ${JSON.stringify(stale)}`);if(stale.rev>BND[1]+1)fails.push(`stored v1.75 revenge still inflated: ${JSON.stringify(stale)}`);
+ // a stored v1.75 opponent may be one of the tier's strongest (revenge, deciders) but never above the strongest the tier serves today
+ const BND=BANDS[1],CLUBMAX=(res.find(r=>r.set==='club'&&r.tier===1)||{}).targetMax||BND[1]+3;if(stale.next>CLUBMAX)fails.push(`stored v1.75 opponent still inflated after update (above ${CLUBMAX}): ${JSON.stringify(stale)}`);if(stale.rev>CLUBMAX)fails.push(`stored v1.75 revenge still inflated (above ${CLUBMAX}): ${JSON.stringify(stale)}`);
  console.log('stale v1.75 save: '+JSON.stringify(stale));
- if(edge.order.length)fails.push('difficulty order broken: '+edge.order.slice(0,3).join(' | '));
+ if(edge.order.length)fails.push('an old save level still changes opponents: '+edge.order.slice(0,3).join(' | '));
+ move.forEach(m=>{if(m.lv!=='club'||m.stored!==m.want||m.got!==m.want)fails.push('1.79 save not moved to Club: '+JSON.stringify(m));});console.log('1.79 saves moved to Club: '+JSON.stringify(move));
  const [want,...got]=edge.idem;if(got.some(g=>g!==want))fails.push(`opponent shifted more than once: wanted ${want}, got ${got.join(',')}`);
  legacy.forEach((l,i)=>{if(l.place!==0||l.placeNew)fails.push(`legacy save placement ${[-6,0,15][i]} not cleared: ${JSON.stringify(l)}`);});
  const lt=legacy.map(l=>TOPS_TGT(l.raw));function TOPS_TGT(x){return x;}
@@ -81,15 +88,14 @@ const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','
  console.log(pad('setting',18)+pad('tier',6)+pad('band',9)+pad('targets',12)+pad('sim avg',9)+pad('180s/100 visits',17)+'b2b 180s/100 legs');
  res.forEach(r=>{const [lo,hi]=BANDS[r.tier];console.log(pad(r.set,18)+pad(r.tier,6)+pad(lo+'-'+hi,9)+pad(r.targetMin+'-'+r.targetMax,12)+pad(r.avg,9)+pad(r.p180,17)+r.b2bPer100Legs);
   // gate (rule 11): Competitive inside the band (1 point of sim noise); no setting above the band top; placement must not change anything
-  if((r.set==='none'||r.set==='club')&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
+  if(r.set==='club'&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
   if(r.avg>hi+5)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} more than 5 over band top ${hi} (rule 11 hard cap)`);
-  if(/^rookie/.test(r.set)&&r.avg>hi)fails.push(`tier ${r.tier} ${r.set}: Rookie ${r.avg} above band top ${hi}`);
   if(r.targetMax>hi+((r.tier<=1)?9:12))fails.push(`tier ${r.tier} ${r.set}: an opponent target of ${r.targetMax} is far above band top ${hi}`);
-  if(r.topAvg!=null){console.log(`   toughest ${r.set} opponent at tier ${r.tier} (target ${r.targetMax}): sim ${r.topAvg}`);if(r.topAvg>hi+5)fails.push(`tier ${r.tier}: toughest Competitive opponent sims at ${r.topAvg}, more than 5 over band top ${hi}`);}
+  if(r.topAvg!=null){console.log(`   toughest ${r.set} opponent at tier ${r.tier} (target ${r.targetMax}): sim ${r.topAvg}`);if(r.topAvg>hi+5)fails.push(`tier ${r.tier}: toughest opponent sims at ${r.topAvg}, more than 5 over band top ${hi}`);}
   if(r.tier<=2&&r.b2bPer100Legs>1)fails.push(`tier ${r.tier} ${r.set}: back-to-back 180s in ${r.b2bPer100Legs} of 100 legs`);});
  // tiers climb in order on every setting
  const bySet={};res.forEach(r=>(bySet[r.set]=bySet[r.set]||[])[r.tier]=r.avg);Object.entries(bySet).forEach(([k,a])=>{for(let t=1;t<a.length;t++)if(!(a[t]>a[t-1]))fails.push(`${k}: tier ${t} (${a[t]}) not above tier ${t-1} (${a[t-1]})`);});
- // placement has no effect: Lee's case and the max case match plain Competitive targets
- const tg=(set,t)=>{const r=res.find(x=>x.set===set&&x.tier===t);return r&&r.targetMean;};for(let t=0;t<7;t++)['comp+11 (Lee)','comp+15 (max)'].forEach(k=>{if(tg(k,t)!==tg('comp',t))fails.push(`${k}: tier ${t} target ${tg(k,t)} differs from Competitive ${tg('comp',t)} (placement still applied)`);});
+ // one setting: every old save (any level, any placement) gets exactly the Club field
+ const tg=(set,t)=>{const r=res.find(x=>x.set===set&&x.tier===t);return r&&r.targetMean;};for(let t=0;t<7;t++)SETS.slice(1).forEach(([k])=>{if(tg(k,t)!==tg('club',t))fails.push(`${k}: tier ${t} target ${tg(k,t)} differs from Club ${tg('club',t)}`);});
  if(fails.length){console.log('SIM-AI FAILED\n- '+fails.join('\n- '));if(!REPORT)process.exit(1);}else console.log('sim-ai: every tier inside its band');
 })();
