@@ -9,8 +9,24 @@
 .hs .tag b{font:800 18px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
 .hs .tag span{font:600 12px/1.2 Manrope;color:var(--muted);margin-top:3px}
 .hs.r{flex-direction:row-reverse}
+.hs.s .dot{background:rgba(255,255,255,.18);box-shadow:0 0 0 2px rgba(237,236,229,.85)}.hs.s .dot::after{background:#EDECE5}.hs.s .tag{border-color:rgba(255,255,255,.18);padding:6px 10px;min-height:44px}.hs.s .tag b{font-size:16px}
+.hs.p .tag b{font-size:19px}
 .hs .tag .badge{color:#10191A!important;font-size:11px!important;margin-top:0!important;display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:var(--gold);color:#10191A;font:800 11px/16px Manrope;vertical-align:2px}
-.sheet{position:absolute;left:12px;right:12px;bottom:14px;border-radius:20px;background:rgba(18,27,27,.96);border:1px solid var(--line);padding:16px 16px 16px;box-shadow:0 -10px 40px rgba(0,0,0,.5);z-index:4}
+.pl,.sc{position:absolute;display:flex;align-items:center;gap:0;z-index:3}
+.pl{left:12px}.sc{right:12px;flex-direction:row;gap:8px}
+.pl .tag,.sc .tag{display:flex;flex-direction:column;justify-content:center;min-height:52px;border-radius:12px;background:rgba(10,16,17,.88);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.pl .tag{width:196px;padding:8px 12px 8px 14px;border:1px solid rgba(198,243,107,.35);border-left:4px solid var(--lime)}
+.pl .tag b{font:800 20px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
+.pl .tag span,.sc .tag span{font:600 12px/1.2 Manrope;color:var(--muted);margin-top:3px}
+.pl .tag .badge{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;background:var(--gold);color:#10191A;font:800 11px/16px Manrope;vertical-align:2px}
+.pl .lead{display:block;height:2px;background:linear-gradient(90deg,var(--lime),rgba(198,243,107,.4))}
+.pl .dot,.sc .dot{width:16px;height:16px;border-radius:50%;flex:none;position:relative}
+.pl .dot{background:rgba(198,243,107,.25);box-shadow:0 0 0 2px var(--lime),0 0 16px rgba(198,243,107,.7)}
+.pl .dot::after,.sc .dot::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--lime)}
+.sc .dot{background:rgba(255,255,255,.18);box-shadow:0 0 0 2px rgba(237,236,229,.85)}.sc .dot::after{background:#EDECE5}
+.sc .tag{width:132px;padding:6px 12px;border:1px solid rgba(255,255,255,.18);min-height:48px}
+.sc .tag b{font:800 17px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
+.sheet{position:absolute;left:12px;right:12px;bottom:14px;border-radius:16px;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.05),transparent 60%),#1b2321;border:6px solid #4a3322;outline:1px solid #2b1d13;padding:16px 16px 16px;box-shadow:0 -10px 40px rgba(0,0,0,.5);z-index:4}
 .sheet .row{display:flex;align-items:center;gap:12px}
 .sheet .ph{width:64px;height:64px;border-radius:12px;background:url(opp_bigmal.png) center/cover;flex:none;box-shadow:0 0 0 2px rgba(198,243,107,.35)}
 .sheet h2{font:900 italic 36px/.9 "Barlow Condensed";text-transform:uppercase}
@@ -18,6 +34,8 @@
 .sheet .go{margin-top:14px;height:60px;border-radius:14px;background:var(--lime);color:#10191A;display:flex;align-items:center;justify-content:center;gap:10px}
 .sheet .go b{font:900 italic 28px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
 .sheet .go span{font:700 12px/1 Manrope;letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.chalk{display:flex;justify-content:space-between;align-items:center}.chalk .wk{font:600 12px/1 Manrope;color:var(--muted)}
+.sheet .meta b{color:var(--lime)}
 .lvl{position:absolute;left:16px;right:16px;top:60px;display:flex;align-items:center;gap:10px;z-index:4}
 .lvl .bar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}.lvl .bar i{display:block;height:100%;width:61%;background:var(--lime)}
 .lvl small{font:700 12px/1 Manrope;color:var(--text);letter-spacing:.06em;text-transform:uppercase}
@@ -26,16 +44,15 @@
 <div class="bg"></div>
 <div class="top"><div class="av"></div><div class="nm">Hayden</div><div class="cash">$640</div><div class="menu"><i></i></div></div>
 <div class="lvl"><small>Lv 14</small><div class="bar"><i></i></div><em>238 XP to Old Gold shirt</em></div>
-<!-- places in the room are the menu -->
-<div class="hs r" style="right:222px;top:196px"><span class="dot"></span><span class="tag"><b>The oche</b><span>Practice · chalk up</span></span></div>
-<div class="hs" style="left:12px;top:112px"><span class="dot"></span><span class="tag"><b>Wall of fame</b><span>Career · 2 trophies</span></span></div>
-<div class="hs r" style="right:12px;top:292px"><span class="dot"></span><span class="tag"><b>The bar</b><span>Store · new barrels</span></span></div>
-<div class="hs" style="left:16px;top:372px"><span class="dot"></span><span class="tag"><b>Back room<span class="badge">$100</span></b><span>Money match tonight</span></span></div>
-<div class="hs r" style="right:12px;top:440px"><span class="dot"></span><span class="tag"><b>Noticeboard<span class="badge">2</span></b><span>Contracts · league table</span></span></div>
-<div class="hs" style="left:110px;top:500px"><span class="dot"></span><span class="tag"><b>Your locker</b><span>Kit · cards 64/144</span></span></div>
+<!-- places in the room are the menu: one consistent primary style (left column, lime edge, leader line to the place); secondaries right -->
+<div class="pl" style="top:100px"><span class="tag"><b>Wall of fame</b><span>Career · table · 2 trophies</span></span><i class="lead" style="width:0"></i></div>
+<div class="pl" style="top:262px"><span class="tag"><b>The oche</b><span>Practice</span></span><i class="lead" style="width:40px"></i><span class="dot"></span></div>
+<div class="pl" style="top:372px"><span class="tag"><b>Back room <span class="badge">$100</span></b><span>Money match tonight</span></span></div>
+<div class="sc" style="top:336px"><span class="tag"><b>The bar</b><span>Store</span></span><span class="dot"></span></div>
+<div class="sc" style="top:452px"><span class="tag"><b>Locker</b><span>Kit · cards</span></span><span class="dot"></span></div>
 <div class="sheet">
-  <div class="k">Tonight · Club League · Week 5 of 8</div>
-  <div class="row" style="margin-top:10px"><div class="ph"></div><div><h2>vs Big Mal</h2><div class="meta">You're 3rd, he's 5th · win and you go 2nd</div></div></div>
+  <div class="chalk"><span class="k">Tonight on the board</span><span class="wk">Club League · Wk 5/8</span></div>
+  <div class="row" style="margin-top:10px"><div class="ph"></div><div><h2>vs Big Mal</h2><div class="meta">You're 3rd, he's 5th. <b>Win and you go 2nd.</b></div></div></div>
   <div class="go"><b>Walk on</b><span>Bo3 · $60 · 120 XP</span></div>
 </div>
 </body></html>
