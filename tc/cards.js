@@ -62,7 +62,7 @@
     c.querySelector('.tc__art').style.backgroundImage = def.art ? `url(${def.art})` : '';
     if (def.foilMask) c.style.setProperty('--foil-mask', `url(${def.foilMask}) center/cover`);
     const nm = c.querySelector('.tc__name'); nm.textContent = def.name; nm.classList.toggle('is-long', def.name.length > 11); nm.classList.toggle('is-xlong', def.name.length > 16);
-    c.querySelector('.tc__set').innerHTML = `No. ${String(def.no).padStart(3, '0')}<span class="tc__setname"> · ${esc(def.set)}</span>`;
+    c.querySelector('.tc__set').innerHTML = `No. ${String(def.no).padStart(3, '0')}<span class="tc__setname"> · ${esc(def.setName || def.set)}</span>`;
     c.querySelector('.tc__rar').textContent = RAR[def.rarity];
   }
   // touch-drag tilt, max 6 deg; art parallax 3px; light follows the finger
