@@ -62,7 +62,7 @@ const _cam=careerAfterMatch;careerAfterMatch=function(){const c=career();const v
  // fame
  if(ranked&&m.won)v.fame=Math.min(100,v.fame+2);if(m.won&&S.rival)v.fame=Math.min(100,v.fame+3);if(S.after==='promo')v.fame=Math.min(100,v.fame+8);if(S.after==='champion')v.fame=Math.min(100,v.fame+10);if(ranked&&!m.won&&S.hard)v.fame=Math.max(0,v.fame-1);
  // revenge: a ranked loss to a named opponent opens a rematch for the spare night
- if(ranked&&!m.won){const op=S.p[1];v.rev={name:op.name,avg:Math.round(S.oppAvg||TIERS[c.tier].avg),stake:Math.round((MM_PAY[c.tier]||30)*1.5),wk:c.season?c.season.week:0,tier:c.tier};}
+ if(ranked&&!m.won){const op=S.p[1];v.rev={name:op.name,raw:1,avg:Math.round(S.oppRaw||S.oppAvg||TIERS[c.tier].avg),stake:Math.round((MM_PAY[c.tier]||30)*1.5),wk:c.season?c.season.week:0,tier:c.tier};}
  else if(S.revenge){v.rev=null;}
  const xp=L.reduce((a,b)=>a+b[1],0);const ups=gainLevels(v,xp);
  if(m.avg>v.best)v.best=+m.avg.toFixed(1);

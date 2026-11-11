@@ -114,25 +114,52 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 // ===== v1.55 difficulty: Rookie / Club / Competitive + placement from your first 120 career darts =====
 // Open, not secret: the level and the shift are shown to the player. No rubber-banding mid-match.
 (function(){
- const LV={rookie:{n:'Rookie',off:-6,d:'Opponents a step below the pub field. Learn the throw.'},club:{n:'Club',off:0,d:'The field as written. Pub regulars play their usual.'},comp:{n:'Competitive',off:8,d:'Everyone brings their best night. For players already averaging 60+.'}};
+ const LV={rookie:{n:'Rookie',off:-11,d:'Opponents a step below the pub field. Learn the throw.'},club:{n:'Club',off:-5,d:'The field as written. Pub regulars play their usual.'},comp:{n:'Competitive',off:0,d:'Everyone brings their best night. For players already averaging 60+.'}};
  const D=()=>save.diff||null;window.TOPS_DIFF=LV;
- const placeOff=()=>{const d=D();return d&&d.place!=null?d.place:0;};
- const totalOff=()=>{const d=D();if(!d)return 0;return (LV[d.lv]||LV.club).off+placeOff();};
+ // v1.77 (#12, rule 11): the 120-dart placement no longer touches opponent strength. Opponents come from tier, opponent and difficulty only.
+ const placeEff=()=>0;
+ const placeOff=()=>0;
+ const totalOff=()=>{const d=D();if(!d)return 0;return (LVO[d.lv]!=null?LVO[d.lv]:0)+placeOff();};
  window.topsDiffOffset=totalOff;
  // shift opponent averages in career (not practice, drills or the intro tutorial)
- const shift=v=>Math.max(25,Math.min(108,Math.round(v+totalOff())));
- const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&D()){n.oppAvg=shift(n.oppAvg);n._d=1;}}catch(e){}return n;};
- const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&D()&&!viaNext){const o=totalOff();opts=Object.assign({},opts,{oppAvg:shift(opts.oppAvg),_diffOff:o});}}catch(e){}return _bm.call(this,opts);};
+ // v1.77 (#12, rule 11): opponents are mapped into their tier's band instead of taking raw offsets. Before this, placement
+ // (measured once off the player's own average, usually against the pub) and the level offset were added at every tier, so a
+ // 75-average pub player met 85-average Club opponents even on Rookie. The bands are for Competitive; Club and Rookie sit below.
+ // Bands are Hayden's drafts; tests/sim-ai.js gates them.
+ const BAND=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
+ // target that makes the simulated match average land mid-band: pub and club AIs finish less efficiently, and stage pressure widens the spread at higher tiers, so each centre sits above its band middle by the measured gap
+ const CEN=[58,63,69,76,84,91,97];
+ const LVO={rookie:-11,club:-5,comp:0};
+ const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
+ const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,d=D();const lv=d&&LVO[d.lv]!=null?d.lv:'club';
+  const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
+  const tgt=CEN[k]+rel+LVO[lv];
+  const top=hi+adj,bot=lo+adj-(lv==='comp'?0:16);   // Competitive stays inside the band; easier settings may sit below it, never above
+  return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
+ window.TOPS_OPP_SHIFT=shift;
+ // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
+ // Undo the old offset (level + placement, read before placement is cleared), then shift once with the new rule. New-code opponents carry oppRaw and _d=2.
+ const migrateSave=()=>{try{const d=save.diff,c=save.career;if(!c&&!d)return;let ch=false;
+  const oldOff=d?(({rookie:-6,club:0,comp:8})[d.lv]||0)+(d.place||0):0;
+  if(c&&c.next&&c.next.oppAvg>0&&c.next.oppRaw==null&&!c.next.intro){const raw=Math.max(20,c.next._d?c.next.oppAvg-oldOff:c.next.oppAvg);c.next.oppRaw=raw;c.next.oppAvg=shift(raw,c.tier);c.next._d=2;ch=true;}
+  const v=c&&c.v3;if(v&&v.rev&&v.rev.avg>0&&!v.rev.raw){if(d)v.rev.avg=Math.max(20,v.rev.avg-oldOff);v.rev.raw=1;ch=true;}
+  if(d&&(d.place||d.placeNew)){d.place=0;d.placeNew=false;d.placeCleared=1;ch=true;}
+  if(ch)persist();}catch(e){console.warn('v11 migrate',e);}};
+ migrateSave();window.TOPS_v11Migrate=migrateSave;
+ // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
+ const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
+ const SHIFTED=new WeakSet();
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
+  else if(opts&&viaNext&&c.next.oppRaw!=null&&opts.oppRaw==null)opts=Object.assign({},opts,{oppRaw:c.next.oppRaw});}catch(e){}
+  const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
-   if(d.place==null&&d.darts>=120){const a=d.pts/d.darts*3;const c=career();const par=c?TIERS[c.tier].avg:45;d.place=Math.max(-6,Math.min(15,Math.round((a-par)*0.6)));d.placeAvg=+a.toFixed(1);d.placeNew=true;try{trackEv('diff_place',{avg:d.placeAvg,place:d.place,lv:d.lv});}catch(e){}}}}catch(e){}return _em.apply(this,arguments);};
- const pick=(done,again)=>{const cur=D()&&D().lv;showMsg({from:'Kev Mercer',lines:[again?'Change how hard it is? Your placement stays.':'Before you play: how hard do you want it? Rookie is a step below the pub, Club is the field as written, Competitive is for 60+ averages.','After 120 darts I\'ll tune the field to how you actually throw, and tell you when I do.'],replies:[['Rookie','rookie'],['Club','club'],['Competitive','comp']]},a=>{save.diff=Object.assign(D()||{darts:0,pts:0,place:null},{lv:LV[a]?a:'club'});try{const c=career();if(c)c.next=null;}catch(e){}try{persist();trackEv('diff_pick',{lv:save.diff.lv,again:!!again});}catch(e){}done&&done();});};
+   /* v1.77: 120-dart placement retired (rule 11) */}}catch(e){}return _em.apply(this,arguments);};
+ const pick=(done,again)=>{const cur=D()&&D().lv;showMsg({from:'Kev Mercer',lines:[again?'Change how hard it is? It applies from your next match.':'Before you play: how hard do you want it? Rookie is a step below the pub, Club is the field as written, Competitive is for 60+ averages.','Each level up the ladder brings a tougher field. Change this any time from the hub.'],replies:[['Rookie','rookie'],['Club','club'],['Competitive','comp']]},a=>{save.diff=Object.assign(D()||{darts:0,pts:0,place:null},{lv:LV[a]?a:'club'});try{const c=career();if(c)c.next=null;}catch(e){}try{persist();trackEv('diff_pick',{lv:save.diff.lv,again:!!again});}catch(e){}done&&done();});};
  window.topsPickDiff=()=>pick(()=>{try{showHub();}catch(e){}},true);
- const placedMsg=done=>{const d=D();d.placeNew=false;try{const c=career();if(c)c.next=null;}catch(e){}try{persist();}catch(e){}const c=career();const par=c?TIERS[c.tier].avg:45;const up=d.place>0;
-   showMsg({from:'Kev Mercer',lines:[`120 darts in. You're averaging ${d.placeAvg} against a ${par} room.`,d.place===0?'That\'s right where the field is. No change.':up?`So the field gets ${d.place} points tougher from tonight. No point beating mugs.`:`So I've eased the field by ${-d.place}. Get the throw right, then we push.`,`You're on ${(LV[d.lv]||LV.club).n}. Change it any time from the hub.`],replies:[['Sweet','ok']]},done);};
- const _pn=playNext;playNext=function(){const args=arguments,self=this;try{const c=career();if(c&&!c.run&&c.stage!=='intro'){if(!D()){return pick(()=>_pn.apply(self,args));}if(D().placeNew)return placedMsg(()=>_pn.apply(self,args));}}catch(e){}return _pn.apply(self,args);};
+ const _pn=playNext;playNext=function(){const args=arguments,self=this;try{const c=career();if(c&&!c.run&&c.stage!=='intro'){if(!D()){return pick(()=>_pn.apply(self,args));}}}catch(e){}return _pn.apply(self,args);};
  // a small difficulty chip on the career hub, tap to change
- setInterval(()=>{try{const d=D();const h=document.querySelector('#hub:not([hidden]) .hx-head');if(!d||!h||h.querySelector('.v11diff'))return;const b=document.createElement('button');b.type='button';b.className='v11diff';b.textContent=(LV[d.lv]||LV.club).n+(d.place?` ${d.place>0?'+':''}${d.place}`:'');b.onclick=e=>{e.stopPropagation();window.topsPickDiff();};const bk=h.querySelector('.bank');h.insertBefore(b,bk||null);}catch(e){}},1500);
+ setInterval(()=>{try{const d=D();const h=document.querySelector('#hub:not([hidden]) .hx-head');if(!d||!h||h.querySelector('.v11diff'))return;const b=document.createElement('button');b.type='button';b.className='v11diff';b.textContent=(LV[d.lv]||LV.club).n;b.onclick=e=>{e.stopPropagation();window.topsPickDiff();};const bk=h.querySelector('.bank');h.insertBefore(b,bk||null);}catch(e){}},1500);
 })();
 </script>
 <style>.v11diff{margin:0 8px 0 auto;font:700 11px Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:999px;border:1px solid rgba(214,178,94,.5);background:rgba(14,16,20,.6);color:#e9d9a8;cursor:pointer}</style>
@@ -142,7 +169,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  let DEV='';try{DEV=localStorage.getItem('tops-dev')||'';if(!DEV){DEV='d'+Math.random().toString(36).slice(2,10);localStorage.setItem('tops-dev',DEV);}}catch(e){DEV='d'+Math.random().toString(36).slice(2,10);}
  const _ps=persist;persist=function(){try{save.sv=(save.sv||0)+1;save.dev=DEV;}catch(e){}return _ps.apply(this,arguments);};
  const busy=()=>typeof S!=='undefined'&&S&&!S.done;
- const adopt=(cloud,why)=>{if(!cloud)return;if(busy()){NET.pendCloud=cloud;return;}NET.pendCloud=null;const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);save.dev=DEV;try{localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){}
+ const adopt=(cloud,why)=>{if(!cloud)return;if(busy()){NET.pendCloud=cloud;return;}NET.pendCloud=null;const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);save.dev=DEV;try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}/* #12: newer save from another device may be a v1.75 one */try{localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){}
    try{trackEv('save_newer',{why,sv:cloud.sv||0});}catch(e){}try{flash('Synced','',why==='push'?'Newer progress from your other device':'Loaded your latest progress');}catch(e){}try{if(document.querySelector('#hub:not([hidden])'))showHub();else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}};
  cloudPush=function(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const {data,error}=await NET.sb.rpc('tops_save_put',{p_data:save});if(error)throw error;
     if(data&&data.ok){NET.cloudAt=Date.now();return;}if(data&&data.err==='older'&&data.data){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+(save.sv||0)+'), loading it');adopt(data.data,'push');}}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);};
