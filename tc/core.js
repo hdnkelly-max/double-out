@@ -698,6 +698,19 @@
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
     const ov = $id('tcWalk'); if (ov) { ov.classList.add('out'); setTimeout(() => ov.remove(), 400); }
   }
+  // the moment in the hero clip where the hands are highest (arms up to the crowd), found once per model and clip by
+  // sampling the clip on the figure; the walk-on holds the pose there
+  const HERO_PEAK = {};
+  function heroPeak(me, act) {
+    try {
+      const clip = act.getClip(), key = (me.userData.ck || '?') + '|' + clip.name; if (HERO_PEAK[key] != null) return HERO_PEAK[key];
+      let hand = null; me.traverse(o => { if (!hand && o.isBone && /RightHand$/.test(o.name)) hand = o; }); if (!hand) return (HERO_PEAK[key] = null);
+      // sample on a separate mixer at full weight (the live action is still fading in), then let the live mixer re-pose the figure
+      const mx = me.userData.mixer, M2 = mx.constructor, m2 = new M2(me), a2 = m2.clipAction(clip), w = new (hand.position.constructor)(); a2.play(); let best = -1e9, bt = null;
+      for (let i = 0; i <= 24; i++) { const t = clip.duration * i / 24; m2.setTime(t); me.updateMatrixWorld(true); hand.getWorldPosition(w); if (w.y > best) { best = w.y; bt = t; } }
+      m2.stopAllAction(); m2.uncacheRoot(me); mx.update(0); return (HERO_PEAK[key] = bt);
+    } catch (e) { return null; }
+  }
   // play a Mixamo clip on the player figure, retargeting track names to the bones it actually has
   function clipOn(v, me, name, once) {
     try {
@@ -785,14 +798,16 @@
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
     me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .8 && !WK.hero) { WK.hero = true; clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
+    if (k >= .74 && !WK.hero) { WK.hero = true; const h = clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); WK.heroA = h; WK.heroPeak = h ? heroPeak(me, h) : null; }
+    // hold the hero pose at the clip's peak (hands highest) instead of letting the one-shot clip run on to its end pose (arms out)
+    if (WK.heroA && WK.heroPeak != null && WK.heroA.time >= WK.heroPeak && !WK.heroA.paused) { WK.heroA.time = WK.heroPeak; WK.heroA.paused = true; }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
     if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
     let cam, tgt, fov;
     if (k < .29) {          // low front 3/4, pushing in as you come through the crowd
       const q = k / .29;
-      cam = up(p0.clone().addScaledVector(F, 1.9 - q * .5).addScaledVector(Sd, -1.5 + q * .3), 1.05); tgt = up(p0.clone(), 1.25); fov = 50 - q * 6;
+      cam = up(p0.clone().addScaledVector(F, 1.9 - q * .5).addScaledVector(Sd, -1.5 + q * .3), 1.3); tgt = up(p0.clone(), 1.18); fov = 46 - q * 5;   // Art: chest height, near level, so the frame stays inside the venue (1.05 looking up showed the black above the walls at stage tiers)
     } else if (k < WA) {    // tracking close-up alongside: face and chest
       cam = up(p0.clone().addScaledVector(F, .55).addScaledVector(Sd, -1.15), 1.5); tgt = up(p0.clone().addScaledVector(F, .1), 1.4); fov = 41;
     } else {                // low rear 3/4 at the oche, board in frame, slow push
@@ -808,7 +823,7 @@
     // lightning shake: 2–3 px for a quarter second
     if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
     const shot = k < .29 ? 0 : k < WA ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
-    const blend = k < .94 ? 1 : 1 - (k - .94) / .06;
+    const blend = 1;   // Art: hold the hero shot to the end and cut (the overlay's .4 s fade covers it); blending the camera back flew through the player's arm
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
     return { fov: fov + (1 - blend) * 4 };
   };
