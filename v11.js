@@ -79,7 +79,10 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   clearTimeout(scT);scT=setTimeout(()=>{if(scEl)scEl.innerHTML='';},1560);}catch(e){}};
  // the number belongs to the visit just thrown: the next dart (anyone's) clears it (ChatGPT review)
  const scClear=()=>{clearTimeout(scT);scOpp=false;if(scEl)scEl.innerHTML='';};
- let scOpp=false;document.addEventListener('pointerdown',()=>{if(scOpp)scClear();},true);
+ let scOpp=false;
+ // the opponent's number goes the moment the player starts to aim (ChatGPT r5): a touch or click on the play area (not on a button), or Space; synchronous, capture phase
+ document.addEventListener('pointerdown',e=>{if(scOpp&&!(e.target&&e.target.closest&&e.target.closest('button,a,[role=button],input,select')))scClear();},true);
+ document.addEventListener('keydown',e=>{if(scOpp&&(e.code==='Space'||e.code==='Enter'))scClear();},true);
  if(typeof landCore==='function'){const _lc=landCore;landCore=function(){scClear();return _lc.apply(this,arguments);};}
  window.TOPS_scoreNum=scoreNum;
  const mine=p=>p&&!p.ai&&(!S.online||p.key===NET.myId);

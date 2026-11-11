@@ -11,7 +11,9 @@ const tap=()=>p.evaluate(()=>{document.body.dispatchEvent(new PointerEvent('poin
 const r={};
 const a=await vis(1,140);r.oppShows=/vs-n/.test(a.html)&&!!a.who;r.oppName=a.who;r.oppNoFinish=!/vs-left/.test(a.html);
 r.tapClearsOpp=(await tap())==='';
+await vis(1,120);r.buttonKeepsOpp=await p.evaluate(()=>{const bt=document.createElement('button');document.body.appendChild(bt);bt.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));bt.remove();return document.getElementById('vscore').innerHTML!=='';});
+r.spaceClearsOpp=await p.evaluate(()=>{document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));return document.getElementById('vscore').innerHTML==='';});
 const m=await vis(0,140);r.ownShows=/vs-n/.test(m.html)&&!m.who;r.tapKeepsOwn=(await tap())!=='';
 const l=await vis(1,100,'Tangaroa the Taniwha');r.longName=l.who;r.longOk=/^Tangaroa the…$|^Tangaroa…$/.test(l.who||'');
-const pass=r.oppShows&&r.oppNoFinish&&r.tapClearsOpp&&r.ownShows&&r.tapKeepsOwn&&r.longOk&&!pe.length;
+const pass=r.oppShows&&r.oppNoFinish&&r.tapClearsOpp&&r.buttonKeepsOpp&&r.spaceClearsOpp&&r.ownShows&&r.tapKeepsOwn&&r.longOk&&!pe.length;
 console.log('oppscore',pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();
