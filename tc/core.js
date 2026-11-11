@@ -698,19 +698,6 @@
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
     const ov = $id('tcWalk'); if (ov) { ov.classList.add('out'); setTimeout(() => ov.remove(), 400); }
   }
-  // the moment in the hero clip where the hands are highest (arms up to the crowd), found once per model and clip by
-  // sampling the clip on the figure; the walk-on holds the pose there
-  const HERO_PEAK = {};
-  function heroPeak(me, act) {
-    try {
-      const clip = act.getClip(), key = (me.userData.ck || '?') + '|' + clip.name; if (HERO_PEAK[key] != null) return HERO_PEAK[key];
-      let hand = null; me.traverse(o => { if (!hand && o.isBone && /RightHand$/.test(o.name)) hand = o; }); if (!hand) return (HERO_PEAK[key] = null);
-      // sample on a separate mixer at full weight (the live action is still fading in), then let the live mixer re-pose the figure
-      const mx = me.userData.mixer, M2 = mx.constructor, m2 = new M2(me), a2 = m2.clipAction(clip), w = new (hand.position.constructor)(); a2.play(); let best = -1e9, bt = null;
-      for (let i = 0; i <= 24; i++) { const t = clip.duration * i / 24; m2.setTime(t); me.updateMatrixWorld(true); hand.getWorldPosition(w); if (w.y > best) { best = w.y; bt = t; } }
-      m2.stopAllAction(); m2.uncacheRoot(me); mx.update(0); return (HERO_PEAK[key] = bt);
-    } catch (e) { return null; }
-  }
   // play a Mixamo clip on the player figure, retargeting track names to the bones it actually has
   function clipOn(v, me, name, once) {
     try {
@@ -798,9 +785,11 @@
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
     me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .74 && !WK.hero) { WK.hero = true; const h = clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); WK.heroA = h; WK.heroPeak = h ? heroPeak(me, h) : null; }
-    // hold the hero pose at the clip's peak (hands highest) instead of letting the one-shot clip run on to its end pose (arms out)
-    if (WK.heroA && WK.heroPeak != null && WK.heroA.time >= WK.heroPeak && !WK.heroA.paused) { WK.heroA.time = WK.heroPeak; WK.heroA.paused = true; }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
+    if (k >= .74 && !WK.hero) { WK.hero = true; WK.heroA = clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); WK.hb = null; }
+    // hold the hero pose at its peak (right hand highest) instead of letting the one-shot clip run on to its arms-out end
+    // pose: track the hand while the clip plays; once it has dropped 2 cm below its best, go back to that moment and pause
+    if (WK.heroA && !WK.heroA.paused) { const hb = WK.hb || (WK.hb = { b: null, y: -1e9, t: 0 }); if (!hb.b) me.traverse(o => { if (!hb.b && o.isBone && /RightHand$/.test(o.name)) hb.b = o; });
+      if (hb.b) { const y = hb.b.getWorldPosition(new T3()).y, t = WK.heroA.time; if (y > hb.y) { hb.y = y; hb.t = t; } else if (t > .3 && y < hb.y - .02) { WK.heroA.time = hb.t; WK.heroA.paused = true; } } }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
     if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
@@ -815,7 +804,7 @@
       const q = Math.min(1, (k - WA) / (.9 - WA)), qe = q * q * (3 - 2 * q), ang = qe * .09;
       const off = new T3().addScaledVector(F, -2.5).addScaledVector(Sd, -.95), c = Math.cos(ang), sn = Math.sin(ang);
       cam = up(new T3(off.x * c - off.z * sn, 0, off.x * sn + off.z * c).multiplyScalar(1 - qe * .08).add(WK.home), 1.12 + qe * .06);
-      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .15), 1.45); fov = 50 - qe * 2.5;   // board two-thirds across, player a third
+      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, innerWidth < innerHeight ? .38 : .15), 1.45);   /* portrait phones: player left, board clear on the right (ChatGPT walk-on r2 P2) */ fov = 50 - qe * 2.5;   // board two-thirds across, player a third
       // where the board sits on screen, so the lightning strikes it (board at the origin, ~1.73 m up)
       { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
         if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
@@ -842,7 +831,8 @@
     rim.position.set(p.x - F.x * 1.1 + Sd.x * .6, p.y + 1.9, p.z - F.z * 1.1 + Sd.z * .6);
     fill.position.set(p.x + F.x * 1.2 + Sd.x * -1, p.y + 1.5, p.z + F.z * 1.2 + Sd.z * -1);
     const dtf = WK.flash ? now - WK.flash : 1e9, fl = Math.max(0, 1 - dtf / 110, 1 - Math.abs(dtf - 190) / 90) + (dtf < 600 ? .25 * (1 - dtf / 600) : 0);   // two strikes then a fading afterglow
-    rim.intensity = 3 + fl * 40; rim.color.setHex(fl > .1 ? 0xe8f2ff : 0x9cc8ff); fill.intensity = 1.4 + fl * 10;
+    const ent = WK.shot === 0 ? 1 : 0;   /* the entrance: more warm front fill and rim so it reads as a walk-on, not a walk through a function room (ChatGPT r2 P3) */
+    rim.intensity = 3 + ent * 1.5 + fl * 40; rim.color.setHex(fl > .1 ? 0xe8f2ff : 0x9cc8ff); fill.intensity = 1.4 + ent * 1.6 + fl * 10;
   }
 
   // ---------- trophy cabinet ----------
