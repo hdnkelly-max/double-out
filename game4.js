@@ -2386,7 +2386,7 @@ async function netSignedIn(user){NET.user=user;save.cloudUser={id:user.id,name:n
   else cloudPush(true);
  }catch(e){console.warn('cloud pull',e);}
  showTitle();}
-function netAdopt(cloud){if(!cloud||cloud.season!==SEASON){cloudPush(true);return;}const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);if(!save.lb&&cloud.lb)save.lb=cloud.lb;persist();}
+function netAdopt(cloud){if(!cloud||cloud.season!==SEASON){cloudPush(true);return;}const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);if(!save.lb&&cloud.lb)save.lb=cloud.lb;/* #12: a cloud save written by v1.75 carries the old inflated opponents; migrate it too (idempotent) */try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}persist();}
 function cloudPush(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const row={user_id:NET.user.id,data:save,updated_at:new Date().toISOString()};const {error}=await NET.sb.from('tops_saves').upsert(row,{onConflict:'user_id'});if(error)throw error;NET.cloudAt=Date.now();}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);}
 async function netSignOut(){try{if(NET.sb)await NET.sb.auth.signOut();}catch(e){}NET.user=null;save.cloudUser=null;persist();showTitle();}
 // ----- online match -----
