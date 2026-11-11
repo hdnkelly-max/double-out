@@ -343,8 +343,8 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
    names clipped. On phones: two columns (cards ~160px, the size the Collection already reads well at 11px), best card on top. */
 @media (max-width:520px){
  .tcpk__summary .tcpk__grid{grid-template-columns:repeat(2,1fr);--card-w:min(42vw,170px);justify-items:center}
- .tcpk__summary .tcpk__grid .tc.is-best{grid-column:1 / -1;grid-row:auto;--card-w:min(60vw,230px)}
- .tcpk__summary .tcpk__grid.is-many .tc.is-best{--card-w:min(56vw,214px)}
+ .tcpk__summary .tcpk__grid .tc.is-best{grid-column:1 / -1;grid-row:auto;--card-w:min(50vw,200px)}
+ .tcpk__summary .tcpk__grid.is-many .tc.is-best{--card-w:min(48vw,190px)}
  /* an odd card left over on the last row sits centred, not alone on the left */
  .tcpk__summary .tcpk__grid .tc:not(.is-best):last-child:nth-child(odd){grid-column:1 / -1}
 }
@@ -359,3 +359,5 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 /* at large system text the number and rarity may not share a line: wrap instead of cutting the number */
 .tc-grid .tc .tc__meta,.tc-sets .tc .tc__meta,.tcpk__summary .tc .tc__meta{flex-wrap:wrap;column-gap:6px;row-gap:1px}
 .tc-grid .tc .tc__meta .tc__set,.tc-sets .tc .tc__meta .tc__set,.tcpk__summary .tc .tc__meta .tc__set{overflow:visible;text-overflow:clip}
+/* the set name repeats the Collection chips and can't fit beside number + rarity at large text: hide it on these cards */
+.tc-grid .tc .tc__setname,.tc-sets .tc .tc__setname,.tcpk__summary .tc .tc__setname{display:none}
