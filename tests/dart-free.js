@@ -26,9 +26,10 @@ while(starts.length<8&&Date.now()-t0<180000){const st=await step();if(st&&st.vis
  if((await p.evaluate(()=>V._qa.darts().flying))>0)aiFlights++;await p.waitForTimeout(40);}
 const dirty=starts.slice(1).filter(d=>d.stuck||d.marks);
 // 3: quit while the AI's dart is in the air
-let caught=false;for(let i=0;i<4000&&!caught;i++){caught=await p.evaluate(()=>{try{if(S&&!S.done&&S.cur===0&&!S.busy&&S.visit.length<3){const t=targetPoint(aimFor(S.p[0].score,4-S.dart));S.busy=true;land(t.x,t.y);}}catch(e){}return V._qa.darts().flying>0;});if(!caught)await p.waitForTimeout(10);}
-const before=await p.evaluate(()=>V._qa.darts());
-await p.evaluate(()=>{const q=$('btnQuit');q.click();q.click();});
+// detect the flight and quit in the same task, so the dart is still in the air when the teardown runs
+let before=null;for(let i=0;i<4000&&!before;i++){before=await p.evaluate(()=>{try{if(S&&!S.done&&S.cur===0&&!S.busy&&S.visit.length<3){const t=targetPoint(aimFor(S.p[0].score,4-S.dart));S.busy=true;land(t.x,t.y);}}catch(e){}
+  const d=V._qa.darts();if(d.flying>0){const q=$('btnQuit');q.click();q.click();return d;}return null;});if(!before)await p.waitForTimeout(5);}
+const caught=!!before;
 await p.waitForTimeout(1500);
 const after=await p.evaluate(()=>({d:V._qa.darts(),S:typeof S==='undefined'?'undef':(S===null?null:'live'),hub:!$('hub').hidden}));
 // the next match starts clean
