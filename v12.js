@@ -1,11 +1,11 @@
 <style>
 /* v12 (F2): barrels and kit parts unlock by player level; sponsor-exclusive sets */
 #hub #shopList .opt.v12lock,#hub #setupList .opt.v12lock{opacity:1!important}
-/* locked: render and body at ~68%, name and requirement at full strength */
+/* locked: dart render dimmed to ~58%; name, body and requirement stay readable (ChatGPT 19:10) */
 #hub .opt.v12lock{border-style:dashed!important;border-color:rgba(237,236,229,.16)!important}
-#hub .opt.v12lock .n{opacity:.68}
+#hub .opt.v12lock .n{opacity:.58}
 #hub .opt.v12lock .n img{filter:grayscale(.6)!important}
-#hub .opt.v12lock .s>*:not(.v12why):not(.v12sp):not(.v12gate),#hub .opt.v12lock .v12d{opacity:.68}
+#hub .opt.v12lock .s>*:not(.v12why):not(.v12sp):not(.v12gate),#hub .opt.v12lock .v12d{opacity:.88}
 #hub .opt.v12lock .t{color:#EDECE5!important;opacity:1}
 /* card descriptions cap at two lines; the full text sits in the preview */
 .opt .v12d{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -131,27 +131,26 @@ function buyBarrel(b){const c=career();const p=price(b.price);if(!c||c.bank<p||s
 function buyPart(key,it){const c=career();const p=price(it.price);if(!c||c.bank<p||gatePart(key,it.id))return;c.bank-=p;save.ownedSetup=(save.ownedSetup||[]).concat(key+':'+it.id);try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}save.setup=Object.assign({},save.setup||{},{[key]:it.id});persist();try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}showShop();}
 function decorate(){grantSponsorSet();syncReserve(false);
  const rows=[...document.querySelectorAll('#shopList .opt')];
- rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;const full=clampDesc(el);
+ rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;el.dataset.v12id=b.id;const full=clampDesc(el);
   if(save.owned.includes(b.id)){const sid=EXCL[b.id]||((SPONSORS.find(s=>s.v12gift===b.id&&s.id===save.sponsor)||{}).id);if(EXCL[b.id]){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why spo" style="--bc:${bc(sid)}"><b>${brandOf(sid)}</b> sponsor set · yours to keep</span>`);}}
   else{const g=gateBarrel(b);if(g)lockRow(el,g,money(price(b.price)));else buyBtn(el,price(b.price),()=>buyBarrel(b));}
   previewFull(el,full);});
  levelStrip();
- const SU=$('setupList');if(SU){let key=null;[...SU.children].forEach(el=>{if(el.classList.contains('label')){key=/Shaft/.test(el.textContent)?'shaft':/Flight/.test(el.textContent)?'flight':'point';return;}const t=el.querySelector('.t');if(!t||!key)return;const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.n===t.textContent);if(!it)return;
+ const SU=$('setupList');if(SU){let key=null;[...SU.children].forEach(el=>{if(el.classList.contains('label')){key=/Shaft/.test(el.textContent)?'shaft':/Flight/.test(el.textContent)?'flight':'point';return;}const t=el.querySelector('.t');if(!t||!key)return;const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.n===t.textContent);if(!it)return;el.dataset.v12id=key+':'+it.id;
   const full=clampDesc(el);const own=(save.ownedSetup||[]).includes(key+':'+it.id)||it.price===0;
   if(!own){const g=gatePart(key,it.id);if(g)lockRow(el,g,money(price(it.price)),true);else buyBtn(el,price(it.price),()=>buyPart(key,it));}
   previewFull(el,full);});}
  markNew();}
-// "New" chip on rows that opened since the last Store visit. Shown for this visit, cleared once you leave the Kit tab.
-
-function markNew(){const nw=save.v12new||[];if(!nw.length)return;let shown=0;
- [...document.querySelectorAll('#shopList .opt')].forEach((el,i)=>{const b=BARRELS[i];if(b&&nw.includes(b.id)&&!save.owned.includes(b.id)){addChip(el);shown++;}});
- const SU=$('setupList');if(SU){let key=null;[...SU.children].forEach(el=>{if(el.classList.contains('label')){key=/Shaft/.test(el.textContent)?'shaft':/Flight/.test(el.textContent)?'flight':'point';return;}const t=el.querySelector('.t');if(!t||!key)return;const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.n===t.textContent);if(it&&nw.includes(key+':'+it.id)){addChip(el);shown++;}});}
- if(shown)markNew.pending=true;}
-function addChip(el){const t=el.querySelector('.t');if(!t||t.querySelector('.v12new'))return;t.insertAdjacentHTML('afterbegin','<span class="v12new">New</span>');}
-// clear once the player has seen the Store and moved on (another hub tab or a match)
-function clearNew(){if(!markNew.pending)return;markNew.pending=false;save.v12new=[];try{persist();}catch(e){}}
-try{const _ht12=hubTab;hubTab=function(t){if(t!=='kit')clearNew();return _ht12.apply(this,arguments);};hubTab.cur=_ht12.cur;}catch(e){}
-const _bm12n=beginMatch;beginMatch=function(){clearNew();return _bm12n.apply(this,arguments);};
+// "New" chip on rows that unlocked since you last looked at them. Each item keeps its chip until you open
+// its preview or own it (ChatGPT 19:10: a tab switch isn't the same as seeing it). Rows matched by data-v12id.
+function ownedKey(k){if(k.includes(':'))return (save.ownedSetup||[]).includes(k);return save.owned.includes(k);}
+function validKey(k){if(!k.includes(':'))return BARRELS.some(b=>b.id===k);return Object.prototype.hasOwnProperty.call(PART_LV,k);}
+function seeNew(k){const nw=save.v12new||[];if(!nw.includes(k))return;save.v12new=nw.filter(x=>x!==k);try{persist();}catch(e){}}
+function markNew(){let nw=save.v12new||[];if(!nw.length)return;
+ const keep=nw.filter(k=>validKey(k)&&!ownedKey(k));if(keep.length!==nw.length){save.v12new=nw=keep;try{persist();}catch(e){}}
+ document.querySelectorAll('#shopList .opt[data-v12id],#setupList .opt[data-v12id]').forEach(el=>{const k=el.dataset.v12id;if(!nw.includes(k))return;
+  const t=el.querySelector('.t');if(!t||t.querySelector('.v12new'))return;t.insertAdjacentHTML('afterbegin','<span class="v12new">New</span>');
+  el.addEventListener('click',()=>{seeNew(k);const c=el.querySelector('.v12new');if(c)c.remove();},{once:true});});}
 const _ss12=showShop;showShop=function(){const r=_ss12.apply(this,arguments);try{decorate();}catch(e){console.warn('v12 shop',e);}return r;};
 // ----- level-up reward: barrels (and parts) that just opened in the store -----
 // the last level whose unlocks were shown lives on the career's v3 state; first seen = current level, so no backlog on update
@@ -165,7 +164,7 @@ function ptsOf(id){try{if(!window.TOPS_kitPts)return '';const sb=save.barrel,ss=
  return [['Scoring','sc'],['Finishing','fi'],['Control','ct'],['Rhythm','rh']].filter(([n,x])=>k[x]>0).map(([n,x])=>`${n} ▲${k[x]}`).join(' · ');}catch(e){return '';}}
 function rewardCards(list){const bs=list.filter(u=>u.k==='barrel');const ps=list.filter(u=>u.k!=='barrel');let h='';
  bs.forEach(u=>{const b=u.it;let img='';try{img=V.dartShot(save.flight,Object.assign({},setupParts(),{barrel:b}));}catch(e){}
-  const cost=price(b.price),bank=career()?career().bank:0;
+  const cost=price(b.price),cr=career(),bank=cr?cr.bank:0;
   const pr=save.owned.includes(b.id)?'Sponsor set · in your kit, <em>no charge</em>':bank>=cost?`<em>${money(cost)}</em> in the Store · you can afford it`:`<em>${money(cost)}</em> in the Store · ${money(cost-bank)} to go`;
   h+=`<div class="v12rw" role="status">${img?`<img class="v12im" src="${img}" alt="">`:''}<small>Level ${u.lv} · Store unlock</small><b>${b.n}</b><span class="v12pt">${ptsOf(b.id)}</span><span class="v12pr">${pr}</span></div>`;});
  if(ps.length)h+=`<div class="v12rw part" role="status"><small>Level ${ps[0].lv} · kit unlocked</small><b>${ps.map(u=>u.it.n).join(', ')}</b><span class="v12pr">${ps.map(u=>u.it.s).join(' ')} Now in the Store.</span></div>`;
@@ -178,6 +177,7 @@ function onReward(){const el=$('c3rw');if(!el||el.hidden)return;const card=el.qu
  try{persist();}catch(e){}if(!list.length)return;
  const html=rewardCards(list);const anchor=card.querySelector('.c3rw-ach,.c3rw-con,.c3rw-hook,.c3rw-act');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else card.insertAdjacentHTML('beforeend',html);}
 window.TOPS_v12Reward=onReward;
-new MutationObserver(()=>{try{onReward();}catch(e){}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden'],childList:true});
+// career3 calls TOPS_REWARD(el) right after the reward overlay opens (no page-wide observer: older iPhones already struggle)
+{const prev=window.TOPS_REWARD;window.TOPS_REWARD=function(el){try{if(prev)prev(el);}catch(e){}try{onReward();}catch(e){console.warn('v12 reward',e);}};}
 })();
 </script>
