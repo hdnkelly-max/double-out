@@ -6364,7 +6364,7 @@ body.lk-match .pa{font-family:var(--body)!important}
 #hub.c3 .c3x-stakes{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(237,236,229,.08);border-bottom:1px solid rgba(237,236,229,.08)}
 #hub.c3 .c3x-stakes>div{padding:10px 0;display:flex;flex-direction:column;gap:2px}
 #hub.c3 .c3x-stakes>div+div{padding-left:14px;border-left:1px solid rgba(237,236,229,.08)}
-#hub.c3 .c3x-stakes small{font:700 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#9AA7A5}
+#hub.c3 .c3x-stakes small{font:700 11px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#9AA7A5}
 #hub.c3 .c3x-stakes b{font:700 16px/1.2 "Barlow Condensed",sans-serif;letter-spacing:.02em;color:#EDECE5}
 #hub.c3 .c3x-stakes b.dim{color:#9AA7A5}
 #hub.c3 .c3x-fix .c3-go{height:58px;border-radius:8px;font:italic 800 22px "Barlow Condensed",sans-serif;letter-spacing:.04em;box-shadow:0 8px 22px rgba(198,243,107,.22),inset 0 1px 0 rgba(255,255,255,.4)}
@@ -6376,7 +6376,7 @@ body.lk-match .pa{font-family:var(--body)!important}
 #hub.c3 .c3x-alts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 #hub.c3 .c3x-alt{position:relative;isolation:isolate;overflow:hidden;min-height:132px;padding:12px;border-radius:12px;border:1px solid rgba(237,236,229,.12);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:2px;text-align:left;color:#EDECE5;background:linear-gradient(0deg,rgba(16,25,26,.96) 8%,rgba(16,25,26,.55) 55%,rgba(16,25,26,.15)),var(--art) center 35%/cover no-repeat,#192426;box-shadow:0 12px 26px rgba(0,0,0,.35),inset 0 1px 0 rgba(237,236,229,.08)}
 #hub.c3 .c3x-alt.rev{background:linear-gradient(0deg,rgba(16,25,26,.96) 10%,rgba(60,20,18,.55) 60%,rgba(201,85,74,.25)),var(--art) center 30%/cover no-repeat,#192426;border-color:rgba(201,85,74,.6)}
-#hub.c3 .c3x-alt small{font:800 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C6F36B}
+#hub.c3 .c3x-alt small{font:800 11px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C6F36B}
 #hub.c3 .c3x-alt.rev small{color:#E07A6E}
 #hub.c3 .c3x-alt b{font:italic 800 22px/.95 "Barlow Condensed",sans-serif;text-transform:uppercase}
 #hub.c3 .c3x-alt span{font:700 13px Manrope,sans-serif;color:#C49A52}
@@ -6385,7 +6385,7 @@ body.lk-match .pa{font-family:var(--body)!important}
 /* unlock preview with item art */
 #hub.c3 .c3x-unl{width:100%;margin-top:22px;padding:16px;min-height:112px;display:flex;align-items:center;text-align:left;color:#EDECE5;cursor:pointer}
 #hub.c3 .c3x-ucopy{position:relative;z-index:2;width:64%;display:flex;flex-direction:column;gap:4px}
-#hub.c3 .c3x-ucopy small{font:700 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C6F36B}
+#hub.c3 .c3x-ucopy small{font:700 12px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C6F36B}
 #hub.c3 .c3x-ucopy b{font:italic 800 26px/.95 "Barlow Condensed",sans-serif;text-transform:uppercase}
 #hub.c3 .c3x-ucopy span{font:600 12px Manrope,sans-serif;color:#9AA7A5}
 #hub.c3 .c3x-ucopy .c3-bar{margin:6px 0 2px}
@@ -6669,4 +6669,6 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(show,1500);})
 .ri-dart{width:232px!important;height:72px!important;margin-top:-36px}
 .c3rw-unl small,.c3rw-cash small,.c3rw-src,.c3rw-sc{color:#C6CBD2!important}
 @media (min-width:700px) and (max-height:900px){.c3x-pl.rwhero{display:none}}
+/* rule 22 (ChatGPT 04:31): the menu rows get a 48px tap target (labels, next-unlock and Respec sizes are changed where they're defined) */
+#hubPop button{min-height:48px}
 </style>
