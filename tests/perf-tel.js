@@ -5,6 +5,7 @@
 //  - an injected 120 ms main-thread stall shows up as stalls100 and an incident with the game phase
 //  - a quit before 30 frames sends nothing; guests' rows wait in a bounded local queue
 //  - cost: the per-frame bookkeeping p95 < 0.05 ms and max < 0.5 ms (bench, median of 3 runs), and no raw user-agent in the row
+//  - every row: version, match index, standalone flag, 10-bin frame histogram summing to frame_n, under 5 KB; the 5 KB guard trims an oversized row
 // usage: node tests/perf-tel.js
 const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files','--js-flags=--expose-gc']});const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});const p=await ctx.newPage();
@@ -41,6 +42,13 @@ const {chromium}=require('playwright');const path=require('path');
  const re=end.rows[0];if(end.rows.length!==1)f.push('end rows: '+end.rows.length);else{if(re.status!=='complete')f.push('end status '+re.status);if(r30&&re.match_id!==r30.match_id)f.push('30 s and end rows have different match ids');if(re.stalls100<1)f.push('end row lost the stall');if(!(re.reticle_n>=1))f.push('no reticle latency samples from the aim input: '+re.reticle_n);}
  if(end.q.some(r=>String(r.sample_id).startsWith('ck-'))||end.ck)f.push('the hidden checkpoint survived the finished match');if(end.all.some(r=>r.status==='interrupted'))f.push('an interrupted row was uploaded for a match that finished');if(re&&re.audio_issue_n)f.push('audio issues reported with no audio problem: '+re.audio_issue_n+' '+JSON.stringify(re.audio));
  // Overseer 07:56: per-match memory and session fields, version on every funnel event
+ // Overseer 10:31 (R0 #16 support): every row carries version, match index, standalone flag and a 10-bin frame histogram, and is under 5 KB
+ for(const r of end.all){const bytes=Buffer.byteLength(JSON.stringify(r));if(bytes>=5000)f.push(r.phase+' row is '+bytes+' bytes (limit 5000)');
+  if(!r.ver)f.push(r.phase+' row has no version');if(r.match_index==null)f.push(r.phase+' row has no match_index');if(!('standalone' in r))f.push(r.phase+' row has no standalone flag');
+  if(!Array.isArray(r.frame_hist)||r.frame_hist.length!==10)f.push(r.phase+' row frame_hist: '+JSON.stringify(r.frame_hist));else if(r.frame_hist.reduce((a,b)=>a+b,0)!==r.frame_n)f.push(r.phase+' frame_hist sums to '+r.frame_hist.reduce((a,b)=>a+b,0)+', frame_n '+r.frame_n);}
+ // the 5 KB guard trims an oversized row (40 fat incidents) instead of sending it whole
+ const big=await p.evaluate(()=>{const r=TOPS_perf.fitTest();return {bytes:new TextEncoder().encode(JSON.stringify(r)).length,inc:(r.incidents||[]).length};});
+ if(big.bytes>5000)f.push('oversized row not trimmed: '+JSON.stringify(big));
  if(re){for(const k of ['match_index','app_secs','geometries','textures','programs'])if(re[k]==null)f.push('end row missing '+k);if(!re.mem||!re.mem.start||!re.mem.now)f.push('end row missing mem start/now');}
  const fv=await p.evaluate(()=>(save.funnel||[]).slice(-5).map(e=>e.v));if(!fv.length||fv.some(v=>!v))f.push('funnel events without a version: '+JSON.stringify(fv));
  // short match quit: nothing sent; guest: queued, bounded

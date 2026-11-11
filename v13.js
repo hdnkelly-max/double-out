@@ -69,11 +69,17 @@ let DEV=null;function dev(){if(DEV)return DEV;const ua=navigator.userAgent||'';l
  DEV={os,os_major:om,browser:br,browser_major:bm,screen:sw+'x'+sh,dpr,gpu,device_class:`${os}${om||''}-${dpr}x-${sw}`};return DEV;}
 function rpr(){try{if(window.TOPS_R&&TOPS_R.getPixelRatio)return +TOPS_R.getPixelRatio().toFixed(2);const cv=document.querySelector('canvas');return cv&&cv.clientWidth?+(cv.width/cv.clientWidth).toFixed(2):null;}catch(e){return null;}}
 function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.fn||1;
- return {sample_id:uid(),match_id:M.id,ver:VER(),build:BUILD(),schema_ver:SCHEMA,phase:ph,status,mode:M.mode,tier:M.tier,secs:Math.round((performance.now()-M.t0)/1000),visible_secs:+vs.toFixed(1),frame_n:M.fn,
+ return fit({sample_id:uid(),match_id:M.id,ver:VER(),build:BUILD(),schema_ver:SCHEMA,phase:ph,status,mode:M.mode,tier:M.tier,secs:Math.round((performance.now()-M.t0)/1000),visible_secs:+vs.toFixed(1),frame_n:M.fn,
   refresh_hz:p50?(p50<10?120:p50<13?90:60):null,fps:vs?+(M.fn/vs).toFixed(1):null,p50,p95:pct(fh,.95),p99:pct(fh,.99),pct33:M.fn?+(M.c33/n*100).toFixed(2):null,pct50:M.fn?+(M.c50/n*100).toFixed(2):null,frames_over200:M.fh[201],stalls100:M.c100,max_ms:Math.round(M.max),
   render_p95:pct(M.rh,.95),reticle_p50:pct(M.ih,.5),reticle_p95:pct(M.ih,.95),reticle_max:M.iN?Math.round(Math.max(...Array.from(M.ih).map((v,i)=>v?i:0))):null,reticle_n:M.iN,reticle_slow:M.i50,
   audio_issue_n:M.auN+(M.mediaN||0)+(()=>{const u=underruns();return u!=null&&M.ur0!=null?Math.max(0,u-M.ur0):0;})(),audio:audioInfo(),drift_max:Math.round(M.drift),drift_n:M.driftN,lt_n:M.ltN,lt_ms:Math.round(M.ltMs),draws_max:M.draws||null,tris_max:M.tris||null,
-  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev())};}
+  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,frame_hist:fbins(fh),standalone:standalone(),app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev())});}
+// frame-interval histogram in 10 fixed bins (ms): <9, 9-12, 13-17, 18-20, 21-25, 26-33, 34-50, 51-100, 101-199, >=200 (Overseer 10:31: per-match histogram, rows < 5 KB)
+const FEDGE=[9,13,18,21,26,34,51,101,200];function fbins(h){const o=[0,0,0,0,0,0,0,0,0,0];try{for(let i=0;i<h.length;i++){if(!h[i])continue;let b=0;while(b<FEDGE.length&&i>=FEDGE[b])b++;o[b]+=h[i];}}catch(e){}return o;}
+// home-screen web app (iOS navigator.standalone, or display-mode standalone elsewhere); null if unknown
+function standalone(){try{if(navigator.standalone===true)return true;if(window.matchMedia)return matchMedia('(display-mode: standalone)').matches;}catch(e){}return null;}
+// keep every row under 5 KB: drop the least useful detail first (Overseer 10:31)
+const ROW_MAX=5000;function fit(row){try{const len=r=>new TextEncoder().encode(JSON.stringify(r)).length;if(len(row)<=ROW_MAX)return row;row.incidents=(row.incidents||[]).slice(0,3);if(len(row)<=ROW_MAX)return row;row.mem=null;if(len(row)<=ROW_MAX)return row;row.incidents=[];row.audio=null;}catch(e){}return row;}
 // --- transport: queue in localStorage (bounded), insert when signed in; duplicates ignored by sample_id ---
 function qGet(){try{return JSON.parse(localStorage.getItem(Q_KEY)||'[]');}catch(e){return [];}}
 function qSet(a){const drop=Math.max(0,a.length-Q_MAX);try{if(drop)localStorage.setItem(DROP_KEY,String((+localStorage.getItem(DROP_KEY)||0)+drop));localStorage.setItem(Q_KEY,JSON.stringify(a.slice(-Q_MAX)));return true;}catch(e){return false;}}
@@ -98,6 +104,6 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
-window.TOPS_perf={get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
+window.TOPS_perf={fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>

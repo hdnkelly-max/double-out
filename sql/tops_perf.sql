@@ -22,15 +22,18 @@ create table if not exists public.tops_perf (
   match_index int,          -- 1, 2, 3 ... matches since the app opened
   app_secs int,             -- seconds since the app opened, at match start
   geometries int, textures int, programs int,   -- three.js renderer.info at the time of the row
-  tex_mb real,              -- texture uploads since telemetry started (level 0, 4 B/px), minus deleted textures
+  tex_mb real,              -- always null since QA 08:23 (no texture-upload patching); kept so older rows stay readable
   mem jsonb,                -- {now:{geo,tex,prog,tex_mb,heap_mb}, start:{...}} so growth within a match is visible
-  frames_over200 int, q_dropped int
+  frames_over200 int, q_dropped int,
+  frame_hist int[],         -- frame intervals per match in 10 bins (ms): <9, 9-12, 13-17, 18-20, 21-25, 26-33, 34-50, 51-100, 101-199, >=200
+  standalone boolean        -- home-screen web app (iOS navigator.standalone / display-mode standalone); null if unknown
 );
 -- if the table already exists from an earlier draft of this migration
 alter table public.tops_perf add column if not exists match_index int, add column if not exists app_secs int,
   add column if not exists geometries int, add column if not exists textures int, add column if not exists programs int,
   add column if not exists tex_mb real, add column if not exists mem jsonb,
-  add column if not exists frames_over200 int, add column if not exists q_dropped int;
+  add column if not exists frames_over200 int, add column if not exists q_dropped int,
+  add column if not exists frame_hist int[], add column if not exists standalone boolean;
 create index if not exists tops_perf_ver_at on public.tops_perf (ver, at);
 alter table public.tops_perf enable row level security;
 drop policy if exists tops_perf_insert_own on public.tops_perf;
