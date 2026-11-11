@@ -29,7 +29,7 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
    save.owned=Array.from(new Set((save.owned||[]).concat(pr.barrel)));save.barrel=pr.barrel;save.setup=Object.assign({},pr.setup);
    beginMatch({mode:'career',tier:t,p0:'P',oppName:'X',oppAvg:50,legs:1});S.adren=0;S.calm=99;
    const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}try{S.done=true;}catch(e){}return tp;};
-  const one=(tp0,pr)=>{const jd=JOINT&&JD[pr.who];const row=jd?jd[Math.floor(Math.random()*jd.length)]:null;const nv=row?row[3]:smp(pr.nvq);const tp={P:tp0.P*K.kP*(REC?1:(1-.3*Math.min(1,nv/2))),/* REC: the recorded window already includes nerves */s0:tp0.s0*K.kS,D:tp0.D*K.kD*(1-.08*Math.min(1,nv)),R0:tp0.R0*K.kR*(1+.1*nv),kv:(tp0.kv||1)*(1+.1*nv)};
+  const one=(tp0,pr)=>{const jd=JOINT&&JD[pr.jd||pr.who];const row=jd?jd[Math.floor(Math.random()*jd.length)]:null;const nv=row?row[3]:smp(pr.nvq);const tp={P:tp0.P*K.kP*(REC?1:(1-.3*Math.min(1,nv/2))),/* REC: the recorded window already includes nerves */s0:tp0.s0*K.kS,D:tp0.D*K.kD*(1-.08*Math.min(1,nv)),R0:tp0.R0*K.kR*(1+.1*nv),kv:(tp0.kv||1)*(1+.1*nv)};
    if(row)return {tp,dt:row[0],lx:row[1]*K.kA,ly:row[2]*K.kA};const dt=smp(pr.dtq);return {tp,dt,lx:smp(pr.lxq)*K.kA,ly:smp(pr.lyq)*K.kA};};
   // a 501 leg for the player: real dart samples, game aiming and scoring; returns darts used and points
   const _t=targetPoint('T20');var tg0x=_t.x,tg0y=_t.y;const DBG=window.__DBG=window.__DBG||{pf:[],np:[],la:[],sp:0,sn:0,t20:0,dx:[],dy:[]};const pLeg=(tp0,pr)=>{let sc=501,darts=0,pts=0,perf=0;for(let v=0;v<40&&sc>0;v++){const st=sc;let vis=0,bust=false;
@@ -38,7 +38,7 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
     if(bust){sc=st;vis=0;}pts+=vis;}return {darts:sc===0?darts:999,used:darts,pts,perf};};
   const aiLeg=(avg,t)=>{let sc=501,darts=0;const base=aiBaseSigma(avg,t);for(let v=0;v<40&&sc>0;v++){const st=sc;let bust=false;for(let d=1;d<=3;d++){const lbl=aimFor(sc,4-d);const tg=targetPoint(lbl);const h=scoreAt(tg.x+gauss()*base,tg.y+gauss()*base);darts++;const ns=sc-h.v;if(ns<0||ns===1||(ns===0&&!h.dbl)){bust=true;break;}sc=ns;if(sc===0)break;}if(bust)sc=st;}return sc===0?darts:999;};
   const out=[];
-  for(const pr of PROF){if(JOINT&&!JD[pr.who])continue;for(let t=0;t<=2;t++){const tp0=STARTER?baseTp(t,Object.assign({},pr,{arm:0,barrel:'assassin',setup:{point:'std',shaft:'med',flight:'standard'}}),{sc:20,fi:20,ct:20,rh:20,co:20}):baseTp(t,pr,pr.st2v);if(REC||LAND){if(t>0)continue;tp0.P=pr.rec.P;tp0.s0=pr.rec.s0;}const fl=field(t);let used=0,pts=0,perf=0,won=0;
+  for(const pr of PROF){if(JOINT&&!JD[pr.jd||pr.who])continue;for(let t=0;t<=2;t++){const tp0=STARTER?baseTp(t,Object.assign({},pr,{arm:0,barrel:'assassin',setup:{point:'std',shaft:'med',flight:'standard'}}),{sc:20,fi:20,ct:20,rh:20,co:20}):baseTp(t,pr,pr.st2v);if(REC||LAND){if(t>0)continue;tp0.P=pr.rec.P;tp0.s0=pr.rec.s0;}const fl=field(t);let used=0,pts=0,perf=0,won=0;
     for(let m=0;m<LEGS;m++){const opp=fl[m%fl.length];let lw=0,lo=0,first=m%2===0;
      while(lw<2&&lo<2){const a=pLeg(tp0,pr),o=aiLeg(opp,t);used+=a.used;pts+=a.pts;perf+=a.perf;const pv=Math.ceil(a.darts/3),ov=Math.ceil(o/3);if(pv<ov||(pv===ov&&first))lw++;else lo++;first=!first;}
      if(lw===2)won++;}
