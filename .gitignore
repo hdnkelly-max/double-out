@@ -1,0 +1,10 @@
+node_modules/
+assets
+img
+index.html
+double-out.html
+double-out-standalone.html
+package.json
+package-lock.json
+shots/
+remy.glb

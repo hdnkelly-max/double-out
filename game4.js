@@ -483,7 +483,7 @@ const V=(function(){try{return (()=>{
  // --- dart model
  const FLT={};
  // real-set flights: each barrel ships with its own flights (researched against retailer listings)
- const BFLY={assassin:{bg:'#141416',ac:'#d4202a',p:'band',tx:'HARROWS',tc:'#ffffff'},neutron:{bg:'#1f4fa8',ac:'#ffffff',p:'stripe',tx:'WINMAU',tc:'#ffffff'},corexl:{bg:'#f2f2f2',ac:'#111111',p:'chev',tx:'UNICORN',tc:'#111111'},supergrip:{bg:'#c9ced4',ac:'#d4202a',p:'stripes',tx:'HARROWS',tc:'#1a1a1a'},razor:{bg:'#0f0f10',ac:'#d4202a',p:'chev',tx:'RED DRAGON',tc:'#ffffff'},vapor8:{bg:'#111113',ac:'#f5d11c',p:'stripes',tx:'TARGET',tc:'#f5d11c'},zen:{bg:'#0f6d73',ac:'#5fd3cf',p:'wave',tx:'SHOT',tc:'#ffffff'},mvg:{bg:'#2fa046',ac:'#0e0e0e',p:'split',tx:'MvG',tc:'#ffffff'},asp:{bg:'#101012',ac:'#c4161c',p:'snake',tx:'THE ASP',tc:'#ffffff'},ga:{bg:'#1c2c5a',ac:'#ffffff',p:'cross',tx:'UNICORN',tc:'#ffffff'},littler:{bg:'#5b2a86',ac:'#d9b45a',p:'band',tx:'LITTLER',tc:'#ffffff'},power:{bg:'#0e0e0e',ac:'#ffffff',p:'bolt',tx:'POWER',tc:'#ffffff'}};
+ const BFLY={assassin:{bg:'#141416',ac:'#d4202a',p:'band',tx:'HARROWS',tc:'#ffffff'},neutron:{bg:'#1f4fa8',ac:'#ffffff',p:'stripe',tx:'WINMAU',tc:'#ffffff'},corexl:{bg:'#f2f2f2',ac:'#111111',p:'chev',tx:'UNICORN',tc:'#111111'},supergrip:{bg:'#c9ced4',ac:'#d4202a',p:'stripes',tx:'HARROWS',tc:'#1a1a1a'},razor:{bg:'#0f0f10',ac:'#d4202a',p:'chev',tx:'RED DRAGON',tc:'#ffffff'},vapor8:{bg:'#111113',ac:'#f5d11c',p:'stripes',tx:'TARGET',tc:'#f5d11c'},zen:{bg:'#0f6d73',ac:'#5fd3cf',p:'wave',tx:'SHOT',tc:'#ffffff'},mvg:{bg:'#2fa046',ac:'#0e0e0e',p:'split',tx:'MvG',tc:'#ffffff'},asp:{bg:'#101012',ac:'#c4161c',p:'snake',tx:'THE ASP',tc:'#ffffff'},ga:{bg:'#1c2c5a',ac:'#ffffff',p:'cross',tx:'UNICORN',tc:'#ffffff'},littler:{bg:'#5b2a86',ac:'#d9b45a',p:'band',tx:'LITTLER',tc:'#ffffff'},power:{bg:'#0e0e0e',ac:'#ffffff',p:'bolt',tx:'POWER',tc:'#ffffff'},iceman:{bg:'#0d2740',ac:'#8fd3ff',p:'chev',tx:'ICEMAN',tc:'#ffffff'}};
  function setFlightTex(id){const D=BFLY[id];if(!D)return null;const key='set:'+id;if(FLT[key])return FLT[key];const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle=D.bg;x.fillRect(0,0,256,256);x.fillStyle=D.ac;x.strokeStyle=D.ac;
   if(D.p==='band'){x.beginPath();x.moveTo(0,200);x.lineTo(200,0);x.lineTo(256,0);x.lineTo(256,40);x.lineTo(40,256);x.lineTo(0,256);x.closePath();x.fill();}
   else if(D.p==='stripe'){x.fillRect(0,96,256,34);}
@@ -511,7 +511,8 @@ const V=(function(){try{return (()=>{
   asp:{col:0xb3b8be,met:.92,rough:.25,prof:t=>1.12-.24*t,bands:[[.55,.05,0xb3141b],[.7,.05,0xb3141b],[.85,.05,0xb3141b]]},
   ga:{col:0xcfd3d8,met:.95,rough:.18,prof:t=>.96},
   littler:{col:0x1b1c20,met:.6,rough:.45,prof:t=>.97},
-  power:{col:0x8e949c,met:.9,rough:.28,prof:t=>.95+.11*Math.exp(-Math.pow((t-.5)/.32,2)),bands:[[.18,.05,0xc9a227],[.82,.05,0x111111]]}};
+  power:{col:0x8e949c,met:.9,rough:.28,prof:t=>.95+.11*Math.exp(-Math.pow((t-.5)/.32,2)),bands:[[.18,.05,0xc9a227],[.82,.05,0x111111]]},
+  iceman:{col:0x7f9fb8,met:.9,rough:.26,prof:t=>.9+.16*Math.exp(-Math.pow((t-.4)/.3,2)),bands:[[.5,.05,0x8fd3ff]]}};
  // lathe-built barrels: real silhouettes, grip cut into the profile, coating colours with bare metal in the grooves
  // lathe-built barrels: real silhouettes, grip cut into the profile (ring, buttress, knurl, pixel, axial), coating colours with bare metal in the cuts
  const BSPEC={
@@ -526,7 +527,8 @@ const V=(function(){try{return (()=>{
   asp:{base:0xBBC0C4,gc:0xC92847,g:[[.5,.95,'butt',9,.08]]},
   ga:{base:0xBFC5C9,gc:0x50565B,g:[[.1,.42,'ring',14,.022,.008],[.58,.9,'ring',14,.022,.008]]},
   littler:{base:0x25272B,gc:0xAEB5BD,g:[[.08,.42,'pixs',10,.05,15],[.58,.92,'pixs',10,.05,15]]},
-  power:{base:0x202226,gc:0xC2C7CA,g:[[.05,.3,'butt',5,.1],[.7,.95,'butt',5,.1]],reg:[[.0,.3,0xC2C7CA],[.7,1,0xC2C7CA],[.47,.53,0xC9A34E]]}};
+  power:{base:0x202226,gc:0xC2C7CA,g:[[.05,.3,'butt',5,.1],[.7,.95,'butt',5,.1]],reg:[[.0,.3,0xC2C7CA],[.7,1,0xC2C7CA],[.47,.53,0xC9A34E]]},
+  iceman:{base:0x1E3A56,gc:0xCFE6F5,g:[[.06,.44,'butt',7,.09],[.56,.94,'ring',7,.05,.02]]}};
  // depth of the cut at t (0 = point end) and angle a (0..1 round the barrel)
  function cutAt(sp,t,a){for(const r of sp.g){const [lo,hi,ty]=r;if(t<lo||t>hi)continue;const u=(t-lo)/(hi-lo);
    if(ty==='ring'){const n=r[3],dep=r[4],w=r[5];const f=(u*n)%1;const d=Math.abs(f-.5)*2;const hw=Math.min(.95,w*n/(hi-lo));if(d<hw)return dep*Math.sqrt(1-Math.pow(d/hw,2));}
@@ -546,15 +548,15 @@ const V=(function(){try{return (()=>{
  const _bgeo={};function barrelGeo(id,base,prof){if(_bgeo[id])return _bgeo[id];const ge=base.clone();const pa=ge.attributes.position;for(let i=0;i<pa.count;i++){const z=pa.getZ(i);const k=prof(z+.5);pa.setX(i,pa.getX(i)*k);pa.setY(i,pa.getY(i)*k);}pa.needsUpdate=true;ge.computeVertexNormals();_bgeo[id]=ge;KEEP.add(ge);return ge;}
  function makeDart(color,setup){setup=setup||{};let sh=setup.shaft||SHAFTS[1],fl=setup.fl||FSHAPES[0],pt=setup.pt||POINTS[0],br=setup.barrel||BARRELS[1];
   if(pt.id==='std'&&!setup.custom){if(br.id==='vapor8')pt=POINTS.find(x=>x.id==='black')||pt;else if(['asp','littler','power'].includes(br.id))pt=POINTS[1];}const g=new T.Group();const metal=new T.MeshStandardMaterial({color:pt.col||0xcfd4d9,metalness:.85,roughness:.3});
-  const bl={assassin:.05,neutron:.046,corexl:.05,supergrip:.052,razor:.05,vapor8:.054,zen:.05,mvg:.056,asp:.048,ga:.052,littler:.05,power:.042}[br.id]||.05,brad={assassin:.0041,neutron:.0047,corexl:.0038,supergrip:.0036,razor:.0039,vapor8:.0031,zen:.0037,mvg:.0032,asp:.0039,ga:.0035,littler:.0036,power:.0044}[br.id]||.0038;
+  const bl={assassin:.05,neutron:.046,corexl:.05,supergrip:.052,razor:.05,vapor8:.054,zen:.05,mvg:.056,asp:.048,ga:.052,littler:.05,power:.042,iceman:.05}[br.id]||.05,brad={assassin:.0041,neutron:.0047,corexl:.0038,supergrip:.0036,razor:.0039,vapor8:.0031,zen:.0037,mvg:.0032,asp:.0039,ga:.0035,littler:.0036,power:.0044,iceman:.0038}[br.id]||.0038;
   const DG=dartGeo();const z0=-bl/2;let p;if(DG){p=new T.Mesh(DG.point,metal);p.scale.set(.0011,.0011,pt.len);p.position.z=z0;}else{p=new T.Mesh(new T.CylinderGeometry(.0006,.0016,pt.len,8),metal);p.rotation.x=-Math.PI/2;p.position.z=z0-pt.len/2;}g.add(p);if(pt.id!=='std'){const gm=new T.MeshStandardMaterial({color:0x2a2c2f,metalness:.6,roughness:.5});for(let k=0;k<(pt.id==='long'?4:3);k++){const r=new T.Mesh(new T.CylinderGeometry(.00125,.00125,.0008,10),gm);r.rotation.x=Math.PI/2;r.position.z=z0-.003-k*.0022;g.add(r);}}
   const bcol={assassin:0xb08d3a,neutron:0xb08d3a,mvg:0x1a1a1e,littler:0x2a2a30,power:0x8a8f96,vapor8:0x7a7f86,asp:0x3a3f46}[br.id]||0x6e7479;const bmat=new T.MeshStandardMaterial({color:bcol,metalness:.9,roughness:.35});
   let barrel;const LK=BLOOK[br.id];if(DG&&LK){bmat.color.setHex(LK.col);bmat.metalness=LK.met;bmat.roughness=LK.rough;}if(setup.mine&&window.TOPS_BARREL)try{TOPS_BARREL(bmat);}catch(e){}
   if(BSPEC[br.id]&&LK){bmat.color.setHex(0xffffff);bmat.vertexColors=true;barrel=new T.Mesh(barrelLathe(br.id,LK.prof),bmat);barrel.scale.set(brad*1.05,brad*1.05,bl);}
   else if(DG){barrel=new T.Mesh(LK?barrelGeo(br.id,DG.barrel,LK.prof):DG.barrel,bmat);barrel.scale.set(brad*1.05,brad*1.05,bl);
    if(LK&&LK.bands)LK.bands.forEach(([t,w,c])=>{const r=brad*1.05*LK.prof(t)*1.035;const band=new T.Mesh(new T.CylinderGeometry(r,r,bl*w,20,1,true),new T.MeshStandardMaterial({color:c,metalness:.7,roughness:.35,side:T.DoubleSide}));band.rotation.x=Math.PI/2;band.position.z=-bl/2+bl*t;g.add(band);});}else{barrel=new T.Mesh(new T.CylinderGeometry(brad,brad*.9,bl,16),bmat);barrel.rotation.x=Math.PI/2;}barrel.position.z=0;g.add(barrel);
-  const rings={assassin:3,neutron:5,corexl:6,supergrip:10,razor:8,vapor8:9,zen:6,mvg:7,asp:4,ga:0,littler:12,power:11}[br.id]||5;for(let k=0;k<(DG?0:rings);k++){const r=new T.Mesh(new T.TorusGeometry(brad*1.02,.0006,6,16),new T.MeshStandardMaterial({color:br.id==='littler'?0xd9b45a:(br.id==='mvg'?0x3a9a4a:0x33373c),metalness:.9,roughness:.4}));r.position.z=z0+bl*(k+.5)/rings;g.add(r);}
-  const SETSHAFT={asp:0xb3141b,littler:0x4b2272,mvg:0x1d5e2b,razor:0x5a0f12,vapor8:0x111214,zen:0x0f5a60,power:0x111111,ga:0x16213f};
+  const rings={assassin:3,neutron:5,corexl:6,supergrip:10,razor:8,vapor8:9,zen:6,mvg:7,asp:4,ga:0,littler:12,power:11,iceman:8}[br.id]||5;for(let k=0;k<(DG?0:rings);k++){const r=new T.Mesh(new T.TorusGeometry(brad*1.02,.0006,6,16),new T.MeshStandardMaterial({color:br.id==='littler'?0xd9b45a:(br.id==='mvg'?0x3a9a4a:0x33373c),metalness:.9,roughness:.4}));r.position.z=z0+bl*(k+.5)/rings;g.add(r);}
+  const SETSHAFT={asp:0xb3141b,littler:0x4b2272,mvg:0x1d5e2b,razor:0x5a0f12,vapor8:0x111214,zen:0x0f5a60,power:0x111111,ga:0x16213f,iceman:0x12324f};
   const sCol=(sh.id==='med'&&!setup.custom&&SETSHAFT[br.id])?SETSHAFT[br.id]:(sh.id==='carbon'?0x26282b:sh.id==='long'?0x8fc6e8:(sh.col||0x1a1c1f));
   const sMat=sh.id==='carbon'?new T.MeshStandardMaterial({color:sCol,roughness:.18,metalness:.35}):sh.id==='long'?new T.MeshStandardMaterial({color:sCol,roughness:.15,metalness:.1,transparent:true,opacity:.72}):new T.MeshStandardMaterial({color:sCol,roughness:.45});
   const SR={short:[.0024,.0026],med:[.0021,.0024],long:[.0017,.0023],carbon:[.0018,.0021],spin:[.0021,.0024]}[sh.id]||[.0021,.0024];const shaft=new T.Mesh(new T.CylinderGeometry(SR[0],SR[1],sh.len,12),sMat);shaft.rotation.x=Math.PI/2;shaft.position.z=bl/2+sh.len/2;g.add(shaft);
@@ -563,7 +565,7 @@ const V=(function(){try{return (()=>{
    else if(sh.id!=='carbon'&&sh.id!=='long')for(let k=0;k<4;k++)add(bl/2+.003+k*.0022,.00235,.0009);
    if(sh.id==='long'){const top=new T.Mesh(new T.CylinderGeometry(.0024,.0024,.003,14),new T.MeshStandardMaterial({color:0xdfe6ea,metalness:.8,roughness:.3}));top.rotation.x=Math.PI/2;top.position.z=bl/2+.0015;g.add(top);}}
   const useSet=!setup.custom&&BFLY[br.id];const fm=new T.MeshStandardMaterial({map:useSet?setFlightTex(br.id):flightTex(color,br.brand||'TOPS'),side:T.DoubleSide,roughness:.45});const s=new T.Shape();
-  const SETSHAPE={assassin:'std',neutron:'std',corexl:'std',supergrip:'pear',razor:'std',vapor8:'vapor',zen:'shot',mvg:'std',asp:'std',ga:'ar',littler:'std',power:'vapor'};
+  const SETSHAPE={assassin:'std',neutron:'std',corexl:'std',supergrip:'pear',razor:'std',vapor8:'vapor',zen:'shot',mvg:'std',asp:'std',ga:'ar',littler:'std',power:'vapor',iceman:'std'};
   const shp=fl.id!=='standard'?fl.id:(SETSHAPE[br.id]||'std');
   // outlines in metres: x along the dart (0 = front of flight), y out from the shaft
   if(shp==='slim'){s.moveTo(0,0);s.lineTo(.021,.010);s.quadraticCurveTo(.031,.011,.031,.004);s.lineTo(.031,-.002);s.lineTo(.02,-.004);}
@@ -1636,7 +1638,7 @@ function offerSponsors(done){const c=career();const offers=SPONSORS.filter(s=>s.
  const next=(k)=>{if(k>=offers.length)return done();const s=offers[k];showMsg({from:s.from,lines:s.lines,replies:[[sponsor()?'Switch to '+s.brand:'Sign with '+s.brand,'yes'],['Not now','no']]},act=>{if(act==='yes'){save.sponsor=s.id;Object.entries(s.free).forEach(([key,id])=>{if(key==='barrel'){if(!save.owned.includes(id))save.owned.push(id);save.barrel=id;}else{const tag=key+':'+id;if(!(save.ownedSetup||[]).includes(tag))save.ownedSetup=(save.ownedSetup||[]).concat(tag);save.setup=Object.assign({},save.setup||{},{[key]:id});}});persist();V.setPlayerLook(save.look,save.flight,save.name,c.tier);showMsg({from:s.from,lines:['Welcome aboard. Gear\u2019s in the post. Check the shop.'],replies:[['Cheers','ok']]},()=>done());}else{c.declined=(c.declined||[]).concat(s.id);persist();next(k+1);}});};next(0);}
 // ===== CAREER =====
 function career(){return save.career;}
-const SLOT_KEYS=['career','perks','attr','arm','owned','barrel','setup','ownedSetup','sponsor','gear','composure'];
+const SLOT_KEYS=['career','perks','attr','arm','owned','barrel','setup','ownedSetup','sponsor','gear','composure','v12res','v12new'];
 function switchSlot(to){const cur=save.slot||'career';if(cur===to)return;save.slots=save.slots||{};const pack={};SLOT_KEYS.forEach(k=>pack[k]=save[k]);save.slots[cur]=pack;const nx=save.slots[to]||{};SLOT_KEYS.forEach(k=>{save[k]=nx[k]!==undefined?nx[k]:(k==='career'?null:(k==='perks'||k==='attr'||k==='setup'?{}:(k==='arm'||k==='composure'?0:(k==='owned'?['assassin']:(k==='ownedSetup'?['shaft:short','shaft:med','flight:standard','point:std']:(k==='barrel'?'assassin':null))))));});if(!save.setup||!save.setup.shaft)save.setup={shaft:'med',flight:'standard',point:'std'};save.slot=to;_SK=null;persist();}
 function isRun(){return (save.slot||'career')==='run';}
 function rseed(salt){const c=career();return (hash(String((c&&c.seed)||0)+'|'+salt)%100000)/100000;}
