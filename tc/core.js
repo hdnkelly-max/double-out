@@ -753,6 +753,7 @@
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
+    if (WK.vis0 == null) WK.vis0 = !!v.me.visible;   // #18: the figure's visibility before the walk-on (hidden in a match), restored at the end
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
@@ -788,6 +789,8 @@
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
       me.position.copy(WK.home); me.rotation.y = WK.rot;
+      // #18: hand the figure back as the walk-on found it. Left visible, it stood on the oche spot and the opponent stepped into it on his throw.
+      me.visible = !!WK.vis0;
       try { if (WK.act) WK.act.fadeOut(.4); v.playClip && v.playClip(me, 'idle', { fade: .5 }); } catch (e) {}
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
