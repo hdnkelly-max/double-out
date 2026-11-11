@@ -214,9 +214,9 @@ window.TC_CAB3D = (function () {
     // Art: seat each trophy on its shelf (a soft contact shadow) and light each shelf on its own (a warm strip under
     // the shelf above), so shelves separate and the cups catch a highlight instead of all sharing one wash
     { const sc2 = document.createElement('canvas'); sc2.width = sc2.height = 64; const q = sc2.getContext('2d'), gr = q.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); q.fillStyle = gr; q.fillRect(0, 0, 64, 64);
-      const st = new T.CanvasTexture(sc2), sm = new T.MeshBasicMaterial({ map: st, transparent: true, depthWrite: false });
+      const st = new T.CanvasTexture(sc2), sm = new T.MeshBasicMaterial({ map: st, transparent: true, depthWrite: false }); own.push(sm);   // freed with the cabinet (QA 05:13)
       items.forEach(g => { const d = new T.Mesh(new T.PlaneGeometry(.2, .14), sm); d.rotation.x = -Math.PI / 2; d.position.set(g.position.x, g.position.y + .003, g.position.z + .01); sc.add(d); });
-      const strip = new T.MeshBasicMaterial({ color: 0x8a6c44, transparent: true, opacity: .7 });   // a dim warm LED edge, not a white bar
+      const strip = new T.MeshBasicMaterial({ color: 0x8a6c44, transparent: true, opacity: .7 }); own.push(strip);   // a dim warm LED edge, not a white bar
       [SH[1], SH[2], TOPY].forEach((y, k) => { const ls = new T.Mesh(new T.BoxGeometry(IW * .86, .003, .004), strip); ls.position.set(0, y - .026, ID / 2 - .06); sc.add(ls);
         if (k < 2) { const pl = new T.PointLight(0xffcf96, .55, .9, 2); pl.position.set(0, y - .06, .1); sc.add(pl); } }); }
     if (!items.length) {            // empty: dusty outlines where the trophies will go

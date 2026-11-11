@@ -629,7 +629,19 @@
   // ---- wearable helpers: sample the skinned body so cloth and hair sit on each model's own shape ----
   // CPU-skins the figure (same maths as the shader, quantised attributes included) and returns the vertices
   // weighted mostly to the `want` bones, in `space` (a bone) coordinates. Runs once when the look is built.
+  // CPU-skinned points are the same for every rebuild of a model (each figure is a fresh clone of the same rig and shares
+  // its geometry), so they're cached per geometry: a phone profile spent ~50 ms per call when the opponent swap rebuilt
+  // figures mid-match (QA 05:13). The WeakMap lets a model's entry go when its geometry does.
+  const SKIN_CACHE = new WeakMap();
   function skinPts(T, fig, space, want, minW, skipMesh) {
+    let g0 = null; fig.traverse(o => { if (!g0 && o.isSkinnedMesh && o.geometry) g0 = o.geometry; });
+    const key = want.source + '|' + minW + '|' + (skipMesh ? 1 : 0) + '|' + (space.name || '');
+    const hit = g0 && SKIN_CACHE.get(g0); if (hit && hit[key]) return hit[key].slice();
+    const out = skinPts0(T, fig, space, want, minW, skipMesh);
+    if (g0) { const m = hit || {}; m[key] = out.slice(); if (!hit) SKIN_CACHE.set(g0, m); }
+    return out;
+  }
+  function skinPts0(T, fig, space, want, minW, skipMesh) {
     fig.updateWorldMatrix(true, true);
     const inv = new T.Matrix4().copy(space.matrixWorld).invert(), out = [], v = new T.Vector3(), acc = new T.Vector3(), tmp = new T.Vector3();
     const rd = (at, i, k) => { const A = at.isInterleavedBufferAttribute ? at.data.array : at.array; let x = at.isInterleavedBufferAttribute ? A[i * at.data.stride + at.offset + k] : A[i * at.itemSize + k];
@@ -796,7 +808,7 @@
   // Business at the front: hide the model's own hair (every rig ships with its own cut, often long) and lay a short
   // crop over the crown and sides, sampled from that model's skull, so the long back reads as a mullet from the front.
   function mulletCrop(T, fig, hd, P, y0, hh, cz, col, strands) {
-    fig.traverse(o => { if (!o.isMesh || o.name === 'wear_mullet') return; const mn = (o.material && o.material.name) || ''; if (/Hair/i.test(o.name + ' ' + mn) && !/Brow|Lash/i.test(o.name + ' ' + mn)) o.visible = false; });
+    fig.traverse(o => { if (!o.isMesh || o.name === 'wear_mullet' || o.userData.hairStyle === 'beard') return; const mn = (o.material && o.material.name) || ''; if (/Hair/i.test(o.name + ' ' + mn) && !/Brow|Lash|Beard|Mous?tach/i.test(o.name + ' ' + mn)) o.visible = false; });
     const yc = y0 + hh * .5, NAZ = 48, NEL = 24, EL0 = -.45, R = [];
     for (let a = 0; a < NAZ; a++) R.push(new Float32Array(NEL + 1));
     for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1] - yc, z = P[i + 2] - cz, r = Math.hypot(x, y, z); if (r < .02) continue;
