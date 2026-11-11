@@ -2156,6 +2156,8 @@ confetti=function(strength){if(LOOK.rm||strength<.4)return;const P=V.lkRects().p
 #routes .rt-rail .rt.on{background:#C6F36B;border-color:#C6F36B;color:#10191A;box-shadow:0 6px 16px rgba(198,243,107,.28)}
 #routes .rt-rail .rt.on .rc.d{color:#10191A!important;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 #routes .rt-rail .rt em{display:none}
+#routes .rt-rail .rt.on .rc:first-child{background:rgba(16,25,26,.16)!important;border-radius:5px;padding:3px 5px!important}
+#routes.rail-on{padding:5px;margin:-5px;border-radius:14px;background:linear-gradient(180deg,rgba(10,16,17,.78),rgba(10,16,17,.55));box-shadow:0 8px 20px rgba(0,0,0,.35)}
 #routes.routes.rail-on{position:fixed!important;z-index:35!important;top:calc(var(--lk-hdr) + var(--lk-bh) + 8px)!important;left:8px!important;right:8px!important;width:auto!important;bottom:auto!important}
 #routes.rail-on .rt-bar{width:100%!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;min-height:44px;gap:5px!important}
 #routes.rail-on .rt-bar .rt-rem,#routes.rail-on .rt-bar .rt-sel,#routes.rail-on .rt-bar .rt-tog{display:none!important}
@@ -2169,7 +2171,8 @@ confetti=function(strength){if(LOOK.rm||strength<.4)return;const P=V.lkRects().p
  host.setAttribute('aria-label',`${me.score} to go, ${4-S.dart} dart${S.dart===3?'':'s'}: pick a route`);};}
 {const _ss=showScreen;showScreen=function(){const r=_ss.apply(this,arguments);try{const h=$('routes'),hud=$('hud');if(h&&hud&&hud.hidden){h.hidden=true;h.classList.remove('rail-on');document.body.classList.remove('lk-rail');if(h.parentNode!==hud)hud.appendChild(h);}}catch(e){}return r;};}
 // a picked route that a dart knocks off course: say so once, then the table's route for the new score takes over
-{const _ld=landCore;landCore=function(){const had=!!(S&&S.planPicked&&S.plan&&S.plan.length);const r=_ld.apply(this,arguments);try{if(had&&S&&!S.plan){S.planPicked=false;S.planDropped=performance.now();setTimeout(()=>{try{renderRoutes();}catch(e){}},2300);}}catch(e){}return r;};}
+{const _ld=landCore;landCore=function(){const had=!!(S&&S.planPicked&&S.plan&&S.plan.length);const snap=had?S.plan.slice():null;const r=_ld.apply(this,arguments);try{if(had&&S&&!S.plan&&snap.length>1){/* ChatGPT P1: keep the rest of your route when it still checks out */const me=S.p[S.cur],rest=snap.slice(1),left=4-S.dart,last=rest[rest.length-1];if(me&&rest.length<=left&&rest.reduce((a,l)=>a+valOf(l),0)===me.score&&(last[0]==='D'||last==='BULL'))S.plan=rest;}
+ if(had&&S&&!S.plan){S.planPicked=false;S.planDropped=performance.now();setTimeout(()=>{try{renderRoutes();}catch(e){}},2300);}}catch(e){}return r;};}
 {const _beginMatch=beginMatch;beginMatch=function(opts){LOOK.routesOpen=false;LOOK.bandOff();LOOK.hush=false;LOOK.ducked=false;$('hudTr').classList.remove('open');$('btnMenu').setAttribute('aria-expanded','false');V.lkRects();document.body.classList.add('lk-match');const r=_beginMatch(opts);LOOK.syncMenu();return r;};}
 {const _showScreen=showScreen;showScreen=function(id){_showScreen(id);document.body.classList.toggle('lk-match',!$('hud').hidden);if(id){const cb=$('btnChat');if(cb)cb.hidden=true;const cp=$('chatPanel');if(cp)cp.hidden=true;const mb=$('mpBoard');if(mb)mb.hidden=true;const pb=$('pubBet');if(pb)pb.hidden=true;}};}
 // --- menu (Sound / Caller / Haptics / Pace / Quit live under Menu) and skip
