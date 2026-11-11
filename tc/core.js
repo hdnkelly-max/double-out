@@ -369,8 +369,10 @@
       <div class="tcpk__kicker">New in TOPS</div><h2 class="tc-h">Cards are here</h2>
       <div class="tc-wel-big"><b>${info.picks}</b><span>picks earned</span></div>
       <p>${info.ach ? `From the ${info.ach} achievement${info.ach > 1 ? 's' : ''} you've already completed. ` : ''}From now on every 180, ton-plus checkout and achievement earns another.</p>
+      <ul class="tc-wel-how"><li><b>Keep one of three.</b> Each pick deals three cards and you keep one.</li><li><b>Unlock rewards.</b> Many cards unlock kit, wearables, celebrations and titles. Equip them in Player · Loadout.</li><li><b>Find them.</b> Everything you own is in Cards on the Career tab.</li></ul>
       <button type="button" class="tcpk__btn tcpk__btn--go" id="tcWelGo">Open ${info.picks} picks</button><button type="button" class="tcpk__later" id="tcWelLater">Later</button></div>`);
     const pk = TCC.card(peek); pk.classList.add('is-flipped'); el.querySelector('.tc-wel-peek').appendChild(pk);
+    save.tcIntro = save.tcIntro || Date.now(); keep(); // #13: the welcome carries the explainer, so no second sheet before the first pick
     el.querySelector('#tcWelGo').onclick = () => { el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
     el.querySelector('#tcWelLater').onclick = () => { el.remove(); hubTiles(); };
   }

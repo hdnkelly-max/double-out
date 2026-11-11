@@ -332,6 +332,9 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-wk-ban em{font-size:13px}.tc-wk-ban span{font-size:12px}
 
 /* #13 What are cards? */
+.tc-wel-how{list-style:none;margin:2px 0 10px;padding:0;max-width:340px;display:grid;gap:7px;text-align:left}
+.tc-wel-how li{font-size:14px;line-height:1.4;color:var(--muted,#9AA7A5)}
+.tc-wel-how b{color:var(--text,#EDECE5);font-weight:800}
 .tc-whatbtn{display:inline-flex;align-items:center;gap:6px;margin:-4px 0 12px;padding:6px 0;background:none;border:0;color:var(--acc,#D8F25A);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .tc-intro .tc-sh-in{max-width:520px;margin:0 auto}
 .tc-introl{list-style:none;counter-reset:ti;margin:6px 0 22px;padding:0;display:grid;gap:10px}
