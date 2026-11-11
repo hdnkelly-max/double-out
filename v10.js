@@ -80,7 +80,7 @@ body.spectating #paLabel{opacity:.0}
 .c3rw-stats>div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 6px 10px;text-align:center;opacity:0;transform:translateY(6px);animation:c3st .35s ease-out forwards}
 .c3rw-stats>div:nth-child(2){animation-delay:.08s}.c3rw-stats>div:nth-child(3){animation-delay:.16s}
 .c3rw-stats b{display:block;font:800 25px/1 var(--display,'Barlow Condensed',sans-serif);color:#f3efe6;font-variant-numeric:tabular-nums}
-.c3rw-stats small{display:block;margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9aa3ad}
+.c3rw-stats small{display:block;margin-top:5px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9aa3ad}
 @keyframes c3st{to{opacity:1;transform:none}}
 .c3rw-cash.none{display:none!important}
 @media (prefers-reduced-motion:reduce){.c3rw-stats>div{animation:none;opacity:1;transform:none}}
