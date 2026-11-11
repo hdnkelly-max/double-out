@@ -3,7 +3,8 @@
 // 1) the board face texture has real colour (red and green rings, numbers drawn, not blank),
 // 2) the board on screen shows that colour,
 // 3) the player's and opponent's shirt textures are drawn,
-// 4) GPU textures and geometries stay flat across matches (needs 3+ matches; the default run plays 4). (not a blank or near-black canvas).
+// 4) GPU textures and geometries stay flat across matches (needs 3+ matches; the default run plays 4),
+// 5) with the character model requests failing, one Club match still shows a coloured board and drawn kits. (not a blank or near-black canvas).
 // Usage: node tests/regress_assets.js [matches=3]   exits 1 on any failure.
 const { chromium } = require('playwright');
 const path = require('path');
@@ -14,10 +15,14 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // match 1 and match 4 are both Club, so the
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
   const fails = [], notes = [];
-  for (const [vn, vp] of Object.entries(VIEWS)) {
+  const RUNS = [];
+  for (const [vn, vp] of Object.entries(VIEWS)) RUNS.push([vn, vp, N, false]);
+  for (const [vn, vp] of Object.entries(VIEWS)) RUNS.push([vn + ' (character models fail to load)', vp, 1, true]);   // a failed texture request must fall back, never a blank or black kit
+  for (const [vn, vp, NM, failChars] of RUNS) {
     const p = await b.newPage({ viewport: vp });
     const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.route(/supabase\.co/, r => r.abort());
+    if (failChars) await p.route(/assets\/(m\/)?chars\//, r => r.abort('failed'));
     await p.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js/, r => r.fulfill({ path: path.resolve(__dirname, '../node_modules/three/build/three.min.js'), contentType: 'application/javascript' }));   // offline test boxes
     // capture the board textures through the existing TOPS_BOARD hook (no game changes needed)
     await p.addInitScript(() => {
@@ -30,7 +35,7 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // match 1 and match 4 are both Club, so the
     const ok = await p.evaluate(() => { try { save.authSeen = true; const l = $('login'); if (l) l.hidden = true; V.walkOn = () => {}; newCareer(); return 'ok'; } catch (e) { return e.message; } });
     if (ok !== 'ok') { fails.push(`${vn}: setup ${ok}`); await p.close(); continue; }
     const mems = [];
-    for (let m = 0; m < N; m++) {
+    for (let m = 0; m < NM; m++) {
       const tier = TIERS[m % TIERS.length], tag = `${vn} match ${m + 1} (tier ${tier})`;
       await p.evaluate((tier) => { try { if (window.S && !S.done) S.done = true; } catch (e) {} try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {}
         const n = nextOpponent(); beginMatch({ mode: 'career', tier, p0: 'Test', oppKey: n.oppKey, oppName: n.oppName, oppAvg: 50, legs: 1, start: 501 }); }, tier);
