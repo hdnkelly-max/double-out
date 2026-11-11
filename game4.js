@@ -963,7 +963,8 @@ const V=(function(){try{return (()=>{
  /* #15: character templates (one GLB per character, ~5-8 MB of textures on phones) were kept for the whole session. After each
     opponent is set, free every template no live figure uses, keeping the player's and the opponent's (and remy, and any still loading).
     A freed one reloads on demand (loadChar only checks RIGS/RIG_WAIT). */
- function evictChars(){try{const live=new Set(['remy']);if(lastMe)live.add(charKey(lastMe[0],lastMe[2]));if(lastOpp)live.add(charKey(lastOpp[0],lastOpp[1]));
+ let lastOppCk=null;/* the last opponent's template stays loaded (a rematch or repeat opponent needs no reload, ~3 s at CPU x4); everything else goes */
+ function evictChars(){try{const live=new Set(['remy']);if(lastOppCk)live.add(lastOppCk);if(lastMe)live.add(charKey(lastMe[0],lastMe[2]));if(lastOpp)live.add(charKey(lastOpp[0],lastOpp[1]));
   scene.traverse(o=>{if(o.userData&&o.userData.ck)live.add(o.userData.ck);});
   Object.keys(RIGS).forEach(k=>{if(live.has(k)||RIG_WAIT[k])return;const r=RIGS[k];delete RIGS[k];window.__charsFreed=(window.__charsFreed||0)+1;
    try{r.base.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton){KEEP.delete(o.skeleton);if(o.skeleton.boneTexture){o.skeleton.boneTexture.dispose();o.skeleton.boneTexture=null;}}
@@ -972,7 +973,7 @@ const V=(function(){try{return (()=>{
    Object.keys(ANIM_CACHE).forEach(ck=>{if(ck.indexOf(k+'|')===0)delete ANIM_CACHE[ck];});});}catch(e){console.warn('evictChars',e);}}
  /* #15 (Hayden 08:00: every match is a clean instance): everything that belongs to the match goes when it's left. The venue room,
     the player's own figure and the UI stay. One entry point; the game calls it on every exit (showHub, showTitle, next beginMatch). */
- function teardownMatch(o){try{if(opp){scene.remove(opp);disposeTree(opp);opp=null;}lastOpp=null;if(!(o&&o.keepTemplates))evictChars();
+ function teardownMatch(o){try{if(opp){lastOppCk=opp.userData&&opp.userData.ck;scene.remove(opp);disposeTree(opp);opp=null;}lastOpp=null;if(!(o&&o.keepTemplates))evictChars();
   const used=new Set();[scene,armScene].forEach(sc=>sc.traverse(o=>{const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(m)TEX_KEYS.forEach(k=>{if(m[k])used.add(m[k]);});});}));
   Object.keys(HAIRCOL_CACHE).forEach(k=>{const t=HAIRCOL_CACHE[k];if(used.has(t))return;delete HAIRCOL_CACHE[k];KEEP.delete(t);t.dispose();});
   window.__teardowns=(window.__teardowns||0)+1;}catch(e){console.warn('teardownMatch',e);}}
