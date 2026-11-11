@@ -74,6 +74,8 @@
       cx.fillStyle = `rgba(${p.foam ? '250,244,226' : '214,150,40'},${.75 * a})`; cx.beginPath(); cx.ellipse(p.x * W, p.y * H, p.s, p.s * (1 + Math.min(2, Math.abs(p.vy) / 500)), Math.atan2(p.vy, p.vx) - Math.PI / 2, 0, 7); cx.fill();
       cx.fillStyle = `rgba(255,255,255,${.5 * a})`; cx.beginPath(); cx.arc(p.x * W - p.s * .3, p.y * H - p.s * .3, p.s * .3, 0, 7); cx.fill(); return; }
     if (p.k === 'note') { p.y -= .12 * dt; p.x += Math.sin(p.age * 3 + p.ph) * .02 * dt; cx.fillStyle = `rgba(${p.c},${Math.sin(Math.PI * k) * .85})`; cx.font = `700 ${p.s}px serif`; cx.fillText(p.g, p.x * W, p.y * H); return; }
+    if (p.k === 'mist') { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy *= .97; const r = p.r * (1 + k * 2.2), g = cx.createRadialGradient(p.x * W, p.y * H, 0, p.x * W, p.y * H, r);
+      g.addColorStop(0, `rgba(240,244,248,${.32 * (1 - k)})`); g.addColorStop(1, 'rgba(240,244,248,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(p.x * W, p.y * H, r, 0, 7); cx.fill(); return; }
     if (p.k === 'spark') { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .6 * dt; cx.fillStyle = `rgba(255,214,120,${1 - k})`; cx.fillRect(p.x * W, p.y * H, 2, 2); }
   }
   // drips that run down the glass for as long as the card lasts
@@ -91,11 +93,14 @@
     switch (e.id) {
       case 'spill': drips(e, W, H, t, '214,150,40'); break;
       case 'bump': if (q < 2.5) drips(e, W, H, t, '214,150,40'); break;
-      case 'juke': {   // jukebox light washing over the board on the beat
-        const beat = Math.pow(Math.max(0, Math.cos(q * Math.PI * 2 * 2.05)), 6), hue = (q * 40) % 360;
-        const g = cx.createRadialGradient(W * (.5 + .35 * Math.sin(q * .9)), H * .9, 10, W * .5, H * .6, W * 1.1);
-        g.addColorStop(0, `hsla(${hue},90%,60%,${.18 + .2 * beat})`); g.addColorStop(1, `hsla(${(hue + 120) % 360},90%,50%,0)`); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
-        if (R() < .05) drop({ k: 'note', x: .1 + R() * .8, y: .95, life: 2.4, s: 16 + R() * 12, g: R() < .5 ? '♪' : '♫', ph: R() * 6, c: R() < .5 ? '255,140,220' : '140,220,255' }); break; }
+      case 'juke': {   // the jukebox's coloured lights spill onto the board surround and wall, on the beat
+        const per = 60 / 123, ph = q % per, env = ph < .12 ? ph / .12 : Math.exp(-(ph - .12) / .3), beat = Math.floor(q / per);
+        const cols = ['255,60,170', '60,140,255', '255,170,40', '150,70,255'], c1 = cols[beat % 4], c2 = cols[(beat + 2) % 4];
+        const side = (x0, col, a) => { const g = cx.createRadialGradient(x0, H * .55, 0, x0, H * .55, W * .7); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.55, `rgba(${col},${a * .35})`); g.addColorStop(1, `rgba(${col},0)`); cx.fillStyle = g; cx.fillRect(0, 0, W, H); };
+        cx.globalCompositeOperation = 'screen'; side(-W * .05, c1, .34 * env + .06); side(W * 1.05, c2, .3 * env + .05);
+        const tg = cx.createLinearGradient(0, 0, 0, H * .3); tg.addColorStop(0, `rgba(${c2},${.22 * env})`); tg.addColorStop(1, `rgba(${c2},0)`); cx.fillStyle = tg; cx.fillRect(0, 0, W, H * .3);
+        cx.globalCompositeOperation = 'source-over';
+        if (e.lb !== beat) { e.lb = beat; if (beat % 2 === 0) PF.cam.push({ dx: .0025, dy: .0025, t0: now(), ms: 120, kind: 'shake' }); } break; }
       case 'cooker': {  // heat shimmer rising and a pulse at the edges in time with the heart rate
         const hr = (S && S.hr) || 90, bt = Math.pow(Math.max(0, Math.sin(q * Math.PI * hr / 60)), 8);
         const v = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .3, W / 2, H / 2, Math.max(W, H) * .75); v.addColorStop(0, 'rgba(160,20,10,0)'); v.addColorStop(1, `rgba(160,20,10,${.28 + .3 * bt})`); cx.fillStyle = v; cx.fillRect(0, 0, W, H);
@@ -111,12 +116,13 @@
 
   // ---- one entry per card ----
   const FX = {
-    horn(m) { jolt(.02, .02, 900, 'shake'); for (let i = 0; i < 5; i++) setTimeout(() => drop({ k: 'ring', x: .08, y: .96, r: 1.2, life: 1 }), i * 120);
-      el('horn', '<i></i>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-horn'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 1300); },
+    horn(m) { jolt(.016, -.012, 330); PF.cam.push({ dx: .006, dy: .006, t0: now(), ms: 260, kind: 'shake' });
+      for (let i = 0; i < (low() ? 14 : 26); i++) drop({ k: 'mist', x: .16, y: .86, vx: .25 + R() * .45, vy: -.12 - R() * .35, r: 10 + R() * 18, life: 1.2 + R() * .8 });
+      el('horn', '<div class="pf-can"><i></i><b></b></div><u></u>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-horn'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 900); },
     bump(m) { const a = R() * 6.28; jolt(Math.cos(a) * .03, Math.sin(a) * .02, 1100); start('bump', m, { until: 'time', end: now() + 2600 });
       for (let i = 0; i < 26; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .5, y: .95, vx: (R() - .5) * 500, vy: -300 - R() * 500, s: 2 + R() * 4, life: 1.4, foam: R() < .3 }); },
     spill(m) { start('spill', m, { until: 'dart', n: 1 }); for (let i = 0; i < 30; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .7, y: .02, vx: (R() - .5) * 220, vy: 60 + R() * 260, s: 2 + R() * 5, life: 1.3, foam: R() < .35 }); },
-    heckle(m) { start('heckle', m, { until: 'dart', n: 1 }); el('heckle', `<b>${esc(m.fl)}</b><small>${esc(m.fromName)}</small>`); jolt(.004, .004, 400, 'shake'); },
+    heckle(m) { start('heckle', m, { until: 'dart', n: 1 }); el('heckle', `<div class="pf-guy"><i></i><b></b><u></u></div><p><em>${esc(m.fromName || 'Crowd')}</em> “${esc(m.fl)}”</p>`); jolt(.004, .002, 260); },
     orders(m) { start('orders', m, { until: 'dart', n: 1 }); el('orders', '<div class="pf-bell"></div><b>Last orders!</b>'); jolt(.006, .002, 900, 'shake'); },
     juke(m) { start('juke', m, { until: 'visit' }); },
     flash(m) { el('flash', '<i></i><u></u>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-flash'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 2200); },
@@ -131,6 +137,7 @@
   const STAMP = { double: ['2×', 'Doubles next visit'], stick: ['TAB', 'Under 60 and it’s down it'], shout: ['🍻', 'My shout'], tab: ['💳', 'Pass the tab'], tax: ['👑', 'Leader tax'], table: ['🍽️', 'Round the table'], swap: ['🔁', 'Pint swap'] };
   function stamp(big, small, cls) { const d = el('stamp', `<b>${esc(big)}</b><small>${esc(small)}</small>`); if (cls) d.classList.add(cls); setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, 1700); }
 
+  function door() { const d = el('door', '<i></i><b>Not tonight</b>'); setTimeout(() => jolt(.012, 0, 420), 480); setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, 1100); }
   const _ca = cardAnnounce;
   cardAnnounce = function (m, mine) {
     const r = _ca.apply(this, arguments);
@@ -138,6 +145,7 @@
       if (!S || !S.pub || S.done || !m) return r;
       const c = (typeof CARD !== 'undefined' && CARD[m.id]) || {}, fi = pubIdx(m.from), ti = pubIdx(m.to);
       const mm = Object.assign({}, m, { fl: c.fl, fromName: fi >= 0 ? S.p[fi].name : '' });
+      if (m.res === 'blocked' && m.by === 'bouncer') { door(); return r; }
       if (m.res === 'blocked') { stamp(m.by === 'ear' ? '🦻' : '🚪', m.by === 'ear' ? 'Earplugs in' : 'Bouncer says no', 'def'); return r; }
       if (m.res === 'reflected') { stamp('↩', 'Return to sender', 'def'); return r; }
       if (m.res !== 'live' && m.res !== 'queued') return r;
@@ -146,20 +154,32 @@
     } catch (e) { console.warn('pubfx', e); }
     return r;
   };
-  window.TOPS_PUBFX = { FX, test: (id, fl) => FX[id] && FX[id]({ id, fl: fl || (CARD[id] || {}).fl || '', fromName: 'Big Mal' }), stamp };
+  window.TOPS_PUBFX = { FX, door, test: (id, fl) => FX[id] && FX[id]({ id, fl: fl || (CARD[id] || {}).fl || '', fromName: 'Big Mal' }), stamp };
 
   const CSS = `
 #pubFxC{position:fixed;left:0;top:0;width:100%;height:52%;z-index:41;pointer-events:none}
 #pubFx{position:fixed;left:0;top:0;width:100%;height:52%;z-index:42;pointer-events:none;overflow:hidden}
 #pubFx>div{position:absolute;inset:0;transition:opacity .45s}#pubFx>div.out{opacity:0}
 /* air horn: a hard blast from the corner */
-#pubFx .pf-horn i{position:absolute;left:-30px;bottom:-30px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(255,250,235,.55),rgba(255,250,235,0) 70%);animation:pfHorn .9s ease-out both}
-@keyframes pfHorn{0%{transform:scale(.3);opacity:1}100%{transform:scale(4);opacity:0}}
-/* heckle: their line, shouted across the room */
-#pubFx .pf-heckle{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:0 18px 108px}
-#pubFx .pf-heckle b{max-width:78%;background:rgba(250,248,240,.96);color:#141414;font:800 17px/1.2 "Barlow Condensed",sans-serif;padding:10px 14px;border-radius:16px 16px 16px 4px;box-shadow:0 8px 24px rgba(0,0,0,.45);transform-origin:0 100%;animation:pfShout .5s cubic-bezier(.2,1.6,.4,1) both,pfJit .12s .5s 6 alternate}
-#pubFx .pf-heckle small{margin:6px 0 0 6px;font:700 11px Manrope,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 4px #000}
-@keyframes pfShout{from{transform:scale(.3) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}@keyframes pfJit{to{transform:translate(1px,-1px) rotate(.6deg)}}
+#pubFx .pf-can{position:absolute;left:-8px;bottom:6%;width:150px;height:70px;transform-origin:0 100%;animation:pfCanIn .6s cubic-bezier(.2,.9,.3,1) both;filter:blur(1.2px) drop-shadow(0 10px 14px rgba(0,0,0,.6))}
+#pubFx .pf-can i{position:absolute;left:0;top:14px;width:62px;height:42px;border-radius:10px 22px 22px 10px;background:linear-gradient(180deg,#ff5a4a,#c81e14 55%,#7a0d08)}
+#pubFx .pf-can b{position:absolute;left:58px;top:4px;width:88px;height:62px;background:linear-gradient(180deg,#fafafa,#cfd3d6 60%,#8b9095);clip-path:polygon(0 38%,100% 0,100% 100%,0 62%)}
+#pubFx .pf-horn u{position:absolute;left:120px;bottom:6%;width:220px;height:110px;margin-bottom:-20px;background:radial-gradient(ellipse at 0 50%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%);animation:pfBlast .5s .15s ease-out both}
+@keyframes pfCanIn{0%{transform:translate(-120px,40px) rotate(-14deg)}60%{transform:translate(4px,-2px) rotate(-12deg)}100%{transform:rotate(-12deg)}}
+@keyframes pfBlast{0%{transform:scaleX(.2);opacity:0}30%{opacity:1}100%{transform:scaleX(1.6);opacity:0}}
+/* heckle: a bloke leans in from the corner, his line as a broadcast subtitle */
+#pubFx .pf-heckle .pf-guy{position:absolute;left:-30px;bottom:-20px;width:190px;height:230px;filter:blur(3px);animation:pfLean 1.9s cubic-bezier(.2,.9,.3,1) both}
+#pubFx .pf-guy i{position:absolute;left:46px;top:10px;width:92px;height:112px;border-radius:48% 48% 44% 44%;background:radial-gradient(circle at 62% 38%,#4a3a30,#1c1410 70%)}
+#pubFx .pf-guy b{position:absolute;left:0;top:104px;width:190px;height:150px;border-radius:46% 46% 0 0;background:linear-gradient(180deg,#22262c,#0c0e10)}
+#pubFx .pf-guy u{position:absolute;left:118px;top:62px;width:46px;height:44px;border-radius:40% 60% 50% 50%;background:radial-gradient(circle at 40% 40%,#6c5242,#2a1d16);transform:rotate(-18deg)}
+@keyframes pfLean{0%{transform:translate(-160px,60px) rotate(-10deg)}14%{transform:translate(0,0) rotate(6deg)}22%{transform:rotate(3deg)}80%{transform:rotate(4deg)}100%{transform:translate(-170px,70px) rotate(-8deg)}}
+#pubFx .pf-heckle p{position:absolute;left:12px;right:12px;bottom:76px;margin:0;text-align:center;font:600 14px/1.35 Manrope,sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);animation:pfSub .25s .2s both}
+#pubFx .pf-heckle p em{font-style:normal;font-weight:800;color:#F2B705;letter-spacing:.04em}
+@keyframes pfSub{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* bouncer: the door shuts in their face */
+#pubFx .pf-door i{position:absolute;top:0;bottom:0;right:0;width:100%;background:linear-gradient(90deg,#2a1a10,#4a2e1a 8%,#3a2414 50%,#2a1a10);box-shadow:inset 0 0 0 14px rgba(0,0,0,.25);animation:pfDoor .7s cubic-bezier(.6,0,.9,.4) both}
+#pubFx .pf-door b{position:absolute;left:0;right:0;top:44%;text-align:center;font:800 30px "Barlow Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#C6F36B;text-shadow:0 2px 10px #000;animation:pfSub .3s .55s both}
+@keyframes pfDoor{0%{transform:translateX(100%)}70%{transform:translateX(-2%)}85%{transform:translateX(1%)}100%{transform:none}}
 /* last orders: brass bell swinging, lights flicking */
 #pubFx .pf-orders{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18%}
 #pubFx .pf-bell{width:54px;height:50px;background:radial-gradient(circle at 35% 30%,#ffe7a3,#c99a3a 45%,#6e4b14);clip-path:path('M27 2C14 2 10 14 9 28C8 38 4 42 1 46L53 46C50 42 46 38 45 28C44 14 40 2 27 2Z');transform-origin:50% 0;animation:pfBell .18s ease-in-out 8 alternate;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
