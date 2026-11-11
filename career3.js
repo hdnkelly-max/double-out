@@ -100,7 +100,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   ${achs.map(a=>`<div class="c3rw-ach t-${a.t}"><i>${achIco(a)}</i><div><small>Achievement \u00b7 ${(ACHR[a.t]||ACHR.R).lab}</small><b>${a.n}</b><span>${a.d}</span></div><em>+${a._xp} XP<br>+${money(a._cash)}</em></div>`).join('')}
   ${P.done.length?`<div class="c3rw-con" id="c3rwCon">${P.done.map(k=>`<span><i>✓</i>${k.t} <em>${money(k.cash)}</em></span>`).join('')}</div>`:''}
   ${hook?`<p class="c3rw-hook" id="c3rwHook">${hook}</p>`:''}
-  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip &amp; continue':'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep my current '+(hero.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
+  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip new '+(hero.k==='flight'?'flights':'shirt'):'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep current '+(hero.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
  const R=$('result');if(R)R.classList.add('c3-dim');
  el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
  const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const big=!!P.ups.length;
