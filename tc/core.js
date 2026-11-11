@@ -584,14 +584,22 @@
       g.rotation.set(.5, .55, 0); g.position.set(.018, bx.y0 + h * .15, front - .004); g.scale.setScalar(sc); add(g);
     }
     if (W.hat === 'wear_flatcap') {
-      const g = new T.Group(), tw = M(0x5b4a3a, { roughness: .95 });
-      const crown = new T.Mesh(new T.SphereGeometry(.1, 28, 12, 0, Math.PI * 2, 0, Math.PI * .5), tw); crown.scale.set(1.04, .66, 1.12); g.add(crown);
-      const rim = new T.Mesh(new T.CylinderGeometry(.104, .104, .02, 28, 1, true), tw); rim.scale.set(1, 1, 1.08); rim.position.y = -.008; g.add(rim);
-      const peak = new T.Mesh(new T.CylinderGeometry(.08, .08, .007, 24, 1, false, -Math.PI / 2, Math.PI), tw); peak.scale.set(1, 1, .6); peak.position.set(0, -.012, .088); peak.rotation.x = .2; g.add(peak);
-      g.position.set(0, bx.y1 - h * .36 + .01, (bx.z0 + bx.z1) / 2 + .01); g.rotation.x = -.09; g.scale.setScalar(sc); add(g);
+      // hide hair that would poke through the crown (the model's own hair, and attached styles that sit high on the head)
+      fig && fig.traverse(o => { if (o.isMesh && /Hair/i.test(o.name) && !/Eyelash|Brow/i.test(o.name)) o.visible = false; });
+      B.Head.children.forEach(o => { if (!o.isMesh || !o.geometry) return; o.geometry.computeBoundingBox(); const top = o.geometry.boundingBox.max.y * o.scale.y + o.position.y, bot = o.geometry.boundingBox.min.y * o.scale.y + o.position.y; if (top > bx.y0 + h * .8 && bot > bx.y0 + h * .35) o.visible = false; });
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; const cx = cv.getContext('2d'); cx.fillStyle = '#3d3329'; cx.fillRect(0, 0, 64, 64);
+      for (let y = 0; y < 64; y += 4) for (let x = 0; x < 64; x += 8) { cx.fillStyle = (x / 8 + y / 4) % 2 ? 'rgba(160,140,110,.28)' : 'rgba(0,0,0,.25)'; cx.fillRect(x + ((y / 4) % 2 ? 4 : 0), y, 4, 2); }
+      const tt = new T.CanvasTexture(cv); tt.wrapS = tt.wrapT = T.RepeatWrapping; tt.repeat.set(5, 3);
+      const tw = new T.MeshStandardMaterial({ map: tt, color: 0xffffff, roughness: .98 });
+      const g = new T.Group();
+      const crown = new T.Mesh(new T.SphereGeometry(.1, 32, 14, 0, Math.PI * 2, 0, Math.PI * .5), tw); crown.scale.set(1.1, .6, 1.2); crown.position.z = .008; crown.rotation.x = .12; g.add(crown);
+      const band = new T.Mesh(new T.CylinderGeometry(.11, .112, .03, 32, 1, true), tw); band.scale.set(1, 1, 1.1); band.position.y = -.01; g.add(band);
+      const peak = new T.Mesh(new T.CylinderGeometry(.09, .09, .008, 28, 1, false, -Math.PI / 2, Math.PI), tw); peak.scale.set(1, 1, .62); peak.position.set(0, -.016, .1); peak.rotation.x = .16; g.add(peak);
+      const btn = new T.Mesh(new T.SphereGeometry(.009, 10, 6), tw); btn.position.set(0, .058, .01); g.add(btn);
+      g.position.set(0, bx.y1 - h * .33 + .006, (bx.z0 + bx.z1) / 2 + .006); g.rotation.x = -.06; g.scale.setScalar(sc); add(g);
     }
     if (W.hair === 'wear_mullet') {
-      const col = (L.hairCol && new T.Color(L.hairCol)) || new T.Color(0x3b2a1a);
+      const col = (L.hairCol && new T.Color(L.hairCol)) || new T.Color(0x2b2119);
       const g = new T.Group(), hm = M(col.getHex(), { roughness: .7 });
       for (let i = 0; i < 11; i++) { const s = new T.Mesh(new T.SphereGeometry(.028, 10, 8), hm); const a = (i - 5) / 5; s.position.set(a * .058, -(i % 2) * .018 - Math.abs(a) * .012, -(i % 3) * .006); s.scale.set(1, 3.3 - Math.abs(a) * 1.1, .75); s.rotation.z = a * .25; g.add(s); }
       g.position.set(0, bx.y0 + h * .18, bx.z0 + .03); g.scale.setScalar(sc); add(g);
@@ -599,15 +607,23 @@
     if (W.shoulder === 'wear_towel') {
       const par = B.Spine2 || B.Spine1 || B.Neck; if (!par) return;
       const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#efe9dc'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#9b3b32'; for (let i = 0; i < 64; i += 16) { x.fillRect(i, 0, 5, 64); x.fillRect(0, i, 64, 5); }
-      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 3);
+      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 4);
       const mat = new T.MeshStandardMaterial({ map: tex, roughness: 1, side: T.DoubleSide });
-      const g = new T.Group();
-      const top = new T.Mesh(new T.BoxGeometry(.11, .018, .2), mat); g.add(top);
-      const seam = new T.Mesh(new T.BoxGeometry(.112, .004, .006), new T.MeshStandardMaterial({ color: 0x9b3b32, roughness: 1 })); seam.position.set(0, -.19, .104); g.add(seam);
-      const front = new T.Mesh(new T.BoxGeometry(.11, .2, .016), mat); front.position.set(0, -.1, .1); front.rotation.x = -.12; g.add(front);
-      const back = new T.Mesh(new T.BoxGeometry(.11, .16, .016), mat); back.position.set(0, -.08, -.1); back.rotation.x = .1; g.add(back);
+      // one strip bent over the shoulder: hangs down the front, curls over the top, hangs longer down the back
+      const W0 = .11, F = .16, R = .092, Bk = .22, Ltot = F + Math.PI * R + Bk;
+      const geo = new T.PlaneGeometry(W0, Ltot, 6, 40), pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const u = pos.getX(i), sAlong = Ltot / 2 - pos.getY(i); let y, z;
+        if (sAlong < F) { y = -(F - sAlong); z = R; }
+        else if (sAlong < F + Math.PI * R) { const th = (sAlong - F) / R; y = Math.sin(th) * R; z = Math.cos(th) * R; }
+        else { y = -(sAlong - F - Math.PI * R); z = -R; }
+        const wob = Math.sin(sAlong * 38 + u * 20) * .003 + (y < 0 ? -y * .06 : 0);
+        pos.setXYZ(i, u * (1 + (y < 0 ? -y * .8 : 0)), y, z + Math.sign(z || 1) * wob);
+      }
+      geo.computeVertexNormals();
+      const g = new T.Group(), cloth = new T.Mesh(geo, mat); g.add(cloth);
       g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
-      g.position.set(-.095, .13, .0); g.rotation.z = -.32; g.scale.setScalar(.92); par.add(g);
+      g.position.set(.115, .11, -.012); g.rotation.set(0, 0, -.3); g.scale.setScalar(1); par.add(g);
     }
   };
 
