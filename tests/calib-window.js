@@ -1,6 +1,6 @@
 // Timing-window calibration (Hayden 22:26/22:28): checks the shipped constants and the feel guarantees.
 //  - a perfect release in career lands inside the 5 mm ring the player sees (scatter 2.8 mm, truncated), mostly T20
-//  - the perfect window is 5.25 ms at Rhythm 20 and grows to 16.25 ms at Rhythm 95 (tightened 00:27 12 Nov after live telemetry) (nerves held at 0)
+//  - the perfect window is 3 ms at Rhythm 20 and grows to 15 ms at Rhythm 95 (Overseer 01:40) (nerves held at 0)
 //  - just outside the window the ring widens smoothly (no cliff), meeting the normal ring 6 ms out
 //  - The Run and online keep their own throw (no perfSig there)
 // usage: node tests/calib-window.js
@@ -17,8 +17,8 @@ const {chromium}=require('playwright');const path=require('path');
   const P=t20.P,ring=dt=>ringR(dt,t20);const edge=[0,.01,1,3,5.99,6,6.01].map(e=>+ring(P+e).toFixed(2));
   return {P20:+t20.P.toFixed(2),P95:+t95.P.toFixed(2),perfSig:t20.perfSig,runPerfSig:trun.perfSig==null?null:trun.perfSig,inRing:inRing/3000,t20:trebs/3000,maxR:+maxR.toFixed(2),ringIn:+ring(0).toFixed(2),edge};});
  await b.close();const f=[];
- if(Math.abs(r.P20-5.25)>0.05)f.push('window at Rhythm 20 '+r.P20+' ms, want 5.25');
- if(Math.abs(r.P95-16.25)>0.1)f.push('window at Rhythm 95 '+r.P95+' ms, want 16.25');
+ if(Math.abs(r.P20-3)>0.05)f.push('window at Rhythm 20 '+r.P20+' ms, want 3');
+ if(Math.abs(r.P95-15)>0.1)f.push('window at Rhythm 95 '+r.P95+' ms, want 15');
  if(r.perfSig!==2.8)f.push('career perfect scatter '+r.perfSig);
  if(r.runPerfSig!=null)f.push('The Run picked up the career perfect release');
  if(r.inRing<1)f.push('perfect darts outside the ring: '+(1-r.inRing));
@@ -28,4 +28,4 @@ const {chromium}=require('playwright');const path=require('path');
  if(Math.abs(r.edge[1]-r.edge[0])>0.5)f.push('cliff at the window edge: '+r.edge.join(' / '));
  if(Math.abs(r.edge[6]-r.edge[5])>0.5)f.push('jump where the soft edge meets the normal ring: '+r.edge.join(' / '));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
- console.log(JSON.stringify(r));if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: perfect release inside the 5 mm ring ('+(r.t20*100).toFixed(0)+'% T20), window 5.25 -> 16.25 ms, smooth edge, The Run unchanged');})();
+ console.log(JSON.stringify(r));if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: perfect release inside the 5 mm ring ('+(r.t20*100).toFixed(0)+'% T20), window 3 -> 15 ms, smooth edge, The Run unchanged');})();

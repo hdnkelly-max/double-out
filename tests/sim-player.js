@@ -22,14 +22,14 @@ const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirna
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
- const res=await p.evaluate(({LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD,DIFF,OPPADJ,CAL,TIERS_})=>{save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};if(CAL){if(CAL.sig!=null)window.TOPS_PERFSIG=CAL.sig;if(CAL.edge!=null)window.TOPS_EDGE=CAL.edge;window.TOPS_CALW={p0:CAL.p0!=null?CAL.p0:7.5,pk:CAL.pk!=null?CAL.pk:16.5,ka:CAL.ka,ks:CAL.ks,e:CAL.e};}delete save.diff;if(DIFF)save.diff={lv:DIFF,darts:0,pts:0,place:0};
+ const res=await p.evaluate(({LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD,DIFF,OPPADJ,CAL,TIERS_})=>{save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};if(CAL){if(CAL.sig!=null)window.TOPS_PERFSIG=CAL.sig;if(CAL.edge!=null)window.TOPS_EDGE=CAL.edge;window.TOPS_CALW={p0:CAL.p0!=null?CAL.p0:7.5,pk:CAL.pk!=null?CAL.pk:16.5,ka:CAL.ka,ks:CAL.ks,e:CAL.e,k:CAL.k};}delete save.diff;if(DIFF)save.diff={lv:DIFF,darts:0,pts:0,place:0};
   const smp=q=>{const u=Math.random()*(q.length-1);const i=Math.floor(u);return q[i]+(q[i+1]-q[i])*(u-i);};
   // the field at tier t (default setting), through the game's own opponent pipeline
   const field=t=>{newCareer();const c=career();c.tier=t;c.stage=null;c.season=null;const a=[];for(let k=0;k<30;k++){c.next=null;const n=nextOpponent();if(n&&n.oppAvg>0)a.push(n.oppAvg+OPPADJ);}return a;};
   // base throw parameters for a player at tier t: a real career match, so every live wrapper (v09 career window etc.) applies
   // stats (st2.v), barrel and setup as the tester has them now; nerves held at 0 here because each replayed dart brings its own
   const baseTp=(t,pr,st)=>{newCareer();save.arm=pr.arm;const c=career();c.tier=t;c.stage=null;
-   const s2=save.st2||(window.TOPS_ST2&&TOPS_ST2(),save.st2);if(save.st2)save.st2.v=Object.assign({},st||pr.st2v);
+   const s2=save.st2||(window.TOPS_ST2&&TOPS_ST2(),save.st2);if(save.st2)save.st2.v=Object.assign({},st||pr.st2v);if(save.st2){save.st2.tb=Object.assign({sc:20,fi:20,ct:20},pr.tb||{});}
    save.owned=Array.from(new Set((save.owned||[]).concat(pr.barrel)));save.barrel=pr.barrel;save.setup=Object.assign({},pr.setup);
    beginMatch({mode:'career',tier:t,p0:'P',oppName:'X',oppAvg:50,legs:1});S.adren=0;S.calm=99;
    const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}try{S.done=true;}catch(e){}return tp;};

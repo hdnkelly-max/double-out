@@ -82,7 +82,7 @@ try{if(!FEATS.some(f=>f.id==='f_comeback'))FEATS.push({id:'f_comeback',n:'Comeba
 function on(){const c=career();return !!(c&&!c.run&&!(S&&S.mp));}
 window.TOPS_ST2=on;
 function lvNow(){try{const v=C3.V3();return v?v.lv:1;}catch(e){return 1;}}
-function st(){if(!save.st2){const z=()=>({sc:0,fi:0,ct:0,rh:0,co:0});const lv=lvNow();save.st2={v:{sc:20,fi:20,ct:20,rh:20,co:20},nat:z(),form:z(),flame:z(),bank:Math.max(0,lv-1),earned:0,lvSeen:lv,trait:null,respec:0};
+function st(){if(!save.st2){const z=()=>({sc:0,fi:0,ct:0,rh:0,co:0});const lv=lvNow();save.st2={tb:{sc:20,fi:20,ct:20},v:{sc:20,fi:20,ct:20,rh:20,co:20},nat:z(),form:z(),flame:z(),bank:Math.max(0,lv-1),earned:0,lvSeen:lv,trait:null,respec:0};
   // migration: retired perks become cash, attribute XP retires
   try{const c=career();const n=Object.values(save.perks||{}).reduce((a,v)=>a+(typeof v==='number'?v:(v?1:0)),0);if(c&&n){const cash=n*Math.max(10,Math.round(TIERS[c.tier||0].purse*.25));c.bank+=cash;save.st2.migCash=cash;}}catch(e){}
   save.perks={};save.attr={};try{_SK=null;}catch(e){}persist();}
@@ -102,6 +102,13 @@ function barrelPts(b){const acc=Math.round((5.6-b.base)/1.8*7);return {sc:acc,fi
 function ptsTxt(o){const parts=STATS.filter(s=>o[s.id]).map(s=>`<span class="${o[s.id]<0?'neg':''}">${SN(s.id)} ${o[s.id]>0?'+':''}${o[s.id]}</span>`);return parts.length?parts.join(' · '):'No stat change';}
 function eff(id){const s=st();const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(100,s.v[id]+kitPts()[id]+hot));}
 function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}
+// Taper (Overseer 01:40): Control, Scoring and Finishing points earned from v1.85 on move sway and scatter by CAL_W.k of a live point;
+// points already in a save (st2.tb, taken the first time this version sees the save) keep exactly today's effect. Never below 20, so
+// sway and scatter can only shrink as you improve: no save gets harder on update, and nobody is ever slower than a new player.
+function tbOf(){const s=st();if(!s.tb){s.tb={sc:s.v.sc,fi:s.v.fi,ct:s.v.ct};try{persist();}catch(e){}}return s.tb;}
+function LofT(id){const s=st();const b=Math.min(s.v[id],(tbOf()[id]!=null?tbOf()[id]:s.v[id]));const CW=window.TOPS_CALW||CAL_W;const k=CW.k!=null?CW.k:1;
+ const v=b+k*Math.max(0,s.v[id]-b);const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(1,(Math.max(0,Math.min(100,v+kitPts()[id]+hot))-20)/75));}
+window.TOPS_LofT=LofT;
 function ovr(){let o=0;STATS.forEach(s=>o+=s.w*(st().v[s.id]+kitPts()[s.id]));return Math.round(o);}
 function ident(){const v=st().v;const arr=STATS.map(s=>v[s.id]);if(Math.max(...arr)-Math.min(...arr)<8)return 'All-Rounder';const top=STATS.slice().sort((a,b)=>v[b.id]-v[a.id])[0];return top.t;}
 // ---------- points from levels ----------
@@ -149,13 +156,14 @@ function trait(){const s=st();if(!on()||!s.trait||lvNow()<15)return null;const t
 window.TOPS_trait=trait;
 function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)/2);return {need,me,op,dec:op&&me.legs===need-1&&op.legs===need-1,md:me.legs===need-1&&me.score<=170,trail:op&&op.legs>me.legs};}
 // ---------- engine ----------
-// Timing-window calibration (Hayden 22:28): the perfect window is the lever. Starter 6 ms at Rhythm 20 (plus a 6 ms soft edge), growing to 21 ms
-// at Rhythm 95 on a convex curve (e), so early stat points matter less than late ones; Control and Scoring/Finishing move sway
-// and scatter only part of the way along the throw table (ka, ks). Fitted on testers' real darts (tests/sim-player.js).
-const CAL_W={p0:5.25,pk:11,e:1.9};window.TOPS_CAL_W=CAL_W;
+// Timing-window calibration (Hayden 22:28; Overseer 01:40): the perfect window is the lever. 3 ms at Rhythm 20 (plus a 6 ms soft edge),
+// staying near 3 ms through the early tiers and widening late (e=4.5) to 15 ms at Rhythm 95. Control/Scoring/Finishing points earned
+// from this version on count k=0.7 of a live point (LofT below); points already in a save keep today's effect.
+// Fitted on testers' real darts (tests/sim-player.js, JOINT=1), incl. Lee's and David's real Club and Regional darts.
+const CAL_W={p0:3,pk:12,e:4.5,k:.7};window.TOPS_CAL_W=CAL_W;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
- const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
+ const q0=ttAt(tp.L),qc=ttAt(LofT('ct')),qr=ttAt(Lof('rh')),qs=ttAt(LofT(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
  const Lr=Lof('rh');const CW=window.TOPS_CALW||CAL_W;tp.P*=(CW.p0+CW.pk*Math.pow(Lr,CW.e!=null?CW.e:1))/(q0.P*tolMult()*.85); /* perfect window (ms) at Rhythm 20 and its growth to Rhythm 95 (calibration, Hayden 22:28) */
  let m=1;const tr=trait();const me=S.p[S.cur];
