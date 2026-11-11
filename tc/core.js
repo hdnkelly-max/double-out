@@ -279,8 +279,23 @@
     openPack(openPicks(), () => { H.sess = []; H.bypass = true; try { b.click(); } finally { H.bypass = false; } });
   }, true);
 
+  // #13 (David 21:13): one-time "What are cards?" before the first pick, and from the Cards screen any time
+  function cardsIntro(then) {
+    const el = sheet('tc-intro', `<div class="tcpk__kicker">Cards</div><h2 class="tc-h">What are cards?</h2>
+      <ol class="tc-introl">
+        <li><b>Earn a pick</b><span>Big moments earn a card pick: a 180, a 100+ checkout, a nine-darter, achievements and stat milestones.</span></li>
+        <li><b>Keep one of three</b><span>Each pick deals three cards and you keep one. A nine-darter keeps all three.</span></li>
+        <li><b>Unlock rewards</b><span>Many cards unlock kit, wearables, celebrations and titles. Equip them in Player · Loadout. Finishing a set unlocks more.</span></li>
+        <li><b>Find them</b><span>Everything you own is in Cards on the Career tab. Spare legendaries can be swapped with mates.</span></li>
+      </ol>
+      <button type="button" class="tcpk__btn tcpk__btn--go tc-introgo">${then ? 'Open my picks' : 'Got it'}</button>`);
+    let gone = false; const go = () => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 200); then && then(); };
+    el.querySelector('.tc-introgo').onclick = go; el.querySelector('.tc-x').onclick = go;
+    return el;
+  }
   function openPack(picks, after) {
     if (!picks.length) { after && after(); return; }
+    if (!save.tcIntro) { save.tcIntro = Date.now(); keep(); cardsIntro(() => openPack(picks, after)); return; }
     H.inPack = true; try { TCC.Sfx.ctx || TCC.Sfx.init('assets/cards/sfx/'); } catch (e) {}
     const done = got => {
       H.inPack = false; badge();
@@ -323,7 +338,7 @@
       let row = $id('tcCareer'); if (!row) { row = document.createElement('div'); row.id = 'tcCareer'; row.className = 'tc-hub'; }
       if (row.parentNode !== car) car.insertBefore(row, car.firstChild);
       row.innerHTML = `<button type="button" class="tc-tile tc-cab" id="tcCabTile"><img src="assets/cards/hub_cabinet.webp" alt=""><span><small>Trophy cabinet</small><b>${t.troph.length ? t.troph.length + (t.troph.length === 1 ? ' title' : ' titles') : 'Empty'}</b></span></button>
-        <button type="button" class="tc-tile tc-col" id="tcColTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><small>Collection</small><b>${nOwn} / ${nAll}</b></span><em class="tc-pickbadge" hidden><b>0</b> picks</em></button>`;
+        <button type="button" class="tc-tile tc-col" id="tcColTile"><i class="tc-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""></i><span><small>Cards</small><b>${nOwn} / ${nAll}</b></span><em class="tc-pickbadge" hidden><b>0</b> picks</em></button>`;
       $id('tcCabTile').onclick = cabinet; $id('tcColTile').onclick = binder;
     }
     badge();
@@ -396,8 +411,9 @@
   function binder() {
     const t = st(); let filt = 'all';
     const nO = D.CARDS.filter(c => !c.exclusive && t.own[c.id]).length, nA = D.CARDS.filter(c => !c.exclusive).length;
-    const el = sheet('tc-binder', `<div class="tcpk__kicker">Collection</div><h2 class="tc-h">Your cards</h2><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
+    const el = sheet('tc-binder', `<div class="tcpk__kicker">Cards · Collection</div><h2 class="tc-h">Your cards</h2><button type="button" class="tc-whatbtn" id="tcWhat">What are cards?</button><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
     { const tb = el.querySelector('#tcTradeBtn'); if (tb) { tb.onclick = () => trades(); tradeCount().then(n => { const b = tb.querySelector('.tc-tradebadge'); if (n) { b.hidden = false; b.textContent = n + ' new'; } }); } }
+    el.querySelector('#tcWhat').onclick = () => cardsIntro(null);
     const chips = el.querySelector('#tcChips'), grid = el.querySelector('#tcGrid');
     const sets = D.SETS.filter(s => D.CARDS.some(c => c.set === s.id));
     chips.innerHTML = [['all', 'All']].concat(sets.map(s => [s.id, s.name])).map(([id, n]) => `<button type="button" data-s="${id}" aria-pressed="${id === filt}">${esc(n)}</button>`).join('');
