@@ -93,15 +93,29 @@
     switch (e.id) {
       case 'spill': drips(e, W, H, t, '214,150,40'); break;
       case 'bump': if (q < 2.5) drips(e, W, H, t, '214,150,40'); break;
-      case 'juke': {   // two coloured lamps throwing pools onto the surround and the brickwork, pulsing in intensity (max ~25%)
-        const per = 60 / 123, ph = q % per, env = ph < .12 ? ph / .12 : Math.exp(-(ph - .12) / .3), beat = Math.floor(q / per);
-        const cols = ['255,70,170', '70,150,255', '255,170,50', '160,80,255'], c1 = cols[beat % 4], c2 = cols[(beat + 1) % 4];
-        const pool = (x0, y0, rx, ry, col, a) => { cx.save(); cx.translate(x0, y0); cx.scale(rx / ry, 1); const g = cx.createRadialGradient(0, 0, 0, 0, 0, ry); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.6, `rgba(${col},${a * .5})`); g.addColorStop(1, `rgba(${col},0)`); cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, ry, 0, 7); cx.fill(); cx.restore(); };
-        cx.globalCompositeOperation = 'soft-light';
-        pool(W * .02, H * .3, W * .3, H * .32, c1, .55 + .45 * env); pool(W * .98, H * .62, W * .3, H * .34, c2, .5 + .45 * (1 - env));
-        cx.globalCompositeOperation = 'screen';
-        pool(W * .02, H * .3, W * .2, H * .22, c1, .1 + .12 * env); pool(W * .98, H * .62, W * .2, H * .24, c2, .09 + .12 * (1 - env));
-        cx.globalCompositeOperation = 'source-over';
+      case 'juke': {   // bubble-tube neon down both edges of the board pane, colour spilling onto the board's edge (centre stays clear), on a 123 bpm beat
+        const per = 60 / 123, ph = q % per, env = ph < .1 ? ph / .1 : Math.exp(-(ph - .1) / .28), beat = Math.floor(q / per), fade = Math.min(1, q / .35);
+        const top = Math.min(H * .14, 56), bot = H - Math.min(H * .16, 64), L = bot - top, mob = W < 600, tw = mob ? 5 : 7, ix = mob ? 7 : 12;
+        const hue = y => (q * 40 + (bot - y) / L * 220) % 360;
+        e.bub = e.bub || [0, 1].map(() => Array.from({ length: low() ? 5 : 9 }, () => ({ y: R(), v: .18 + R() * .25, s: .6 + R() * .5 })));
+        [ix, W - ix].forEach((x, side) => {
+          // spill onto the board: a soft vertical band of the tube's colours, strongest on the beat
+          cx.globalCompositeOperation = 'soft-light';
+          const sp = cx.createLinearGradient(x, 0, side ? x - W * .2 : x + W * .2, 0), sg = cx.createLinearGradient(0, top, 0, bot);
+          sp.addColorStop(0, `rgba(255,255,255,${(.32 + .3 * env) * fade})`); sp.addColorStop(1, 'rgba(255,255,255,0)');
+          for (let i = 0; i <= 4; i++) sg.addColorStop(i / 4, `hsla(${hue(top + L * i / 4)},95%,58%,${(.5 + .35 * env) * fade})`);
+          cx.save(); cx.beginPath(); cx.rect(side ? x - W * .2 : x, top - 20, W * .2, L + 40); cx.clip(); cx.fillStyle = sg; cx.fillRect(side ? x - W * .2 : x, top - 20, W * .2, L + 40);
+          cx.globalCompositeOperation = 'destination-in'; cx.fillStyle = sp; cx.fillRect(side ? x - W * .2 : x, top - 20, W * .2, L + 40); cx.restore();
+          cx.globalCompositeOperation = 'source-over';
+          // the tube: dark housing, coloured glass, a hot core, chrome caps
+          const tg = cx.createLinearGradient(0, bot, 0, top); for (let i = 0; i <= 6; i++) tg.addColorStop(i / 6, `hsl(${hue(bot - L * i / 6)},100%,${58 + 8 * env}%)`);
+          cx.lineCap = 'round'; cx.strokeStyle = 'rgba(8,6,10,.75)'; cx.lineWidth = tw + 6; cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke();
+          cx.save(); cx.shadowColor = `hsla(${hue(top + L / 2)},100%,60%,.9)`; cx.shadowBlur = (mob ? 14 : 22) * (.6 + .4 * env); cx.globalAlpha = fade;
+          cx.strokeStyle = tg; cx.lineWidth = tw; cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.restore();
+          cx.globalAlpha = .55 * fade; cx.strokeStyle = '#fff'; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(x - tw * .18, top + 4); cx.lineTo(x - tw * .18, bot - 4); cx.stroke(); cx.globalAlpha = 1;
+          e.bub[side].forEach(u => { u.y = (u.y + u.v * .016) % 1; const by = bot - u.y * L, r = tw * .32 * u.s; cx.fillStyle = `rgba(255,255,255,${.55 * fade})`; cx.beginPath(); cx.arc(x + Math.sin(u.y * 9 + side) * tw * .12, by, r, 0, 7); cx.fill(); });
+          [top, bot].forEach(cy => { const cg = cx.createLinearGradient(x - tw, 0, x + tw, 0); cg.addColorStop(0, '#3a3e44'); cg.addColorStop(.45, '#d9dde2'); cg.addColorStop(1, '#2a2d32'); cx.fillStyle = cg; cx.fillRect(x - tw * .9, cy - 3, tw * 1.8, 6); });
+        });
         if (e.lb !== beat) { e.lb = beat; if (beat % 2 === 0) PF.cam.push({ dx: .0025, dy: .0025, t0: now(), ms: 120, kind: 'shake' }); } break; }
       case 'cooker': {  // heat shimmer rising and a pulse at the edges in time with the heart rate
         const hr = (S && S.hr) || 90, bt = Math.pow(Math.max(0, Math.sin(q * Math.PI * hr / 60)), 8);
@@ -126,7 +140,7 @@
     spill(m) { start('spill', m, { until: 'dart', n: 1 }); for (let i = 0; i < 30; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .7, y: .02, vx: (R() - .5) * 220, vy: 60 + R() * 260, s: 2 + R() * 5, life: 1.3, foam: R() < .35 }); },
     heckle(m) { start('heckle', m, { until: 'dart', n: 1 }); el('heckle', `<div class="pf-guy"><i></i><b></b><u></u></div><p><em>${esc(m.fromName || 'Crowd')}</em> “${esc(m.fl)}”</p>`); jolt(.004, .002, 260); },
     orders(m) { start('orders', m, { until: 'dart', n: 1 }); el('orders', '<div class="pf-bell"></div><b>Last orders!</b>'); jolt(.006, .002, 900, 'shake'); },
-    juke(m) { start('juke', m, { until: 'visit' }); },
+    juke(m) { start('juke', m, { until: 'visit' }); el('juke', '<div class="pf-np"><span><i></i><i></i><i></i><i></i><i></i></span><b>Jukebox</b><small>this visit</small></div>'); },
     flash(m) { el('flash', '<i></i><u></u>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-flash'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 2200); },
     wobble(m) { start('wobble', m, { until: 'visit' }); jolt(.012, 0, 700); },
     cooker(m) { start('cooker', m, { until: 'dart', n: 1 }); },
@@ -208,6 +222,14 @@
  radial-gradient(ellipse 9% 18% at 90% 60%,#0c0a08 96%,transparent 100%),radial-gradient(ellipse 18% 30% at 90% 106%,#0c0a08 96%,transparent 100%)}
 #pubFx .pf-crowd::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 8% 3% at 31% 46%,rgba(255,190,120,.18),transparent),radial-gradient(ellipse 7% 3% at 66% 41%,rgba(255,190,120,.16),transparent)}
 @keyframes pfCrowd{from{transform:translateY(100%)}to{transform:none}}@keyframes pfSway{to{transform:translateX(10px)}}
+/* jukebox: a now-playing pill with equaliser bars, opposite the HR chip, for as long as the card lasts */
+#pubFx .pf-np{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 10px;border-radius:9px;background:rgba(12,14,18,.78);border:1px solid rgba(255,255,255,.1);box-shadow:0 4px 14px rgba(0,0,0,.45);animation:pfSub .3s .15s both}
+#pubFx .pf-np span{display:flex;align-items:flex-end;gap:2px;height:14px}
+#pubFx .pf-np i{width:3px;height:100%;border-radius:1px;background:linear-gradient(0deg,#ff4fa8,#ffb23c 55%,#6fd3ff);transform-origin:50% 100%;animation:pfEq .49s ease-in-out infinite alternate}
+#pubFx .pf-np i:nth-child(2){animation-duration:.37s;animation-delay:-.2s}#pubFx .pf-np i:nth-child(3){animation-duration:.61s;animation-delay:-.1s}#pubFx .pf-np i:nth-child(4){animation-duration:.43s;animation-delay:-.3s}#pubFx .pf-np i:nth-child(5){animation-duration:.55s}
+@keyframes pfEq{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+#pubFx .pf-np b{font:800 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#fff}
+#pubFx .pf-np small{font:600 11px/1 Manrope,sans-serif;color:rgba(255,255,255,.62)}
 /* stamps: drink cards and blocks */
 #pubFx .pf-stamp{display:flex;flex-direction:column;align-items:center;justify-content:center}
 #pubFx .pf-stamp b{font:800 64px/1 "Barlow Condensed",sans-serif;color:#fff;padding:10px 22px;border:4px solid currentColor;border-radius:14px;transform:rotate(-8deg);animation:pfStamp .45s cubic-bezier(.2,1.5,.4,1) both;text-shadow:0 3px 16px rgba(0,0,0,.7)}
