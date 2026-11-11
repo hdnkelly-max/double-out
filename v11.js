@@ -71,6 +71,11 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   if(B&&B.w>0){scEl.style.right=Math.max(14,W-(B.x+B.w)+14)+'px';scEl.style.bottom=Math.max(14,H-(B.y+B.h)+14)+'px';scEl.style.left='auto';scEl.style.top='auto';}
   else{scEl.style.right='16px';scEl.style.bottom='45%';}
   let desk=false;try{desk=!(V.lkPhone&&V.lkPhone());}catch(e){}scEl.className=band+(desk?' desk':'');scEl.innerHTML=`<div class="vs-n"><i>${n}</i></div>${sub?`<small>${sub}</small>`:''}`;
+  // ChatGPT round 2: keep >=12 px between the finish label and the HR chip on narrow phones (the gap was 8 px at 360):
+  // shorten to "120 LEFT · FINISH", and if that still doesn't fit, drop the label (the number stays)
+  const sm=sub&&scEl.querySelector('small'),hrE=document.getElementById('hr');
+  if(sm&&hrE){const tight=()=>{const a=sm.getBoundingClientRect(),h=hrE.getBoundingClientRect();return h.width>0&&a.bottom>h.top-10&&a.top<h.bottom+10&&a.left-h.right<12;};
+   if(tight()){sm.textContent=sub.replace(' · on a finish',' · finish');if(tight())sm.remove();}}
   clearTimeout(scT);scT=setTimeout(()=>{if(scEl)scEl.innerHTML='';},1560);}catch(e){}};
  // the number belongs to the visit just thrown: the next dart (anyone's) clears it (ChatGPT review)
  const scClear=()=>{clearTimeout(scT);if(scEl)scEl.innerHTML='';};
