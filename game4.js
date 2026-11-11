@@ -2177,6 +2177,36 @@ confetti=function(strength){if(LOOK.rm||strength<.4)return;const P=V.lkRects().p
  let lst=host.querySelector('.rt-list');if(!lst&&list.length){lst=document.createElement('div');lst.className='rt-list';const head=document.createElement('div');head.className='rt-lh';head.textContent=`${me.score} · ${d} dart${d>1?'s':''} · pick a route`;lst.appendChild(head);list.forEach(b=>lst.appendChild(b));host.appendChild(lst);}
  host.insertBefore(bar,host.firstChild);const tg=bar.querySelector('.rt-tog');if(tg)tg.onclick=()=>{LOOK.routesOpen=!LOOK.routesOpen;renderRoutes();};
  list.forEach(b=>{const o=b.onclick;b.onclick=e=>{LOOK.routesOpen=false;if(o)o(e);};});};}
+// Quick route picker (Hayden 22:59, product rule 9): on a finish, the top routes for your score and darts in hand sit in the bar as
+// buttons; one tap re-aims along that route (aim only, the throw is untouched) and you can switch any time in the visit. Routes come
+// from the standard checkout table (routesFor). With one dart left only direct finishes show. A missed route falls back to the table
+// and says so. The rail swallows its own touches so a tap never starts a throw.
+{const RS=document.createElement('style');RS.textContent=`
+#routes .rt-rail{display:flex;gap:5px;flex:1;min-width:0}
+#routes .rt-rail .rt{flex:1 1 0;min-width:0;min-height:44px;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center;justify-content:center;gap:0;padding:0 4px;border-radius:10px;border:1px solid rgba(237,236,229,.2);background:linear-gradient(160deg,rgba(38,51,53,.94),rgba(16,25,26,.96));box-shadow:0 6px 14px rgba(0,0,0,.35);color:#EDECE5;cursor:pointer;touch-action:manipulation;position:relative!important;height:auto!important}
+#routes .rt-rail .rt .rc{position:static!important;margin:0!important;display:inline-block!important;flex:none!important;min-width:0!important;width:auto!important;padding:0 3px!important;background:none!important;border:0!important;box-shadow:none!important;font:italic 800 16px/1 "Barlow Condensed",sans-serif!important;letter-spacing:.01em;color:inherit!important;transform:none!important}
+#routes .rt-rail .rt .rc+.rc::before{content:'';display:inline-block;width:3px;height:3px;margin:0 4px 0 -1px;border-radius:50%;background:currentColor;opacity:.45;vertical-align:middle}
+#routes .rt-rail .rt .rc.d{color:#C6F36B!important}
+#routes .rt-rail .rt.on{background:#C6F36B;border-color:#C6F36B;color:#10191A;box-shadow:0 6px 16px rgba(198,243,107,.28)}
+#routes .rt-rail .rt.on .rc.d{color:#10191A!important;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+#routes .rt-rail .rt em{display:none}
+#routes .rt-rail .rt.on .rc:first-child{background:rgba(16,25,26,.16)!important;border-radius:5px;padding:3px 5px!important}
+#routes.rail-on{padding:5px;margin:-5px;border-radius:14px;background:linear-gradient(180deg,rgba(10,16,17,.78),rgba(10,16,17,.55));box-shadow:0 8px 20px rgba(0,0,0,.35)}
+#routes.routes.rail-on{position:fixed!important;z-index:35!important;top:calc(var(--lk-hdr) + var(--lk-bh) + 8px)!important;left:8px!important;right:8px!important;width:auto!important;bottom:auto!important}
+#routes.rail-on .rt-bar{width:100%!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;min-height:44px;gap:5px!important}
+#routes.rail-on .rt-bar .rt-rem,#routes.rail-on .rt-bar .rt-sel,#routes.rail-on .rt-bar .rt-tog{display:none!important}
+#routes .rt-upd{position:absolute;left:4px;top:auto;bottom:-16px;font:800 10px/1 Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#D9AD52;text-shadow:0 1px 3px #000}
+`;document.head.appendChild(RS);}
+{const _rr=renderRoutes;renderRoutes=function(){_rr();const host=$('routes');const home=()=>{const hud=$('hud'),db=$('drillBar');if(host&&hud&&host.parentNode!==hud){if(db&&db.parentNode===hud)db.after(host);else hud.appendChild(host);}};if(host&&(host.hidden||!S)){host.classList.remove('rail-on');document.body.classList.remove('lk-rail');home();}if(!host||host.hidden||!S)return;const me=S.p[S.cur];if(!me)return;
+ host.classList.remove('rail-on');document.body.classList.remove('lk-rail');home();const lst=host.querySelector('.rt-list');const bar=host.querySelector('.rt-bar');if(!bar||!lst)return;const btns=[...lst.querySelectorAll('.rt')].slice(0,3);if(btns.length<2||innerWidth>700||innerWidth>innerHeight)return; /* phone portrait; desktop keeps the Routes list */
+ LOOK.routesOpen=false;host.classList.remove('lk-open');host.classList.add('rail-on');document.body.classList.add('lk-rail');if(host.parentNode!==document.body)document.body.appendChild(host);bar.classList.add('rail');let rail=bar.querySelector('.rt-rail');if(!rail){rail=document.createElement('div');rail.className='rt-rail';bar.appendChild(rail);}
+ if(S.planDropped&&performance.now()-S.planDropped<2200){if(!bar.querySelector('.rt-upd')){const u=document.createElement('span');u.className='rt-upd';u.textContent='Route updated';bar.insertBefore(u,rail);}}
+ btns.forEach(b=>{b.setAttribute('aria-pressed',b.classList.contains('on'));rail.appendChild(b);['pointerdown','touchstart','mousedown'].forEach(ev=>b.addEventListener(ev,e=>e.stopPropagation(),{passive:true}));});
+ host.setAttribute('aria-label',`${me.score} to go, ${4-S.dart} dart${S.dart===3?'':'s'}: pick a route`);};}
+{const _ss=showScreen;showScreen=function(){const r=_ss.apply(this,arguments);try{const h=$('routes'),hud=$('hud');if(h&&hud&&hud.hidden){h.hidden=true;h.classList.remove('rail-on');document.body.classList.remove('lk-rail');if(h.parentNode!==hud)hud.appendChild(h);}}catch(e){}return r;};}
+// a picked route that a dart knocks off course: say so once, then the table's route for the new score takes over
+{const _ld=landCore;landCore=function(){const had=!!(S&&S.planPicked&&S.plan&&S.plan.length);const snap=had?S.plan.slice():null;const r=_ld.apply(this,arguments);try{if(had&&S&&!S.plan&&snap.length>1){/* ChatGPT P1: keep the rest of your route when it still checks out */const me=S.p[S.cur],rest=snap.slice(1),left=4-S.dart,last=rest[rest.length-1];if(me&&rest.length<=left&&rest.reduce((a,l)=>a+valOf(l),0)===me.score&&(last[0]==='D'||last==='BULL'))S.plan=rest;}
+ if(had&&S&&!S.plan){S.planPicked=false;S.planDropped=performance.now();setTimeout(()=>{try{renderRoutes();}catch(e){}},2300);}}catch(e){}return r;};}
 {const _beginMatch=beginMatch;beginMatch=function(opts){LOOK.routesOpen=false;LOOK.bandOff();LOOK.hush=false;LOOK.ducked=false;$('hudTr').classList.remove('open');$('btnMenu').setAttribute('aria-expanded','false');V.lkRects();document.body.classList.add('lk-match');const r=_beginMatch(opts);LOOK.syncMenu();return r;};}
 {const _showScreen=showScreen;showScreen=function(id){_showScreen(id);document.body.classList.toggle('lk-match',!$('hud').hidden);if(id){const cb=$('btnChat');if(cb)cb.hidden=true;const cp=$('chatPanel');if(cp)cp.hidden=true;const mb=$('mpBoard');if(mb)mb.hidden=true;const pb=$('pubBet');if(pb)pb.hidden=true;}};}
 // --- menu (Sound / Caller / Haptics / Pace / Quit live under Menu) and skip

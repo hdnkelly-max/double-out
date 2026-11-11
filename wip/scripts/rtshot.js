@@ -1,0 +1,12 @@
+// Quick route picker: a 390 px match screen on a finish, with the current route UI (node wip/scripts/rtshot.js <tag> [score] [dartsLeft])
+const {chromium}=require('playwright');const tag=process.argv[2]||'x',score=+(process.argv[3]||100),left=+(process.argv[4]||3),pick=+(process.argv[5]||0);
+(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
+const p=await b.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,hasTouch:true,isMobile:true});await require('./hl.js')(p);
+const cdp=await p.context().newCDPSession(p);const shot=async o=>{const r=await cdp.send('Page.captureScreenshot',{format:'jpeg',quality:85});require('fs').writeFileSync(o,Buffer.from(r.data,'base64'));};
+const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.goto('file://'+require('path').resolve(__dirname,'../../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
+await p.evaluate(()=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;persist();beginMatch({mode:'career',tier:1,p0:'Hayden',oppName:'Deano',oppAvg:58,legs:3});});
+await p.waitForFunction(()=>S&&S.bull,null,{timeout:20000}).catch(()=>{});await p.waitForTimeout(500);
+const info=await p.evaluate(([score,left])=>{try{$('intro')&&$('intro').classList.remove('show');}catch(e){}S.bull=null;S.busy=false;S.cur=0;S.p[0].score=score;S.dart=4-left;S.visit=[];try{updateUI();}catch(e){}try{renderRoutes();}catch(e){}const h=$('routes');return {hidden:h&&h.hidden,html:h?h.innerText.slice(0,200):null,coll:h&&h.className};},[score,left]);
+if(pick){await p.evaluate(i=>{const b=[...document.querySelectorAll('#routes .rt-rail .rt')][i];if(b)b.click();},pick);await p.waitForTimeout(800);}
+await p.waitForTimeout(1500);console.log(await p.evaluate(()=>{const h=$('routes');const r=h.getBoundingClientRect();const cs=getComputedStyle(h);return JSON.stringify({busy:S.busy,bull:S.bull,done:S.done,intro:$('intro').classList.contains('show'),cur:S.cur,ai:S.p[S.cur].ai,mate:S.mateTurn,score:S.p[0].score,r:[r.left,r.top,r.width,r.height].map(Math.round),disp:cs.display,vis:cs.visibility,op:cs.opacity,z:cs.zIndex,top:cs.top,hdr:cs.getPropertyValue('--lk-hdr'),bh:cs.getPropertyValue('--lk-bh')});}));await shot(`shots/rt_${tag}.jpg`);console.log(JSON.stringify(info),'errors:',errs.slice(0,3).join(' | ')||'none');await b.close();})();
