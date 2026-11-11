@@ -1329,7 +1329,7 @@ const V=(function(){try{return (()=>{
   if(previewOn){if(portrait){pos.set(Math.sin(t*.4)*.2,1.75,OCHE_Z-1.7);look.set(0,.7,OCHE_Z+1.5);fov=50;}else{pos.copy(camPrev.pos);pos.x+=Math.sin(t*.4)*.2;look.copy(camPrev.look);fov=40;}}
   else if(idleOn&&titleOn){const k=(Math.sin(t*.07)+1)/2;pos.set(-.75+.2*k,1.6,OCHE_Z+1.75-.25*k);look.set(portrait?-.3:-.72,1.56,0);fov=portrait?60:46;}else if(idleOn){const k=(Math.sin(t*.12)+1)/2;pos.set(1.6-2.4*k,1.75-.15*k,OCHE_Z+4.2-1.6*k);look.set(.1,1.45,0);fov=portrait?70:56;}
   if(Math.abs(camera.fov-fov)>.01){camera.fov=fov;camera.updateProjectionMatrix();}
-  const nv=state.nerves;const sw=(1-camK)*(.0015+nv*.0025);pos.x+=Math.sin(t*1.3)*sw+camOff.x;pos.y+=Math.cos(t*1.7)*sw*.6+camOff.y;if(window.TOPS_WALKFX){try{const r=TOPS_WALKFX(now,{me,pos,look,T,playClip,fpFig});if(r&&r.fov!=null)fov=r.fov;}catch(e){}}camera.position.copy(pos);camera.lookAt(look);camOff.multiplyScalar(.8);
+  const nv=state.nerves;const sw=(1-camK)*(.0015+nv*.0025);pos.x+=Math.sin(t*1.3)*sw+camOff.x;pos.y+=Math.cos(t*1.7)*sw*.6+camOff.y;if(window.TOPS_WALKFX){try{const r=TOPS_WALKFX(now,{me,opp:typeof opp!=='undefined'?opp:null,pos,look,T,playClip,fpFig});if(r&&r.fov!=null)fov=r.fov;}catch(e){}}camera.position.copy(pos);camera.lookAt(look);camOff.multiplyScalar(.8);
   camera.updateMatrixWorld();camera.updateMatrixWorld(true);
   // fp arm
   fpArm.visible=!fpFig&&!cine&&!previewOn&&!idleOn&&((camK<.5&&!state.p[state.cur].ai&&wk>=1)||state.done);
