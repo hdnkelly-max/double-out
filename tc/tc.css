@@ -383,3 +383,17 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-introgo{width:100%}
 /* #13: short phones (360x640 and similar): shrink the card fan so Open picks fits without scrolling */
 @media (max-height:700px){.tc-welcome .tc-wel-fan{transform:scale(.64);transform-origin:50% 0;margin-bottom:-82px}.tc-welcome .tc-wel-big b{font-size:52px}}
+/* 3D trophy cabinet (tc/cab3d.js) */
+.tc-cab3{aspect-ratio:3/4;background:#0f1612;overflow:hidden}
+.tc-cab3d{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;touch-action:pan-y;cursor:pointer}
+.tc-cab-3d .tc-cabinfo{margin-top:-64px;padding-top:72px;background:linear-gradient(180deg,rgba(16,25,26,0),rgba(16,25,26,.92) 60px,var(--base,#10191A) 100px);pointer-events:none}
+.tc-cab-3d .tc-cabinfo>*{pointer-events:auto}
+.tc-cabhint{color:var(--lime,#C6F36B)}
+.tc-cab-3d .tc-cabdet:empty{display:none}
+.tc-cab-3d .tc-cabdet{margin:4px 0 6px}
+.tc-cab-3d .tc-cabdet>b{font:800 20px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;color:var(--gold,#C49A52)}
+.tc-case{margin-top:18px}
+.tc-casestrip{display:flex;gap:10px;overflow-x:auto;--card-w:88px;padding:16px 2px 8px;scrollbar-width:none}
+.tc-casestrip::-webkit-scrollbar{display:none}
+.tc-casestrip .tc{flex:0 0 auto}
+.tc-casestrip .tc-dim{margin:0}
