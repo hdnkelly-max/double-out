@@ -1,0 +1,6 @@
+const {chromium}=require('playwright');(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
+const p=await b.newPage({viewport:{width:1366,height:768}});await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
+await p.goto('file:///home/claude/oche-next/index.html');await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(3000);
+await p.evaluate(()=>{save.authSeen=true;save.name='Hayden';persist();$('login').hidden=true;V.walkOn=()=>{};newCareer();save.look.model='pete';persist();beginMatch({mode:'career',tier:2,p0:'Hayden',oppKey:'deano',oppName:'Deano',oppAvg:60,legs:3});});
+await p.waitForTimeout(30000);await p.evaluate(()=>{$('intro').classList.remove('show');});
+console.log(await p.evaluate(async()=>{const q=V._qa,r=q.renderer,orig=r.render;let out=null;r.render=function(sc,cam){if(!out&&cam.fov<=31&&cam.fov>=20){const o=q.opp(),f=q.fp();out={opp:o&&{vis:o.visible,pos:o.position.toArray(),ck:o.userData.ck,wait:o.userData.waiting,skinned:(()=>{let n=0;o.traverse(c=>{if(c.isSkinnedMesh)n++;});return n;})(),inScene:o.parent===sc},fp:f&&{vis:f.visible,ck:f.userData.ck}};}return orig.call(this,sc,cam);};await new Promise(z=>setTimeout(z,1500));r.render=orig;return JSON.stringify(out);}));await b.close();})();
