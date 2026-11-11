@@ -8,7 +8,7 @@ const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
- const r=await p.evaluate(()=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;
+ const f0=[];const r=await p.evaluate(()=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;
   const tpAt=(rh,run)=>{save.st2=save.st2||TOPS_st();if(save.st2)save.st2.v={sc:20,fi:20,ct:20,rh,co:20};save.barrel='assassin';save.setup={point:'std',shaft:'med',flight:'standard'};save.arm=0;
    if(run)c.run={stage:0};else c.run=null;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:50,legs:1});S.aim=targetPoint('T20');const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}try{S.done=true;}catch(e){}c.run=null;return tp;};
   const t20=tpAt(20),t95=tpAt(95),trun=tpAt(20,true);
@@ -16,7 +16,12 @@ const {chromium}=require('playwright');const path=require('path');
   const tg=targetPoint('T20');let inRing=0,trebs=0,maxR=0;for(let i=0;i<3000;i++){const l=landFrom({x:tg.x,y:tg.y},t20,0);const d=Math.hypot(l.x-tg.x,l.y-tg.y);maxR=Math.max(maxR,d);if(d<=1.794*2.8+1e-6)inRing++;if(scoreAt(l.x,l.y).label==='T20')trebs++;}
   const P=t20.P,ring=dt=>ringR(dt,t20);const edge=[0,.01,1,3,5.99,6,6.01].map(e=>+ring(P+e).toFixed(2));
   return {P20:+t20.P.toFixed(2),P95:+t95.P.toFixed(2),perfSig:t20.perfSig,runPerfSig:trun.perfSig==null?null:trun.perfSig,inRing:inRing/3000,t20:trebs/3000,maxR:+maxR.toFixed(2),ringIn:+ring(0).toFixed(2),edge};});
- await b.close();const f=[];
+ // QA 00:40: practice with no career save uses the starter window; Metronome scales with the window; the verdict uses the locked parameters
+ const q=await p.evaluate(()=>{const out={};try{newCareer();const c=career();c.stage=null;c.tier=0;c.run=null;beginMatch({mode:'career',tier:0,p0:'P',oppName:'X',oppAvg:50,legs:1});S.aim=targetPoint('T20');
+   const keep=save.career;save.career=null;try{const en=effNerves;effNerves=()=>0;try{const tp=throwParams();out.prP=+tp.P.toFixed(2);out.prSig=tp.perfSig;}finally{effNerves=en;}}finally{save.career=keep;}try{S.done=true;}catch(e){}}catch(e){out.err=e.message;}
+  return out;});
+ if(q.err)f0.push('practice check failed: '+q.err);else{if(Math.abs(q.prP-3)>0.05)f0.push('practice without a career: window '+q.prP+' ms, want 3');if(q.prSig!==2.8)f0.push('practice without a career: no starter perfect release');}
+ await b.close();const f=f0;
  if(Math.abs(r.P20-3)>0.05)f.push('window at Rhythm 20 '+r.P20+' ms, want 3');
  if(Math.abs(r.P95-15)>0.1)f.push('window at Rhythm 95 '+r.P95+' ms, want 15');
  if(r.perfSig!==2.8)f.push('career perfect scatter '+r.perfSig);
