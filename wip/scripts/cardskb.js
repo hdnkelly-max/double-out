@@ -14,11 +14,11 @@ r.locked=await p.evaluate(()=>{const k=document.querySelector('.tc-grid .tc.is-l
 // Tab until focus lands on a card (max 40 presses)
 let hit=null;for(let i=0;i<40&&!hit;i++){await p.keyboard.press('Tab');hit=await p.evaluate(()=>{const a=document.activeElement;return a&&a.matches('.tc-grid .tc')?a.getAttribute('aria-label'):null;});}
 r.tabReached=hit;
-r.focusRing=await p.evaluate(()=>{const a=document.activeElement;return a?getComputedStyle(a).outlineStyle+' '+getComputedStyle(a).outlineWidth:null;});
+await p.screenshot({path:require('path').resolve(__dirname,'../shots')+'/cardskb_focus.png',timeout:120000});r.focusRing=await p.evaluate(()=>{const a=document.activeElement;return a?getComputedStyle(a).outlineStyle+' '+getComputedStyle(a).outlineWidth:null;});
 await p.keyboard.press('Enter');await p.waitForTimeout(800);
 r.enterOpens=await p.evaluate(()=>!!document.querySelector('.tc-inspect'));
 await p.evaluate(()=>document.querySelectorAll('.tc-inspect').forEach(e=>e.remove()));
-await p.evaluate(()=>document.querySelector('.tc-grid .tc:not(.is-locked)').focus());await p.keyboard.press(' ');await p.waitForTimeout(800);
+await p.evaluate(()=>{const k=document.querySelector('.tc-grid .tc:not(.is-locked)');if(k)k.focus();});await p.keyboard.press(' ');await p.waitForTimeout(800);
 r.spaceOpens=await p.evaluate(()=>!!document.querySelector('.tc-inspect'));
 const pass=r.owned&&r.owned.role==='button'&&r.owned.label&&r.owned.tab===0&&r.locked&&r.locked.label&&r.locked.tab<0&&r.tabReached&&r.enterOpens&&r.spaceOpens&&!pe.length;
 console.log('cardskb',pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();
