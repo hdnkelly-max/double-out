@@ -351,3 +351,11 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tcpk__row[hidden]{display:none}
 .tcpk__summary .tc .tc__meta{font-size:max(11px,calc(var(--card-w)*.047));letter-spacing:.03em}
 .tcpk__summary .tc .tc__name.is-xlong{font-size:max(12px,calc(var(--card-w)*.066))}
+/* P6 send-back (QA 02:54): long names were cut to one line with an ellipsis wherever the font runs wider (font fallback,
+   other phones). On Collection and pack-summary cards a name may wrap to two lines instead; the plate grows upward. */
+.tc-grid .tc .tc__plate,.tc-sets .tc .tc__plate,.tcpk__summary .tc .tc__plate{top:auto;gap:.25em}
+.tc-grid .tc .tc__name,.tc-sets .tc .tc__name,.tcpk__summary .tc .tc__name{white-space:normal;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.05;flex:none;padding-bottom:1px}
+.tc-grid .tc .tc__name.is-long,.tc-sets .tc .tc__name.is-long,.tcpk__summary .tc .tc__name.is-long{font-size:max(12px,calc(var(--card-w)*.078))}
+/* at large system text the number and rarity may not share a line: wrap instead of cutting the number */
+.tc-grid .tc .tc__meta,.tc-sets .tc .tc__meta,.tcpk__summary .tc .tc__meta{flex-wrap:wrap;column-gap:6px;row-gap:1px}
+.tc-grid .tc .tc__meta .tc__set,.tc-sets .tc .tc__meta .tc__set,.tcpk__summary .tc .tc__meta .tc__set{overflow:visible;text-overflow:clip}
