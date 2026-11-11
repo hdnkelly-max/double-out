@@ -14,7 +14,7 @@ const TIERS_=process.env.TIERS?process.env.TIERS.split(',').map(Number):[0,1,2];
  // OPPADJ=-4: shift every opponent's rating (what-if for a softer setting)
  // DIFF=rookie|club|comp: the difficulty setting (default: none chosen = Club)
  // JOINT=1: sample whole real darts (timing, lock offset and nerves together) from tests/sim-player-joint.json where a tester has them
-const JD=JSON.parse(fs.readFileSync(path.resolve(__dirname,'sim-player-joint.json'),'utf8'));Object.keys(JD).forEach(k=>{if(k!=='note')JD[k]=JD[k].split(',').map(r=>r.trim().split(' ').map(Number));});
+const JD=JSON.parse(fs.readFileSync(process.env.JDFILE||path.resolve(__dirname,'sim-player-joint.json'),'utf8'));Object.keys(JD).forEach(k=>{if(k!=='note')JD[k]=JD[k].split(',').map(r=>r.trim().split(' ').map(Number));});
  // LAND=1: replay the testers' real landing offsets from aim directly (checks aiming and scoring, bypasses the throw model)
  // REC=1: window and s0 as recorded on the testers' own pub darts (validates the model, tier 0 only)
  // STARTER=1: every tester's real timing at starter stats (20s) and starter kit
