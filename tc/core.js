@@ -753,11 +753,11 @@
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
-    if (WK.vis0 == null) WK.vis0 = !!v.me.visible;   // #18: the figure's visibility before the walk-on (hidden in a match), restored at the end
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
       WK.rot = me.rotation.y;
+      WK.vis0 = !!me.visible;   // #18: the figure's visibility before the walk-on shows it (hidden in a match); restored at the end
       // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
       // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
       const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37;
