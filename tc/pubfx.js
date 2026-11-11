@@ -16,7 +16,13 @@
     cv = document.createElement('canvas'); cv.id = 'pubFxC'; document.body.appendChild(cv); cx = cv.getContext('2d');
     const css = document.createElement('style'); css.textContent = CSS; document.head.appendChild(css);
   }
-  function size() { const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = Math.round(innerHeight * .52); if (cv.width !== w * d || cv.height !== h * d) { cv.width = w * d; cv.height = h * d; } cx.setTransform(d, 0, 0, d, 0, 0); return [w, h]; }
+  function place() { if (cv) try { size(); } catch (e) {} }
+  // the effects sit on the board pane itself (phone: under the header, above the thrower panel; desktop: the left pane), not a fixed top band
+  function pane() { try { const r = V.lkRects().board; if (r && r.w > 0 && r.h > 0) return r; } catch (e) {} return { x: 0, y: 0, w: innerWidth, h: Math.round(innerHeight * .52) }; }
+  function size() { const d = Math.min(2, devicePixelRatio || 1), r = pane(), w = Math.round(r.w), h = Math.round(r.h);
+    [cv, layer].forEach(o => { const st = o.style; st.left = r.x + 'px'; st.top = r.y + 'px'; st.width = w + 'px'; st.height = h + 'px'; });
+    layer.style.setProperty('--s', Math.max(1, Math.min(1.8, Math.min(w / 390, h / 358))).toFixed(3));   // props are drawn for a phone-sized pane; scale them up on a desktop pane
+    if (cv.width !== w * d || cv.height !== h * d) { cv.width = w * d; cv.height = h * d; } cx.setTransform(d, 0, 0, d, 0, 0); return [w, h]; }
 
   // ---- who is throwing, and how long a card lasts ----
   const thr = () => (S && S.p && S.p[S.cur]) || null;
@@ -34,7 +40,7 @@
     PF.on = PF.on.filter(o => o.id !== id); PF.on.push(e); document.body.classList.add('pfx-' + id); kick(); return e;
   }
   function stop(e) { document.body.classList.remove('pfx-' + e.id); const el = layer && layer.querySelector('.pf-' + e.id); if (el) { el.classList.add('out'); setTimeout(() => el.remove(), 450); } }
-  function el(id, html) { host(); let d = layer.querySelector('.pf-' + id); if (d) d.remove(); d = document.createElement('div'); d.className = 'pf-' + id; d.innerHTML = html || ''; layer.appendChild(d); return d; }
+  function el(id, html) { host(); place(); let d = layer.querySelector('.pf-' + id); if (d) d.remove(); d = document.createElement('div'); d.className = 'pf-' + id; d.innerHTML = html || ''; layer.appendChild(d); return d; }
   const esc = s => String(s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
   // ---- board camera: jolts, shakes and the slow swing of a loose board ----
@@ -93,15 +99,28 @@
     switch (e.id) {
       case 'spill': drips(e, W, H, t, '214,150,40'); break;
       case 'bump': if (q < 2.5) drips(e, W, H, t, '214,150,40'); break;
-      case 'juke': {   // two coloured lamps throwing pools onto the surround and the brickwork, pulsing in intensity (max ~25%)
-        const per = 60 / 123, ph = q % per, env = ph < .12 ? ph / .12 : Math.exp(-(ph - .12) / .3), beat = Math.floor(q / per);
-        const cols = ['255,70,170', '70,150,255', '255,170,50', '160,80,255'], c1 = cols[beat % 4], c2 = cols[(beat + 1) % 4];
-        const pool = (x0, y0, rx, ry, col, a) => { cx.save(); cx.translate(x0, y0); cx.scale(rx / ry, 1); const g = cx.createRadialGradient(0, 0, 0, 0, 0, ry); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.6, `rgba(${col},${a * .5})`); g.addColorStop(1, `rgba(${col},0)`); cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, ry, 0, 7); cx.fill(); cx.restore(); };
-        cx.globalCompositeOperation = 'soft-light';
-        pool(W * .02, H * .3, W * .3, H * .32, c1, .55 + .45 * env); pool(W * .98, H * .62, W * .3, H * .34, c2, .5 + .45 * (1 - env));
-        cx.globalCompositeOperation = 'screen';
-        pool(W * .02, H * .3, W * .2, H * .22, c1, .1 + .12 * env); pool(W * .98, H * .62, W * .2, H * .24, c2, .09 + .12 * (1 - env));
-        cx.globalCompositeOperation = 'source-over';
+      case 'juke': {   // bubble-tube neon down both edges of the board pane, colour spilling onto the board's edge (centre stays clear), on a 123 bpm beat
+        const per = 60 / 123, ph = q % per, env = ph < .1 ? ph / .1 : Math.exp(-(ph - .1) / .28), beat = Math.floor(q / per), fade = Math.min(1, q / .35);
+        const mob = W < 600, top = 10, bot = H - (mob ? 46 : 54), L = bot - top, tw = mob ? 5 : 7, ix = mob ? 7 : 12;
+        const hue = y => (q * 40 + (bot - y) / L * 220) % 360;
+        e.bub = e.bub || [0, 1].map(() => Array.from({ length: low() ? 5 : 9 }, () => ({ y: R(), v: .18 + R() * .25, s: .6 + R() * .5 })));
+        [ix, W - ix].forEach((x, side) => {
+          // spill onto the board's edge: a narrow screen-blended glow in the tube's colours, strongest on the beat (centre and numbers stay clean)
+          const sw = W * (mob ? .1 : .085), x0 = side ? x - sw : x, sg = cx.createLinearGradient(0, top, 0, bot), sp = cx.createLinearGradient(x, 0, side ? x - sw : x + sw, 0);
+          for (let i = 0; i <= 4; i++) sg.addColorStop(i / 4, `hsl(${hue(top + L * i / 4)},100%,55%)`);
+          sp.addColorStop(0, 'rgba(0,0,0,1)'); sp.addColorStop(1, 'rgba(0,0,0,0)');
+          cx.save(); cx.beginPath(); cx.rect(x0, top, sw, L); cx.clip(); cx.globalAlpha = (.2 + .22 * env) * fade; cx.globalCompositeOperation = 'screen';
+          cx.fillStyle = sg; cx.fillRect(x0, top, sw, L); cx.globalCompositeOperation = 'destination-in'; cx.globalAlpha = 1; cx.fillStyle = sp; cx.fillRect(x0, top, sw, L); cx.restore();
+          cx.globalCompositeOperation = 'source-over';
+          // the tube: dark housing, coloured glass, a hot core, chrome caps
+          const tg = cx.createLinearGradient(0, bot, 0, top); for (let i = 0; i <= 6; i++) tg.addColorStop(i / 6, `hsl(${hue(bot - L * i / 6)},100%,${58 + 8 * env}%)`);
+          cx.lineCap = 'round'; cx.strokeStyle = 'rgba(8,6,10,.75)'; cx.lineWidth = tw + 6; cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke();
+          cx.save(); cx.shadowColor = `hsla(${hue(top + L / 2)},100%,60%,.9)`; cx.shadowBlur = (mob ? 14 : 22) * (.6 + .4 * env); cx.globalAlpha = fade;
+          cx.strokeStyle = tg; cx.lineWidth = tw; cx.beginPath(); cx.moveTo(x, top); cx.lineTo(x, bot); cx.stroke(); cx.restore();
+          cx.globalAlpha = .55 * fade; cx.strokeStyle = '#fff'; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(x - tw * .18, top + 4); cx.lineTo(x - tw * .18, bot - 4); cx.stroke(); cx.globalAlpha = 1;
+          e.bub[side].forEach(u => { u.y = (u.y + u.v * .016) % 1; const by = bot - u.y * L, r = tw * .32 * u.s; cx.fillStyle = `rgba(255,255,255,${.55 * fade})`; cx.beginPath(); cx.arc(x + Math.sin(u.y * 9 + side) * tw * .12, by, r, 0, 7); cx.fill(); });
+          [top, bot].forEach(cy => { const cg = cx.createLinearGradient(x - tw, 0, x + tw, 0); cg.addColorStop(0, '#3a3e44'); cg.addColorStop(.45, '#d9dde2'); cg.addColorStop(1, '#2a2d32'); cx.fillStyle = cg; cx.fillRect(x - tw * .9, cy - 3, tw * 1.8, 6); });
+        });
         if (e.lb !== beat) { e.lb = beat; if (beat % 2 === 0) PF.cam.push({ dx: .0025, dy: .0025, t0: now(), ms: 120, kind: 'shake' }); } break; }
       case 'cooker': {  // heat shimmer rising and a pulse at the edges in time with the heart rate
         const hr = (S && S.hr) || 90, bt = Math.pow(Math.max(0, Math.sin(q * Math.PI * hr / 60)), 8);
@@ -126,7 +145,7 @@
     spill(m) { start('spill', m, { until: 'dart', n: 1 }); for (let i = 0; i < 30; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .7, y: .02, vx: (R() - .5) * 220, vy: 60 + R() * 260, s: 2 + R() * 5, life: 1.3, foam: R() < .35 }); },
     heckle(m) { start('heckle', m, { until: 'dart', n: 1 }); el('heckle', `<div class="pf-guy"><i></i><b></b><u></u></div><p><em>${esc(m.fromName || 'Crowd')}</em> “${esc(m.fl)}”</p>`); jolt(.004, .002, 260); },
     orders(m) { start('orders', m, { until: 'dart', n: 1 }); el('orders', '<div class="pf-bell"></div><b>Last orders!</b>'); jolt(.006, .002, 900, 'shake'); },
-    juke(m) { start('juke', m, { until: 'visit' }); },
+    juke(m) { start('juke', m, { until: 'visit' }); el('juke', '<div class="pf-np"><span><i></i><i></i><i></i><i></i><i></i></span><b>Jukebox</b><small>this visit</small></div>'); },
     flash(m) { el('flash', '<i></i><u></u>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-flash'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 2200); },
     wobble(m) { start('wobble', m, { until: 'visit' }); jolt(.012, 0, 700); },
     cooker(m) { start('cooker', m, { until: 'dart', n: 1 }); },
@@ -163,30 +182,33 @@
 #pubFx{position:fixed;left:0;top:0;width:100%;height:52%;z-index:42;pointer-events:none;overflow:hidden}
 #pubFx>div{position:absolute;inset:0;transition:opacity .45s}#pubFx>div.out{opacity:0}
 /* air horn: a hard blast from the corner */
-#pubFx .pf-can{position:absolute;left:-8px;bottom:6%;width:150px;height:70px;transform-origin:0 100%;animation:pfCanIn .6s cubic-bezier(.2,.9,.3,1) both;filter:blur(1.2px) drop-shadow(0 10px 14px rgba(0,0,0,.6))}
+#pubFx .pf-can{zoom:var(--s,1);position:absolute;left:-52px;bottom:6%;width:150px;height:70px;transform-origin:0 100%;animation:pfCanIn .6s cubic-bezier(.2,.9,.3,1) both;filter:blur(1.2px) drop-shadow(0 10px 14px rgba(0,0,0,.6))}
 #pubFx .pf-can i{position:absolute;left:0;top:14px;width:62px;height:42px;border-radius:10px 22px 22px 10px;background:linear-gradient(180deg,#ff5a4a,#c81e14 55%,#7a0d08)}
 #pubFx .pf-can b{position:absolute;left:58px;top:4px;width:88px;height:62px;background:linear-gradient(180deg,#fafafa,#cfd3d6 60%,#8b9095);clip-path:polygon(0 38%,100% 0,100% 100%,0 62%)}
 #pubFx .pf-horn u{position:absolute;left:120px;bottom:6%;width:220px;height:110px;margin-bottom:-20px;background:radial-gradient(ellipse at 0 50%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%);animation:pfBlast .5s .15s ease-out both}
+@media (min-width:700px){#pubFx .pf-can{left:-8px}}   /* phone: most of the horn stays off the board (ChatGPT r1) */
 @keyframes pfCanIn{0%{transform:translate(-120px,40px) rotate(-14deg)}60%{transform:translate(4px,-2px) rotate(-12deg)}100%{transform:rotate(-12deg)}}
 @keyframes pfBlast{0%{transform:scaleX(.2);opacity:0}30%{opacity:1}100%{transform:scaleX(1.6);opacity:0}}
 /* heckle: a bloke leans in from the corner, his line as a broadcast subtitle */
-#pubFx .pf-heckle .pf-guy{position:absolute;left:-30px;bottom:-20px;width:190px;height:230px;filter:blur(3px);animation:pfLean 1.9s cubic-bezier(.2,.9,.3,1) both}
+#pubFx .pf-heckle .pf-guy{zoom:var(--s,1);position:absolute;left:-30px;bottom:-20px;width:190px;height:230px;filter:blur(3px);animation:pfLean 1.9s cubic-bezier(.2,.9,.3,1) both}
 #pubFx .pf-guy i{position:absolute;left:46px;top:10px;width:92px;height:112px;border-radius:48% 48% 44% 44%;background:radial-gradient(circle at 62% 38%,#4a3a30,#1c1410 70%)}
 #pubFx .pf-guy b{position:absolute;left:0;top:104px;width:190px;height:150px;border-radius:46% 46% 0 0;background:linear-gradient(180deg,#22262c,#0c0e10)}
 #pubFx .pf-guy u{position:absolute;left:118px;top:62px;width:46px;height:44px;border-radius:40% 60% 50% 50%;background:radial-gradient(circle at 40% 40%,#6c5242,#2a1d16);transform:rotate(-18deg)}
 @keyframes pfLean{0%{transform:translate(-160px,60px) rotate(-10deg)}14%{transform:translate(0,0) rotate(6deg)}22%{transform:rotate(3deg)}80%{transform:rotate(4deg)}100%{transform:translate(-170px,70px) rotate(-8deg)}}
-#pubFx .pf-heckle p{position:absolute;left:12px;right:12px;bottom:76px;margin:0;text-align:center;font:600 14px/1.35 Manrope,sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 12px rgba(0,0,0,.8);animation:pfSub .25s .2s both}
+#pubFx .pf-heckle p{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);width:max-content;max-width:86%;box-sizing:border-box;margin:0;padding:7px 12px 8px;border-radius:7px;background:rgba(10,12,14,.74);border-left:3px solid #F2B705;box-shadow:0 6px 18px rgba(0,0,0,.45);text-align:left;font:600 calc(13px + 7.8px * (var(--s,1) - 1))/1.35 Manrope,sans-serif;color:#fff;animation:pfCap .25s .2s both}
+@media (min-width:700px){#pubFx .pf-heckle p{bottom:22px}}   /* a staged broadcast caption above the HR chip, not loose dialogue (ChatGPT r1) */
+@keyframes pfCap{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translateX(-50%)}}
 #pubFx .pf-heckle p em{font-style:normal;font-weight:800;color:#F2B705;letter-spacing:.04em}
 @keyframes pfSub{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* bouncer: the door shuts in their face */
 #pubFx .pf-door i{position:absolute;top:0;bottom:0;right:0;width:100%;background:linear-gradient(90deg,#2a1a10,#4a2e1a 8%,#3a2414 50%,#2a1a10);box-shadow:inset 0 0 0 14px rgba(0,0,0,.25);animation:pfDoor .7s cubic-bezier(.6,0,.9,.4) both}
-#pubFx .pf-door b{position:absolute;left:0;right:0;top:44%;text-align:center;font:800 30px "Barlow Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#C6F36B;text-shadow:0 2px 10px #000;animation:pfSub .3s .55s both}
+#pubFx .pf-door b{position:absolute;left:0;right:0;top:44%;text-align:center;font:800 calc(30px * var(--s,1)) "Barlow Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#C6F36B;text-shadow:0 2px 10px #000;animation:pfSub .3s .55s both}
 @keyframes pfDoor{0%{transform:translateX(100%)}70%{transform:translateX(-2%)}85%{transform:translateX(1%)}100%{transform:none}}
 /* last orders: brass bell swinging, lights flicking */
 #pubFx .pf-orders{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:18%}
-#pubFx .pf-bell{width:54px;height:50px;background:radial-gradient(circle at 35% 30%,#ffe7a3,#c99a3a 45%,#6e4b14);clip-path:path('M27 2C14 2 10 14 9 28C8 38 4 42 1 46L53 46C50 42 46 38 45 28C44 14 40 2 27 2Z');transform-origin:50% 0;animation:pfBell .18s ease-in-out 8 alternate;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
+#pubFx .pf-bell{zoom:var(--s,1);width:54px;height:50px;background:radial-gradient(circle at 35% 30%,#ffe7a3,#c99a3a 45%,#6e4b14);clip-path:path('M27 2C14 2 10 14 9 28C8 38 4 42 1 46L53 46C50 42 46 38 45 28C44 14 40 2 27 2Z');transform-origin:50% 0;animation:pfBell .18s ease-in-out 8 alternate;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
 @keyframes pfBell{from{transform:rotate(-24deg)}to{transform:rotate(24deg)}}
-#pubFx .pf-orders b{background:none;margin-top:10px;font:800 26px "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#f3e2b8;text-shadow:0 2px 12px rgba(0,0,0,.9);animation:pfShout .4s .1s both}
+#pubFx .pf-orders b{zoom:var(--s,1);background:none;margin-top:10px;font:800 26px "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#f3e2b8;text-shadow:0 2px 12px rgba(0,0,0,.9);animation:pfShout .4s .1s both}
 /* camera flash: white-out, then the purple-green blob burned into your eyes */
 #pubFx .pf-flash i{position:absolute;inset:0;background:#fff;animation:pfWhite 1s ease-out both}
 #pubFx .pf-flash u{position:absolute;left:50%;top:46%;width:170px;height:170px;margin:-85px 0 0 -85px;border-radius:50%;background:radial-gradient(circle,rgba(120,255,170,.85),rgba(170,80,255,.6) 45%,rgba(170,80,255,0) 70%);mix-blend-mode:screen;filter:blur(6px);animation:pfBurn 2.2s .25s ease-out both}
@@ -208,11 +230,19 @@
  radial-gradient(ellipse 9% 18% at 90% 60%,#0c0a08 96%,transparent 100%),radial-gradient(ellipse 18% 30% at 90% 106%,#0c0a08 96%,transparent 100%)}
 #pubFx .pf-crowd::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 8% 3% at 31% 46%,rgba(255,190,120,.18),transparent),radial-gradient(ellipse 7% 3% at 66% 41%,rgba(255,190,120,.16),transparent)}
 @keyframes pfCrowd{from{transform:translateY(100%)}to{transform:none}}@keyframes pfSway{to{transform:translateX(10px)}}
+/* jukebox: a now-playing pill with equaliser bars, opposite the HR chip, for as long as the card lasts */
+#pubFx .pf-np{zoom:var(--s,1);position:absolute;right:8px;bottom:8px;display:flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 10px;border-radius:9px;background:rgba(12,14,18,.78);border:1px solid rgba(255,255,255,.1);box-shadow:0 4px 14px rgba(0,0,0,.45);animation:pfSub .3s .15s both}
+#pubFx .pf-np span{display:flex;align-items:flex-end;gap:2px;height:14px}
+#pubFx .pf-np i{width:3px;height:100%;border-radius:1px;background:linear-gradient(0deg,#ff4fa8,#ffb23c 55%,#6fd3ff);transform-origin:50% 100%;animation:pfEq .49s ease-in-out infinite alternate}
+#pubFx .pf-np i:nth-child(2){animation-duration:.37s;animation-delay:-.2s}#pubFx .pf-np i:nth-child(3){animation-duration:.61s;animation-delay:-.1s}#pubFx .pf-np i:nth-child(4){animation-duration:.43s;animation-delay:-.3s}#pubFx .pf-np i:nth-child(5){animation-duration:.55s}
+@keyframes pfEq{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+#pubFx .pf-np b{font:800 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#fff}
+#pubFx .pf-np small{font:600 11px/1 Manrope,sans-serif;color:rgba(255,255,255,.62)}
 /* stamps: drink cards and blocks */
 #pubFx .pf-stamp{display:flex;flex-direction:column;align-items:center;justify-content:center}
-#pubFx .pf-stamp b{font:800 64px/1 "Barlow Condensed",sans-serif;color:#fff;padding:10px 22px;border:4px solid currentColor;border-radius:14px;transform:rotate(-8deg);animation:pfStamp .45s cubic-bezier(.2,1.5,.4,1) both;text-shadow:0 3px 16px rgba(0,0,0,.7)}
+#pubFx .pf-stamp b{zoom:var(--s,1);font:800 64px/1 "Barlow Condensed",sans-serif;color:#fff;padding:10px 22px;border:4px solid currentColor;border-radius:14px;transform:rotate(-8deg);animation:pfStamp .45s cubic-bezier(.2,1.5,.4,1) both;text-shadow:0 3px 16px rgba(0,0,0,.7)}
 #pubFx .pf-stamp.drink b{color:#F2B705}#pubFx .pf-stamp.def b{color:#C6F36B}
-#pubFx .pf-stamp small{margin-top:12px;font:800 14px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;text-shadow:0 2px 8px #000}
+#pubFx .pf-stamp small{zoom:var(--s,1);margin-top:12px;font:800 14px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;text-shadow:0 2px 8px #000}
 @keyframes pfStamp{from{transform:scale(2.6) rotate(-14deg);opacity:0}to{transform:rotate(-8deg);opacity:1}}
 @media (prefers-reduced-motion:reduce){#pubFx *{animation-duration:.01s!important;animation-iteration-count:1!important}}
 `;
