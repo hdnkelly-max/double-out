@@ -75,7 +75,7 @@
       cx.fillStyle = `rgba(255,255,255,${.5 * a})`; cx.beginPath(); cx.arc(p.x * W - p.s * .3, p.y * H - p.s * .3, p.s * .3, 0, 7); cx.fill(); return; }
     if (p.k === 'note') { p.y -= .12 * dt; p.x += Math.sin(p.age * 3 + p.ph) * .02 * dt; cx.fillStyle = `rgba(${p.c},${Math.sin(Math.PI * k) * .85})`; cx.font = `700 ${p.s}px serif`; cx.fillText(p.g, p.x * W, p.y * H); return; }
     if (p.k === 'mist') { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy *= .97; const r = p.r * (1 + k * 2.2), g = cx.createRadialGradient(p.x * W, p.y * H, 0, p.x * W, p.y * H, r);
-      g.addColorStop(0, `rgba(240,244,248,${.32 * (1 - k)})`); g.addColorStop(1, 'rgba(240,244,248,0)'); cx.fillStyle = g; cx.beginPath(); cx.arc(p.x * W, p.y * H, r, 0, 7); cx.fill(); return; }
+      g.addColorStop(0, `rgba(236,240,244,${.22 * (1 - k) * Math.min(1, k * 6)})`); g.addColorStop(.6, `rgba(236,240,244,${.08 * (1 - k)})`); g.addColorStop(1, 'rgba(236,240,244,0)'); cx.fillStyle = g; cx.save(); cx.translate(p.x * W, p.y * H); cx.rotate(p.vy * 3); cx.scale(p.sx || 1, 1); cx.translate(-p.x * W, -p.y * H); cx.beginPath(); cx.arc(p.x * W, p.y * H, r, 0, 7); cx.fill(); cx.restore(); return; }
     if (p.k === 'spark') { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .6 * dt; cx.fillStyle = `rgba(255,214,120,${1 - k})`; cx.fillRect(p.x * W, p.y * H, 2, 2); }
   }
   // drips that run down the glass for as long as the card lasts
@@ -93,12 +93,14 @@
     switch (e.id) {
       case 'spill': drips(e, W, H, t, '214,150,40'); break;
       case 'bump': if (q < 2.5) drips(e, W, H, t, '214,150,40'); break;
-      case 'juke': {   // the jukebox's coloured lights spill onto the board surround and wall, on the beat
+      case 'juke': {   // two coloured lamps throwing pools onto the surround and the brickwork, pulsing in intensity (max ~25%)
         const per = 60 / 123, ph = q % per, env = ph < .12 ? ph / .12 : Math.exp(-(ph - .12) / .3), beat = Math.floor(q / per);
-        const cols = ['255,60,170', '60,140,255', '255,170,40', '150,70,255'], c1 = cols[beat % 4], c2 = cols[(beat + 2) % 4];
-        const side = (x0, col, a) => { const g = cx.createRadialGradient(x0, H * .55, 0, x0, H * .55, W * .7); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.55, `rgba(${col},${a * .35})`); g.addColorStop(1, `rgba(${col},0)`); cx.fillStyle = g; cx.fillRect(0, 0, W, H); };
-        cx.globalCompositeOperation = 'screen'; side(-W * .05, c1, .34 * env + .06); side(W * 1.05, c2, .3 * env + .05);
-        const tg = cx.createLinearGradient(0, 0, 0, H * .3); tg.addColorStop(0, `rgba(${c2},${.22 * env})`); tg.addColorStop(1, `rgba(${c2},0)`); cx.fillStyle = tg; cx.fillRect(0, 0, W, H * .3);
+        const cols = ['255,70,170', '70,150,255', '255,170,50', '160,80,255'], c1 = cols[beat % 4], c2 = cols[(beat + 1) % 4];
+        const pool = (x0, y0, rx, ry, col, a) => { cx.save(); cx.translate(x0, y0); cx.scale(rx / ry, 1); const g = cx.createRadialGradient(0, 0, 0, 0, 0, ry); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.6, `rgba(${col},${a * .5})`); g.addColorStop(1, `rgba(${col},0)`); cx.fillStyle = g; cx.beginPath(); cx.arc(0, 0, ry, 0, 7); cx.fill(); cx.restore(); };
+        cx.globalCompositeOperation = 'soft-light';
+        pool(W * .02, H * .3, W * .3, H * .32, c1, .55 + .45 * env); pool(W * .98, H * .62, W * .3, H * .34, c2, .5 + .45 * (1 - env));
+        cx.globalCompositeOperation = 'screen';
+        pool(W * .02, H * .3, W * .2, H * .22, c1, .1 + .12 * env); pool(W * .98, H * .62, W * .2, H * .24, c2, .09 + .12 * (1 - env));
         cx.globalCompositeOperation = 'source-over';
         if (e.lb !== beat) { e.lb = beat; if (beat % 2 === 0) PF.cam.push({ dx: .0025, dy: .0025, t0: now(), ms: 120, kind: 'shake' }); } break; }
       case 'cooker': {  // heat shimmer rising and a pulse at the edges in time with the heart rate
@@ -117,8 +119,8 @@
   // ---- one entry per card ----
   const FX = {
     horn(m) { jolt(.016, -.012, 330); PF.cam.push({ dx: .006, dy: .006, t0: now(), ms: 260, kind: 'shake' });
-      for (let i = 0; i < (low() ? 14 : 26); i++) drop({ k: 'mist', x: .16, y: .86, vx: .25 + R() * .45, vy: -.12 - R() * .35, r: 10 + R() * 18, life: 1.2 + R() * .8 });
-      el('horn', '<div class="pf-can"><i></i><b></b></div><u></u>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-horn'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 900); },
+      for (let i = 0; i < (low() ? 10 : 18); i++) setTimeout(() => drop({ k: 'mist', x: .3 + R() * .04, y: .8 + R() * .04, vx: .12 + R() * .3, vy: -.06 - R() * .2, r: 12 + R() * 22, life: .5 + R() * .5, sx: .7 + R() * .8 }), 120 + i * 18);
+      el('horn', '<div class="pf-can"><i></i><b></b></div>'); setTimeout(() => { const d = layer && layer.querySelector('.pf-horn'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 450); } }, 900); },
     bump(m) { const a = R() * 6.28; jolt(Math.cos(a) * .03, Math.sin(a) * .02, 1100); start('bump', m, { until: 'time', end: now() + 2600 });
       for (let i = 0; i < 26; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .5, y: .95, vx: (R() - .5) * 500, vy: -300 - R() * 500, s: 2 + R() * 4, life: 1.4, foam: R() < .3 }); },
     spill(m) { start('spill', m, { until: 'dart', n: 1 }); for (let i = 0; i < 30; i++) drop({ k: 'splash', x: .5 + (R() - .5) * .7, y: .02, vx: (R() - .5) * 220, vy: 60 + R() * 260, s: 2 + R() * 5, life: 1.3, foam: R() < .35 }); },

@@ -11,7 +11,19 @@
       { r: [1724, 1100, 1805, 1211], img: 'pub_2.webp', rot: 180 },
       { r: [1724, 1241, 1805, 1351], img: 'pub_3.webp', rot: 180 },
       { r: [1696, 1365, 1777, 1476], img: 'pub_4.webp', rot: 180 }
-    ] }
+    ] },
+    // the club: plain painted walls, so these get a frame, a mat and a shadow. Faces map the texture rotated 90° (wall up = texture -x).
+    1: {
+      bake_wallL: [
+        { r: [240, 1528, 600, 1752], img: 'club_team.webp', rot: 270, frame: 'wood' },
+        { r: [240, 1168, 600, 1392], img: 'club_brew.webp', rot: 270, frame: 'black' },
+        { r: [240, 808, 600, 1032], img: 'club_throw.webp', rot: 270, frame: 'black' }
+      ],
+      bake_wallB: [
+        { r: [130, 590, 400, 770], img: 'club_raffle.webp', rot: 270, frame: 'black' },
+        { r: [130, 250, 400, 430], img: 'club_throw.webp', rot: 270, frame: 'wood' }
+      ]
+    }
   };
   window.TOPS_VENUE_SPOTS = SPOTS;
   window.TOPS_VENUE_TEX = function (tier, name, map) {
@@ -28,6 +40,22 @@
         const sw = s.rot % 180 ? h : w, sh = s.rot % 180 ? w : h;
         // cover-fit the poster, then darken a touch so it sits in the baked lighting
         const a = im.width / im.height, b = sw / sh; let dw = sw, dh = sh; if (a > b) dw = sh * a; else dh = sw / a;
+        if (s.frame) {   // a real frame on a plain wall: soft shadow below, moulding, then a mat for photos
+          const fw = Math.max(4, sw * .055), mat = s.frame === 'wood' ? sw * .06 : 0;
+          g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = sw * .08; g.shadowOffsetY = sw * .04; g.fillStyle = '#222'; g.fillRect(-sw / 2, -sh / 2, sw, sh); g.restore();
+          if (s.frame !== 'none') {
+            const fg = g.createLinearGradient(-sw / 2, -sh / 2, sw / 2, sh / 2);
+            if (s.frame === 'wood') { fg.addColorStop(0, '#6b4424'); fg.addColorStop(.5, '#8a5a33'); fg.addColorStop(1, '#4e2f17'); } else { fg.addColorStop(0, '#2b2b2d'); fg.addColorStop(.5, '#151516'); fg.addColorStop(1, '#0b0b0c'); }
+            g.fillStyle = fg; g.fillRect(-sw / 2, -sh / 2, sw, sh);
+            g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.strokeRect(-sw / 2 + .5, -sh / 2 + .5, sw - 1, sh - 1);
+            if (mat) { g.fillStyle = '#efe9dc'; g.fillRect(-sw / 2 + fw, -sh / 2 + fw, sw - 2 * fw, sh - 2 * fw); }
+            const ins = fw + mat; g.translate(0, 0); s._in = ins;
+          } else s._in = 0;
+          const ins = s._in, iw = sw - 2 * ins, ih = sh - 2 * ins; let ddw = iw, ddh = ih; if (a > iw / ih) ddw = ih * a; else ddh = iw / a;
+          g.beginPath(); g.rect(-iw / 2, -ih / 2, iw, ih); g.clip(); g.drawImage(im, -ddw / 2, -ddh / 2, ddw, ddh);
+          const gl = g.createLinearGradient(-iw / 2, -ih / 2, iw / 2, ih / 2); gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(.35, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(-iw / 2, -ih / 2, iw, ih);   // glass glare
+          g.restore(); tex.needsUpdate = true; return;
+        }
         g.beginPath(); g.rect(-sw / 2, -sh / 2, sw, sh); g.clip(); g.drawImage(im, -dw / 2, -dh / 2, dw, dh);
         g.fillStyle = 'rgba(20,12,6,' + (s.dim == null ? .18 : s.dim) + ')'; g.fillRect(-sw / 2, -sh / 2, sw, sh);
         const sh2 = g.createLinearGradient(0, -sh / 2, 0, sh / 2); sh2.addColorStop(0, 'rgba(255,230,190,.10)'); sh2.addColorStop(1, 'rgba(0,0,0,.18)'); g.fillStyle = sh2; g.fillRect(-sw / 2, -sh / 2, sw, sh);
