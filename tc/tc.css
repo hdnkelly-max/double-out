@@ -335,3 +335,7 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-grid .tc .tc__meta,.tc-sets .tc .tc__meta{font-size:max(11px,calc(var(--card-w)*.047));letter-spacing:.03em}
 .tc-lockno em{font-size:11px;letter-spacing:.1em}
 .tc-grid .tc .tc__name.is-xlong,.tc-sets .tc .tc__name.is-xlong{font-size:max(12px,calc(var(--card-w)*.066))}
+/* P6 (12 Nov): pack text floor. The welcome's peek card is an illustration: drop its tiny number/rarity line (6.8px).
+   The card you just picked shows its number and rarity at >=11px (was 10.7). Dimmed "missed" cards are decorative. */
+.tc-wel-peek .tc__meta{display:none}
+.tcpk__row .tc.is-hero .tc__meta{font-size:max(11px,calc(var(--card-w)*.047))}
