@@ -15,15 +15,15 @@ await p.evaluate(()=>window.tcOpenPicks());await p.waitForTimeout(600);
 res.introFirst=await p.evaluate(()=>!!document.querySelector('.tc-intro')&&!!save.tcIntro);
 res.introBtn=await p.evaluate(()=>{const e=document.querySelector('.tc-introgo');return e&&e.textContent;});
 res.fits=await p.evaluate(()=>{const e=document.querySelector('.tc-introgo');const r=e&&e.getBoundingClientRect();return r?{bottom:Math.round(r.bottom),vh:innerHeight}:null;});
-await p.screenshot({path:out+tag+'_intro.png'});
+await p.screenshot({path:out+tag+'_intro.png',timeout:120000,animations:'disabled'});
 await p.click('.tc-introgo');await p.waitForTimeout(900);
 res.packAfter=await p.evaluate(()=>!document.querySelector('.tc-intro')&&!!document.querySelector('.tcpk, [class*="tcpk"]'));
-await p.screenshot({path:out+tag+'_pack.png'});
+await p.screenshot({path:out+tag+'_pack.png',timeout:120000,animations:'disabled'});
 // second time: no explainer
 await p.evaluate(()=>{document.querySelectorAll('[class*="tcpk"],.tc-sheet').forEach(e=>e.remove());TC_API.award('c13test2:'+Date.now(),'max','180');window.tcOpenPicks();});await p.waitForTimeout(500);
 res.introSecond=await p.evaluate(()=>!!document.querySelector('.tc-intro'));
 await p.evaluate(()=>{document.querySelectorAll('[class*="tcpk"],.tc-sheet').forEach(e=>e.remove());TC_API.binder();});await p.waitForTimeout(600);
-await p.screenshot({path:out+tag+'_binder.png'});
+await p.screenshot({path:out+tag+'_binder.png',timeout:120000,animations:'disabled'});
 await p.click('#tcWhat');await p.waitForTimeout(500);
 res.fromBinder=await p.evaluate(()=>{const e=document.querySelector('.tc-intro .tc-introgo');return e&&e.textContent;});
 await p.click('.tc-intro .tc-introgo');await p.waitForTimeout(400);
