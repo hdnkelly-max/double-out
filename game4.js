@@ -1076,8 +1076,8 @@ const V=(function(){try{return (()=>{
   {const cf=new T.PointLight(0xc5d9e8,.28,6);cf.position.set(-1,2.2,OCHE_Z+.8);venue.add(cf);}
   if(PLATE5){pm.map=PLATE5;pm.color.setRGB(1,1,1);pm.needsUpdate=true;return;}   // Art: the hall plate is loaded once and kept, so a venue rebuild (e.g. when character models finish loading) no longer blinks it black
   try{new T.TextureLoader().load('assets/venue/plate_5.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());KEEP.add(tx);PLATE5=tx;pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x0a1d3a);});}catch(e){}}
- let PLATE5=null;
- function sideDress(t){sideLed=null;SIDE_C=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:(window.TOPS_PLATE6?{6:'plate_6.webp'}:{})[t];
+ let PLATE5=null;const PLATE_TX={};
+ function sideDress(t){sideLed=null;SIDE_C=null;if(t<2){pubDress(t);return;}if(t===5){floorPlate();return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false||window.TOPS_PLATE6===false?null:{6:'plate_6.webp'}[t];   // Art (F1): the clean World Champs plate (no characters, brands or text) is on by default
   const big=t>=4,X=big?3.4:3.1,Z0=OCHE_Z;const NAMES={2:['AUCKLAND','REGIONAL OPEN'],3:['DPNZ','NATIONAL SERIES'],4:['TRANS-TASMAN','DARTS CUP'],5:['PDC','PRO TOUR'],6:['WORLD','CHAMPIONSHIP']};const N=NAMES[t]||NAMES[4];
   const ACC={2:'#2fa046',3:'#e8382c',4:'#ffb000',5:'#2c8cff',6:'#D7B45C'}[t]||'#C6F36B';
   // LED event wall (canvas, gently animated on the big stages)
@@ -1098,7 +1098,7 @@ const V=(function(){try{return (()=>{
    const len=ty-.2;const cone=new T.Mesh(new T.ConeGeometry(big?.85:.6,len,18,1,true),i%2?whiteBeam:beamMat);cone.position.set(TX-.4,ty-.2-len/2,z);cone.rotation.z=-.12;cone.userData.ph=i*1.3;G.add(cone);
    if(big)cone.onBeforeRender=()=>{const s=performance.now()/1000;cone.rotation.z=-.12+Math.sin(s*.18+cone.userData.ph)*.12;cone.rotation.x=Math.cos(s*.14+cone.userData.ph)*.08;};}
   // crowd: stepped seating, varied shirts, rim-lit, phone lights (v1.70)
-  const rows=PLATE?0:({4:4,5:5,6:7}[t]||0),per={4:14,5:16,6:20}[t]||0;
+  const rows=PLATE?(t===6?3:0):({4:4,5:5,6:7}[t]||0),per={4:14,5:16,6:20}[t]||0;   // Worlds with the plate: three near rows of 3D people in front of the photographic arena (hybrid)
   // Art (Trans-Tasman, ChatGPT 6.5 'too empty, no event identity'): a qualifier, not an arena. The same stepped
   // stands, but ~a dozen believable seated spectators from the crowd atlas instead of 56 box figures, and a
   // trackside hoarding banner at the front of the stands, low enough to read behind the thrower's legs.
@@ -1165,8 +1165,10 @@ const V=(function(){try{return (()=>{
    [bI,hI,rI].forEach(o=>{o.count=n;o.instanceMatrix.needsUpdate=true;if(o.instanceColor)o.instanceColor.needsUpdate=true;G.add(o);});
    if(phones.length){const pg=new T.BufferGeometry();pg.setAttribute('position',new T.Float32BufferAttribute(phones.flat(),3));G.add(new T.Points(pg,new T.PointsMaterial({color:0xfff6e0,size:.06,sizeAttenuation:true,transparent:true,opacity:.9})));}}
   // v1.73 painted crowd backplate (ChatGPT review: hybrid; 3D near layers, image beyond ~4 m)
-  if(PLATE){const pm=new T.MeshBasicMaterial({color:0x000000,toneMapped:false,fog:false});pm.userData.own=1;const pw=13.2,ph=8.8;const pl=new T.Mesh(new T.PlaneGeometry(pw,ph),pm);pl.position.set(X+3.4,ph/2-.25,Z0-.3);pl.rotation.y=-Math.PI/2;G.add(pl);
-   try{new T.TextureLoader().load('assets/venue/'+PLATE,tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x05070c);});}catch(e){}
+  if(PLATE){const pm=new T.MeshBasicMaterial({color:0x000000,toneMapped:false,fog:false});pm.userData.own=1;const far=t===6,pw=far?16:13.2,ph=far?10.67:8.8;const pl=new T.Mesh(new T.PlaneGeometry(pw,ph),pm);pl.position.set(X+(far?4.6:3.4),ph/2-(far?.6:.25),Z0-.3);pl.rotation.y=-Math.PI/2;G.add(pl);
+   // loaded once and kept (KEEP): a venue rebuild mid-match must not blink the arena black (the Pro Tour bug fixed in 1.92)
+   if(PLATE_TX[PLATE]){pm.map=PLATE_TX[PLATE];pm.color.setRGB(1,1,1);pm.needsUpdate=true;}
+   else try{new T.TextureLoader().load('assets/venue/'+PLATE,tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());KEEP.add(tx);PLATE_TX[PLATE]=tx;pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x05070c);});}catch(e){}
    venue.traverse(o=>{const g=o.geometry;if(o.isMesh&&g&&g.type==='BoxGeometry'&&g.parameters.height<=.11&&g.parameters.width>=8&&o.position.y>3)o.visible=false;}); // open the low ceiling so the plate and rig read
    const bar=new T.Mesh(new T.BoxGeometry(.12,.95,12),new T.MeshStandardMaterial({color:0x07080b,roughness:.6}));bar.position.set(X+1.35,.475,Z0+.4);G.add(bar);
    const barL=new T.Mesh(new T.BoxGeometry(.02,.025,12),new T.MeshBasicMaterial({color:new T.Color(ACC),toneMapped:false}));barL.position.set(X+1.28,.93,Z0+.4);G.add(barL);}
