@@ -6,7 +6,7 @@ const {chromium}=require('playwright');const path=require('path');(async()=>{con
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
 const p=await b.newPage({viewport:{width:390,height:844},screen:{width:390,height:844},isMobile:true,hasTouch:true});await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
 await p.goto('file://'+dir+'/index.html');
-await p.waitForFunction(()=>typeof S!=='undefined'&&typeof beginMatch==='function'&&window.V&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:180000});
+await p.waitForFunction(()=>typeof S!=='undefined'&&typeof beginMatch==='function'&&typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:180000});
 await p.evaluate(()=>{save.authSeen=true;save.name='Lee';$('login').hidden=true;newCareer();});await p.waitForTimeout(2000);
 const snap=()=>p.evaluate(()=>{const d=V._qa.gfx();const live=new Set(['remy']);if(d.me)live.add(d.me);(d.extras||[]).forEach(e=>live.add(String(e).split(':')[0]));
   const opp=V._qa.opp&&V._qa.opp();if(opp&&opp.userData&&opp.userData.ck)live.add(opp.userData.ck);
