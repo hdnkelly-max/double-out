@@ -20,9 +20,9 @@ const {chromium}=require('playwright');const path=require('path');
  const q=await p.evaluate(()=>{const out={};try{newCareer();const c=career();c.stage=null;c.tier=0;c.run=null;beginMatch({mode:'career',tier:0,p0:'P',oppName:'X',oppAvg:50,legs:1});S.aim=targetPoint('T20');
    const keep=save.career;save.career=null;try{const en=effNerves;effNerves=()=>0;try{const tp=throwParams();out.prP=+tp.P.toFixed(2);out.prSig=tp.perfSig;}finally{effNerves=en;}}finally{save.career=keep;}try{S.done=true;}catch(e){}}catch(e){out.err=e.message;}
   return out;});
- if(q.err)f0.push('practice check failed: '+q.err);else{if(Math.abs(q.prP-3)>0.05)f0.push('practice without a career: window '+q.prP+' ms, want 3');if(q.prSig!==2.8)f0.push('practice without a career: no starter perfect release');}
+ if(q.err)f0.push('practice check failed: '+q.err);else{if(Math.abs(q.prP-4)>0.05)f0.push('practice without a career: window '+q.prP+' ms, want 4');if(q.prSig!==2.8)f0.push('practice without a career: no starter perfect release');}
  await b.close();const f=f0;
- if(Math.abs(r.P20-3)>0.05)f.push('window at Rhythm 20 '+r.P20+' ms, want 3');
+ if(Math.abs(r.P20-4)>0.05)f.push('window at Rhythm 20 '+r.P20+' ms, want 4');
  if(Math.abs(r.P95-15)>0.1)f.push('window at Rhythm 95 '+r.P95+' ms, want 15');
  if(r.perfSig!==2.8)f.push('career perfect scatter '+r.perfSig);
  if(r.runPerfSig!=null)f.push('The Run picked up the career perfect release');
@@ -33,4 +33,4 @@ const {chromium}=require('playwright');const path=require('path');
  if(Math.abs(r.edge[1]-r.edge[0])>0.5)f.push('cliff at the window edge: '+r.edge.join(' / '));
  if(Math.abs(r.edge[6]-r.edge[5])>0.5)f.push('jump where the soft edge meets the normal ring: '+r.edge.join(' / '));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
- console.log(JSON.stringify(r));if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: perfect release inside the 5 mm ring ('+(r.t20*100).toFixed(0)+'% T20), window 3 -> 15 ms, smooth edge, The Run unchanged');})();
+ console.log(JSON.stringify(r));if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: perfect release inside the 5 mm ring ('+(r.t20*100).toFixed(0)+'% T20), window 4 -> 15 ms, smooth edge, The Run unchanged');})();

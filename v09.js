@@ -161,11 +161,11 @@ function trait(){const s=st();if(!on()||!s.trait||lvNow()<15)return null;const t
 window.TOPS_trait=trait;
 function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)/2);return {need,me,op,dec:op&&me.legs===need-1&&op.legs===need-1,md:me.legs===need-1&&me.score<=170,trail:op&&op.legs>me.legs};}
 // ---------- engine ----------
-// Timing-window calibration (Hayden 22:28; Overseer 01:40): the perfect window is the lever. 3 ms at Rhythm 20 (plus a 6 ms soft edge),
-// staying near 3 ms through the early tiers and widening late (e=4.5) to 15 ms at Rhythm 95. Control/Scoring/Finishing points earned
-// from this version on count k=0.7 of a live point (LofT below); points already in a save keep today's effect.
+// Timing-window calibration (Hayden 22:28; Overseer 01:40, V4 03:33): the perfect window is the lever. 4 ms at Rhythm 20 (plus a 6 ms soft
+// edge; 4 ms is the smallest window a 120 Hz touch screen can always measure), widening late (e=4) to 15 ms at Rhythm 95. Control/Scoring/
+// Finishing points earned from this version on count k=0.6 of a live point (LofT below); points already in a save keep today's effect.
 // Fitted on testers' real darts (tests/sim-player.js, JOINT=1), incl. Lee's and David's real Club and Regional darts.
-const CAL_W={p0:3,pk:12,e:4.5,k:.7};window.TOPS_CAL_W=CAL_W;
+const CAL_W={p0:4,pk:11,e:4,k:.6};window.TOPS_CAL_W=CAL_W;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(S&&!S.mp&&!career()&&!isRun()){try{const CW=window.TOPS_CAL_W;tp.P*=CW.p0/(ttAt(tp.L).P*tolMult()*.85);tp.perfSig=window.TOPS_PERFSIG!=null?window.TOPS_PERFSIG:2.8;}catch(e){}return tp;}/* no career save (practice, friendlies): a new career's starter window and perfect release, so the throw is the same everywhere outside The Run and online */
  if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
