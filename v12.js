@@ -98,7 +98,7 @@ function brandOf(spId){const s=SPONSORS.find(x=>x.id===spId);return s?s.brand:sp
 function bc(spId){return BCOL[spId]||'#C6F36B';}
 function giftOf(sid){const s=SPONSORS.find(x=>x.id===sid);return s&&s.v12gift;}
 // reservations live on the save: {barrelId: sponsorId}. Granted (free) once your level reaches the barrel's gate.
-function syncReserve(equipNow){const out=[];try{if(!save||!save.owned)return out;const R=save.v12res=save.v12res||{};const g=save.sponsor&&giftOf(save.sponsor);
+function syncReserve(equipNow){const out=[];try{if(!save||!save.owned)return out;if(lvNow()==null)return out;/* never outside a career: a career's reserved set must not leak into The Run (QA 04:21) */const R=save.v12res=save.v12res||{};const g=save.sponsor&&giftOf(save.sponsor);
  if(g&&!save.owned.includes(g)&&!R[g])R[g]=save.sponsor;
  const lv=lvNow();Object.keys(R).forEach(id=>{if(save.owned.includes(id)){delete R[id];return;}if(lv==null||lv>=(LV[id]||1)){save.owned.push(id);if(equipNow)save.barrel=id;out.push({id,sp:R[id]});delete R[id];}});
  if(out.length||g)persist();}catch(e){}return out;}

@@ -27,6 +27,11 @@ const {chromium}=require('playwright');const path=require('path');
   let cloud=await plant(c);await p.evaluate(x=>netAdopt(x),cloud);check(name,'sign-in adopt',await read(),c.want);
   cloud=await plant(c);await p.evaluate(x=>{NET.pendCloud=x;},cloud);await p.waitForTimeout(2600);check(name,'other-device adopt',await read(),c.want);
   cloud=await plant(c);await p.evaluate(x=>{const keep={authSeen:true};save=Object.assign({},x,keep);persist();},cloud);await p.reload();await p.waitForTimeout(4000);check(name,'page load',await read(),c.want);}
+ // QA 04:21: a career's reserved set must not leak into The Run, and must survive it
+ const R=await p.evaluate(()=>{newCareer();const v=C3.V3();v.lv=10;save.sponsor='rd';save.owned=['assassin'];save.v12res={zen:'shot'};persist();
+  newRun();try{TOPS_v11Migrate();}catch(e){}try{showShop('barrel');}catch(e){}const runOwned=save.owned.slice();const runRes=Object.keys(save.v12res||{});
+  switchSlot('career');try{TOPS_v11Migrate();}catch(e){}return {runOwned,runRes,careerRes:Object.keys(save.v12res||{}),careerOwned:save.owned.slice()};});
+ if(R.runOwned.includes('zen'))f.push('The Run got the career\'s reserved Zen Jutsu');if(!R.careerRes.includes('zen'))f.push('the career lost its reservation after a Run: '+JSON.stringify(R));
  const E=await p.evaluate(()=>{save.v12res={zen:'shot'};newCareer();return Object.keys(save.v12res||{}).length;});if(E)f.push('a new career keeps old reservations');
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  await b.close();if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: F2 data paths (page load, sign-in adopt, other-device adopt, new career): sponsor set granted, reserved gift kept across a sponsor change and handed over at its level, nothing owned removed');})();
