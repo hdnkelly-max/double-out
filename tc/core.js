@@ -718,7 +718,13 @@
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
-    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
+    if (WK.holding && window.TC_WALK_FREEZE == null) WK.t0 += now - WK.holdLast;   // time spent holding (below) doesn't count
+    WK.holding = false; WK.holdLast = now;
+    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE;
+    if (k < 0) {   // pre-roll: no T-pose either; waiting here counts toward the same 4 s cap as the hold below
+      if (v.me && !(v.me.userData && v.me.userData.mixer) && !WK.holdSkip) { if (!WK.hold0) WK.hold0 = now;
+        if (now - WK.hold0 < 4000) { v.me.visible = false; WK.holding = true; } else { WK.t0 = now - WK.dur; WK.holdSkip = true; return null; } }
+      return { fov: 50 }; }
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
       WK.rot = me.rotation.y;
@@ -733,6 +739,19 @@
       WK.cam = WK.home.clone().addScaledVector(fwd, .15).addScaledVector(side, 1.3); WK.cam.y = 1.5;   // beside the oche, facing back at you
     }
     if (!WK.walking && k < WA) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
+    // the rig can't animate until anims.glb is in (playClip makes the mixer then), and a figure rebuilt as the character
+    // models land starts without one; posed by nobody it stands in a T-pose. Hold the walk on an establishing shot of
+    // the stage with the figure hidden for up to 4 s; if the clips still aren't there, skip to the end (effect still fires).
+    if (!WK.walking && k < WA && !WK.holdSkip) {
+      if (!WK.hold0) WK.hold0 = now;
+      if (now - WK.hold0 < 4000) {
+        WK.holding = true; me.visible = false; if (v.fpFig) v.fpFig.visible = false;
+        const est = WK.home.clone().addScaledVector(WK.fwd, -3.4).addScaledVector(WK.side, -.6); est.y = 1.55;
+        v.pos.lerp(est, .2); v.look.lerp(new T3(0, 1.6, 0), .2); return { fov: 52 };
+      }
+      WK.t0 = now - WK.dur; WK.holdSkip = true; return null;
+    }
+    if (WK.walking) WK.hold0 = 0;
     me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; }
     // clear the stage: other figures (opponent, crowd) near the walk path hide until the walk-on ends
     if (me.parent && (!WK.hidAt || now - WK.hidAt > 500)) {
@@ -749,7 +768,7 @@
         if (fig !== root && fig.visible) { fig.visible = false; WK.hid.add(fig); }
         root.traverse(m => { if (m.isSkinnedMesh && m.skeleton && m.skeleton.bones.indexOf(o) >= 0 && m.visible) { m.visible = false; WK.hid.add(m); } }); });
     }
-    if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; } WK.me = me;
+    if (WK.hid) WK.hid.forEach(o => { o.visible = false; }); if (WK.me !== me) { WK.walking = false; if (WK.arrived) WK.arrived = false; WK.hero = false; } WK.me = me;
     { const mx = me.userData && me.userData.mixer, dt = Math.min(.05, (now - (WK.last || now)) / 1000); WK.last = now; if (mx) mx.update(window.TC_WALK_FREEZE != null ? .12 : dt); }
     if (k >= 1) {
       me.position.copy(WK.home); me.rotation.y = WK.rot;
