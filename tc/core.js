@@ -503,9 +503,11 @@
     if (s.kind === 'wear') { L.wear = L.wear || {}; if (off) delete L.wear[s.slot]; else { L.wear[s.slot] = cos; if (s.slot === 'hat') L.cap = 0; } }
     else if (s.kind === 'cel') { L.cel = L.cel || {}; if (off) delete L.cel[s.slot]; else L.cel[s.slot] = cos; }
     else if (s.kind === 'title') { L.title = off ? null : cos; }
-    else { L.tkit = (L.tkit && typeof L.tkit === 'object') ? L.tkit : {}; if (off) delete L.tkit[s.slot]; else L.tkit[s.slot] = cos; if (s.flight && !off) save.flight = s.flight; }
+    else { L.tkit = (L.tkit && typeof L.tkit === 'object') ? L.tkit : {}; if (off) delete L.tkit[s.slot]; else L.tkit[s.slot] = cos; if (s.flight && !off) { save.flight = s.flight; save.flightCustom = true; } else if (s.flight && off && save.flight === s.flight) save.flightCustom = false; }
     keep(); try { V.setPlayerLook(save.look, save.flight, save.name, career() ? career().tier : 0); if (document.body.classList.contains('tc-preview')) V.preview(true); } catch (e) {}
   }
+  // QA-B1: true when an equipped reward's flight colour is the current flight (covers saves from before the fix)
+  window.TOPS_flightReward = () => { try { const tk = (save.look && save.look.tkit) || {}; return Object.values(tk).some(c => D.COS[c] && D.COS[c].flight && D.COS[c].flight === save.flight); } catch (e) { return false; } };
   function slotOf(slot) { const L = save.look || {}; return (L.wear || {})[slot] || (L.cel || {})[slot] || (L.tkit || {})[slot] || (slot === 'title' ? L.title : null); }
   // source card for a cosmetic (for thumbnails and "how to unlock")
   function srcOf(cos) {
