@@ -339,3 +339,15 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
    The card you just picked shows its number and rarity at >=11px (was 10.7). Dimmed "missed" cards are decorative. */
 .tc-wel-peek .tc__meta{display:none}
 .tcpk__row .tc.is-hero .tc__meta{font-size:max(11px,calc(var(--card-w)*.047))}
+/* P6 (12 Nov): pack summary. At three columns the small cards were ~105px with text at 4.9px (number/rarity) and
+   names clipped. On phones: two columns (cards ~160px, the size the Collection already reads well at 11px), best card on top. */
+@media (max-width:520px){
+ .tcpk__summary .tcpk__grid{grid-template-columns:repeat(2,1fr);--card-w:min(42vw,170px);justify-items:center}
+ .tcpk__summary .tcpk__grid .tc.is-best{grid-column:1 / -1;grid-row:auto;--card-w:min(60vw,230px)}
+ .tcpk__summary .tcpk__grid.is-many .tc.is-best{--card-w:min(56vw,214px)}
+ /* an odd card left over on the last row sits centred, not alone on the left */
+ .tcpk__summary .tcpk__grid .tc:not(.is-best):last-child:nth-child(odd){grid-column:1 / -1}
+}
+.tcpk__row[hidden]{display:none}
+.tcpk__summary .tc .tc__meta{font-size:max(11px,calc(var(--card-w)*.047));letter-spacing:.03em}
+.tcpk__summary .tc .tc__name.is-xlong{font-size:max(12px,calc(var(--card-w)*.066))}
