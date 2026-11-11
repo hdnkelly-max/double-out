@@ -162,6 +162,9 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  if(tr==='steady')tp.w/=(1+.08*nv);
  if(tr==='metro')tp.P+=Math.min(6,3*(S.visPerf||0));
  tp.s0=Math.max(4.2,qs.s0*m);
+ /* calibration (Build 21:08, held for Hayden): sway 1.3x wider wherever career stats drive the throw, the same for everyone.
+    Control still shrinks it. Lee's real darts: Pub/Club/Regional arrival 54/47/48%, promotion 73/61/61% (was 72/68/66 -> 84/72/85). */
+ tp.A*=(window.TOPS_SWAY_K!=null?window.TOPS_SWAY_K:1.3);
 }catch(e){}return tp;};
 const _ce9=compEff;compEff=function(){if(!on())return _ce9.apply(this,arguments);const c=career();return (eff('co')-20)/7.5+((c&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);};
 const _en9=effNerves;effNerves=function(){const n=_en9.apply(this,arguments);if(!n||!on()||!S||!S.p)return n;try{const t=trait();if(!t)return n;const L=lastLegs();if(t==='clutch'&&(L.dec||L.md))return n*.5;if(t==='comeback'&&L.trail)return n*.65;}catch(e){}return n;};
