@@ -52,7 +52,7 @@ function flush(){if(!Q.length||!window.NET||!NET.user||!NET.sb)return;const rows
 const _lf=landFrom;landFrom=function(lock,tp,dt){const l=_lf.apply(this,arguments);try{if(S&&!S.done&&S.cur===0&&!S.p[0].ai&&window.NET&&NET.user){const h=scoreAt(l.x,l.y);const sh=window.TOPS_SW?TOPS_SW.curSway():null;
  Q.push({ver:window.TOPS_BUILD||'',mode:S.online?'online':(S.practice?'practice':(isRun&&isRun()?'run':ui.mode)),tier:ui.tier|0,opp:(S.p[1]&&S.p[1].name)||null,leg:(function(){try{return legsPlayed();}catch(e){return null;}})(),dart:S.dart,score_before:S.p[0].score,
   aim_x:+S.aim.x.toFixed(1),aim_y:+S.aim.y.toFixed(1),lock_x:+lock.x.toFixed(1),lock_y:+lock.y.toFixed(1),land_x:+l.x.toFixed(1),land_y:+l.y.toFixed(1),dt_ms:+dt.toFixed(1),perfect:Math.abs(dt)<=tp.P,ring_mm:+ringR(dt,tp).toFixed(1),s0:+tp.s0.toFixed(2),sway_mm:+tp.A.toFixed(1),window_ms:+tp.P.toFixed(1),
-  hr:Math.round(S.hr||0),nerves:+(effNerves()||0).toFixed(2),barrel:S.barrel&&S.barrel.id,sway_shape:sh&&sh.id,cards:(S.fx||[]).map(f=>f.id).filter(Boolean).concat(save.calSway?['cal_sway13']:[]),hit:h.label,pts:h.v|0});
+  hr:Math.round(S.hr||0),nerves:+(effNerves()||0).toFixed(2),barrel:S.barrel&&S.barrel.id,sway_shape:sh&&sh.id,cards:(S.fx||[]).map(f=>f.id).filter(Boolean).concat(S&&S._calTag?[S._calTag]:[]),hit:h.label,pts:h.v|0});
  clearTimeout(t);if(Q.length>=3)flush();else t=setTimeout(flush,8000);}}catch(e){}return l;};
 addEventListener('pagehide',flush);})();
 </script>
