@@ -1,19 +1,38 @@
 <style>
 /* v12 (F2): barrels and kit parts unlock by player level; sponsor-exclusive sets */
 #hub #shopList .opt.v12lock,#hub #setupList .opt.v12lock{opacity:1!important}
-#hub .opt.v12lock .n img{filter:grayscale(.55) brightness(.8)!important}
-#hub .opt.v12lock .t{color:#C9CFCE!important}
-#hub .opt.v12lock .n em{opacity:.7}
-#hub .opt.v12lock .kitpts,#hub .opt.v12lock .kitpts *{opacity:.9}
+/* locked: render and body at ~68%, name and requirement at full strength */
+#hub .opt.v12lock{border-style:dashed!important;border-color:rgba(237,236,229,.16)!important}
+#hub .opt.v12lock .n{opacity:.68}
+#hub .opt.v12lock .n img{filter:grayscale(.6)!important}
+#hub .opt.v12lock .s>*:not(.v12why):not(.v12sp):not(.v12gate),#hub .opt.v12lock .v12d{opacity:.68}
+#hub .opt.v12lock .t{color:#EDECE5!important;opacity:1}
+/* card descriptions cap at two lines; the full text sits in the preview */
+.opt .v12d{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.st2x .v12full{margin:12px 2px 2px;font:500 14px/1.45 Manrope,system-ui,sans-serif;color:#C9CFCE}
+/* buy button on available rows */
+#hub .opt .price.v12bp{font-size:0!important;line-height:1}
+.v12buy{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:112px;padding:0 16px;border-radius:10px;background:#C6F36B;color:#10191A;font:800 15px/1 Manrope,system-ui,sans-serif;letter-spacing:.02em;box-shadow:0 6px 14px rgba(0,0,0,.25);cursor:pointer}
+.v12buy i{font-style:normal;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+.v12buy b{font:italic 800 19px/1 "Barlow Condensed",sans-serif}
+.v12buy:active{transform:translateY(1px)}
+.v12buy.poor{background:transparent;color:#D9AD52;box-shadow:inset 0 0 0 1px rgba(217,173,82,.55);cursor:default}
+.v12buy.poor i{color:#ADB2BA}
+#hub .opt .price .v12need{display:block;margin-top:6px;font:600 12px/1.3 Manrope,system-ui,sans-serif;color:#ADB2BA;letter-spacing:0;text-transform:none}
+#hub #setupList .opt .price.v12bp{justify-self:end;text-align:right}
+#setupList .v12buy{min-width:96px;padding:0 12px}
+/* sponsor identity */
+.v12sp{display:inline-flex;flex-direction:column;gap:3px;padding:8px 14px 8px 12px;border-radius:8px;border-left:3px solid var(--bc);background:linear-gradient(90deg,color-mix(in srgb,var(--bc) 16%,transparent),rgba(255,255,255,.02))}
+.v12sp small{font:800 11px/1.1 Manrope,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#EDECE5}
+.v12sp b{font:italic 800 21px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.02em;color:var(--bc)}
+.v12why.spo{display:block;color:#C9CFCE;font-weight:600}.v12why.spo b{font:italic 800 15px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.03em;color:var(--bc)}
 #hub .opt .price.v12p{font-size:0!important;line-height:1;text-align:left;justify-self:start}
 .v12gate{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:5px 12px 5px 10px;border-radius:999px;background:rgba(198,243,107,.08);border:1px solid rgba(198,243,107,.5);color:#C6F36B;font:800 13px/1.1 Manrope,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .v12gate svg{width:14px;height:14px;flex:none}
-.v12gate.sp{background:linear-gradient(90deg,rgba(233,196,106,.16),rgba(233,196,106,.04));border-color:rgba(233,196,106,.65);color:#E9C46A}
 .v12sub{display:block;margin-top:7px;font:600 12px/1.35 Manrope,system-ui,sans-serif;color:#ADB2BA;letter-spacing:.01em;text-transform:none;white-space:normal}
 .v12sub b{color:#EDECE5;font-weight:700}
 #hub #setupList .opt .price.v12p{justify-self:end;text-align:right}
 #setupList .v12gate{min-height:30px;padding:5px 10px 5px 9px;font-size:12px}
-.v12why.sp{display:flex;align-items:center;gap:6px;color:#E9C46A}.v12why.sp svg{width:13px;height:13px;flex:none}
 .v12why{display:block;margin-top:6px;font:700 12px/1.35 Manrope,system-ui,sans-serif;color:#C6F36B}
 .v12lv{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 14px;margin:0 0 12px;padding:12px 16px;border-radius:12px;background:radial-gradient(ellipse at 0% 50%,rgba(198,243,107,.1),transparent 60%),linear-gradient(155deg,#263335,#192426 75%);border:1px solid rgba(198,243,107,.22)}
 .v12lv .lvn{grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:56px;padding-right:14px;border-right:1px solid rgba(237,236,229,.12)}
@@ -23,7 +42,7 @@
 .v12lv .nn{font:italic 800 19px/1.05 "Barlow Condensed",sans-serif;text-transform:uppercase;color:#EDECE5}
 .v12lv .nn i{font-style:normal;color:#C6F36B}
 .st2x .v12no{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin-top:10px;border-radius:10px;border:1px dashed rgba(198,243,107,.45);color:#C6F36B;font:700 14px Manrope,system-ui,sans-serif;text-align:center;padding:8px 12px}
-.st2x .v12no.sp{border-color:rgba(233,196,106,.6);color:#E9C46A}
+.st2x .v12no.sp{border:0;border-left:3px solid var(--bc);border-radius:8px;justify-content:flex-start;background:rgba(255,255,255,.04);color:#EDECE5}.st2x .v12no.sp b{font:italic 800 17px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;color:var(--bc)}
 .st2x .v12no svg{width:15px;height:15px;flex:none}
 /* level-up reward: barrel unlocked */
 .v12rw{position:relative;overflow:hidden;display:grid;grid-template-columns:104px 1fr;gap:3px 12px;align-items:center;min-height:104px;padding:14px 16px;border-radius:10px;background:radial-gradient(ellipse at 12% 50%,rgba(198,243,107,.16),transparent 58%),linear-gradient(155deg,#263335,#192426 75%);box-shadow:inset 0 0 0 1px rgba(198,243,107,.6),0 10px 24px rgba(0,0,0,.35);animation:v12in .4s cubic-bezier(.2,.8,.2,1) 1.6s both}
@@ -59,21 +78,38 @@ try{const sp=id=>SPONSORS.find(s=>s.id===id);
  const tg=sp('target');if(tg){tg.free=Object.assign({},tg.free,{barrel:'littler'});tg.lines=['Target Darts. Tour Card holders only get this call.','Luke Littler Gen 1 set, sponsored players only. Swiss points, Pro Grip Spin shafts, 40% off and $900 a match.','You’d be on the same wall as Littler and Aspinall.'];}
  const wm=sp('winmau');if(wm){wm.lines=['Winmau. Congratulations on the card.','MvG Exact set, sponsored players only. Prism shafts and flights, Diamond points, 40% off and $900 a match.','Blade 6 board for the house too.'];}
 }catch(e){}
+// sponsor gifts of store barrels respect the level gate: reserved for you (no charge) and handed over when you reach the level
+const BCOL={rd:'#FF4A3D',winmau:'#5B9BFF',target:'#FFD43B',shot:'#5FD3CF',harrows:'#FF5A5F'};
+SPONSORS.forEach(s=>{const id=s.free&&s.free.barrel;if(id&&!EXCL[id]&&(LV[id]||1)>1){s.v12gift=id;s.free=Object.assign({},s.free);delete s.free.barrel;}});
 const LOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.5 7V5.2a3.5 3.5 0 0 1 7 0V7h.6c.8 0 1.4.6 1.4 1.4v5.2c0 .8-.6 1.4-1.4 1.4H3.9c-.8 0-1.4-.6-1.4-1.4V8.4C2.5 7.6 3.1 7 3.9 7h.6Zm1.8 0h3.4V5.2a1.7 1.7 0 0 0-3.4 0V7Z"/></svg>';
-const STAR='<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.2l2 4.3 4.7.5-3.5 3.2 1 4.6L8 11.5l-4.2 2.3 1-4.6L1.3 6l4.7-.5z"/></svg>';
 function lvNow(){try{const c=career();if(!c||c.run)return null;const v=C3.V3();return v?v.lv:null;}catch(e){return null;}}
 function brandOf(spId){const s=SPONSORS.find(x=>x.id===spId);return s?s.brand:spId;}
+function bc(spId){return BCOL[spId]||'#C6F36B';}
+function giftOf(sid){const s=SPONSORS.find(x=>x.id===sid);return s&&s.v12gift;}
+// reservations live on the save: {barrelId: sponsorId}. Granted (free) once your level reaches the barrel's gate.
+function syncReserve(equipNow){const out=[];try{if(!save||!save.owned)return out;const R=save.v12res=save.v12res||{};const g=save.sponsor&&giftOf(save.sponsor);
+ if(g&&!save.owned.includes(g)&&!R[g])R[g]=save.sponsor;
+ const lv=lvNow();Object.keys(R).forEach(id=>{if(save.owned.includes(id)){delete R[id];return;}if(lv==null||lv>=(LV[id]||1)){save.owned.push(id);if(equipNow)save.barrel=id;out.push({id,sp:R[id]});delete R[id];}});
+ if(out.length||g)persist();}catch(e){}return out;}
+window.TOPS_v12Res=syncReserve;
+const _os12=offerSponsors;offerSponsors=function(done){try{const sh=SPONSORS.find(x=>x.id==='shot');if(sh){const lv=lvNow();const need=LV[sh.v12gift]||1;sh.lines[1]=(lv!=null&&lv<need)?`We back Kiwi players coming through. A set of Zen Jutsu 23g is put aside for you, no charge, the day you hit level ${need}. 15% off anything in the range now.`:'We back Kiwi players coming through. Set of Zen Jutsu 23g on us, 15% off anything in the range.';}}catch(e){}
+ return _os12.call(this,()=>{const got=syncReserve(true);if(got.length){try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}}done&&done();});};
+const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};persist();}catch(e){}return r;};
 // gate for an item you don't own: null (open) | {lv} | {sp}
-function gateBarrel(b){if(EXCL[b.id])return {sp:EXCL[b.id]};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
+function gateBarrel(b){if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
 function gatePart(key,id){const need=PART_LV[key+':'+id];if(!need)return null;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
 window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart};
 // migration: a player already signed with Red Dragon, Target or Winmau gets that deal's exclusive set (not equipped). Owned barrels are never taken away.
 function grantSponsorSet(){try{if(!save||!save.owned||!save.sponsor)return;const id=Object.keys(EXCL).find(k=>EXCL[k]===save.sponsor);if(id&&!save.owned.includes(id)){save.owned.push(id);persist();}}catch(e){}}
 grantSponsorSet();
-function gateHTML(g,short){if(short&&g.lv)return `<span class="v12gate">${LOCK}Lv ${g.lv}</span>`;return g.sp?`<span class="v12gate sp">${STAR}Sponsor exclusive</span><span class="v12sub">Sign with <b>${brandOf(g.sp)}</b> to get this set</span>`:`<span class="v12gate">${LOCK}Unlocks at level ${g.lv}</span>`;}
-function noteHTML(g,priceTxt){return g.sp?`<div class="v12no sp">${STAR}Sponsor exclusive · sign with ${brandOf(g.sp)}</div>`:`<div class="v12no">${LOCK}Unlocks at level ${g.lv}${priceTxt?' · then '+priceTxt:''}</div>`;}
+function spLabel(sid,top){return `<span class="v12sp" style="--bc:${bc(sid)}"><small>${top}</small><b>${brandOf(sid)}</b></span>`;}
+function gateHTML(g,short){if(g.res)return spLabel(g.res,'Sponsor set')+`<span class="v12sub">Unlocks for you at Lv ${g.lv} · no charge</span>`;
+ if(short&&g.lv)return `<span class="v12gate">${LOCK}Lv ${g.lv}</span>`;
+ return g.sp?spLabel(g.sp,'Sponsor exclusive')+`<span class="v12sub">Comes with a ${brandOf(g.sp)} deal. Not sold in the Store.</span>`:`<span class="v12gate">${LOCK}Unlocks at level ${g.lv}</span>`;}
+function noteHTML(g,priceTxt){if(g.res)return `<div class="v12no sp" style="--bc:${bc(g.res)}"><b>${brandOf(g.res)}</b>&nbsp;sponsor set · yours at Lv ${g.lv}, no charge</div>`;
+ return g.sp?`<div class="v12no sp" style="--bc:${bc(g.sp)}">Sponsor exclusive ·&nbsp;<b>${brandOf(g.sp)}</b>&nbsp;deal only</div>`:`<div class="v12no">${LOCK}Unlocks at level ${g.lv}${priceTxt?' · then '+priceTxt:''}</div>`;}
 function lockRow(el,g,priceTxt,short){el.classList.add('v12lock');el.classList.remove('locked');el.setAttribute('aria-disabled','true');
- const pr=el.querySelector('.price');if(pr){pr.className='price v12p';pr.innerHTML=gateHTML(g,short)+(g.lv&&priceTxt&&!short?`<span class="v12sub">${priceTxt} once unlocked</span>`:'');}
+ const pr=el.querySelector('.price');if(pr){pr.className='price v12p';pr.innerHTML=gateHTML(g,short)+(g.lv&&!g.res&&priceTxt&&!short?`<span class="v12sub">${priceTxt} once unlocked</span>`:'');}
  if(short&&g.lv){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why">Unlocks at level ${g.lv}${priceTxt?', then '+priceTxt:''}</span>`);}
  const tap=el.onclick;
  if(el.dataset.st2w&&tap){el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')){x.querySelectorAll('button').forEach(bt=>bt.remove());x.insertAdjacentHTML('beforeend',noteHTML(g,priceTxt));}};}
@@ -82,18 +118,32 @@ function nextUnlock(lv){let best=null;BARRELS.forEach(b=>{const n=LV[b.id];if(!E
 function levelStrip(){const L=$('shopList');if(!L)return;let s=$('v12lv');const lv=lvNow();if(lv==null){if(s)s.remove();return;}
  if(!s){s=document.createElement('div');s.id='v12lv';s.className='v12lv';L.parentNode.insertBefore(s,L);}
  const nx=nextUnlock(lv);s.innerHTML=`<div class="lvn"><small>Level</small><b>${lv}</b></div>`+(nx?`<span class="nx">Next barrel · level ${nx.lv}</span><span class="nn">${nx.n}</span>`:`<span class="nx">Every barrel unlocked</span><span class="nn">Sponsor sets come <i>with a deal</i></span>`);}
-function decorate(){grantSponsorSet();
+function clampDesc(el){const s0=el.querySelector('.s');if(!s0||s0.querySelector('.v12d'))return '';const sp=document.createElement('span');sp.className='v12d';
+ while(s0.firstChild&&!(s0.firstChild.nodeType===1&&s0.firstChild.matches('.kitpts,.v12why,.swtag,br')))sp.appendChild(s0.firstChild);s0.insertBefore(sp,s0.firstChild);return sp.textContent.trim();}
+function previewFull(el,txt){if(!txt||!el.dataset.st2w||el.dataset.v12f)return;el.dataset.v12f='1';const tap=el.onclick;if(!tap)return;
+ el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')&&!x.querySelector('.v12full')){const big=x.querySelector('.st2big');const p=document.createElement('p');p.className='v12full';p.textContent=txt;if(big)big.after(p);else x.prepend(p);}};}
+function buyBtn(el,cost,doBuy){const pr=el.querySelector('.price');if(!pr)return;const bank=career()?career().bank:0;const ok=bank>=cost;pr.className='price v12bp';
+ pr.innerHTML=`<span class="v12buy${ok?'':' poor'}" aria-label="Buy for ${money(cost)}"><i>Buy</i><b>${money(cost)}</b></span>`+(ok?'':`<span class="v12need">Need ${money(cost-bank)} more</span>`);
+ const btn=pr.querySelector('.v12buy');btn.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(ok)doBuy();});}
+function buyBarrel(b){const c=career();const p=price(b.price);if(!c||c.bank<p||save.owned.includes(b.id)||gateBarrel(b))return;c.bank-=p;save.owned.push(b.id);save.barrel=b.id;try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}persist();showShop();}
+function buyPart(key,it){const c=career();const p=price(it.price);if(!c||c.bank<p||gatePart(key,it.id))return;c.bank-=p;save.ownedSetup=(save.ownedSetup||[]).concat(key+':'+it.id);try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}save.setup=Object.assign({},save.setup||{},{[key]:it.id});persist();try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}showShop();}
+function decorate(){grantSponsorSet();syncReserve(false);
  const rows=[...document.querySelectorAll('#shopList .opt')];
- rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;if(save.owned.includes(b.id)){if(EXCL[b.id]){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why sp">${STAR}${brandOf(EXCL[b.id])} sponsor set · yours to keep</span>`);}return;}const g=gateBarrel(b);if(!g)return;lockRow(el,g,money(price(b.price)));});
+ rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;const full=clampDesc(el);
+  if(save.owned.includes(b.id)){const sid=EXCL[b.id]||((SPONSORS.find(s=>s.v12gift===b.id&&s.id===save.sponsor)||{}).id);if(EXCL[b.id]){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why spo" style="--bc:${bc(sid)}"><b>${brandOf(sid)}</b> sponsor set · yours to keep</span>`);}}
+  else{const g=gateBarrel(b);if(g)lockRow(el,g,money(price(b.price)));else buyBtn(el,price(b.price),()=>buyBarrel(b));}
+  previewFull(el,full);});
  levelStrip();
  const SU=$('setupList');if(SU){let key=null;[...SU.children].forEach(el=>{if(el.classList.contains('label')){key=/Shaft/.test(el.textContent)?'shaft':/Flight/.test(el.textContent)?'flight':'point';return;}const t=el.querySelector('.t');if(!t||!key)return;const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.n===t.textContent);if(!it)return;
-  const own=(save.ownedSetup||[]).includes(key+':'+it.id)||it.price===0;if(own)return;const g=gatePart(key,it.id);if(!g)return;lockRow(el,g,money(price(it.price)),true);});}}
+  const full=clampDesc(el);const own=(save.ownedSetup||[]).includes(key+':'+it.id)||it.price===0;
+  if(!own){const g=gatePart(key,it.id);if(g)lockRow(el,g,money(price(it.price)),true);else buyBtn(el,price(it.price),()=>buyPart(key,it));}
+  previewFull(el,full);});}}
 const _ss12=showShop;showShop=function(){const r=_ss12.apply(this,arguments);try{decorate();}catch(e){console.warn('v12 shop',e);}return r;};
 // ----- level-up reward: barrels (and parts) that just opened in the store -----
 // the last level whose unlocks were shown lives on the career's v3 state; first seen = current level, so no backlog on update
 function v3(){try{const c=career();if(!c||c.run)return null;return C3.V3();}catch(e){return null;}}
 function seenInit(){const v=v3();if(v&&v.bSeen==null)v.bSeen=v.lv;}
-const _cam12=careerAfterMatch;careerAfterMatch=function(){seenInit();return _cam12.apply(this,arguments);};
+const _cam12=careerAfterMatch;careerAfterMatch=function(){seenInit();const r=_cam12.apply(this,arguments);try{syncReserve(false);}catch(e){}return r;};
 const _bm12=beginMatch;beginMatch=function(){seenInit();return _bm12.apply(this,arguments);};
 function unlocksIn(a,b){const out=[];BARRELS.forEach(x=>{const n=LV[x.id];if(!EXCL[x.id]&&n>a&&n<=b&&n>1)out.push({k:'barrel',lv:n,it:x});});
  Object.entries(PART_LV).forEach(([tag,n])=>{if(n>a&&n<=b){const [key,id]=tag.split(':');const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.id===id);if(it)out.push({k:key,lv:n,it});}});return out;}
@@ -101,11 +151,11 @@ function ptsOf(id){try{if(!window.TOPS_kitPts)return '';const sb=save.barrel,ss=
  return [['Scoring','sc'],['Finishing','fi'],['Control','ct'],['Rhythm','rh']].filter(([n,x])=>k[x]>0).map(([n,x])=>`${n} ▲${k[x]}`).join(' · ');}catch(e){return '';}}
 function rewardCards(list){const bs=list.filter(u=>u.k==='barrel');const ps=list.filter(u=>u.k!=='barrel');let h='';
  bs.forEach(u=>{const b=u.it;let img='';try{img=V.dartShot(save.flight,Object.assign({},setupParts(),{barrel:b}));}catch(e){}
-  h+=`<div class="v12rw" role="status">${img?`<img class="v12im" src="${img}" alt="">`:''}<small>Level ${u.lv} · Store unlock</small><b>${b.n}</b><span class="v12pt">${ptsOf(b.id)}</span><span class="v12pr">Yours for <em>${money(price(b.price))}</em> in the Store</span></div>`;});
+  h+=`<div class="v12rw" role="status">${img?`<img class="v12im" src="${img}" alt="">`:''}<small>Level ${u.lv} · Store unlock</small><b>${b.n}</b><span class="v12pt">${ptsOf(b.id)}</span><span class="v12pr">${save.owned.includes(b.id)?'Sponsor set · in your kit, <em>no charge</em>':`Yours for <em>${money(price(b.price))}</em> in the Store`}</span></div>`;});
  if(ps.length)h+=`<div class="v12rw part" role="status"><small>Level ${ps[0].lv} · kit unlocked</small><b>${ps.map(u=>u.it.n).join(', ')}</b><span class="v12pr">${ps.map(u=>u.it.s).join(' ')} Now in the Store.</span></div>`;
  return h;}
 function onReward(){const el=$('c3rw');if(!el||el.hidden)return;const card=el.querySelector('.c3rw-card');if(!card||card.dataset.v12)return;card.dataset.v12='1';
- const v=v3();if(!v)return;if(v.bSeen==null){v.bSeen=v.lv;return;}if(v.lv<=v.bSeen)return;
+ syncReserve(false);const v=v3();if(!v)return;if(v.bSeen==null){v.bSeen=v.lv;return;}if(v.lv<=v.bSeen)return;
  const list=unlocksIn(v.bSeen,v.lv);v.bSeen=v.lv;try{persist();}catch(e){}if(!list.length)return;
  const html=rewardCards(list);const anchor=card.querySelector('.c3rw-ach,.c3rw-con,.c3rw-hook,.c3rw-act');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else card.insertAdjacentHTML('beforeend',html);}
 window.TOPS_v12Reward=onReward;
