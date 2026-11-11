@@ -138,11 +138,11 @@ body.tc-zone::after{content:"";position:fixed;inset:0;pointer-events:none;z-inde
 
 /* ===== round 2 (ChatGPT review 11 Nov) ===== */
 /* picks tile: fan + count + chevron, 80px */
-.tc-picks{min-height:80px;padding:0 14px 0 0;gap:6px}
+.tc-picks{min-height:92px;padding:8px 14px 8px 0;gap:6px}  /* rule 22 (ChatGPT 04:31): +12px so 'Ready to open' isn't on the bottom edge */
 .tc-picks span{padding:0;flex:1}
 .tc-picks span b{font-size:24px;color:var(--text,#EDECE5)}
-.tc-picks span small{color:var(--lime,#C6F36B);margin-top:2px}
-.tc-chev{font-style:normal;font:800 30px/1 "Barlow Condensed",sans-serif;color:var(--lime,#C6F36B);flex:none}
+.tc-picks span small{color:var(--lime,#C6F36B);margin-top:2px;padding-bottom:4px}
+.tc-chev{font-style:normal;font:800 30px/1 "Barlow Condensed",sans-serif;color:var(--lime,#C6F36B);flex:none;display:grid;place-items:center;min-width:32px;min-height:32px}
 .ach-toasts .ach-t+.ach-t{display:none}
 /* welcome */
 .tc-wel-fan{width:240px;height:250px}
