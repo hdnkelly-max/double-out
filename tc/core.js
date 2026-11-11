@@ -676,9 +676,9 @@
       const nm = save.name || 'You'; document.body.classList.add('tc-oppwalk');
       const ov = document.createElement('div'); ov.id = 'tcOppWalk';
       ov.innerHTML = `<div class="tc-wk-ban"><small>Now walking on</small><b>${esc(nm)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
-      let done = false; const end = () => { if (done) return; done = true; ov.classList.add('out'); document.body.classList.remove('tc-oppwalk'); setTimeout(() => ov.remove(), 400); };
+      let done = false, fxT = 0; const end = () => { if (done) return; done = true; clearTimeout(fxT); ov.classList.add('out'); document.body.classList.remove('tc-oppwalk'); setTimeout(() => ov.remove(), 400); };
       ov.onclick = end; document.body.appendChild(ov);
-      if (cel.walkon) setTimeout(() => { try { FX.run(cel.walkon, nm); } catch (e) {} }, 350);
+      if (cel.walkon) fxT = setTimeout(() => { if (done) return; try { FX.run(cel.walkon, nm); } catch (e) {} }, 350);   /* a skip before 350 ms cancels the effect */
       setTimeout(end, 3200); return;
     }
     WK = { t0: performance.now() + 300, dur: 4800, fx: cel.walkon || null, fired: false, name: save.name || 'You' };

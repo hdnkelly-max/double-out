@@ -34,6 +34,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.waitForTimeout(10000);
   const c = Object.assign({ step: 'off at match boundary', glbRequests: glb.length }, await figs()); console.log(JSON.stringify(c));
   if (!c.rigReady || !c.skinned) fails.push(`switch off but figures not rigged (rigReady ${c.rigReady}, skinned ${c.skinned})`);
+  // 3: switch on again at the next match boundary: the rigged figures from match 2 are replaced by code-built ones, nothing new loads
+  const n3 = glb.length;
+  await p.evaluate(() => { window.TOPS_SAFE = { simpleFigures: true }; try { S.done = true; } catch (e) {} const n = nextOpponent(); beginMatch({ mode: 'career', tier: 1, p0: 'T', oppKey: n.oppKey, oppName: n.oppName, oppAvg: 50, legs: 1, start: 501 }); });
+  await p.waitForTimeout(8000);
+  const d = Object.assign({ step: 'on again at match boundary', newGlb: glb.length - n3 }, await figs()); console.log(JSON.stringify(d));
+  if (d.rigged || d.skinned) fails.push(`switch on again but rigged figures remain (rigged ${d.rigged}, skinned ${d.skinned})`);
+  if (d.newGlb) fails.push('character GLBs requested after switching on again');
   if (errs.length) fails.push('page errors: ' + errs.slice(0, 3).join(' | '));
   console.log(fails.length ? 'SAFE-FIGURES FAIL\n- ' + fails.join('\n- ') : 'SAFE-FIGURES PASS'); await b.close(); process.exit(fails.length ? 1 : 0);
 })();
