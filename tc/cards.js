@@ -232,7 +232,7 @@
       btnNext.textContent = i + 1 < n ? `Continue · ${n - i - 1} left` : 'Done'; btnNext.hidden = false; btnLater.hidden = i + 1 >= n;
     }
     function summary() {
-      row.innerHTML = ''; ov.querySelector('.tcpk__foot').hidden = true; ov.querySelector('.tcpk__head').hidden = true;
+      row.innerHTML = ''; row.hidden = true; /* P6: the empty pick row kept ~400px above the summary */ ov.querySelector('.tcpk__foot').hidden = true; ov.querySelector('.tcpk__head').hidden = true;
       const s = ov.querySelector('.tcpk__summary'); s.hidden = false;
       const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
       const sorted = got.slice().sort((a, b) => order.indexOf(a.def.rarity) - order.indexOf(b.def.rarity));
