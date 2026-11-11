@@ -1154,9 +1154,9 @@ const V=(function(){try{return (()=>{
   const fill=new T.PointLight(new T.Color(ACC),big?1.1:.6,7);fill.position.set(X-.2,2.2,Z0+.4);G.add(fill);sideLed=led;}
 
  // GFX: baked venues (Blender, lighting baked into textures). Loaded once, swapped in for the code-built room.
- const VENUE_GLB={0:'pub.glb',1:'club.glb'},VENUE_SC={};
+ const VENUE_GLB={0:'pub.glb',1:'club2.glb'},VENUE_SC={}; // Art: club2 = the baked club with the Art colour grade applied offline (wip/art/bake)
  function venueGlb(t){if(window.GFX_LEGACY||!VENUE_GLB[t])return null;if(VENUE_SC[t]&&VENUE_SC[t]!=='loading')return VENUE_SC[t];if(VENUE_SC[t]==='loading')return null;VENUE_SC[t]='loading';
-  try{new T.GLTFLoader().load((window.TOPS_ASSETS||'assets/')+VENUE_GLB[t],g=>{const k=(window.GFX_BAKE_K||1)*({0:1,1:.8}[t]||1);g.scene.traverse(o=>{if(o.isMesh){let mp=o.material.map;if(mp&&window.TOPS_VENUE_TEX){try{mp=TOPS_VENUE_TEX(t,o.name,mp)||mp;}catch(e){}}if(mp){mp.encoding=T.sRGBEncoding;mp.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}o.material=new T.MeshBasicMaterial({map:mp,color:new T.Color().setRGB(k,k,k)});o.castShadow=false;o.receiveShadow=false;if(/board/i.test(o.name))o.position.z-=.018;o.matrixAutoUpdate=false;o.updateMatrix();}});g.scene.userData.keep=1;VENUE_SC[t]=g.scene;if(lastTier===t)buildVenue(t);},null,e=>{console.warn('venue glb',e);VENUE_SC[t]=null;});}catch(e){VENUE_SC[t]=null;}return null;}
+  const ld=(file,retry)=>{try{new T.GLTFLoader().load((window.TOPS_ASSETS||'assets/')+file,g=>{const k=(window.GFX_BAKE_K||1)*({0:1,1:.8}[t]||1);g.scene.traverse(o=>{if(o.isMesh){let mp=o.material.map;if(mp&&window.TOPS_VENUE_TEX){try{mp=TOPS_VENUE_TEX(t,o.name,mp)||mp;}catch(e){}}if(mp){mp.encoding=T.sRGBEncoding;mp.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}o.material=new T.MeshBasicMaterial({map:mp,color:new T.Color().setRGB(k,k,k)});if(window.TOPS_VENUE_MAT){try{TOPS_VENUE_MAT(t,o.name,o.material);}catch(e){}}o.castShadow=false;o.receiveShadow=false;if(/board/i.test(o.name))o.position.z-=.018;o.matrixAutoUpdate=false;o.updateMatrix();}});g.scene.userData.keep=1;VENUE_SC[t]=g.scene;if(lastTier===t)buildVenue(t);},null,e=>{if(retry){ld(retry,null);return;}console.warn('venue glb',e);VENUE_SC[t]=null;});}catch(e){VENUE_SC[t]=null;}};ld(VENUE_GLB[t],/2\.glb$/.test(VENUE_GLB[t])?VENUE_GLB[t].replace('2.glb','.glb'):null);return null;}   // Art: graded club2/pub2, falling back to the original file if it isn't on the server yet
  function buildVenueInner(t){lastTier=t;setEnv(t<=1?'pub':t<=3?'club':'stage');ledWall=null;clearGroup(venue);clearGroup(lights);extras.length=0;let spots=[];renderer.toneMappingExposure=[1.05,.78,1.05,1.0,1.0,1.1,.95][t]||1.05;document.body.dataset.tier=t;scene.fog=t>=2?new T.FogExp2([0,0,0x0a0c18,0x04101e,0x04101e,0x0a1d3a,0x0a0414][t],t===5?.03:.045):null;
   const pool=addLight(new T.SpotLight(0xfff0d8,.9,6,.5,.7,1.2));pool.position.set(.3,3.2,OCHE_Z+.3);const pt=new T.Object3D();pt.position.set(.1,0,OCHE_Z);lights.add(pt);pool.target=pt;
   const amb=addLight(new T.AmbientLight(0xffffff,.3));addLight(new T.HemisphereLight(0xdfe6ff,0x3a2a1a,.35));addLight(new T.PointLight(0xfff0e0,.45,8)).position.set(-.6,2.4,OCHE_Z+1.6);
@@ -1200,12 +1200,12 @@ const V=(function(){try{return (()=>{
    addExtra('Jonno',-1.95,.55,-.35,'stand',0);addExtra('Shazza',-2.6,2.7,2.6,'stand',0);addExtra('Pete',-3.9,2.6,2.2,'stand',0);
    spots=[[-1.6,-.42,4.3],[1.5,-.42,4.1],[2.3,-.42,3.1],[2.1,-.42,5.9],[-2.6,-.42,5.2],[-1.2,-.42,3.6],[3.1,-.42,5.4]];
   }else if(t===1&&VG){ // club (baked)
-    amb.intensity=.22;key.intensity=1.2;key.color.set(0xfff4e8);
+    amb.intensity=.2;amb.color.set(0xffd9b0);key.intensity=1.2;key.color.set(0xffe2bc);pool.intensity=1.25;pool.color.set(0xffcf96);addLight(new T.PointLight(0xffc27a,1.4,3.6,1)).position.set(2.2,2.0,1.9);
     addExtra('Tama',1.4,1.0,.6,'stand',1);addExtra('Kev',2.5,3.3,2.9,'stand',1);
     [['Aroha',-3.15,4.6],['Sione',-2.05,4.6],['Mike',-2.6,5.35],['Deb',1.85,4.6],['Tane',2.95,4.6],['Jess',2.4,5.35]].forEach(([nm,x,z])=>addExtra(nm,x,z+.05,0,'sit',1));
     spots=[];
   }else if(t===1){ // club: function room, carpet, trophy cabinet, noticeboard, chairs
-   const wm=surf(plasterTex('#cfc3a8'),[4,2]);room(wm,surf(carpetTex('#2e3a4a'),[8,8]),surf(plasterTex('#e7e2d4'),[4,4]));box(ROOM.w,.9,.08,surf(woodTex('#5a3a22','#2e1c0e',64),[3,1]),0,.45,-.02);
+   const wm=surf(plasterTex('#2c4438'),[4,2]);room(wm,surf(carpetTex('#5a1c20'),[8,8]),surf(plasterTex('#6f6150'),[4,4]));box(ROOM.w,.9,.08,surf(woodTex('#5a3a22','#2e1c0e',64),[3,1]),0,.45,-.02);
    banner('WAITAKERE CLUB CHAMPIONSHIP','#1d3f6e','#f2efe6',2.6,2.75);
    // trophy cabinet
    box(1.5,1.9,.4,surf(woodTex('#5a3a22','#2e1c0e',48),[1,1]),-2.8,.95,.2);plane(1.3,1.6,new T.MeshStandardMaterial({color:0x9ab,transparent:true,opacity:.18,roughness:.05}),-2.8,1.05,.41);for(let r=0;r<2;r++)for(let i=0;i<4;i++){box(.08,.18+(i%2)*.08,.08,new T.MeshStandardMaterial({color:0xd9b45a,metalness:.85,roughness:.25}),-3.3+i*.33,.55+r*.7,.25);}

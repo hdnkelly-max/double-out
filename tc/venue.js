@@ -25,6 +25,27 @@
       ]
     }
   };
+
+  const LIGHT = { 1: [
+    '{ vec3 w = vTopsW;',
+    '  float lane = exp(-pow(length((w - vec3(0., 1.8, .3)) * vec3(.55, .8, .7)), 2.));',   // board lane: wide, warm
+    '  float oche = exp(-pow(length((w - vec3(0., .05, 2.4)) * vec3(.75, 1.5, .75)), 2.));',  // pool on the oche
+    '  float side = exp(-pow(length((w - vec3(4.4, 1.75, 2.2)) * vec3(.9, .85, .5)), 2.));',  // wash on the honours wall behind the thrower (side view)
+    '  float edge = smoothstep(3.2, 4.5, abs(w.x)) * .14 * (1. - side) + smoothstep(4.8, 7., w.z) * .3 + smoothstep(2.5, 3.4, w.y) * .25;',
+    '  float hon = exp(-pow(length((w - vec3(4.42, 1.85, 1.6)) * vec3(1.0, 1.25, .8)), 2.));',  // tight amber highlight on the honours boards (x 4.42, y 1.2-2.5, z 0.6-2.6, measured from the wallR UVs)
+    '  float flr = exp(-pow(length((w - vec3(2.4, 0., 3.4)) * vec3(.9, 4., .9)), 2.)) * (1. - oche);', // carpet behind the player, kept off the oche pool
+    '  float L = clamp(.74 + .42 * lane + .3 * oche + .3 * side + .5 * hon - edge - .13 * flr, .36, 1.28);',
+    '  outgoingLight *= L * mix(vec3(1.), vec3(1.07, .97, .82), clamp(lane + oche + hon, 0., 1.)); }'
+  ].join('\n') };
+  function venueMat(tier, name, mat) {
+    if (!LIGHT[tier] || !mat || !/^bake_/.test(name)) return;
+    mat.customProgramCacheKey = () => 'topsVenue' + tier;   // one program per venue light setup; club and pub never share or clash
+    mat.onBeforeCompile = sh => {
+      sh.vertexShader = 'varying vec3 vTopsW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vTopsW = (modelMatrix * vec4(transformed, 1.)).xyz;');
+      sh.fragmentShader = 'varying vec3 vTopsW;\n' + sh.fragmentShader.replace('#include <envmap_fragment>', '#include <envmap_fragment>\n' + LIGHT[tier]);
+    };
+  }
+  window.TOPS_VENUE_MAT = venueMat;
   window.TOPS_VENUE_SPOTS = SPOTS;
   window.TOPS_VENUE_TEX = function (tier, name, map) {
     if (window.TOPS_VENUE_DEBUG) (window.__ven = window.__ven || []).push([tier, name]);
