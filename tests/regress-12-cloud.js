@@ -22,7 +22,7 @@ const {chromium}=require('playwright');const path=require('path');
   if(!(r.next>=BAND[0]-12&&r.next<=BAND[1]))fails.push(`${k}: stored Club opponent ${r.next} not in band (v1.75 stored 75)`);
   if(r.raw==null)fails.push(`${k}: stored opponent not migrated (no oppRaw)`);
   // revenge stores the raw rating (raw:1); the band shift happens when the match starts
-  if(!r.revRaw||!(r.revPlays<=BAND[1]))fails.push(`${k}: stored revenge not migrated (avg ${r.rev}, raw ${r.revRaw}, plays at ${r.revPlays}; v1.75 stored 79)`);
+  if(!r.revRaw||!(r.revPlays<=BAND[1]+3)) /* v1.80: one setting (Club); a revenge opponent can be one of the tier's strongest (Club targets reach 67 at tier 1) */fails.push(`${k}: stored revenge not migrated (avg ${r.rev}, raw ${r.revRaw}, plays at ${r.revPlays}; v1.75 stored 79)`);
   if(r.place)fails.push(`${k}: placement ${r.place} not cleared`);});
  // 3. idempotent: adopting the already-migrated save again changes nothing
  const again=await p.evaluate(()=>{const c=JSON.parse(JSON.stringify(save));netAdopt(c);return save.career.next.oppAvg;});if(again!==d.next)fails.push(`second adopt moved the opponent ${d.next} -> ${again}`);
