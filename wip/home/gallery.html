@@ -1,0 +1,42 @@
+<title>TOPS Home Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,800;1,900&family=Manrope:wght@500;700&display=swap">
+<style>
+/* layout: a row of four phone screens (today, then A/B/C), each with its score and a three-line verdict; wraps to one column on phones */
+:root{--bg:#0e1617;--card:#152120;--line:#2a3532;--text:#EDECE5;--muted:#aab6af;--lime:#C6F36B;--gold:#D9AD52;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;--body:Manrope,system-ui,sans-serif;color-scheme:dark}
+body{background:var(--bg);color:var(--text);font-family:var(--body);padding-block:28px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header h1{font:900 italic 44px/1 var(--display);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+header p{color:var(--muted);font-size:15px;line-height:1.5;max-width:68ch;margin-top:8px}
+.row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:1000px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.row{grid-template-columns:minmax(0,1fr)}}
+figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+figure img{width:100%;max-width:100%;aspect-ratio:390/844;object-fit:cover;border-radius:18px;border:1px solid var(--line)}
+.lab{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.lab b{font:800 22px/1 var(--display);text-transform:uppercase;letter-spacing:.03em}
+.sc{font:800 22px/1 var(--display);color:var(--lime);font-variant-numeric:tabular-nums}
+.sc.base{color:var(--muted)}
+figcaption{font-size:14px;line-height:1.45;color:var(--muted)}
+figcaption strong{color:var(--text);font-weight:700}
+.cost{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:8px;border:1px solid var(--line);font:700 12px/1.3 var(--body);color:var(--gold)}
+footer{color:var(--muted);font-size:13px;line-height:1.5;max-width:80ch}
+</style>
+<div class="wrap">
+  <header>
+    <h1>Your next home screen</h1>
+    <p>Three directions for the career hub, mocked at phone size (390×844) with a mid-career save: Club League week 5 of 8, 3rd of 8, level 14. Everything uses the game's own art, type and colours. Concepts only: nothing has changed in the game. Scores are ChatGPT's, out of 10 for a phone player, after three review rounds.</p>
+  </header>
+  <div class="row">
+    <figure><img src="tops-home-today.png" alt="Today's live career hub"><div class="lab"><b>Today</b><span class="sc base">7.2</span></div>
+      <figcaption>Good art and a clear Walk on, but it never says where you stand or why tonight matters. "FILL-IN" jargon, equal-weight blocks, progress below the fold.</figcaption></figure>
+    <figure><img src="tops-home-a-tonight.png" alt="Concept A, Tonight"><div class="lab"><b>A · Tonight</b><span class="sc">9.0</span></div>
+      <figcaption><strong>One big next action.</strong> You vs him at a glance, the stake as the headline ("Win and you go 2nd"), a giant Walk on under your thumb, three specific extras below.<br><span class="cost">Build: low–medium · ~1 day</span></figcaption></figure>
+    <figure><img src="tops-home-b-your-local.png" alt="Concept B, Your local"><div class="lab"><b>B · Your local</b><span class="sc">9.0</span></div>
+      <figcaption><strong>The pub is the menu.</strong> Places in the room are the buttons: Wall of fame, The oche, Back room up front, the bar and your locker behind. Tonight's match sits on the pub's chalkboard.<br><span class="cost">Build: medium (painted) – high (live 3D) · 2–3 days</span></figcaption></figure>
+    <figure><img src="tops-home-c-dashboard.png" alt="Concept C, Career dashboard"><div class="lab"><b>C · Dashboard</b><span class="sc">8.9</span></div>
+      <figcaption><strong>Your career at a glance.</strong> The promotion race as the headline, Walk on second, the league table with tonight's opponent flagged, your rival, cards, contract and trophies.<br><span class="cost">Build: medium · ~1.5 days + rival stats</span></figcaption></figure>
+  </div>
+  <footer>Sample numbers (table, averages, rival record) are invented for a mid-career save; opponent names come from the game. Full notes: project doc <code>claude/tops-home-concepts.md</code>; mocks on branch <code>exp-home</code>, folder <code>wip/home/</code>.</footer>
+</div>
