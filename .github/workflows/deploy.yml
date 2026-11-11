@@ -1,0 +1,32 @@
+# TOPS Pages deploy we control (SHIP-2 fallback, pre-approved by Hayden/Overseer 10:19).
+# Live only after Settings -> Pages -> Source = "GitHub Actions". Until then it does nothing on main.
+# On the deploy-fallback branch it is a dry run: builds and uploads the Pages artifact, never deploys.
+name: deploy
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+permissions: { contents: read, pages: write, id-token: write }
+concurrency:
+  group: tops-production-release
+  queue: max
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sanity (version.json + index.html present)
+        run: test -s index.html && cat version.json
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: '.' }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
