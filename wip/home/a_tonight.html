@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><style>
+.bg{position:absolute;inset:0;background:url(../../assets/ui/bg_club.webp) center 18%/cover}
+.bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,15,16,.55) 0%,rgba(10,15,16,.15) 18%,rgba(10,15,16,.35) 34%,rgba(16,25,26,.92) 52%,var(--base) 64%)}
+.wrap{position:absolute;left:0;right:0;top:56px;bottom:62px;padding:0 18px;display:flex;flex-direction:column}
+.when{margin-top:118px;display:flex;align-items:center;gap:8px}
+.when .live{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+.vs{margin-top:10px;display:flex;align-items:flex-end;gap:14px}
+.vs .ph{width:96px;height:96px;border-radius:14px;background:url(opp_bigmal.png) center/cover;box-shadow:0 0 0 2px rgba(198,243,107,.35),0 12px 30px rgba(0,0,0,.5);flex:none}
+.vs h1{font:900 italic 64px/.86 "Barlow Condensed";text-transform:uppercase;letter-spacing:-.005em}
+.vs small{display:block;font:600 14px/1.3 Manrope;color:var(--muted);margin-top:6px}
+.tape{margin-top:20px;display:grid;grid-template-columns:1fr auto 1fr;row-gap:9px;column-gap:12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(18,27,27,.9)}
+.tape .h{font:700 12px/1 Manrope;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:center}
+.tape .l,.tape .r{font:800 22px/1 "Barlow Condensed";text-transform:uppercase}
+.tape .l{color:var(--lime)} .tape .r{text-align:right;color:var(--text)}
+.tape .who{font:700 12px/1 Manrope;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pips{display:flex;gap:4px}.pips i{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font:800 11px/1 Manrope;font-style:normal;color:#10191A;background:var(--lime)}.pips i.x{background:#3a4743;color:var(--text)}
+.r .pips{justify-content:flex-end}
+.stake{margin-top:12px;display:flex;gap:8px}
+.stake div{flex:1;padding:10px 12px;border-radius:12px;background:#141f1e;border:1px solid var(--line)}
+.stake b{display:block;font:800 20px/1 "Barlow Condensed";text-transform:uppercase}
+.stake span{display:block;margin-top:4px;font:600 12px/1.2 Manrope;color:var(--muted)}
+.stake .up b{color:var(--lime)} .stake .cash b{color:var(--gold)}
+.go{margin-top:auto;margin-bottom:12px;height:72px;border-radius:16px;background:var(--lime);color:#10191A;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 34px rgba(198,243,107,.28)}
+.go b{font:900 italic 32px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
+.go span{font:700 12px/1 Manrope;letter-spacing:.08em;text-transform:uppercase;margin-top:4px;opacity:.75}
+.also{display:flex;gap:8px;margin-bottom:12px}
+.also>div{flex:1;min-height:52px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:#121b1b}
+.also small{display:block;font:700 11px/1 Manrope;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.also b{display:block;margin-top:5px;font:700 14px/1.15 Manrope;color:var(--text)}
+.also .bar{height:4px;border-radius:2px;background:#26312f;margin-top:6px;overflow:hidden}.also .bar i{display:block;height:100%;width:61%;background:var(--lime)}
+</style></head><body>
+<div class="bg"></div>
+<div class="top"><div class="av"></div><div class="nm">Hayden</div><div class="cash">$640</div><div class="menu"><i></i></div></div>
+<div class="wrap">
+  <div class="when"><span class="live"></span><span class="k">Tonight · Club League · Week 5 of 8</span></div>
+  <div class="vs"><div class="ph"></div><div><h1>Big<br>Mal</h1><small>"The Fridge" · Waitākere Club</small></div></div>
+  <div class="tape">
+    <div class="who">You</div><div class="h"></div><div class="who" style="text-align:right">Big Mal</div>
+    <div class="l">61.4</div><div class="h">Average</div><div class="r">58.2</div>
+    <div class="l">3rd</div><div class="h">Table</div><div class="r">5th</div>
+    <div class="l pips"><i>W</i><i>W</i><i class="x">L</i><i>W</i><i>W</i></div><div class="h">Form</div><div class="r pips"><i class="x">L</i><i>W</i><i class="x">L</i><i>W</i><i class="x">L</i></div>
+  </div>
+  <div class="stake"><div class="up"><b>Up to 2nd</b><span>if you win</span></div><div class="cash"><b>+$60</b><span>prize</span></div><div><b>+120 XP</b><span>to Old Gold shirt</span></div></div>
+  <div class="go"><b>Walk on</b><span>Best of 3 · 501</span></div>
+  <div class="also">
+    <div><small>Money match</small><b>Kauri Back Room · $100</b></div>
+    <div><small>Contract</small><b>4/7 perfect releases</b></div>
+    <div><small>Level 14</small><b>238 XP to go</b><div class="bar"><i></i></div></div>
+  </div>
+</div>
+<div class="tabs"><b class="on"><svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg>Play</b><b><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 01-8 0zM12 13v4M8 20h8M5 5h3M16 5h3"/></svg>Career</b><b><svg viewBox="0 0 24 24"><path d="M4 6h16l-2 9H6zM9 19a1 1 0 100 .1M16 19a1 1 0 100 .1"/></svg>Store</b><b><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 15-5 16 0"/></svg>Player</b><b><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Practice</b></div>
+</body></html>

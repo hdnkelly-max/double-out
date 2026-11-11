@@ -1,0 +1,27 @@
+/* EXP-HOME concepts: the game's real type and palette (Barlow Condensed display, Manrope text, base #10191A, lime #C6F36B, gold #D9AD52) */
+@font-face{font-family:"Barlow Condensed";font-weight:600;src:url(fonts/barlow-condensed-latin-600-normal.woff2)}
+@font-face{font-family:"Barlow Condensed";font-weight:700;src:url(fonts/barlow-condensed-latin-700-normal.woff2)}
+@font-face{font-family:"Barlow Condensed";font-weight:800;src:url(fonts/barlow-condensed-latin-800-normal.woff2)}
+@font-face{font-family:"Barlow Condensed";font-weight:900;src:url(fonts/barlow-condensed-latin-900-normal.woff2)}
+@font-face{font-family:"Barlow Condensed";font-weight:800;font-style:italic;src:url(fonts/barlow-condensed-latin-800-italic.woff2)}
+@font-face{font-family:"Barlow Condensed";font-weight:900;font-style:italic;src:url(fonts/barlow-condensed-latin-900-italic.woff2)}
+@font-face{font-family:Manrope;font-weight:400;src:url(fonts/manrope-latin-400-normal.woff2)}
+@font-face{font-family:Manrope;font-weight:500;src:url(fonts/manrope-latin-500-normal.woff2)}
+@font-face{font-family:Manrope;font-weight:600;src:url(fonts/manrope-latin-600-normal.woff2)}
+@font-face{font-family:Manrope;font-weight:700;src:url(fonts/manrope-latin-700-normal.woff2)}
+@font-face{font-family:Manrope;font-weight:800;src:url(fonts/manrope-latin-800-normal.woff2)}
+:root{--base:#10191A;--raise:#172220;--line:#2a3532;--text:#EDECE5;--muted:#aab6af;--dim:#7f8b86;--lime:#C6F36B;--gold:#D9AD52;--red:#e0453a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:390px;height:844px;overflow:hidden;background:var(--base);color:var(--text);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.d{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.02em}
+.k{font:700 11px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+.top{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;z-index:5}
+.top .av{width:36px;height:36px;border-radius:50%;background:url(me_avatar.png) center/cover;box-shadow:0 0 0 2px rgba(255,255,255,.12)}
+.top .nm{font:800 22px/1 "Barlow Condensed";text-transform:uppercase;letter-spacing:.04em}
+.top .cash{margin-left:auto;font:800 24px/1 "Barlow Condensed";color:var(--gold)}
+.top .menu{width:44px;height:44px;display:grid;place-items:center}
+.top .menu i{display:block;width:20px;height:2px;background:var(--text);box-shadow:0 6px 0 var(--text),0 -6px 0 var(--text)}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:62px;display:grid;grid-template-columns:repeat(5,1fr);background:rgba(13,20,21,.96);border-top:1px solid var(--line);z-index:6}
+.tabs b{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:700 12px/1 Manrope;color:var(--muted)}
+.tabs b.on{color:var(--lime)}
+.tabs b svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
