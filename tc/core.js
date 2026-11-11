@@ -497,16 +497,16 @@
     const tr = el.querySelector('#tcTry'); if (tr) tr.onclick = () => FX.run(c.cosmetic, save.name);
   }
   // Loadout
-  function isEquipped(cos) { const s = D.COS[cos]; if (!s) return false; const L = save.look || {}; return s.kind === 'wear' ? (L.wear || {})[s.slot] === cos : s.kind === 'cel' ? (L.cel || {})[s.slot] === cos : s.kind === 'title' ? L.title === cos : (L.kit || {})[s.slot] === cos; }
+  function isEquipped(cos) { const s = D.COS[cos]; if (!s) return false; const L = save.look || {}; return s.kind === 'wear' ? (L.wear || {})[s.slot] === cos : s.kind === 'cel' ? (L.cel || {})[s.slot] === cos : s.kind === 'title' ? L.title === cos : (L.tkit || {})[s.slot] === cos; }
   function equip(cos, off) {
     const s = D.COS[cos]; if (!s) return; const L = save.look || (save.look = {});
     if (s.kind === 'wear') { L.wear = L.wear || {}; if (off) delete L.wear[s.slot]; else { L.wear[s.slot] = cos; if (s.slot === 'hat') L.cap = 0; } }
     else if (s.kind === 'cel') { L.cel = L.cel || {}; if (off) delete L.cel[s.slot]; else L.cel[s.slot] = cos; }
     else if (s.kind === 'title') { L.title = off ? null : cos; }
-    else { L.kit = L.kit || {}; if (off) delete L.kit[s.slot]; else L.kit[s.slot] = cos; if (s.flight && !off) save.flight = s.flight; }
+    else { L.tkit = (L.tkit && typeof L.tkit === 'object') ? L.tkit : {}; if (off) delete L.tkit[s.slot]; else L.tkit[s.slot] = cos; if (s.flight && !off) save.flight = s.flight; }
     keep(); try { V.setPlayerLook(save.look, save.flight, save.name, career() ? career().tier : 0); if (document.body.classList.contains('tc-preview')) V.preview(true); } catch (e) {}
   }
-  function slotOf(slot) { const L = save.look || {}; return (L.wear || {})[slot] || (L.cel || {})[slot] || (L.kit || {})[slot] || (slot === 'title' ? L.title : null); }
+  function slotOf(slot) { const L = save.look || {}; return (L.wear || {})[slot] || (L.cel || {})[slot] || (L.tkit || {})[slot] || (slot === 'title' ? L.title : null); }
   // source card for a cosmetic (for thumbnails and "how to unlock")
   function srcOf(cos) {
     const c = D.CARDS.find(x => x.cosmetic === cos); if (c) return { card: c, how: `${c.name} card · ${c.rarity}` };
@@ -631,7 +631,7 @@
 
   // barrel finish from the loadout (own dart only)
   window.TOPS_BARREL = function (mat) {
-    const k = save.look && save.look.kit && save.look.kit.barrel, c = k && D.COS[k];
+    const k = save.look && save.look.tkit && save.look.tkit.barrel, c = k && D.COS[k];
     if (c && c.barrel != null) { mat.color.setHex(c.barrel); mat.metalness = c.barrel === 0x1a1d1f ? .5 : .95; mat.roughness = c.barrel === 0x1a1d1f ? .45 : .22; }
   };
   // ---------- walk-on: character walks to the oche, effect fires on arrival ----------

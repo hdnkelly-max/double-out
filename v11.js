@@ -202,3 +202,31 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 /* career standings: your row stands out */
 #hub tr.you,#hub .you-row,#hub [data-you="1"]{background:#263B32!important;box-shadow:inset 3px 0 0 #C6F36B}
 </style>
+<style>
+/* v1.66 result details polish (ChatGPT round 3 prep): objective chips were squeezed into a narrow column, next-fixture text unreadable on lime */
+#resObj{grid-column:1/-1!important;width:100%!important;max-width:none!important}
+#resObjChips{display:flex!important;flex-direction:column!important;gap:6px!important}
+#resObjChips .chip{display:block!important;height:auto!important;min-height:0!important;margin:0!important;width:100%!important;white-space:normal!important;word-break:normal!important;font:600 13px/1.35 Manrope,system-ui,sans-serif!important;padding:8px 10px!important;text-align:left!important}
+#btnResultNext:not(.v11rem),#btnResAction{color:#10191A!important}
+#btnResultNext:not(.v11rem) small,#btnResAction small{color:#24331f!important;opacity:.85}
+</style>
+<style>
+/* v1.67 ChatGPT round 3 (match flow 7.7/10): result first on the details screen, pinned Next fixture, clear XP names */
+@media (max-width:700px){
+ #result .rx-left{display:flex!important;flex-direction:column}
+ #result .rx-left>*{order:3}
+ #result .rx-left>#resTitle{order:0}
+ #result .rx-left>#resSub{order:1}
+ #result .rx-left>.res-score{order:2;margin:8px 0 14px!important}
+ #btnResAction{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:0 -8px 24px rgba(16,25,26,.9)}
+}
+</style>
+<script>
+// v1.68 avatars: portraits drawn before your chosen character loaded were cached as the default bloke. Redraw once it's in.
+let __avN=0;setInterval(()=>{try{if(!window.__avPending||__avN>12)return;__avN++;window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}catch(e){}},2500);
+document.addEventListener('tops-avatars',()=>{try{if(typeof S!=='undefined'&&S&&!S.done)return;if(document.querySelector('#hub:not([hidden])')){const t=hubTab.cur;showHub();try{if(t)hubTab(t);}catch(e){}}else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}});
+</script>
+<script>
+// v1.69 one-time migration: collectible kit slots moved from look.kit (clashed with the shirt kit picker) to look.tkit
+(function(){try{const L=save.look;if(L&&L.kit&&typeof L.kit==='object'){L.tkit=Object.assign({},L.tkit||{},L.kit);L.kit=null;persist();}}catch(e){}})();
+</script>
