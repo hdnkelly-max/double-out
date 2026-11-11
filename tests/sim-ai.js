@@ -57,11 +57,16 @@ const SETS=[['club','club',0],['none',null,null],['old rookie save','rookie',0],
   await p.reload();await p.waitForTimeout(4000);
   move.push(await p.evaluate(()=>{const c=career();save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};const want=TOPS_OPP_SHIFT(70,2);const stored=c.next.oppAvg;beginMatch({mode:'career',tier:2,p0:'T',oppName:c.next.oppName,oppAvg:c.next.oppAvg,legs:1});const got=S.oppAvg;try{S.done=true;}catch(e){}return {lv:save.diff.lv,was:save.diff.lvWas,stored,got,want};}));}
  // (e) The Run: every stage tougher than the one before, the boss above its stage's regulars, on every setting
- const run=await p.evaluate(()=>{const out=[];for(const lv of ['club']){save.diff={lv,darts:999,pts:0,place:0};newCareer();const c=career();c.run=true;c.stage=null;const row=[];
+ const run=await p.evaluate(({LEGS})=>{const out=[];for(const lv of ['club']){save.diff={lv,darts:999,pts:0,place:0};newCareer();const c=career();c.run=true;c.stage=null;const row=[];
   for(let t=0;t<7;t++){c.tier=t;const reg=[],boss=[];for(let w=0;w<2;w++){c.tierWins=w;for(let k=0;k<12;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}}
    c.tierWins=2;for(let k=0;k<6;k++){c.next=null;let n;try{n=nextOpponent();}catch(e){n=null;}if(n&&n.oppAvg>0)(n.decider||n.boss?boss:reg).push(n.oppAvg);}
-   row.push({t,reg:Math.max(...reg),regMin:Math.min(...reg),boss:boss.length?Math.max(...boss):null});}
-  c.run=false;out.push({lv,row});}return out;});
+   // the tougher route card (+3, Hayden 22:54): the strongest one this stage can offer, simulated on its own below
+   let rt=0;for(let k=0;k<12;k++){c.tierWins=k%2;c.wins=k;c.losses=0;c.routeOpts=null;try{const ns=runRouteNodes(c);ns.forEach(n=>{if(!n.boss)rt=Math.max(rt,n.oppAvg);});}catch(e){}}
+   row.push({t,reg:Math.max(...reg),regMin:Math.min(...reg),boss:boss.length?Math.max(...boss):null,route:rt||null});}
+  c.run=false;out.push({lv,row});}
+  // simulate each stage's toughest route opponent (same leg model as the field)
+  out.forEach(({row})=>row.forEach(r=>{if(!r.route)return;let d=0,p2=0;const temps=Object.keys(TEMPER);const base=aiBaseSigma(r.route,r.t);for(let i=0;i<LEGS;i++){let sc=501,dd=0,pp=0;for(let v=0;v<60&&sc>0;v++){const st=sc;let vis=0,bust=false;for(let k=1;k<=3;k++){const lbl=aimFor(sc,4-k);const tg=targetPoint(lbl);const h=scoreAt(tg.x+gauss()*base,tg.y+gauss()*base);dd++;const ns=sc-h.v;if(ns<0||ns===1||(ns===0&&!h.dbl)){bust=true;break;}sc=ns;vis+=h.v;if(sc===0)break;}if(bust){sc=st;vis=0;}pp+=vis;}d+=dd;p2+=pp;}r.routeAvg=+(p2/d*3).toFixed(1);}));
+  return out;},{LEGS});
  // (f) a save written by v1.75: next opponent already shifted (+8 Rookie/placement 14 style), revenge stored, placement set
  await p.evaluate(()=>{save.diff={lv:'rookie',darts:600,pts:40000,place:14,placeAvg:74.6};newCareer();const c=career();c.tier=1;c.stage=null;c.next={oppName:'Old Stored',oppAvg:75,legs:3,_d:1};c.v3=c.v3||{};C3.V3().rev={name:'Rev Guy',avg:79,stake:45};persist();});
  await p.reload();await p.waitForTimeout(4000);
@@ -73,8 +78,8 @@ const SETS=[['club','club',0],['none',null,null],['old rookie save','rookie',0],
   legacy.push(await p.evaluate(()=>{const d=save.diff;save.authSeen=true;$('login').hidden=true;newCareer();const c=career();c.tier=1;c.stage=null;c.season=null;c.next=null;const n=nextOpponent();return {place:d.place,placeNew:d.placeNew,opp:n.oppAvg,raw:n.oppRaw};}));}
  await b.close();
  const fails=[];
- run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} not above its regulars ${r.reg}`);});});
- console.log('The Run: '+run.map(({lv,row})=>lv+' '+row.map(r=>r.reg+(r.boss!=null?'/B'+r.boss:'')).join(' > ')).join(' · '));
+ run.forEach(({lv,row})=>{row.forEach((r,i)=>{if(r.routeAvg!=null&&r.routeAvg>BANDS[r.t][1]+5)fails.push(`The Run ${lv}: stage ${i} tougher route (target ${r.route}) sims at ${r.routeAvg}, more than 5 over band top ${BANDS[r.t][1]}`);if(i&&!(r.regMin>row[i-1].reg-6))0;if(i&&!(r.reg>row[i-1].reg))fails.push(`The Run ${lv}: stage ${i} regulars (${r.reg}) not above stage ${i-1} (${row[i-1].reg})`);if(r.boss!=null&&!(r.boss>r.reg))fails.push(`The Run ${lv}: stage ${i} boss ${r.boss} not above its regulars ${r.reg}`);});});
+ console.log('The Run: '+run.map(({lv,row})=>lv+' '+row.map(r=>r.reg+(r.boss!=null?'/B'+r.boss:'')+(r.route?'/R'+r.route+'→'+r.routeAvg:'')).join(' > ')).join(' · '));
  // a stored v1.75 opponent may be one of the tier's strongest (revenge, deciders) but never above the strongest the tier serves today
  const BND=BANDS[1],CLUBMAX=(res.find(r=>r.set==='club'&&r.tier===1)||{}).targetMax||BND[1]+3;if(stale.next>CLUBMAX)fails.push(`stored v1.75 opponent still inflated after update (above ${CLUBMAX}): ${JSON.stringify(stale)}`);if(stale.rev>CLUBMAX)fails.push(`stored v1.75 revenge still inflated (above ${CLUBMAX}): ${JSON.stringify(stale)}`);
  console.log('stale v1.75 save: '+JSON.stringify(stale));

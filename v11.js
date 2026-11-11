@@ -139,6 +139,8 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // inside the band (lv is always 'club' since v1.80; the Competitive/Rookie branches are inert)
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
+ // The Run's tougher route may sit above the band, but its target stays at most 4 over the band top so it sims inside the +5 hard cap (sim-ai)
+ window.TOPS_ROUTE_CAP=t=>BAND[tierOf(t)][1]+4;
  // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
  // Undo the old offset (level + placement, read before placement is cleared), then shift once with the new rule. New-code opponents carry oppRaw and _d=2.
  const migrateSave=()=>{try{const d=save.diff,c=save.career;if(!c&&!d)return;let ch=false;
@@ -149,14 +151,16 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   // v1.80 (Hayden 21:52): the difficulty setting is gone; everyone plays Club. Rookie and Competitive saves move to Club,
   // and a queued next opponent is re-derived from its raw rating so it plays at Club straight away (also future band tweaks).
   if(d&&d.lv!=='club'){d.lvWas=d.lv;d.lv='club';ch=true;}
-  if(c&&c.next&&c.next.oppRaw!=null&&!c.next.intro){const a=shift(c.next.oppRaw,c.tier);if(a!==c.next.oppAvg){c.next.oppAvg=a;ch=true;}}
+  if(c&&c.next&&c.next.oppRaw!=null&&!c.next.intro){const a=shift(c.next.oppRaw,c.tier)+(c.next.routeAdj||0);if(a!==c.next.oppAvg){c.next.oppAvg=a;ch=true;}}
+  // The Run: cached route cards re-derive from the raw rating plus the route's own deliberate difference (+3 tougher / -2 softer), so card = match (Hayden 22:54)
+  if(c&&c.routeOpts&&Array.isArray(c.routeOpts.nodes))c.routeOpts.nodes.forEach(n=>{if(n&&n.oppRaw!=null&&!n.intro){const tt=c.routeOpts.tier!=null?c.routeOpts.tier:c.tier;if(n.routeAdj==null)n.routeAdj=Math.max(-2,Math.min(3,n.oppAvg-shift(n.oppRaw,tt)));const a=shift(n.oppRaw,tt)+n.routeAdj;if(a!==n.oppAvg){n.oppAvg=a;ch=true;}}});
   if(ch)persist();}catch(e){console.warn('v11 migrate',e);}};
  migrateSave();window.TOPS_v11Migrate=migrateSave;
  // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
  const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
  const SHIFTED=new WeakSet();
  const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
-  else if(opts&&viaNext&&c.next.oppRaw!=null){const a=shift(c.next.oppRaw,opts.tier);opts=Object.assign({},opts,{oppRaw:c.next.oppRaw,oppAvg:a});c.next.oppAvg=a;}}catch(e){}
+  else if(opts&&viaNext&&c.next.oppRaw!=null){const a=shift(c.next.oppRaw,opts.tier)+(c.next.routeAdj||0);opts=Object.assign({},opts,{oppRaw:c.next.oppRaw,oppAvg:a});c.next.oppAvg=a;}}catch(e){}
   const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);

@@ -21,7 +21,16 @@ const {chromium}=require('playwright');const path=require('path');
  const first=await p.evaluate(async()=>{localStorage.clear();delete save.diff;save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=0;c.bank=500;persist();playNext();
   await new Promise(r=>setTimeout(r,800));const msg=document.getElementById('msg');const asked=!!(msg&&!msg.hidden&&/how hard/i.test(msg.textContent));const playing=!!(S&&!S.done);try{S.done=true;}catch(e){}return {asked,playing,lv:save.diff&&save.diff.lv};});
  if(first.asked)f.push('a new career still asks for a difficulty');if(first.lv!=='club')f.push('new career not on Club: '+JSON.stringify(first));
+ // The Run: route B keeps its deliberate difference (+3 tougher pays draft 5 / -2 softer pays 3), and every match plays what its card says (QA 22:27, Hayden 22:54)
+ const run=await p.evaluate(()=>{const out=[];for(let t=0;t<6;t++){newCareer();const c=career();c.run={stage:0};c.tier=t;c.stage=null;c.wins=t;c.losses=0;c.routeOpts=null;
+   const nodes=runRouteNodes(c);const cards=nodes.map(n=>n.oppAvg);const played=nodes.map(n=>{c.next=n;beginMatch({mode:'career',tier:t,p0:'P',oppName:n.oppName,oppAvg:n.oppAvg,legs:1});const v=S.oppAvg;try{S.done=true;}catch(e){}return v;});
+   const hi=nodes[0].oppAvg>nodes[1].oppAvg?nodes[0]:nodes[1];out.push({t,boss:!!nodes[0].boss,cards,played,tougherDraft:hi.draftWin});}
+  // a 1.80 save with a cached route card at +3 comes back matching its match
+  newCareer();const c=career();c.run={stage:0};c.tier=2;c.stage=null;c.wins=1;c.losses=0;c.routeOpts=null;const nodes=runRouteNodes(c);const want=nodes.map(n=>n.oppAvg);nodes.forEach(n=>{delete n.routeAdj;});persist();
+  TOPS_v11Migrate();const fixed=c.routeOpts.nodes.every((n,i)=>n.oppAvg===want[i]);c.run=null;return {out,fixed};});
+ run.out.forEach(r=>{if(!r.boss&&r.cards[0]===r.cards[1])f.push(`The Run tier ${r.t}: routes have the same strength ${r.cards.join('/')} (the tougher route should show it)`);if(!r.boss&&r.tougherDraft!==5)f.push(`The Run tier ${r.t}: the tougher route doesn't pay the bigger draft`);r.cards.forEach((v,i)=>{if(r.played[i]!==v)f.push(`The Run tier ${r.t}: route ${'AB'[i]} card ${v} plays ${r.played[i]}`);});});
+ if(!run.fixed)f.push('a cached 1.80 route card loses its route difference on load');
  await p.evaluate(()=>{showHub();});await p.waitForTimeout(2000);
  if(await p.evaluate(()=>!!document.querySelector('.v11diff')))f.push('difficulty chip still on the hub');
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
- await b.close();if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: one setting (Club) after load, sign-in adopt and other-device adopt; queued opponent re-derived ('+want+'); no picker, no chip');})();
+ await b.close();if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: one setting (Club) after load, sign-in adopt and other-device adopt; queued opponent re-derived ('+want+'); no picker, no chip; The Run tougher route shown and pays more, card = match');})();
