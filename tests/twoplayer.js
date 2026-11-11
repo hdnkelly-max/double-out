@@ -61,7 +61,7 @@ const STUB = () => {
   for (const p of [host, guest]) await p.evaluate(() => { window.__vl = []; const _vr = visitReceipt; visitReceipt = function () { const r = _vr.apply(this, arguments); try { const R = S.lastRec || {}; const who = S.p[R.who != null ? R.who : S.cur]; window.__vl.push([who && who.name, R.tot, S.p.map(q => q.name + '=' + q.score).sort().join('/')]); } catch (e) {} return r; }; });
   if (process.env.DBG) { await host.waitForTimeout(15000); console.log('  dbg', JSON.stringify(await Promise.all([host, guest].map(p => p.evaluate(() => S && { bull: S.bull, busy: S.busy, cur: S.cur, dart: S.dart, v: S.visit.length, me: S.p.findIndex(q => q.key === NET.myId), keys: S.p.map(q => q.key), my: NET.myId, mode: ui.mode, q: NET.queue.length, qs: NET.queue.slice(0,2), intro: $('intro').classList.contains('show'), netAnim: S.netAnim, busyLeg: S.busyLeg, seen: Object.keys(NET.seen).length }))))); }
   const t0 = Date.now(); let st = ['', ''];
-  while (Date.now() - t0 < 360000) {
+  while (Date.now() - t0 < (+process.env.TMAX || 360000)) {
     st = await Promise.all([host, guest].map(p => p.evaluate(() => { try {
       if (!S) return 'nomatch'; if (S.done) return 'done';
       const me = S.p.findIndex(q => q.key === NET.myId);
@@ -71,6 +71,7 @@ const STUB = () => {
       return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(e => 'ERR ' + e.message)));
     if (st.every(s => s === 'done') || st.some(s => s.startsWith('ERR'))) break; if (process.env.DBG && (Date.now()-t0) % 15000 < 120) console.log('  dbg', JSON.stringify(await Promise.all([host, guest].map(p => p.evaluate(() => S && { bull: S.bull, busy: S.busy, cur: S.cur, dart: S.dart, v: S.visit.length, me: S.p.findIndex(q => q.key === NET.myId), keys: S.p.map(q => q.key), my: NET.myId, mode: ui.mode }))))); await host.waitForTimeout(60); }
   const res = await Promise.all([host, guest].map(p => p.evaluate(() => ({ done: !!(S && S.done), legs: S ? S.p.map(q => q.legs) : null, names: S ? S.p.map(q => q.name) : null, scores: S ? S.p.map(q => q.score) : null, vl: window.__vl || [] }))));
+  if (process.env.DBG) { console.log('  HOSTLOG', JSON.stringify(res[0].vl)); console.log('  GUESTLOG', JSON.stringify(res[1].vl)); console.log('  END', JSON.stringify(await Promise.all([host, guest].map(p => p.evaluate(() => S && { cur: S.cur, busy: S.busy, dart: S.dart, v: S.visit.length, netAnim: S.netAnim, q: NET.queue.length, qs: NET.queue.slice(0,3).map(m => [m.from.slice(0,4), m.dart, m.leg]), scores: S.p.map(q => q.name + '=' + q.score), intro: $('intro').classList.contains('show'), busyLeg: S.busyLeg }))))); }
   notes.push(`match: host ${JSON.stringify({ legs: res[0].legs, names: res[0].names })} · guest ${JSON.stringify({ legs: res[1].legs, names: res[1].names })} · visits ${res[0].vl.length}/${res[1].vl.length} · states ${st.join('/')}`);
   if (!res[0].done || !res[1].done) fails.push(`match did not finish on both phones within 6 min (host ${st[0]}, guest ${st[1]})`);
   else if (JSON.stringify(res[0].legs) !== JSON.stringify([...res[1].legs].reverse())) fails.push(`legs differ: host ${res[0].legs} vs guest ${res[1].legs}`);
