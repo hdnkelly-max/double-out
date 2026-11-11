@@ -47,7 +47,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 #lvFirst{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 42%,#3a2a0c,#0b0c0f 72%);color:#f1e6c8;text-align:center;padding:24px;cursor:pointer}
 #lvFirst .k{font:700 13px Manrope,system-ui,sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#d6b25e;animation:lvUp .5s .1s}
 #lvFirst .n{font:900 88px/1 Barlow,system-ui,sans-serif;background:linear-gradient(180deg,#fff1bf,#d6a640 60%,#9a6d1e);-webkit-background-clip:text;background-clip:text;color:transparent;animation:lvBig .7s .25s cubic-bezier(.2,.75,.2,1);filter:drop-shadow(0 6px 18px rgba(214,166,64,.45))}
-#lvFirst .s{font:600 15px/1.4 Manrope,system-ui,sans-serif;max-width:300px;margin-top:14px;animation:lvUp .5s .8s}
+#lvFirst .s{font:600 15px/1.4 Manrope,system-ui,sans-serif;max-width:300px;margin-top:14px;animation:lvUp .5s .8s}#lvFirst .s2{margin-top:8px;font-size:14px;color:#d9ccaa}
 #lvFirst .t{margin-top:26px;font:700 12px Manrope,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#d6b25e;animation:lvUp .5s 1.4s}
 #lvFirst .ring{position:absolute;width:220px;height:220px;border-radius:50%;border:2px solid rgba(246,220,146,.6);opacity:0;animation:lvRing 1.2s .25s ease-out forwards}
 @keyframes lvUp{from{transform:translateY(8px)}to{transform:none}}
@@ -131,8 +131,12 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // ---- 4. a bigger first level-up: full-screen reveal the first time the reward card unlocks something ----
  const lvReveal=(unl)=>{const lab=(unl.querySelector('small')||{}).textContent||'';const m=lab.match(/Level (\d+)/);const lv=m?m[1]:'2';
    const item=(unl.querySelector('b')||{}).textContent||'';const ico=unl.querySelector('.ri');
-   const o=document.createElement('div');o.id='lvFirst';o.innerHTML=`<div class="ring"></div><div class="k">Level up</div><div class="n">${lv}</div><div class="s">${item?`<b style="display:block;font:800 22px Barlow,system-ui,sans-serif;letter-spacing:.04em;color:#fff1bf;margin-bottom:6px">${item}</b>`:''}Your first unlock. Every level from here adds something to your kit, your look or your name.</div><div class="t">Tap to equip</div>`;
-   if(ico){const c=ico.cloneNode(true);c.style.cssText='display:block;width:96px;height:96px;margin:18px auto 0;animation:lvUp .5s .6s';const im=c.querySelector('img');if(im)im.style.cssText='width:96px;height:96px;object-fit:contain';o.querySelector('.s').after(c);}
+   const o=document.createElement('div');o.id='lvFirst';o.innerHTML=`<div class="ring"></div><div class="k">Level up</div><div class="n">${lv}</div>${item?`<div class="s"><b style="display:block;font:800 22px Barlow,system-ui,sans-serif;letter-spacing:.04em;color:#fff1bf">${item}</b></div>`:''}<div class="s s2">Your first unlock. Every level adds something new.</div><div class="t">Tap to continue</div>`;
+   // the unlocked item is the star: the dart render 210 px wide straight under its name, angled like the reward card, on a soft spotlight (ChatGPT 00:08)
+   if(ico){const c=ico.cloneNode(true);const dart=c.classList.contains('ri-dart');const im=c.querySelector('img');
+     if(dart){c.style.cssText='display:block;position:relative;width:210px;height:66px;margin:22px auto 4px;background:radial-gradient(ellipse at 50% 55%,rgba(214,166,64,.22),transparent 70%);animation:lvUp .5s .6s';if(im)im.style.cssText='width:210px;height:66px;object-fit:contain;transform:rotate(-9deg);filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))';}
+     else{c.style.cssText='display:block;width:120px;height:120px;margin:18px auto 4px;animation:lvUp .5s .6s';if(im)im.style.cssText='width:120px;height:120px;object-fit:contain';}
+     (o.querySelector('.s:not(.s2)')||o.querySelector('.n')).after(c);}
    document.body.appendChild(o);try{sfxLevel();setTimeout(()=>{try{sfxCheer(false);}catch(e){}},350);}catch(e){}try{confetti(1);}catch(e){}
    let gone=false;const go=()=>{if(gone)return;gone=true;o.style.transition='opacity .25s';o.style.opacity='0';setTimeout(()=>o.remove(),260);};o.onclick=go;setTimeout(go,5000);};
  new MutationObserver(()=>{try{const u=$('c3rwUnl');if(!u||u.hidden||u.dataset.v11||save.lvFirstSeen)return;u.dataset.v11=1;if(!/Level \d+ unlocked/.test(u.textContent))return;save.lvFirstSeen=true;try{persist();}catch(e){}setTimeout(()=>lvReveal(u),250);}catch(e){}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden'],childList:true});
