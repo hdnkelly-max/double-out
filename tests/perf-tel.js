@@ -16,7 +16,7 @@ const {chromium}=require('playwright');const path=require('path');
   window.TOPS_PERF_30=3000;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:3});});
  await p.waitForTimeout(2500);await p.evaluate(()=>{if(S&&S.bull)S.bull=null;S.busy=false;S.cur=0;/* the 'who throws first, tap to continue' card, as a player's tap */});
  // aim input (real pointer events) so the reticle latency has samples
- await p.evaluate(()=>{for(let k=0;k<5;k++)setTimeout(()=>window.dispatchEvent(new PointerEvent('pointermove',{pointerType:'touch',pointerId:3,clientX:200+k,clientY:300,bubbles:true})),k*400);});
+ await p.evaluate(()=>{for(let k=0;k<5;k++)setTimeout(()=>document.querySelector('canvas').dispatchEvent(new PointerEvent('pointermove',{pointerType:'touch',pointerId:3,clientX:200+k,clientY:300,bubbles:true})),k*400);});
  // wait for the 30 s checkpoint (3 s here) to upload at a safe moment
  for(let i=0;i<40;i++){await p.waitForTimeout(500);if(await p.evaluate(()=>__rows.some(r=>r.phase==='30s')))break;}
  const r30=await p.evaluate(()=>__rows.find(r=>r.phase==='30s')||null);
@@ -24,18 +24,18 @@ const {chromium}=require('playwright');const path=require('path');
   if(r30.dev&&(r30.dev.ua||/Mozilla\//.test(JSON.stringify(r30))))f.push('raw user-agent stored');if(!r30.dev||!r30.dev.device_class)f.push('no device_class');}
  // hidden = pause: checkpoint stored locally, no network; then resume
  const hid=await p.evaluate(async()=>{const n0=__rows.length;const vis0=TOPS_perf.m.vis;let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));
-  const q=TOPS_perf.queue().filter(r=>String(r.sample_id).startsWith('ck-'));await new Promise(r=>setTimeout(r,2000));const visHidden=TOPS_perf.m.vis-vis0;
-  hidden=false;document.dispatchEvent(new Event('visibilitychange'));return {ck:q.length,net:__rows.length-n0,visHidden,still:!!TOPS_perf.m&&!TOPS_perf.m.done,mid:TOPS_perf.m&&TOPS_perf.m.id};});
- if(hid.ck!==1)f.push('hidden: no local checkpoint ('+hid.ck+')');if(hid.net)f.push('hidden: sent to the network');if(hid.visHidden>50)f.push('hidden time counted as play: '+hid.visHidden+' ms');if(!hid.still)f.push('hidden ended the match');
+  const q=[JSON.parse(localStorage.getItem('tops_perfck')||'null')].filter(Boolean);const inQueue=TOPS_perf.queue().filter(r=>String(r.sample_id).startsWith('ck-')).length;await new Promise(r=>setTimeout(r,2000));const visHidden=TOPS_perf.m.vis-vis0;
+  hidden=false;document.dispatchEvent(new Event('visibilitychange'));return {ck:q.length,inQueue,net:__rows.length-n0,visHidden,still:!!TOPS_perf.m&&!TOPS_perf.m.done,mid:TOPS_perf.m&&TOPS_perf.m.id};});
+ if(hid.ck!==1)f.push('hidden: no local checkpoint ('+hid.ck+')');if(hid.inQueue)f.push('hidden checkpoint put in the upload queue (would upload with the next send)');if(hid.net)f.push('hidden: sent to the network');if(hid.visHidden>50)f.push('hidden time counted as play: '+hid.visHidden+' ms');if(!hid.still)f.push('hidden ended the match');
  await p.waitForTimeout(1500);
  // injected 120 ms stall during the next frame
  await p.evaluate(()=>{requestAnimationFrame(()=>{const t=performance.now();while(performance.now()-t<120);});});await p.waitForTimeout(2500);
  const mid=await p.evaluate(()=>({c100:TOPS_perf.m.c100,inc:TOPS_perf.m.inc.slice()}));
  if(mid.c100<1)f.push('injected 120 ms stall not counted');if(!mid.inc.some(i=>i.f>=100&&i.ph))f.push('no incident with a phase for the stall: '+JSON.stringify(mid.inc.slice(0,3)));
  // end the match
- const end=await p.evaluate(async()=>{S.won=true;endMatch();await new Promise(r=>setTimeout(r,5000));return {rows:__rows.filter(r=>r.phase==='end'),q:TOPS_perf.queue()};});
+ const end=await p.evaluate(async()=>{S.won=true;endMatch();await new Promise(r=>setTimeout(r,5000));return {rows:__rows.filter(r=>r.phase==='end'),all:__rows.slice(),q:TOPS_perf.queue(),ck:localStorage.getItem('tops_perfck')};});
  const re=end.rows[0];if(end.rows.length!==1)f.push('end rows: '+end.rows.length);else{if(re.status!=='complete')f.push('end status '+re.status);if(r30&&re.match_id!==r30.match_id)f.push('30 s and end rows have different match ids');if(re.stalls100<1)f.push('end row lost the stall');if(!(re.reticle_n>=1))f.push('no reticle latency samples from the aim input: '+re.reticle_n);}
- if(end.q.some(r=>String(r.sample_id).startsWith('ck-')))f.push('the hidden checkpoint was not replaced by the finished match');
+ if(end.q.some(r=>String(r.sample_id).startsWith('ck-'))||end.ck)f.push('the hidden checkpoint survived the finished match');if(end.all.some(r=>r.status==='interrupted'))f.push('an interrupted row was uploaded for a match that finished');if(re&&re.audio_issue_n)f.push('audio issues reported with no audio problem: '+re.audio_issue_n+' '+JSON.stringify(re.audio));
  // Overseer 07:56: per-match memory and session fields, version on every funnel event
  if(re){for(const k of ['match_index','app_secs','geometries','textures','programs','tex_mb'])if(re[k]==null)f.push('end row missing '+k);if(!re.mem||!re.mem.start||!re.mem.now)f.push('end row missing mem start/now');}
  const fv=await p.evaluate(()=>(save.funnel||[]).slice(-5).map(e=>e.v));if(!fv.length||fv.some(v=>!v))f.push('funnel events without a version: '+JSON.stringify(fv));
@@ -46,7 +46,11 @@ const {chromium}=require('playwright');const path=require('path');
  // match index counts up across matches in one session
  const ix=await p.evaluate(async()=>{const out=[];for(let i=0;i<2;i++){window.__rows.length=0;NET.user={id:'u1'};beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});out.push(TOPS_perf.m&&TOPS_perf.m.ix);await new Promise(r=>setTimeout(r,200));}return out;});
  if(!(ix[1]===ix[0]+1&&ix[0]>=3))f.push('match index does not count up per match: '+JSON.stringify(ix));
- const cost=await p.evaluate(()=>TOPS_perf.bench(20000));if(cost.p95>50||cost.max>500)f.push('per-frame bookkeeping too slow: '+JSON.stringify(cost));
+ const cost=await p.evaluate(()=>TOPS_perf.bench(20000));if(cost.p95>50||cost.call_p95>50||cost.call_max>500)f.push('per-frame bookkeeping too slow: '+JSON.stringify(cost));
+ // a session killed while hidden: its checkpoint becomes one interrupted row on the next load (and isn't lost)
+ await p.evaluate(()=>{try{S.won=true;endMatch();}catch(e){}localStorage.setItem('tops_perfq','[]');localStorage.setItem('tops_perfck',JSON.stringify({sample_id:'ck-zz',match_id:'zz',phase:'end',status:'interrupted'}));});
+ await p.reload();await p.waitForTimeout(4500);const k=await p.evaluate(()=>({ck:localStorage.getItem('tops_perfck'),q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').map(r=>[r.match_id,r.status,String(r.sample_id).startsWith('ck-')])}));
+ if(k.ck||k.q.length!==1||k.q[0][0]!=='zz'||k.q[0][1]!=='interrupted'||k.q[0][2])f.push('killed-while-hidden checkpoint not promoted once with a fresh id: '+JSON.stringify(k));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
  console.log(JSON.stringify({r30:r30&&{fps:r30.fps,p95:r30.p95,frame_n:r30.frame_n,dev:r30.dev,reticle_n:r30.reticle_n},end:re&&{status:re.status,stalls100:re.stalls100,max_ms:re.max_ms,incidents:(re.incidents||[]).slice(0,2),draws_max:re.draws_max,reticle_n:re.reticle_n,reticle_p95:re.reticle_p95,match_index:re.match_index,app_secs:re.app_secs,geometries:re.geometries,textures:re.textures,programs:re.programs,tex_mb:re.tex_mb},cost}));
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: 30 s checkpoint + end row (same match), hidden is a pause, stall caught with its phase, quit sends nothing, guest queue bounded, bookkeeping p95 '+cost.p95+' us / max '+cost.max+' us per frame');})();
