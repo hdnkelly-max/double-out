@@ -226,3 +226,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 let __avN=0;setInterval(()=>{try{if(!window.__avPending||__avN>12)return;__avN++;window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}catch(e){}},2500);
 document.addEventListener('tops-avatars',()=>{try{if(typeof S!=='undefined'&&S&&!S.done)return;if(document.querySelector('#hub:not([hidden])')){const t=hubTab.cur;showHub();try{if(t)hubTab(t);}catch(e){}}else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}});
 </script>
+<script>
+// v1.69 one-time migration: collectible kit slots moved from look.kit (clashed with the shirt kit picker) to look.tkit
+(function(){try{const L=save.look;if(L&&L.kit&&typeof L.kit==='object'){L.tkit=Object.assign({},L.tkit||{},L.kit);L.kit=null;persist();}}catch(e){}})();
+</script>
