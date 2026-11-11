@@ -1,6 +1,6 @@
 # TOPS Pages deploy we control (SHIP-2 fallback, pre-approved by Hayden/Overseer 10:19).
 # Live only after Settings -> Pages -> Source = "GitHub Actions". Until then it does nothing on main.
-# On the deploy-fallback branch it is a dry run: builds and uploads the Pages artifact, never deploys.
+# Deploys main as-is on a hand push (ship.sh). release.yml pushes with GITHUB_TOKEN, so it doesn't trigger this. Same lock as release.yml.
 name: deploy
 on:
   push: { branches: [main] }
