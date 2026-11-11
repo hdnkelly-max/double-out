@@ -17,8 +17,18 @@ create table if not exists public.tops_perf (
   audio_issue_n int, audio jsonb,
   drift_max int, drift_n int, lt_n int, lt_ms int,
   draws_max int, tris_max int, heap_mb real,
-  incidents jsonb, dev jsonb
+  incidents jsonb, dev jsonb,
+  -- per-match memory (Overseer 07:56, #15: does anything grow from match 2 on?)
+  match_index int,          -- 1, 2, 3 ... matches since the app opened
+  app_secs int,             -- seconds since the app opened, at match start
+  geometries int, textures int, programs int,   -- three.js renderer.info at the time of the row
+  tex_mb real,              -- texture uploads since telemetry started (level 0, 4 B/px), minus deleted textures
+  mem jsonb                 -- {now:{geo,tex,prog,tex_mb,heap_mb}, start:{...}} so growth within a match is visible
 );
+-- if the table already exists from an earlier draft of this migration
+alter table public.tops_perf add column if not exists match_index int, add column if not exists app_secs int,
+  add column if not exists geometries int, add column if not exists textures int, add column if not exists programs int,
+  add column if not exists tex_mb real, add column if not exists mem jsonb;
 create index if not exists tops_perf_ver_at on public.tops_perf (ver, at);
 alter table public.tops_perf enable row level security;
 drop policy if exists tops_perf_insert_own on public.tops_perf;

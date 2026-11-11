@@ -36,11 +36,17 @@ const {chromium}=require('playwright');const path=require('path');
  const end=await p.evaluate(async()=>{S.won=true;endMatch();await new Promise(r=>setTimeout(r,5000));return {rows:__rows.filter(r=>r.phase==='end'),q:TOPS_perf.queue()};});
  const re=end.rows[0];if(end.rows.length!==1)f.push('end rows: '+end.rows.length);else{if(re.status!=='complete')f.push('end status '+re.status);if(r30&&re.match_id!==r30.match_id)f.push('30 s and end rows have different match ids');if(re.stalls100<1)f.push('end row lost the stall');if(!(re.reticle_n>=1))f.push('no reticle latency samples from the aim input: '+re.reticle_n);}
  if(end.q.some(r=>String(r.sample_id).startsWith('ck-')))f.push('the hidden checkpoint was not replaced by the finished match');
+ // Overseer 07:56: per-match memory and session fields, version on every funnel event
+ if(re){for(const k of ['match_index','app_secs','geometries','textures','programs','tex_mb'])if(re[k]==null)f.push('end row missing '+k);if(!re.mem||!re.mem.start||!re.mem.now)f.push('end row missing mem start/now');}
+ const fv=await p.evaluate(()=>(save.funnel||[]).slice(-5).map(e=>e.v));if(!fv.length||fv.some(v=>!v))f.push('funnel events without a version: '+JSON.stringify(fv));
  // short match quit: nothing sent; guest: queued, bounded
  const g=await p.evaluate(async()=>{const n0=__rows.length;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));const q=document.getElementById('btnQuit');if(q)q.click();
   await new Promise(r=>setTimeout(r,2500));const sent=__rows.length-n0;NET.user=null;TOPS_perf.send(Array.from({length:30},(_,i)=>({sample_id:'g'+i,match_id:'m',phase:'end'})));return {sent,q:TOPS_perf.queue().length};});
  if(g.sent)f.push('a quit before 30 frames sent a row');if(g.q>20)f.push('guest queue not bounded: '+g.q);
+ // match index counts up across matches in one session
+ const ix=await p.evaluate(async()=>{const out=[];for(let i=0;i<2;i++){window.__rows.length=0;NET.user={id:'u1'};beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:1});out.push(TOPS_perf.m&&TOPS_perf.m.ix);await new Promise(r=>setTimeout(r,200));}return out;});
+ if(!(ix[1]===ix[0]+1&&ix[0]>=3))f.push('match index does not count up per match: '+JSON.stringify(ix));
  const cost=await p.evaluate(()=>TOPS_perf.bench(20000));if(cost.p95>50||cost.max>500)f.push('per-frame bookkeeping too slow: '+JSON.stringify(cost));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
- console.log(JSON.stringify({r30:r30&&{fps:r30.fps,p95:r30.p95,frame_n:r30.frame_n,dev:r30.dev,reticle_n:r30.reticle_n},end:re&&{status:re.status,stalls100:re.stalls100,max_ms:re.max_ms,incidents:(re.incidents||[]).slice(0,2),draws_max:re.draws_max,reticle_n:re.reticle_n,reticle_p95:re.reticle_p95},cost}));
+ console.log(JSON.stringify({r30:r30&&{fps:r30.fps,p95:r30.p95,frame_n:r30.frame_n,dev:r30.dev,reticle_n:r30.reticle_n},end:re&&{status:re.status,stalls100:re.stalls100,max_ms:re.max_ms,incidents:(re.incidents||[]).slice(0,2),draws_max:re.draws_max,reticle_n:re.reticle_n,reticle_p95:re.reticle_p95,match_index:re.match_index,app_secs:re.app_secs,geometries:re.geometries,textures:re.textures,programs:re.programs,tex_mb:re.tex_mb},cost}));
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: 30 s checkpoint + end row (same match), hidden is a pause, stall caught with its phase, quit sends nothing, guest queue bounded, bookkeeping p95 '+cost.p95+' us / max '+cost.max+' us per frame');})();

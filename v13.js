@@ -17,13 +17,13 @@ function mode(){try{if(!S)return '?';if(S.online)return 'online';if(S.mp)return 
 function phase(){try{if(!S||S.done)return 'end';if(S.bull)return 'bull';if(S.pulling)return 'pull';if(S.p&&S.p[S.cur]&&S.p[S.cur].ai)return 'opp';if(S.busy)return 'flight';return 'aim';}catch(e){return '?';}}
 function newM(){return {id:uid(),t0:performance.now(),vis:0,last:0,skip:true,fh:hist(),rh:hist(),ih:hist(),fn:0,c33:0,c50:0,c100:0,max:0,inc:[],
  pend:0,lat:0,iN:0,i50:0,iNeg:0,cpu:0,draws:0,tris:0,infoAt:0,auN:0,auLast:0,auStates:[],drift:0,driftN:0,ltN:0,ltMs:0,
- want30:false,sent30:false,done:false,mode:mode(),tier:(S&&S.tier&&S.tier.n)||'',hid:0};}
+ want30:false,sent30:false,done:false,mode:mode(),tier:(S&&S.tier&&S.tier.n)||'',hid:0,ix:++MATCH_IX,app:Math.round(performance.now()/1000),mem0:mem()};}
 // --- the frame hook: wraps V.frame (called once per game frame from tick) ---
 function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);if(d>33)M.c33++;if(d>50){M.c50++;incident(d,now);}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
  M.skip=false;M.last=now;const counting=drawsOn&&now-M.infoAt>2000;if(counting){M.infoAt=now;drawN=0;triN=0;window.__tpDraw=true;}return counting;}
 function post(t0,t1,counting){M.cpu=t1-t0;bump(M.rh,M.cpu);if(counting){window.__tpDraw=false;if(drawN>M.draws)M.draws=drawN;if(triN>M.tris)M.tris=Math.round(triN);}
  if(M.pend){const lat=t1-M.pend;M.pend=0;if(lat<0)M.iNeg++;else{bump(M.ih,lat);M.iN++;M.lat=lat;if(lat>50)M.i50++;}}
- if(!M.sent30&&M.vis>=(window.TOPS_PERF_30||30000))M.want30=true;}
+ if(!M.sent30&&!M.want30&&M.vis>=(window.TOPS_PERF_30||30000)){M.want30=true;M.want30At=M.vis;}}
 if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf=V.frame;V.frame=function(now,st){
  if(!M||M.done||document.hidden)return vf.apply(this,arguments);
  const counting=pre(now);const t0=performance.now();try{return vf.apply(this,arguments);}finally{post(t0,performance.now(),counting);}};}
@@ -36,12 +36,26 @@ addEventListener('pointermove',e=>{if(M&&!M.done&&!M.pend)M.pend=e.timeStamp;},{
 // draw calls / triangles: counted for one frame every 2 s (the wrapper is a flag check otherwise)
 try{for(const C of [window.WebGLRenderingContext,window.WebGL2RenderingContext]){if(!C)continue;const P=C.prototype;
  for(const fn of ['drawElements','drawArrays']){const o=P[fn];if(!o||o.__tp)continue;const w=function(){if(window.__tpDraw){drawN++;triN+=(+arguments[fn==='drawElements'?1:2]||0)/3;}return o.apply(this,arguments);};w.__tp=true;P[fn]=w;}}drawsOn=true;}catch(e){}
+// live texture memory estimate (uploads after this script loads; renderer.info has the full counts): level-0 uploads x 4 bytes/pixel per texture (cube maps sum their faces), freed on deleteTexture
+let texBytes=0;const TEXB=new WeakMap();
+try{for(const C of [window.WebGLRenderingContext,window.WebGL2RenderingContext]){if(!C)continue;const P=C.prototype;
+ const dims=a=>{if(typeof a[3]==='number'&&typeof a[4]==='number'&&a.length>=8)return [a[3],a[4]];const src=a[a.length-1];if(!src)return null;const w=src.videoWidth||src.naturalWidth||src.width,h=src.videoHeight||src.naturalHeight||src.height;return w&&h?[w,h]:null;};
+ const note=function(gl,target,level,d,faceKey){if(level!==0||!d)return;const cube=target!==gl.TEXTURE_2D;const t=gl.getParameter(cube?gl.TEXTURE_BINDING_CUBE_MAP:gl.TEXTURE_BINDING_2D);if(!t)return;
+  let e=TEXB.get(t);if(!e){e={};TEXB.set(t,e);}const k=cube?String(target):'2d';const nb=d[0]*d[1]*4;texBytes+=nb-(e[k]||0);e[k]=nb;};
+ for(const fn of ['texImage2D','compressedTexImage2D']){const o=P[fn];if(!o||o.__tp)continue;const w=function(){try{note(this,arguments[0],arguments[1],dims(arguments));}catch(e){}return o.apply(this,arguments);};w.__tp=true;P[fn]=w;}
+ if(P.texStorage2D&&!P.texStorage2D.__tp){const o=P.texStorage2D;const w=function(target,levels,fmt,wd,ht){try{note(this,target===this.TEXTURE_CUBE_MAP?this.TEXTURE_CUBE_MAP_POSITIVE_X:target,0,[wd*(target===this.TEXTURE_CUBE_MAP?6:1),ht]);}catch(e){}return o.apply(this,arguments);};w.__tp=true;P.texStorage2D=w;}
+ const od=P.deleteTexture;if(od&&!od.__tp){const w=function(t){try{const e=t&&TEXB.get(t);if(e){for(const k in e)texBytes-=e[k];TEXB.delete(t);}}catch(x){}return od.apply(this,arguments);};w.__tp=true;P.deleteTexture=w;}}}catch(e){}
+function mem(){const o={geo:null,tex:null,prog:null,tex_mb:+(texBytes/1048576).toFixed(1),heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1048576).toFixed(1):null};
+ try{const r=window.TOPS_R;if(r&&r.info){o.geo=r.info.memory.geometries;o.tex=r.info.memory.textures;o.prog=r.info.programs?r.info.programs.length:null;}}catch(e){}return o;}
+let MATCH_IX=0;
+// every funnel event carries the version (the gap found 07:10: match_exit rows had no version)
+if(typeof trackEv==='function'){const te=trackEv;trackEv=function(){const L0=(save.funnel||[]).length;const r=te.apply(this,arguments);try{const L=save.funnel;if(L&&L.length>L0)L[L.length-1].v=VER();}catch(e){}return r;};}
 // long tasks where supported (not iOS Safari)
 try{if(window.PerformanceObserver&&(PerformanceObserver.supportedEntryTypes||[]).includes('longtask')){ltObs=new PerformanceObserver(l=>{if(!M||M.done)return;for(const e of l.getEntries()){M.ltN++;M.ltMs+=e.duration;}});ltObs.observe({type:'longtask',buffered:false});}}catch(e){}
 // timer drift (main-thread stall proxy for iOS) + the safe-moment check for the 30 s upload; one 250 ms timer, idle when no match or hidden
 let exp=0;setInterval(()=>{const t=performance.now();if(!M||M.done||document.hidden){exp=0;return;}if(exp){const d=t-exp;if(d>M.drift)M.drift=d;if(d>100)M.driftN++;}exp=t+250;
- if(M.want30&&!M.sent30&&safe()){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}watchAudio();},250);
-function safe(){try{return S&&!S.pulling&&!S.busy&&!S.bull;}catch(e){return false;}}
+ if(M.want30&&!M.sent30&&(safe()||(M.vis-M.want30At>10000&&!(S&&S.pulling)))){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}watchAudio();},250);
+function safe(){try{return S&&!S.pulling&&!S.busy&&!S.bull;}catch(e){return false;}}/* preferred; after 10 s of play waiting, any moment the player isn't pulling */
 const idle=f=>{try{if(window.requestIdleCallback)return requestIdleCallback(f,{timeout:3000});}catch(e){}setTimeout(f,1500);};
 // audio: the game's AudioContext state changes (incl. iOS 'interrupted') and playbackStats underruns where the browser has them
 function watchAudio(){try{const c=(typeof AU!=='undefined')&&AU&&AU.ctx;if(!c||c===auCtx)return;auCtx=c;c.addEventListener('statechange',()=>{if(!M||M.done)return;M.auN++;M.auLast=performance.now();if(M.auStates.length<12)M.auStates.push(c.state+'@'+Math.round((M.auLast-M.t0)/1000));});}catch(e){}}
@@ -61,7 +75,7 @@ function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.f
   refresh_hz:p50?(p50<10?120:p50<13?90:60):null,fps:vs?+(M.fn/vs).toFixed(1):null,p50,p95:pct(fh,.95),p99:pct(fh,.99),pct33:+(M.c33/n*100).toFixed(2),pct50:+(M.c50/n*100).toFixed(2),stalls100:M.c100,max_ms:Math.round(M.max),
   render_p95:pct(M.rh,.95),reticle_p50:pct(M.ih,.5),reticle_p95:pct(M.ih,.95),reticle_max:M.iN?Math.round(Math.max(...Array.from(M.ih).map((v,i)=>v?i:0))):null,reticle_n:M.iN,reticle_slow:M.i50,
   audio_issue_n:M.auN,audio:audioInfo(),drift_max:Math.round(M.drift),drift_n:M.driftN,lt_n:M.ltN,lt_ms:Math.round(M.ltMs),draws_max:M.draws||null,tris_max:M.tris||null,
-  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,incidents:M.inc.slice().sort((a,b)=>b.f-a.f),dev:Object.assign({rpr:rpr()},dev())};}
+  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),dev:Object.assign({rpr:rpr()},dev())};}
 // --- transport: queue in localStorage (bounded), insert when signed in; duplicates ignored by sample_id ---
 function qGet(){try{return JSON.parse(localStorage.getItem(Q_KEY)||'[]');}catch(e){return [];}}
 function qSet(a){try{localStorage.setItem(Q_KEY,JSON.stringify(a.slice(-Q_MAX)));}catch(e){}}
