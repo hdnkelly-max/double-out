@@ -4,7 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -d node_modules/three ] || npm i --no-save three@0.128.0 >/dev/null
 # assets live on main; copy them in without staging them on this branch
-git fetch -q --depth=1 origin main
+# never make a full clone shallow (Shipping 21:34): shallow fetch only if this clone is already shallow
+if [ "$(git rev-parse --is-shallow-repository)" = true ]; then git fetch -q --depth=1 origin main; else git fetch -q origin main; fi
 git checkout origin/main -- img assets && git reset -q -- img assets
 # the dev index.html loads remy.glb; decode it from the base64 copy
 [ -f remy.glb ] || node -e "require('fs').writeFileSync('remy.glb',Buffer.from(require('fs').readFileSync('remy.b64.txt','utf8').trim(),'base64'))"
