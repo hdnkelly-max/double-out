@@ -17,6 +17,12 @@ const one=async(m)=>{
    const _st=startTurn;startTurn=function(){const r=_st.apply(this,arguments);try{if(S&&!S.bull)S.p.forEach((q,i)=>{const s0=window.__T.start;if(q.score===s0&&window.__T.last[i]!==s0)window.__T.base[i]=q.pts;window.__T.last[i]=q.score;const base=window.__T.base[i]||0;if(q.pts-base!==s0-q.score)window.__T.viol.push(`pts drift p${i}: pts ${q.pts} base ${base} score ${q.score}`);if(q.score<0||q.score===1)window.__T.viol.push(`bad score p${i} ${q.score}`);});}catch(e){window.__T.viol.push('hook '+e.message)}return r;};
    const _ld=land;land=function(x,y,far){if(S&&!S.bull&&!S.done){const k=S.cur+':'+S.turnN;window.__T.turns[k]=(window.__T.turns[k]||0)+1;if(window.__T.turns[k]>3)window.__T.viol.push(`4th dart in turn ${k} (p${S.cur})`);}return _ld.apply(this,arguments);};
    try{if(window.TC_API){const t=TC_API.st();window.__T.paid0=new Set(Object.keys(t.paid||{}));window.__T.picks0=(t.picks||[]).length;window.__T.exp={max:0,ton:0};const _av=achVisit;achVisit=function(tc,R,vs0){const r=_av.apply(this,arguments);try{if(tc===0&&R&&!R.bust&&!S.practice){if(R.tot===180)window.__T.exp.max++;if(R.won&&vs0>=100)window.__T.exp.ton++;}}catch(e){}return r;};}}catch(e){window.__T.viol.push('tc setup '+e.message);}
+   // v1.71: opponent never stands in a throw pose on your visit; spare darts count down 2/1/0
+   {const bad={};setInterval(()=>{try{if(!S||S.bull||S.done||!V._qa.opp)return;const o=V._qa.opp();if(!o)return;const seen=new Set();const chk=(m,c)=>{if(c){seen.add(m);bad[m]=(bad[m]||0)+1;if(bad[m]>=12&&!window.__T.viol.includes(m))window.__T.viol.push(m);}};
+    chk('opponent in throw pose on human visit',S.cur===0&&!S.p[0].ai&&!S.mateTurn&&o.visible!==false&&!o.userData.waiting);
+    chk('opponent hidden on his visit',S.p[S.cur].ai&&o.visible!==true);
+    if(S.p[S.cur].ai&&o.visible===true){const got=o.userData.B.LeftHand.children.filter(c=>c.userData.spare&&c.visible).length,want=Math.max(0,2-S.visit.length);chk('opp spares wrong',got!==want);}
+    Object.keys(bad).forEach(k=>{if(!seen.has(k))bad[k]=0;});}catch(e){}},150);}
    return 'ok';}catch(e){return 'setup '+e.message;}},m);
   if(setup!=='ok'){fails.push(`match ${m}: ${setup}`);await p.close();return;}
   const t0=Date.now();let st='';
