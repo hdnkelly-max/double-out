@@ -3,8 +3,8 @@
 #hub #shopList .opt.v12lock,#hub #setupList .opt.v12lock{opacity:1!important}
 /* locked: dart render dimmed to ~58%; name, body and requirement stay readable (ChatGPT 19:10) */
 #hub .opt.v12lock{border-style:dashed!important;border-color:rgba(237,236,229,.16)!important}
-#hub .opt.v12lock .n{opacity:.58}
-#hub .opt.v12lock .n img{filter:grayscale(.6)!important}
+#hub .opt.v12lock .n em{opacity:.58}
+#hub .opt.v12lock .n img{filter:grayscale(.6) brightness(.62)!important}
 #hub .opt.v12lock .s>*:not(.v12why):not(.v12sp):not(.v12gate),#hub .opt.v12lock .v12d{opacity:.88}
 #hub .opt.v12lock .t{color:#EDECE5!important;opacity:1}
 /* card descriptions cap at two lines; the full text sits in the preview */
@@ -58,6 +58,12 @@
 .v12new{display:inline-block;vertical-align:.15em;margin-right:8px;padding:3px 7px 2px;border-radius:4px;background:#C6F36B;color:#10191A;font:800 11px/1 Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
 @keyframes v12in{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.v12rw{animation:none}}
+/* F2 resubmit (QA 21:55): the dart render stays inside its 104 px column so it never runs over names; locked rows show a compact level pill and the full line in the body */
+#hub.c3 #shopList .bopt .bimg{width:118px!important;margin-left:-20px!important}
+#hub.c3 #shopList .opt.bopt .s,#hub.c3 #shopList .opt.bopt .t{min-width:0;overflow-wrap:anywhere}
+#hub #shopList .opt.v12lock .price.v12p{justify-self:end;text-align:right}
+.v12why.v12whysp{color:#C9CFCE;font-weight:600}
+#hub #shopList .v12sp{padding:6px 10px 6px 9px}#hub #shopList .v12sp b{font-size:18px}
 </style>
 <script>
 (function(){
@@ -102,17 +108,21 @@ function gateBarrel(b){if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res
 function gatePart(key,id){const need=PART_LV[key+':'+id];if(!need)return null;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
 window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart};
 // migration: a player already signed with Red Dragon, Target or Winmau gets that deal's exclusive set (not equipped). Owned barrels are never taken away.
-function grantSponsorSet(){try{if(!save||!save.owned||!save.sponsor)return;const id=Object.keys(EXCL).find(k=>EXCL[k]===save.sponsor);if(id&&!save.owned.includes(id)){save.owned.push(id);persist();}}catch(e){}}
-grantSponsorSet();
+function grantSponsorSet(){try{if(!save||!save.owned||!save.sponsor)return false;const id=Object.keys(EXCL).find(k=>EXCL[k]===save.sponsor);if(id&&!save.owned.includes(id)){save.owned.push(id);persist();return true;}}catch(e){}return false;}
+grantSponsorSet();syncReserve(false);
+// rule 17 (QA 21:55 #4): whenever the save is replaced (cloud copy at sign-in: netAdopt; a newer save from another device: adopt),
+// run the same F2 upkeep as page load: sponsor exclusive granted, due reserved gifts handed over. Owned barrels are never removed.
+// Reserved gifts (QA 21:55 #5): a set a sponsor put aside for you stays yours if you later change sponsor; it arrives at its level, no charge.
+{const _m=window.TOPS_v11Migrate;window.TOPS_v11Migrate=function(){let r;try{r=_m&&_m.apply(this,arguments);}catch(e){}grantSponsorSet();syncReserve(false);return r;};}
 function spLabel(sid,top){return `<span class="v12sp" style="--bc:${bc(sid)}"><small>${top}</small><b>${brandOf(sid)}</b></span>`;}
-function gateHTML(g,short){if(g.res)return spLabel(g.res,'Sponsor set')+`<span class="v12sub">Unlocks for you at Lv ${g.lv} · no charge</span>`;
+function gateHTML(g,short){if(short&&g.res)return spLabel(g.res,'Sponsor set');if(short&&g.sp)return spLabel(g.sp,'Sponsor only');if(g.res)return spLabel(g.res,'Sponsor set')+`<span class="v12sub">Unlocks for you at Lv ${g.lv} · no charge</span>`;
  if(short&&g.lv)return `<span class="v12gate">${LOCK}Lv ${g.lv}</span>`;
  return g.sp?spLabel(g.sp,'Sponsor exclusive')+`<span class="v12sub">Comes with a ${brandOf(g.sp)} deal. Not sold in the Store.</span>`:`<span class="v12gate">${LOCK}Unlocks at level ${g.lv}</span>`;}
 function noteHTML(g,priceTxt){if(g.res)return `<div class="v12no sp" style="--bc:${bc(g.res)}"><b>${brandOf(g.res)}</b>&nbsp;sponsor set · yours at Lv ${g.lv}, no charge</div>`;
  return g.sp?`<div class="v12no sp" style="--bc:${bc(g.sp)}">Sponsor exclusive ·&nbsp;<b>${brandOf(g.sp)}</b>&nbsp;deal only</div>`:`<div class="v12no">${LOCK}Unlocks at level ${g.lv}${priceTxt?' · then '+priceTxt:''}</div>`;}
 function lockRow(el,g,priceTxt,short){el.classList.add('v12lock');el.classList.remove('locked');el.setAttribute('aria-disabled','true');
  const pr=el.querySelector('.price');if(pr){pr.className='price v12p';pr.innerHTML=gateHTML(g,short)+(g.lv&&!g.res&&priceTxt&&!short?`<span class="v12sub">${priceTxt} once unlocked</span>`:'');}
- if(short&&g.lv){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why">Unlocks at level ${g.lv}${priceTxt?', then '+priceTxt:''}</span>`);}
+ if(short){const s0=el.querySelector('.s');const why=g.res?`Yours at level ${g.lv}, no charge`:g.sp?`Comes with a ${brandOf(g.sp)} deal. Not sold in the Store.`:g.lv?`Unlocks at level ${g.lv}${priceTxt?', then '+priceTxt:''}`:'';if(s0&&why&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why${g.lv&&!g.res?'':' v12whysp'}">${why}</span>`);}
  const tap=el.onclick;
  if(el.dataset.st2w&&tap){el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')){x.querySelectorAll('button').forEach(bt=>bt.remove());x.insertAdjacentHTML('beforeend',noteHTML(g,priceTxt));}};}
  else el.onclick=null;}
@@ -129,11 +139,11 @@ function buyBtn(el,cost,doBuy){const pr=el.querySelector('.price');if(!pr)return
  const btn=pr.querySelector('.v12buy');btn.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(ok)doBuy();});}
 function buyBarrel(b){const c=career();const p=price(b.price);if(!c||c.bank<p||save.owned.includes(b.id)||gateBarrel(b))return;c.bank-=p;save.owned.push(b.id);save.barrel=b.id;try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}persist();showShop();}
 function buyPart(key,it){const c=career();const p=price(it.price);if(!c||c.bank<p||gatePart(key,it.id))return;c.bank-=p;save.ownedSetup=(save.ownedSetup||[]).concat(key+':'+it.id);try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}save.setup=Object.assign({},save.setup||{},{[key]:it.id});persist();try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}showShop();}
-function decorate(){grantSponsorSet();syncReserve(false);
+function decorate(){if(grantSponsorSet()|syncReserve(false).length>0&&!decorate.again){decorate.again=1;try{showShop(showShop.tab,true);}finally{decorate.again=0;}return;}
  const rows=[...document.querySelectorAll('#shopList .opt')];
  rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;el.dataset.v12id=b.id;const full=clampDesc(el);
   if(save.owned.includes(b.id)){const sid=EXCL[b.id]||((SPONSORS.find(s=>s.v12gift===b.id&&s.id===save.sponsor)||{}).id);if(EXCL[b.id]){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why spo" style="--bc:${bc(sid)}"><b>${brandOf(sid)}</b> sponsor set · yours to keep</span>`);}}
-  else{const g=gateBarrel(b);if(g)lockRow(el,g,money(price(b.price)));else buyBtn(el,price(b.price),()=>buyBarrel(b));}
+  else{const g=gateBarrel(b);if(g)lockRow(el,g,money(price(b.price)),true);else buyBtn(el,price(b.price),()=>buyBarrel(b));}
   previewFull(el,full);});
  levelStrip();
  const SU=$('setupList');if(SU){let key=null;[...SU.children].forEach(el=>{if(el.classList.contains('label')){key=/Shaft/.test(el.textContent)?'shaft':/Flight/.test(el.textContent)?'flight':'point';return;}const t=el.querySelector('.t');if(!t||!key)return;const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.n===t.textContent);if(!it)return;el.dataset.v12id=key+':'+it.id;
