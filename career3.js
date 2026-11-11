@@ -225,5 +225,48 @@ try{applyUnlocks();}catch(e){}
 // every flight colour a level you've reached has awarded stays yours, equipped or not (needed once 'Keep current flights' exists); derived from your level, so nothing extra is stored
 const lvFlights=()=>{const out=[];try{const lv=V3().lv;for(let L=2;L<=lv;L++){const r=rewardAt(L);if(r&&r.k==='flight'&&!out.includes(r.v))out.push(r.v);}}catch(e){}return out;};
 window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
+// ===== F8: Your form (improvement chart). ChatGPT design review 8.5 → option A "performance card" (Player tab, under the level hero).
+// One trend (10-match rolling 3-dart average over raw match dots), one comparison (vs the previous 10), checkout %, and where you started.
+// Personal only: no comparisons with other players, nothing feeds difficulty. Falling form is shown neutrally (no red), never faked.
+{const FMAX=200;
+ const fLog=()=>{if(!Array.isArray(save.mlog))save.mlog=[];return save.mlog;};
+ const _emF=endMatch;endMatch=function(){const s=S;_emF.apply(this,arguments);try{const c=career();if(!s||!c||c.run||s.practice||s.online||s.mp||ui.mode!=='career'||!s.p||!s.p[1]||!s.p[1].ai)return;const me=s.p[0];if(!me||!me.darts)return;
+   if(!s.fid)s.fid=Date.now().toString(36)+Math.random().toString(36).slice(2,6);const L=fLog();if(L.some(x=>x.id===s.fid))return;
+   L.push({id:s.fid,t:Date.now(),tr:c.tier||0,a:+avg(me).toFixed(1),ca:me.coAtt||0,ch:me.coHit||0,pf:me.perfects||0,th:me.throws||0,w:s.won?1:0});if(L.length>FMAX)L.splice(0,L.length-FMAX);persist();}catch(e){}};
+ const mean=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
+ const roll=(L,k)=>L.map((_,i)=>i+1<k?null:mean(L.slice(i+1-k,i+1).map(x=>x.a)));
+ function fSum(L){const n=L.length;const last=L.slice(-10),prev=n>=20?L.slice(-20,-10):null;const a10=mean(last.map(x=>x.a));const p10=prev?mean(prev.map(x=>x.a)):null;
+  const ca=last.reduce((s,x)=>s+x.ca,0),ch=last.reduce((s,x)=>s+x.ch,0);const start=n>=10?mean(L.slice(0,10).map(x=>x.a)):null;
+  const pca=prev?prev.reduce((s,x)=>s+x.ca,0):0,pch=prev?prev.reduce((s,x)=>s+x.ch,0):0;return {n,a10,p10,co:ca?ch/ca*100:null,pco:pca?pch/pca*100:null,start};}
+ function fLine(f){if(f.n<10)return `Building your form · ${f.n}/10 matches`;if(f.p10==null)return 'Your last 10 matches';const d=f.a10-f.p10;
+  if(d>=1)return `<b class="up">↑ ${d.toFixed(1)}</b> vs your previous 10`;if(d>-1)return `Holding steady across 10 matches`;
+  if(f.co!=null&&f.pco!=null&&f.co-f.pco>=3)return `Checkout up from ${f.pco.toFixed(0)}% to ${f.co.toFixed(0)}%`;return `Previous 10: ${f.p10.toFixed(1)}`;}
+ function fSvg(L,w,h,marks){const pts=L.map(x=>x.a);if(!pts.length)return '';const r=roll(L,Math.min(10,Math.max(3,L.length)));const lo=Math.floor(Math.min(...pts)/5)*5-2,hi=Math.ceil(Math.max(...pts)/5)*5+2;
+  const X=i=>L.length<2?w/2:6+(w-12)*i/(L.length-1),Y=v=>h-6-(h-12)*(v-lo)/Math.max(1,hi-lo);
+  const dots=pts.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2" fill="#EDECE5" opacity=".28"/>`).join('');
+  const rl=r.map((v,i)=>v==null?null:`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).filter(Boolean);
+  const mk=marks?L.map((x,i)=>i&&x.tr>L[i-1].tr?`<line x1="${X(i)}" x2="${X(i)}" y1="4" y2="${h-4}" stroke="#D9AD52" stroke-dasharray="3 3" opacity=".6"/><text x="${X(i)+3}" y="12" fill="#D9AD52" font-size="10" font-family="Manrope,system-ui">${(TIERS[x.tr]||{}).n||''}</text>`:'').join(''):'';
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true">${mk}${dots}${rl.length>1?`<polyline points="${rl.join(' ')}" fill="none" stroke="#C6F36B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`:''}</svg>`;}
+ const FS=document.createElement('style');FS.textContent=`
+ .c3form{margin:12px 0 4px;padding:14px 16px 12px;border-radius:12px;background:linear-gradient(155deg,#263335,#192426 75%);border:1px solid rgba(237,236,229,.1);color:#EDECE5;cursor:pointer;display:block;width:100%;text-align:left;font:inherit}
+ .c3form .fk{display:flex;justify-content:space-between;align-items:baseline;font:800 11px/1 Manrope,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#ADB2BA}
+ .c3form .fk i{font-style:normal;letter-spacing:.04em;text-transform:none;font-weight:700;color:#C6F36B}
+ .c3form .fh{display:flex;align-items:baseline;gap:10px;margin:8px 0 2px}.c3form .fh b{font:italic 800 40px/1 "Barlow Condensed",sans-serif}
+ .c3form .fh span{font:600 13px/1.3 Manrope,system-ui,sans-serif;color:#C9CFCE}.c3form .fh span b{font:800 13px Manrope,system-ui,sans-serif}.c3form .up{color:#C6F36B}
+ .c3form .fl{font:600 12px/1.2 Manrope,system-ui,sans-serif;color:#ADB2BA;margin-bottom:6px}
+ .c3form .fc{margin:4px -4px 8px}.c3form .fr{display:flex;gap:18px;font:600 12px/1.25 Manrope,system-ui,sans-serif;color:#ADB2BA}.c3form .fr b{display:block;font:italic 800 19px/1.1 "Barlow Condensed",sans-serif;color:#EDECE5}
+ .c3formx{position:fixed;inset:0;z-index:80;background:#0b1011;display:flex;flex-direction:column;padding:max(16px,env(safe-area-inset-top)) 16px 16px;color:#EDECE5;overflow:auto}
+ .c3formx h2{font:italic 800 26px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;margin:6px 0 4px}.c3formx p{font:600 13px/1.4 Manrope,system-ui,sans-serif;color:#C9CFCE;margin:0 0 12px}
+ .c3formx .fx{border-radius:12px;background:#192426;padding:10px 6px;margin-bottom:12px}.c3formx button{align-self:stretch;min-height:48px;border-radius:10px;border:0;background:#C6F36B;color:#10191A;font:800 15px Manrope,system-ui,sans-serif;margin-top:auto}`;document.head.appendChild(FS);
+ function fCard(){const L=fLog();const f=fSum(L);const last=L.slice(-30);
+  return `<button type="button" class="c3form" id="c3form" aria-label="Your form: ${f.n<10?'building':'last 10 average '+f.a10.toFixed(1)}. Open the full chart"><div class="fk">Your form<i>${f.n>=10?'See all →':''}</i></div>
+   ${f.n?`<div class="fh"><b>${f.a10.toFixed(1)}</b><span>3-dart avg · last ${Math.min(10,f.n)}<br>${fLine(f)}</span></div>`:`<div class="fh"><span>Play a career match to start your form line.</span></div>`}
+   ${last.length>=2?`<div class="fc">${fSvg(last,320,84,false)}</div>`:''}
+   ${f.n>=10?`<div class="fr"><span>Checkout<b>${f.co==null?'–':f.co.toFixed(0)+'%'}</b></span><span>Your start<b>${f.start.toFixed(1)}</b></span><span>Matches<b>${f.n}</b></span></div>`:''}</button>`;}
+ function fOpen(){const L=fLog();const f=fSum(L);const o=document.createElement('div');o.className='c3formx';o.setAttribute('role','dialog');o.setAttribute('aria-label','Your form');
+  o.innerHTML=`<h2>Your form</h2><p>Every career match, oldest to newest. Dots are single matches; the line is your 10-match average. Gold lines mark promotions.${f.start!=null?` Your first 10 matches averaged ${f.start.toFixed(1)}; your last 10, ${f.a10.toFixed(1)}.`:''}</p><div class="fx">${fSvg(L,340,220,true)}</div><button type="button">Done</button>`;
+  o.querySelector('button').onclick=()=>o.remove();document.body.appendChild(o);}
+ window.TOPS_form={log:fLog,sum:fSum,card:fCard,render:()=>renderPlayerTop()};
+ const _rpt=renderPlayerTop;renderPlayerTop=function(){const r=_rpt.apply(this,arguments);try{const host=$('c3plv');if(host&&career()&&!career().run){let el=$('c3form');const html=fCard();const hero=host.querySelector('.c3x-hero');if(el)el.outerHTML=html;else if(hero)hero.insertAdjacentHTML('afterend',html);else host.insertAdjacentHTML('afterbegin',html);el=$('c3form');if(el)el.onclick=fOpen;const place=()=>{const fm=$('c3form'),hr=host.querySelector('.c3x-hero');if(fm&&hr&&hr.nextElementSibling!==fm)hr.after(fm);};place();setTimeout(place,0);}}catch(e){}return r;};}
 })();
 </script>
