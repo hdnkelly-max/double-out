@@ -330,3 +330,8 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-wk-ban span{font:600 11px Manrope,sans-serif;margin:3px 0 0 13px}
 #tcWalk::after{background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(4,6,10,.55) 55%,rgba(4,6,10,0))}
 .tc-wk-ban em{font-size:13px}.tc-wk-ban span{font-size:12px}
+/* P6 (QA audit 01:18): card number + rarity on Collection cards were 7.5px at 390; floor them at 11px.
+   Tighter tracking keeps "No. 003 · Uncommon" on one line on a 150-160px card; the set name stays hidden there. */
+.tc-grid .tc .tc__meta,.tc-sets .tc .tc__meta{font-size:max(11px,calc(var(--card-w)*.047));letter-spacing:.03em}
+.tc-lockno em{font-size:11px;letter-spacing:.1em}
+.tc-grid .tc .tc__name.is-xlong,.tc-sets .tc .tc__name.is-xlong{font-size:max(12px,calc(var(--card-w)*.066))}
