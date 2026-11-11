@@ -161,12 +161,14 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
- const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,d=D();const lv=d&&LVO[d.lv]!=null?d.lv:'club';
+ const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
   const tgt=CEN[k]+rel+LVO[lv];
-  const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // Club inside the band; Competitive targets at most 3 over (realised toughest opponents stay inside the +5 hard cap); Rookie below
+  const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // inside the band (lv is always 'club' since v1.80; the Competitive/Rookie branches are inert)
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
+ // The Run's tougher route may sit above the band, but its target stays at most 4 over the band top so it sims inside the +5 hard cap (sim-ai)
+ window.TOPS_ROUTE_CAP=t=>BAND[tierOf(t)][1]+4;
  // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
  // Undo the old offset (level + placement, read before placement is cleared), then shift once with the new rule. New-code opponents carry oppRaw and _d=2.
  const migrateSave=()=>{try{const d=save.diff,c=save.career;if(!c&&!d)return;let ch=false;
@@ -174,22 +176,26 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   if(c&&c.next&&c.next.oppAvg>0&&c.next.oppRaw==null&&!c.next.intro){const raw=Math.max(20,c.next._d?c.next.oppAvg-oldOff:c.next.oppAvg);c.next.oppRaw=raw;c.next.oppAvg=shift(raw,c.tier);c.next._d=2;ch=true;}
   const v=c&&c.v3;if(v&&v.rev&&v.rev.avg>0&&!v.rev.raw){if(d)v.rev.avg=Math.max(20,v.rev.avg-oldOff);v.rev.raw=1;ch=true;}
   if(d&&(d.place||d.placeNew)){d.place=0;d.placeNew=false;d.placeCleared=1;ch=true;}
+  // v1.80 (Hayden 21:52): the difficulty setting is gone; everyone plays Club. Rookie and Competitive saves move to Club,
+  // and a queued next opponent is re-derived from its raw rating so it plays at Club straight away (also future band tweaks).
+  if(d&&d.lv!=='club'){d.lvWas=d.lv;d.lv='club';ch=true;}
+  if(c&&c.next&&c.next.oppRaw!=null&&!c.next.intro){const a=shift(c.next.oppRaw,c.tier)+(c.next.routeAdj||0);if(a!==c.next.oppAvg){c.next.oppAvg=a;ch=true;}}
+  // The Run: cached route cards re-derive from the raw rating plus the route's own deliberate difference (+3 tougher / -2 softer), so card = match (Hayden 22:54)
+  if(c&&c.routeOpts&&Array.isArray(c.routeOpts.nodes))c.routeOpts.nodes.forEach(n=>{if(n&&n.oppRaw!=null&&!n.intro){const tt=c.routeOpts.tier!=null?c.routeOpts.tier:c.tier;if(n.routeAdj==null)n.routeAdj=Math.max(-2,Math.min(3,n.oppAvg-shift(n.oppRaw,tt)));const a=shift(n.oppRaw,tt)+n.routeAdj;if(a!==n.oppAvg){n.oppAvg=a;ch=true;}}});
   if(ch)persist();}catch(e){console.warn('v11 migrate',e);}};
  migrateSave();window.TOPS_v11Migrate=migrateSave;
  // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
  const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
  const SHIFTED=new WeakSet();
  const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
-  else if(opts&&viaNext&&c.next.oppRaw!=null&&opts.oppRaw==null)opts=Object.assign({},opts,{oppRaw:c.next.oppRaw});}catch(e){}
+  else if(opts&&viaNext&&c.next.oppRaw!=null){const a=shift(c.next.oppRaw,opts.tier)+(c.next.routeAdj||0);opts=Object.assign({},opts,{oppRaw:c.next.oppRaw,oppAvg:a});c.next.oppAvg=a;}}catch(e){}
   const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
  const _em=endMatch;endMatch=function(){try{if(ui.mode==='career'&&!S.practice&&!S.drill&&D()){const me=S.p[0];const d=D();d.darts=(d.darts||0)+(me.darts||0);d.pts=(d.pts||0)+(me.pts||0);
    /* v1.77: 120-dart placement retired (rule 11) */}}catch(e){}return _em.apply(this,arguments);};
- const pick=(done,again)=>{const cur=D()&&D().lv;showMsg({from:'Kev Mercer',lines:[again?'Change how hard it is? It applies from your next match.':'Before you play: how hard do you want it? Rookie is a step below the pub, Club is the field as written, Competitive is for 60+ averages.','Each level up the ladder brings a tougher field. Change this any time from the hub.'],replies:[['Rookie','rookie'],['Club','club'],['Competitive','comp']]},a=>{save.diff=Object.assign(D()||{darts:0,pts:0,place:null},{lv:LV[a]?a:'club'});try{const c=career();if(c)c.next=null;}catch(e){}try{persist();trackEv('diff_pick',{lv:save.diff.lv,again:!!again});}catch(e){}done&&done();});};
- window.topsPickDiff=()=>pick(()=>{try{showHub();}catch(e){}},true);
- const _pn=playNext;playNext=function(){const args=arguments,self=this;try{const c=career();if(c&&!c.run&&c.stage!=='intro'){if(!D()){return pick(()=>_pn.apply(self,args));}}}catch(e){}return _pn.apply(self,args);};
- // a small difficulty chip on the career hub, tap to change
- setInterval(()=>{try{const d=D();const h=document.querySelector('#hub:not([hidden]) .hx-head');if(!d||!h||h.querySelector('.v11diff'))return;const b=document.createElement('button');b.type='button';b.className='v11diff';b.textContent=(LV[d.lv]||LV.club).n;b.onclick=e=>{e.stopPropagation();window.topsPickDiff();};const bk=h.querySelector('.bank');h.insertBefore(b,bk||null);}catch(e){}},1500);
+ // v1.80 (Hayden 21:52): no difficulty picker anywhere (career start, hub chip). Everyone plays Club; players improve through gear and skill-ups.
+ window.topsPickDiff=()=>{};
+ const _pn=playNext;playNext=function(){try{if(!save.diff){save.diff={lv:'club',darts:0,pts:0,place:0};persist();}}catch(e){}return _pn.apply(this,arguments);};
 })();
 </script>
 <style>.v11diff{margin:0 8px 0 auto;font:700 11px Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:999px;border:1px solid rgba(214,178,94,.5);background:rgba(14,16,20,.6);color:#e9d9a8;cursor:pointer}</style>
