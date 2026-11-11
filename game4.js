@@ -1009,7 +1009,7 @@ const V=(function(){try{return (()=>{
   hm.instanceMatrix.needsUpdate=true;hr.instanceMatrix.needsUpdate=true;if(ch>0){bm.instanceMatrix.needsUpdate=true;sm.instanceMatrix.needsUpdate=true;}}
  function crowdCheer(now){}
  // --- venue builder
- function clearGroup(g){while(g.children.length){const c=g.children[0];g.remove(c);}}
+ function clearGroup(g){while(g.children.length){const c=g.children[0];g.remove(c);try{c.traverse(o=>{const m=o.material;if(m&&m.userData&&m.userData.own){if(m.map)m.map.dispose();m.dispose();}});}catch(e){}}}
  function box(w,h,d,mat,x,y,z){const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.receiveShadow=true;m.castShadow=h<1.5&&w<3;venue.add(m);return m;}
  function plane(w,h,mat,x,y,z,ry=0){const m=new T.Mesh(new T.PlaneGeometry(w,h),mat);m.position.set(x,y,z);m.rotation.y=ry;venue.add(m);return m;}
  function banner(txt,bg,fg,w,y,z=.02){const tex=patternTexture((x,W,H)=>{x.fillStyle=bg;x.fillRect(0,0,W,H);const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(255,255,255,.10)');gr.addColorStop(1,'rgba(0,0,0,.18)');x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle='#e8382c';x.fillRect(0,0,230,H);x.fillStyle='#fff';x.font='800 120px "Saira Condensed","Arial Narrow",Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('TOPS',115,H/2+4);x.fillStyle=fg;let size=140;x.font=`800 ${size}px "Saira Condensed","Arial Narrow",Arial,sans-serif`;let tw=x.measureText(txt).width;if(tw>(W-300)*.94){size=Math.floor(size*(W-300)*.94/tw);x.font=`800 ${size}px "Saira Condensed","Arial Narrow",Arial,sans-serif`;}x.fillText(txt,230+(W-230)/2,H/2+6);},2048,226);plane(w,w*.11,new T.MeshBasicMaterial({map:tex}),0,y,z);}
@@ -1059,7 +1059,7 @@ const V=(function(){try{return (()=>{
   [[-.6],[2.6]].forEach(([dz])=>{const l=t===0?new T.SpotLight(0xf3c17c,.9,4,.5,.8,1.4):new T.SpotLight(0xfff1de,.35,4,.5,.8,1.4);l.position.set(wx-.9,3.1,OCHE_Z+dz);const tg=new T.Object3D();tg.position.set(wx,1.6,OCHE_Z+dz);G.add(tg);l.target=tg;G.add(l);});
   // LOOK v1.39: dust motes drifting in the lamp light
   motes.length=0;if(!RM){const mm=new T.SpriteMaterial({map:glowTex,color:0xffe2b0,transparent:true,opacity:.45,blending:T.AdditiveBlending,depthWrite:false});for(let k=0;k<46;k++){const s=new T.Sprite(mm);const p0=new T.Vector3(wx-.25-Math.random()*.9,1.5+Math.random()*1.2,OCHE_Z-1.5+Math.random()*2.2);s.position.copy(p0);s.scale.setScalar(.02+Math.random()*.025);s.userData={p0,ph:Math.random()*6.3,sp:.15+Math.random()*.25};G.add(s);motes.push(s);}}}catch(e){console.warn('pubDress',e);}}
- function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}const G=new T.Group();G.name='sideDress';venue.add(G);
+ function sideDress(t){sideLed=null;if(t<2){pubDress(t);return;}const G=new T.Group();G.name='sideDress';venue.add(G);const PLATE=window.TOPS_PLATES===false?null:{5:'plate_5.webp'}[t];
   const big=t>=4,X=big?3.4:3.1,Z0=OCHE_Z;const NAMES={2:['AUCKLAND','REGIONAL OPEN'],3:['DPNZ','NATIONAL SERIES'],4:['TRANS-TASMAN','DARTS CUP'],5:['PDC','PRO TOUR'],6:['WORLD','CHAMPIONSHIP']};const N=NAMES[t]||NAMES[4];
   const ACC={2:'#2fa046',3:'#e8382c',4:'#ffb000',5:'#2c8cff',6:'#D7B45C'}[t]||'#C6F36B';
   // LED event wall (canvas, gently animated on the big stages)
@@ -1070,7 +1070,7 @@ const V=(function(){try{return (()=>{
    cx.fillStyle='rgba(237,236,229,.75)';cx.font='800 40px Manrope,sans-serif';cx.fillText('T O P S',512,330);
    cx.fillStyle='rgba(0,0,0,.22)';for(let y=0;y<512;y+=4)cx.fillRect(0,y,1024,1);tex.needsUpdate=true;};draw(0);
   const ledW=big?7.4:3.1,ledH=big?3.7:1.9;const led=new T.Mesh(new T.PlaneGeometry(ledW,ledH),new T.MeshBasicMaterial({map:tex,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));led.position.set(big?X+3.8:X+.6,big?2.35:2.1,big?Z0-.3:Z0-.55);led.rotation.y=-Math.PI/2;G.add(led);
-  const frame=new T.Mesh(new T.BoxGeometry(.08,ledH+.12,ledW+.12),new T.MeshStandardMaterial({color:0x0b0c0e,roughness:.5}));frame.position.set(led.position.x+.12,led.position.y,led.position.z);G.add(frame);
+  const frame=new T.Mesh(new T.BoxGeometry(.08,ledH+.12,ledW+.12),new T.MeshStandardMaterial({color:0x0b0c0e,roughness:.5}));frame.position.set(led.position.x+.12,led.position.y,led.position.z);G.add(frame);if(PLATE){led.scale.setScalar(.55);led.position.set(X+3.2,4.35,Z0-.3);frame.scale.setScalar(.55);frame.position.set(X+3.27,4.35,Z0-.3);}
   
   // truss + beams
   const tm=new T.MeshStandardMaterial({color:0x2a2d33,metalness:.8,roughness:.35});const ty=big?5.2:3.3,TX=big?X+2.2:X+.2;const tr=new T.Mesh(new T.BoxGeometry(.18,.18,big?8:5.5),tm);tr.position.set(TX,ty,Z0+.4);G.add(tr);
@@ -1080,7 +1080,7 @@ const V=(function(){try{return (()=>{
    const len=ty-.2;const cone=new T.Mesh(new T.ConeGeometry(big?.85:.6,len,18,1,true),i%2?whiteBeam:beamMat);cone.position.set(TX-.4,ty-.2-len/2,z);cone.rotation.z=-.12;cone.userData.ph=i*1.3;G.add(cone);
    if(big)cone.onBeforeRender=()=>{const s=performance.now()/1000;cone.rotation.z=-.12+Math.sin(s*.18+cone.userData.ph)*.12;cone.rotation.x=Math.cos(s*.14+cone.userData.ph)*.08;};}
   // crowd: stepped seating, varied shirts, rim-lit, phone lights (v1.70)
-  const rows={4:4,5:5,6:7}[t]||0,per={4:14,5:16,6:20}[t]||0;
+  const rows=PLATE?0:({4:4,5:5,6:7}[t]||0),per={4:14,5:16,6:20}[t]||0;
   if(rows){const SH=[0x2a3550,0x5a1f22,0x1f3a2a,0x3c3c44,0x50402a,0x223048,0x472447,0x606068,0x1a1a1e,0x6a4a20];
    const body=new T.MeshStandardMaterial({color:0xffffff,roughness:.85}),skin=new T.MeshStandardMaterial({color:0x3a2c26,roughness:.85});
    const rim=new T.MeshBasicMaterial({color:new T.Color(ACC).multiplyScalar(.7),toneMapped:false});
@@ -1098,6 +1098,12 @@ const V=(function(){try{return (()=>{
      if(Math.random()<(t>=6?.16:.08))phones.push([x-.14,y+.7+stand+Math.random()*.25,z]);}}
    [bI,hI,rI].forEach(o=>{o.count=n;o.instanceMatrix.needsUpdate=true;if(o.instanceColor)o.instanceColor.needsUpdate=true;G.add(o);});
    if(phones.length){const pg=new T.BufferGeometry();pg.setAttribute('position',new T.Float32BufferAttribute(phones.flat(),3));G.add(new T.Points(pg,new T.PointsMaterial({color:0xfff6e0,size:.06,sizeAttenuation:true,transparent:true,opacity:.9})));}}
+  // v1.73 painted crowd backplate (ChatGPT review: hybrid; 3D near layers, image beyond ~4 m)
+  if(PLATE){const pm=new T.MeshBasicMaterial({color:0x000000,toneMapped:false,fog:false});pm.userData.own=1;const pw=13.2,ph=8.8;const pl=new T.Mesh(new T.PlaneGeometry(pw,ph),pm);pl.position.set(X+3.4,ph/2-.25,Z0-.3);pl.rotation.y=-Math.PI/2;G.add(pl);
+   try{new T.TextureLoader().load('assets/venue/'+PLATE,tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());pm.map=tx;pm.color.setRGB(1,1,1);pm.needsUpdate=true;},null,()=>{pm.color.setHex(0x05070c);});}catch(e){}
+   venue.traverse(o=>{const g=o.geometry;if(o.isMesh&&g&&g.type==='BoxGeometry'&&g.parameters.height<=.11&&g.parameters.width>=8&&o.position.y>3)o.visible=false;}); // open the low ceiling so the plate and rig read
+   const bar=new T.Mesh(new T.BoxGeometry(.12,.95,12),new T.MeshStandardMaterial({color:0x07080b,roughness:.6}));bar.position.set(X+1.35,.475,Z0+.4);G.add(bar);
+   const barL=new T.Mesh(new T.BoxGeometry(.02,.025,12),new T.MeshBasicMaterial({color:new T.Color(ACC),toneMapped:false}));barL.position.set(X+1.28,.93,Z0+.4);G.add(barL);}
   // soft glow texture shared by halos, back glow and haze
   const gcv=document.createElement('canvas');gcv.width=gcv.height=128;{const gx=gcv.getContext('2d');const rg=gx.createRadialGradient(64,64,0,64,64,64);rg.addColorStop(0,'rgba(255,255,255,1)');rg.addColorStop(.35,'rgba(255,255,255,.45)');rg.addColorStop(1,'rgba(255,255,255,0)');gx.fillStyle=rg;gx.fillRect(0,0,128,128);}const gTex=new T.CanvasTexture(gcv);
   const glow=(w,h,c,o,x,y,z)=>{const g=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:gTex,color:new T.Color(c),transparent:true,opacity:o,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));g.position.set(x,y,z);g.rotation.y=-Math.PI/2;G.add(g);return g;};
@@ -1130,7 +1136,7 @@ const V=(function(){try{return (()=>{
    const lampM=new T.MeshBasicMaterial({color:0xffe6a8,toneMapped:false});for(let i=0;i<16;i++){const a=i/16*Math.PI*2;const lp=new T.Mesh(new T.SphereGeometry(.07,8,6),lampM);lp.position.set(X+2.6+Math.cos(a)*2.4,4.5,Z0+.4+Math.sin(a)*2.4);G.add(lp);}
    glow(6,1.6,ACC,.16,X+2.4,4.4,Z0+.4);glow(9,2.4,0xffe6b0,.07,X+5,1.8,Z0+.4);}
   // floor edge glow strip under the LED
-  const strip=new T.Mesh(new T.BoxGeometry(.04,.04,ledW),new T.MeshBasicMaterial({color:new T.Color(ACC),toneMapped:false}));strip.position.set(led.position.x-.06,led.position.y-ledH/2-.08,led.position.z);G.add(strip);
+  const strip=new T.Mesh(new T.BoxGeometry(.04,.04,ledW),new T.MeshBasicMaterial({color:new T.Color(ACC),toneMapped:false}));strip.position.set(led.position.x-.06,led.position.y-ledH/2-.08,led.position.z);G.add(strip);if(PLATE)strip.visible=false;
   const fill=new T.PointLight(new T.Color(ACC),big?1.1:.6,7);fill.position.set(X-.2,2.2,Z0+.4);G.add(fill);sideLed=led;}
 
  // GFX: baked venues (Blender, lighting baked into textures). Loaded once, swapped in for the code-built room.
