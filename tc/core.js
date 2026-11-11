@@ -283,14 +283,15 @@
   function cardsIntro(then) {
     const el = sheet('tc-intro', `<div class="tcpk__kicker">Cards</div><h2 class="tc-h">What are cards?</h2>
       <ol class="tc-introl">
-        <li><b>Earn a pick</b><span>Big moments earn a card pick: a 180, a 100+ checkout, a nine-darter, achievements and stat milestones.</span></li>
-        <li><b>Keep one of three</b><span>Each pick deals three cards and you keep one. A nine-darter keeps all three.</span></li>
-        <li><b>Unlock rewards</b><span>Many cards unlock kit, wearables, celebrations and titles. Equip them in Player · Loadout. Finishing a set unlocks more.</span></li>
-        <li><b>Find them</b><span>Everything you own is in Cards on the Career tab. Spare legendaries can be swapped with mates.</span></li>
+        <li><b>Earn picks</b><span>Hit 180s, check out 100+, or complete achievements.</span></li>
+        <li><b>Keep one of three</b><span>Three cards appear. Pick one to keep. Nine&#8209;darter? Keep all three.</span></li>
+        <li><b>Unlock rewards</b><span>Many cards unlock kit and celebrations. Equip them in Player · Loadout.</span></li>
+        <li><b>Find them</b><span>Your collection is in Career → Cards.</span></li>
       </ol>
       <button type="button" class="tcpk__btn tcpk__btn--go tc-introgo">${then ? 'Open my picks' : 'Got it'}</button>`);
+    const x = el.querySelector('.tc-x'); el.querySelector('.tc-sh-in').appendChild(x);
     let gone = false; const go = () => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 200); then && then(); };
-    el.querySelector('.tc-introgo').onclick = go; el.querySelector('.tc-x').onclick = go;
+    el.querySelector('.tc-introgo').onclick = go; x.onclick = go; el.addEventListener('click', e => { if (e.target === el) go(); });
     return el;
   }
   function openPack(picks, after) {
@@ -368,8 +369,8 @@
     const el = sheet('tc-welcome', `<div class="tc-wel"><div class="tc-wel-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><div class="tc-wel-peek"></div></div>
       <div class="tcpk__kicker">New in TOPS</div><h2 class="tc-h">Cards are here</h2>
       <div class="tc-wel-big"><b>${info.picks}</b><span>picks earned</span></div>
-      <p>${info.ach ? `From the ${info.ach} achievement${info.ach > 1 ? 's' : ''} you've already completed. ` : ''}From now on every 180, ton-plus checkout and achievement earns another.</p>
-      <ul class="tc-wel-how"><li><b>Keep one of three.</b> Each pick deals three cards and you keep one.</li><li><b>Unlock rewards.</b> Many cards unlock kit, wearables, celebrations and titles. Equip them in Player · Loadout.</li><li><b>Find them.</b> Everything you own is in Cards on the Career tab.</li></ul>
+      ${info.ach ? `<p>From the ${info.ach} achievement${info.ach > 1 ? 's' : ''} you've already completed.</p>` : ''}
+      <ul class="tc-wel-how"><li><b>Keep one of three.</b> Each pick deals three cards. You keep one.</li><li><b>Earn more.</b> 180s, 100+ checkouts and achievements.</li><li><b>Unlock rewards.</b> Many cards unlock kit and celebrations for Player · Loadout.</li><li><b>Find them</b> in Career → Cards.</li></ul>
       <button type="button" class="tcpk__btn tcpk__btn--go" id="tcWelGo">Open ${info.picks} picks</button><button type="button" class="tcpk__later" id="tcWelLater">Later</button></div>`);
     const pk = TCC.card(peek); pk.classList.add('is-flipped'); el.querySelector('.tc-wel-peek').appendChild(pk);
     save.tcIntro = save.tcIntro || Date.now(); keep(); // #13: the welcome carries the explainer, so no second sheet before the first pick
@@ -413,7 +414,7 @@
   function binder() {
     const t = st(); let filt = 'all';
     const nO = D.CARDS.filter(c => !c.exclusive && t.own[c.id]).length, nA = D.CARDS.filter(c => !c.exclusive).length;
-    const el = sheet('tc-binder', `<div class="tcpk__kicker">Cards · Collection</div><h2 class="tc-h">Your cards</h2><button type="button" class="tc-whatbtn" id="tcWhat">What are cards?</button><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
+    const el = sheet('tc-binder', `<div class="tcpk__kicker">Cards · Collection</div><h2 class="tc-h">Your cards</h2><button type="button" class="tc-whatbtn" id="tcWhat"><i>?</i>How cards work</button><div class="tc-prog"><b>${nO} / ${nA}</b><span>Collected</span></div><i class="tc-progbar" style="--p:${nO / nA};display:block"></i>${t.srv ? `<button type="button" class="tc-tradebtn" id="tcTradeBtn"><i>⇄</i><span><b>Trades</b><small>Swap spare legendaries with your mates</small></span><em class="tc-tradebadge" hidden></em><i class="tc-chev">›</i></button>` : ''}<div class="tc-chips" id="tcChips"></div><div class="tc-grid" id="tcGrid"></div><div class="tc-sets" id="tcSets"></div>`);
     { const tb = el.querySelector('#tcTradeBtn'); if (tb) { tb.onclick = () => trades(); tradeCount().then(n => { const b = tb.querySelector('.tc-tradebadge'); if (n) { b.hidden = false; b.textContent = n + ' new'; } }); } }
     el.querySelector('#tcWhat').onclick = () => cardsIntro(null);
     const chips = el.querySelector('#tcChips'), grid = el.querySelector('#tcGrid');
