@@ -1,0 +1,23 @@
+// Rule 22 baseline: screenshots of the main menu screens at a phone size, real fonts if available.
+// node r22shots.js <dir> <w> <h> <tag>  -> wip/shots/<tag>_<screen>.png + a small-text report per screen
+const {chromium}=require('playwright');(async()=>{const dir=process.argv[2],w=+(process.argv[3]||390),h=+(process.argv[4]||844),tag=process.argv[5]||'r22';
+const out=require('path').resolve(__dirname,'../shots')+'/';
+const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
+const p=await b.newPage({viewport:{width:w,height:h},hasTouch:w<600,isMobile:w<600});await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
+await p.goto('file://'+dir+'/index.html');
+if(process.env.FONTS!=='fallback'){try{await p.addStyleTag({content:require('fs').readFileSync('/home/claude/fonts/fonts_local.css','utf8')});}catch(e){}}
+await p.waitForFunction(()=>window.TC_API&&typeof S!=='undefined',null,{timeout:180000});await p.waitForTimeout(1500);
+await p.evaluate(()=>{save.authSeen=true;save.name='Lee';save.matches=12;$('login').hidden=true;newCareer();save.tcIntro=Date.now();save.tcWelcomed=Date.now();document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());showHub();});
+await p.waitForTimeout(2500);
+for(let i=0;i<3;i++){const L=await p.$('#tcWelLater');if(!L)break;await L.click().catch(()=>{});await p.waitForTimeout(800);}
+await p.evaluate(()=>document.querySelectorAll('.tc-sheet').forEach(e=>e.remove()));
+const small=()=>p.evaluate(()=>{const res={};document.querySelectorAll('body *').forEach(e=>{const own=[...e.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();if(!own)return;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity<.3)return;const r=e.getBoundingClientRect();if(!r.width||r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)return;let hid=false;for(let a=e;a;a=a.parentElement){if(a.hidden){hid=true;break;}}if(hid)return;const sc=e.offsetHeight?r.height/e.offsetHeight:1;const fs=parseFloat(cs.fontSize)*sc;if(fs<11){const k=(own.slice(0,18))+'@'+fs.toFixed(1);res[k]=1;}});
+ const taps=[...document.querySelectorAll('button,[role=button],a')].filter(e=>{const r=e.getBoundingClientRect();const cs=getComputedStyle(e);return r.width&&r.height&&cs.display!=='none'&&cs.visibility!=='hidden'&&r.bottom>0&&r.top<innerHeight&&(r.height<44||r.width<44);}).map(e=>((e.textContent||e.getAttribute('aria-label')||e.id||'').trim().slice(0,14))+'@'+(e.getBoundingClientRect().width|0)+'x'+(e.getBoundingClientRect().height|0));
+ return {small:Object.keys(res).slice(0,25),smallN:Object.keys(res).length,tapsUnder44:taps.slice(0,20),tapsN:taps.length};});
+const shot=async name=>{await p.waitForTimeout(1200);await p.screenshot({path:out+tag+'_'+name+'.png',timeout:120000});return small();};
+const R={};
+await p.evaluate(()=>{try{hubTab('play');}catch(e){}});await p.waitForTimeout(800);await p.evaluate(()=>{const pn=document.querySelector('#hub .panel');if(pn)pn.scrollTop=420;});R.play_scrolled=await shot('play_scrolled');
+for(const t of ['play','kit','player']){await p.evaluate(t=>{try{hubTab(t);}catch(e){}},t);R['hub_'+t]=await shot('hub_'+t);}
+await p.evaluate(()=>{const b=document.getElementById('btnHubMenu');if(b)b.click();});R.menu=await shot('menu');
+await p.evaluate(()=>{const pp=document.getElementById('hubPop');if(pp)pp.hidden=true;try{showShop();}catch(e){}});R.store=await shot('store');
+console.log(tag,JSON.stringify(R),pe.slice(0,3).join(' | '));await b.close();})();
