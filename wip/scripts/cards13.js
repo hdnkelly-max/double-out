@@ -28,7 +28,7 @@ const r={};
  await clickSel(p,'#tcWelLater');await p.waitForTimeout(500);r.welcomeDismissed=await p.evaluate(()=>!document.querySelector('.tc-welcome'));
  await p.evaluate(()=>{delete save.tcIntro;TC_API.award('c13b:'+Date.now(),'max','180');window.tcOpenPicks();});await p.waitForTimeout(700);
  r.existingSheet=await p.evaluate(()=>{const e=document.querySelector('.tc-intro');return e?{rows:e.querySelectorAll('.tc-introl li').length,btn:(e.querySelector('.tc-introgo')||{}).textContent}:null;});
- await shot(p,'intro');r.introNoClash=await p.evaluate(()=>{const h=document.querySelector('.tc-intro .tc-h').getBoundingClientRect(),x=document.querySelector('.tc-intro .tc-x').getBoundingClientRect();const t=document.createRange();t.selectNodeContents(document.querySelector('.tc-intro .tc-h'));const tr=t.getBoundingClientRect();return tr.right<=x.left-4||tr.bottom<=x.top||tr.top>=x.bottom;});r.introFits=await p.evaluate(()=>{const g=document.querySelector('.tc-intro .tc-introgo').getBoundingClientRect();return g.bottom<=innerHeight;});
+ await shot(p,'intro');r.introNoClash=await p.evaluate(()=>{const h=document.querySelector('.tc-intro .tc-h').getBoundingClientRect(),x=document.querySelector('.tc-intro .tc-x').getBoundingClientRect();const t=document.createRange();t.selectNodeContents(document.querySelector('.tc-intro .tc-h'));const tr=t.getBoundingClientRect();return tr.right<=x.left-4||tr.bottom<=x.top||tr.top>=x.bottom;});r.introFits=await p.evaluate(()=>{const sh=document.querySelector('.tc-intro');sh.scrollTop=0;const top=sh.querySelector('.tcpk__kicker').getBoundingClientRect().top;sh.scrollTop=1e5;const g=sh.querySelector('.tc-introgo').getBoundingClientRect();const ok=top>=0&&g.bottom<=innerHeight;sh.scrollTop=0;return ok?true:{top,bottom:g.bottom,vh:innerHeight};});
  await p.evaluate(()=>{window.__clk=[];document.addEventListener('click',e=>{window.__clk.push((e.target.className||e.target.tagName)+'|'+document.querySelectorAll('.tc-sheet').length);},true);});
  r.introAt=await p.evaluate(()=>{const g=document.querySelector('.tc-intro .tc-introgo');const q=g.getBoundingClientRect();const top=document.elementFromPoint(q.x+q.width/2,q.y+q.height/2);return {btn:[q.x|0,q.y|0,q.width|0,q.height|0],top:top&&String(top.className).slice(0,40),sheets:[...document.querySelectorAll('.tc-sheet')].map(e=>e.className)};});
  await clickSel(p,'.tc-intro .tc-introgo');await p.waitForTimeout(1500);r.clk=await p.evaluate(()=>window.__clk);r.after=await p.evaluate(()=>({sheets:[...document.querySelectorAll('.tc-sheet,.tcpk')].map(e=>e.className.slice(0,30)),picks:TC_API.st().picks.filter(p=>p.chosen==null).length}));
@@ -36,6 +36,11 @@ const r={};
  // next pick: no sheet again
  await p.evaluate(()=>{document.querySelectorAll('.tc-sheet,.tcpk').forEach(e=>e.remove());TC_API.award('c13c:'+Date.now(),'max','180');window.tcOpenPicks();});await p.waitForTimeout(600);
  r.secondTimeNoSheet=await p.evaluate(()=>!document.querySelector('.tc-intro'));
+ // B2. one-time sheet closed with X: no pack, picks still waiting, the caller's flow continues
+ await p.evaluate(()=>{document.querySelectorAll('.tc-sheet,.tcpk').forEach(e=>e.remove());delete save.tcIntro;window.__after=0;TC_API.award('c13d:'+Date.now(),'max','180');});
+ await p.evaluate(()=>{TC_API.openPack(TC_API.st().picks.filter(p=>p.chosen==null),()=>{window.__after++;});});await p.waitForTimeout(600);
+ await clickSel(p,'.tc-intro .tc-x');await p.waitForFunction(()=>!document.querySelector('.tc-intro'),null,{timeout:5000}).catch(()=>{});
+ r.xClose=await p.evaluate(()=>({pack:!!document.querySelector('.tcpk'),after:window.__after,waiting:TC_API.st().picks.filter(p=>p.chosen==null).length,seen:!!save.tcIntro}));
  // C. binder link
  await p.evaluate(()=>{document.querySelectorAll('.tc-sheet,.tcpk').forEach(e=>e.remove());TC_API.binder();});await p.waitForTimeout(700);
  await shot(p,'binder');
@@ -44,5 +49,5 @@ const r={};
  await clickSel(p,'.tc-intro .tc-introgo');await p.waitForFunction(()=>!document.querySelector('.tc-intro'),null,{timeout:5000}).catch(()=>{});
  r.backToBinder=await p.evaluate(()=>!!document.querySelector('.tc-binder')&&!document.querySelector('.tc-intro'));r.bDbg=await p.evaluate(()=>[...document.querySelectorAll('.tc-sheet,.tcpk')].map(e=>e.className.slice(0,30)));
  r.peB=p.pe.slice();await p.close();}
-const pass=r.tile==='Cards'&&r.welcome&&r.welcome.how===4&&r.welcome.intro&&r.welcomeFits&&r.welcomeFits.bottom<=r.welcomeFits.vh&&r.newNoSecondSheet&&r.newPack&&r.existingSheet&&r.existingSheet.btn==='Open my picks'&&r.existingPack&&r.secondTimeNoSheet&&r.linkBtn==="Got it"&&r.backToBinder&&r.introNoClash&&r.introFits&&r.whatTap>=44&&!r.peA.length&&!r.peB.length;
+const pass=r.tile==='Cards'&&r.welcome&&r.welcome.how===4&&r.welcome.intro&&r.welcomeFits&&r.welcomeFits.bottom<=r.welcomeFits.vh&&r.newNoSecondSheet&&r.newPack&&r.existingSheet&&r.existingSheet.btn==='Open my picks'&&r.existingPack&&r.secondTimeNoSheet&&r.linkBtn==="Got it"&&r.backToBinder&&r.xClose&&!r.xClose.pack&&r.xClose.after===1&&r.xClose.waiting>0&&r.xClose.seen&&r.introNoClash&&r.introFits&&r.whatTap>=44&&!r.peA.length&&!r.peB.length;
 console.log(tag,pass?'PASS':'FAIL',JSON.stringify(r));await b.close();process.exit(pass?0:1);})();

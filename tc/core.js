@@ -280,7 +280,7 @@
   }, true);
 
   // #13 (David 21:13): one-time "What are cards?" before the first pick, and from the Cards screen any time
-  function cardsIntro(then) {
+  function cardsIntro(then, skip) {
     const el = sheet('tc-intro', `<div class="tcpk__kicker">Cards</div><h2 class="tc-h">What are cards?</h2>
       <ol class="tc-introl">
         <li><b>Earn picks</b><span>Hit 180s, check out 100+, or complete achievements.</span></li>
@@ -290,13 +290,14 @@
       </ol>
       <button type="button" class="tcpk__btn tcpk__btn--go tc-introgo">${then ? 'Open my picks' : 'Got it'}</button>`);
     const x = el.querySelector('.tc-x'); el.querySelector('.tc-sh-in').appendChild(x);
-    let gone = false; const go = () => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 200); then && then(); };
-    el.querySelector('.tc-introgo').onclick = go; x.onclick = go; el.addEventListener('click', e => { if (e.target === el) go(); });
+    let gone = false; const close = fn => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 200); fn && fn(); };
+    /* the button opens the picks; X or a tap outside means "not now": the picks stay waiting and the calling flow carries on */
+    el.querySelector('.tc-introgo').onclick = () => close(then); x.onclick = () => close(skip); el.addEventListener('click', e => { if (e.target === el) close(skip); });
     return el;
   }
   function openPack(picks, after) {
     if (!picks.length) { after && after(); return; }
-    if (!save.tcIntro) { save.tcIntro = Date.now(); keep(); cardsIntro(() => openPack(picks, after)); return; }
+    if (!save.tcIntro) { save.tcIntro = Date.now(); keep(); cardsIntro(() => openPack(picks, after), () => { after && after(); }); return; }
     H.inPack = true; try { TCC.Sfx.ctx || TCC.Sfx.init('assets/cards/sfx/'); } catch (e) {}
     const done = got => {
       H.inPack = false; badge();
@@ -909,5 +910,5 @@
     clearInterval(zoneTimer);
     if (want) zoneTimer = setInterval(() => { try { if (!zoneOn) return; sfxHeart(); } catch (e) {} }, 820);
   }
-  window.TC_API = { oppWalk, trades, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
+  window.TC_API = { oppWalk, trades, openPack, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
 })();
