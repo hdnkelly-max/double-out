@@ -1,0 +1,32 @@
+# TOPS CI phase 1 (SHIP-3, spec v1): on every push to a builder branch, build and run a fast Chromium check (<5 min).
+# Results live on the commit (check run + job summary), so test evidence is in GitHub, not in chats. No branch protection yet.
+name: ci
+on:
+  push:
+    branches: ['build-*', 'polish-*', 'art-*', 'engine-*', 'career-*', 'exp-*', 'qa-*', 'qa2-*', 'ci-*']
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install three + Playwright Chromium
+        run: |
+          npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Build (tests/setup.sh)
+        run: bash tests/setup.sh
+      - name: Checkout routes (no browser)
+        run: node tests/checkouts.js | tee -a ci.log
+      - name: One real match in Chromium (regress.js 1)
+        run: node tests/regress.js 1 2>&1 | tee -a ci.log
+      - name: Summary
+        if: always()
+        run: |
+          { echo "### TOPS fast check"; echo; echo "commit \`${GITHUB_SHA::7}\` · tree \`$(git rev-parse --short HEAD^{tree})\` · branch \`${GITHUB_REF_NAME}\`"; echo; echo '```'; tail -20 ci.log 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
