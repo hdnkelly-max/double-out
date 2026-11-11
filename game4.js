@@ -1081,7 +1081,7 @@ const V=(function(){try{return (()=>{
   // LED event wall (canvas, gently animated on the big stages)
   const cv=document.createElement('canvas');cv.width=1024;cv.height=512;const cx=cv.getContext('2d');const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;
   const draw=k=>{const g2=cx.createLinearGradient(0,0,1024,512);g2.addColorStop(0,'#05070c');g2.addColorStop(.55,big?'#0c1830':'#141a14');g2.addColorStop(1,'#05070c');cx.fillStyle=g2;cx.fillRect(0,0,1024,512);
-   cx.globalAlpha=.18;for(let i=0;i<14;i++){cx.fillStyle=ACC;const x=((i*90+k*60)%1300)-150;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x+40,0);cx.lineTo(x-120,512);cx.lineTo(x-160,512);cx.fill();}cx.globalAlpha=1;
+   cx.globalAlpha=t<=3?.145:.18;for(let i=0;i<14;i++){cx.fillStyle=ACC;const x=((i*90+k*60)%1300)-150;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x+40,0);cx.lineTo(x-120,512);cx.lineTo(x-160,512);cx.fill();}cx.globalAlpha=1;
    cx.fillStyle='#EDECE5';cx.font=`900 ${big?96:70}px "Barlow Condensed",Impact,sans-serif`;cx.textAlign='center';cx.fillText(N[0],512,200);cx.fillStyle=ACC;cx.font=`800 ${big?56:42}px "Barlow Condensed",Impact,sans-serif`;cx.fillText(N[1],512,268);
    cx.fillStyle='rgba(237,236,229,.75)';cx.font='800 40px Manrope,sans-serif';cx.fillText('T O P S',512,330);
    cx.fillStyle='rgba(0,0,0,.22)';for(let y=0;y<512;y+=4)cx.fillRect(0,y,1024,1);tex.needsUpdate=true;};draw(0);
@@ -1100,6 +1100,23 @@ const V=(function(){try{return (()=>{
   // Art (Trans-Tasman, ChatGPT 6.5 'too empty, no event identity'): a qualifier, not an arena. The same stepped
   // stands, but ~a dozen believable seated spectators from the crowd atlas instead of 56 box figures, and a
   // trackside hoarding banner at the front of the stands, low enough to read behind the thrower's legs.
+  // Art (Regional, DPNZ; ChatGPT 8.0 / 8.2 'a strong LED wall but nobody watching'): a handful of people from the
+  // crowd atlas, most behind the thrower's back, one or two at the board-end edge, so the band behind the head and raised arm stays clear (this camera sees z ~1.2-3.6). Regional:
+  // six players waiting on plastic chairs behind a low stage edge. DPNZ: nine standing in two rows, front row lit a
+  // touch more. The LED wall is smaller, sits toward the board end so its title clears the thrower's head, stripes softer.
+  if((t===2||t===3)&&CROWD_TEX){
+   led.scale.setScalar(.82);frame.scale.setScalar(.82);led.position.z-=.6;frame.position.z-=.6;   // the face camera sees only z ~1.2-3.6 here; this moves the title off the head without cutting it
+   const cellW=1.08,cellH=2.16,mk=k=>new T.MeshBasicMaterial({map:CROWD_TEX,transparent:true,alphaTest:.45,side:T.DoubleSide,fog:false,color:new T.Color().setRGB(k,k*.97,k*.93)});
+   const person=(x,yb,z,col,row,mat,sc)=>{const g=new T.PlaneGeometry(cellW*sc,cellH*sc),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(col+uv.getX(i))/8,1-(row+1-uv.getY(i))/3);const m=new T.Mesh(g,mat);m.position.set(x,yb+cellH*sc/2,z);m.rotation.y=-Math.PI/2;G.add(m);};
+   const dark=new T.MeshStandardMaterial({color:0x0b0d12,roughness:.85});
+   if(t===2){const front=mk(.6),chair=new T.MeshStandardMaterial({color:0x2a2f38,roughness:.6});
+    const step=new T.Mesh(new T.BoxGeometry(.6,.55,2.0),dark);step.position.set(3.35,.275,3.45);G.add(step);   // a tiered step behind the thrower's back, so the waiting players' heads and shoulders clear his shoulder
+    [[.98,2,.05,0],[2.92,0,-.04,.55],[3.28,6,.06,.55],[3.64,5,0,.55],[4.02,4,-.05,.55]].forEach(([z,c,jx,yb],k)=>{const x=3.3+jx;const st=new T.Mesh(new T.BoxGeometry(.42,.05,.42),chair);st.position.set(x+.05,yb+.44,z);G.add(st);person(x,yb,z,c,0,front,.95+((k*3)%5)*.025);});
+    const edge=new T.Mesh(new T.BoxGeometry(.12,.42,6.2),dark);edge.position.set(2.85,.21,Z0+.3);G.add(edge);}   // low stage edge: hides chair legs and feet
+   else{const front=mk(.7),back=mk(.5);const riser=new T.Mesh(new T.BoxGeometry(.5,.55,6.2),dark);riser.position.set(3.45,.275,Z0+.3);G.add(riser);
+    const fr=new T.Mesh(new T.BoxGeometry(.45,.3,1.6),dark);fr.position.set(3.0,.15,3.35);G.add(fr);   // front-row step: upper bodies show right of the thrower's head
+    [[.96,3,.04,0],[2.9,0,-.04,.3],[3.26,5,.06,.3],[3.62,6,.03,.3]].forEach(([z,c,jx,yb],k)=>person(3.0+jx,yb,z,c,2,front,.96+((k*7)%5)*.02));
+    [[3.08,2,.04],[3.44,7,-.05],[3.8,1,-.03],[4.15,3,0]].forEach(([z,c,jx],k)=>person(3.45+jx,.55,z,c,2,back,.94+((k*3)%5)*.02));}}
   if(t===4&&rows&&CROWD_TEX){   // the hall's side wall is at x 5.5, so the arena stands sit behind it: put the people in front of it instead
    const cellW=1.08,cellH=2.16,mk=k=>new T.MeshBasicMaterial({map:CROWD_TEX,transparent:true,alphaTest:.45,side:T.DoubleSide,fog:false,color:new T.Color().setRGB(k,k*.97,k*.92)});
    const back=mk(.5),front=mk(.66);   // spectators sit a step below the lit lane: secondary, not competing with the thrower
