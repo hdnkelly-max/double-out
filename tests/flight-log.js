@@ -61,8 +61,8 @@ const {chromium}=require('playwright');const path=require('path');
  const red=await p.evaluate(()=>{console.error('login failed for joe@example.com token=abc123secret Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c');return JSON.stringify(TOPS_LOG.events().slice(-3));});
  if(/joe@example|abc123secret|eyJhbGci/.test(red))f.push('secrets reached the ring: '+red.slice(0,200));
  // strict body cap with huge unicode events
- const big=await p.evaluate(()=>{for(let i=0;i<300;i++)TOPS_LOG.log('x',{m:'表'.repeat(400),i});const r=TOPS_LOG.row('error');return {bytes:new TextEncoder().encode(JSON.stringify(r)).length,claimed:r.bytes,trimmed:r.trimmed_events};});
- if(big.bytes>48*1024)f.push('body over 48 KiB with unicode: '+JSON.stringify(big));if(Math.abs(big.bytes-big.claimed)>8)f.push('bytes field does not match the body: '+JSON.stringify(big));
+ const big=await p.evaluate(()=>{for(let i=0;i<300;i++)TOPS_LOG.log('x',{m:'表'.repeat(400),i});const r=TOPS_LOG.row('error');const w=Object.assign({},r);delete w.made;delete w.rev;/* the body actually sent */return {bytes:new TextEncoder().encode(JSON.stringify(w)).length,claimed:r.bytes,trimmed:r.trimmed_events};});
+ if(big.bytes>48*1024)f.push('body over 48 KiB with unicode: '+JSON.stringify(big));if(big.bytes!==big.claimed)f.push('bytes field does not match the body: '+JSON.stringify(big));
  // rapid transition: a match starting within 1.5 s gets no 'after' snapshot from the previous one
  const rap=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));S.won=true;endMatch();beginMatch({mode:'career',tier:1,p0:'P',oppName:'B',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,2000));
    const ev=TOPS_LOG.events();const startB=ev.filter(e=>e.k==='match_start').pop();const afterA=ev.filter(e=>e.k==='res'&&e.d.w==='after'&&e.q>startB.q);return {after:afterA.length};});
@@ -73,6 +73,22 @@ const {chromium}=require('playwright');const path=require('path');
  // ring cap, dropped count, size cap, fetch failures without query strings
  const cap=await p.evaluate(async()=>{for(let i=0;i<400;i++)TOPS_LOG.log('x','y'.repeat(150));try{await fetch('http://127.0.0.1:9/nowhere?token=secret');}catch(e){}const r=TOPS_LOG.row('error');return {n:TOPS_LOG.events().length,dropped:TOPS_LOG.dropped,bytes:r.bytes,q:JSON.stringify(TOPS_LOG.events()).includes('token=secret'),nf:TOPS_LOG.events().some(e=>e.k==='net_fail')};});
  if(cap.n!==300)f.push('ring not capped at 300: '+cap.n);if(cap.dropped<100)f.push('dropped count missing: '+cap.dropped);if(cap.bytes>48*1024)f.push('row over 48 KiB: '+cap.bytes);if(cap.q)f.push('a query string was logged');if(!cap.nf)f.push('fetch failure not logged');
+ // ChatGPT r3 P0-1: storage writes fail while reads still work (quota): a new incident must live in memory, be read back and upload
+ const memc=await p.evaluate(async()=>{const old=[{upload_id:'disk-old',reason:'error',rev:1,events:[]}];localStorage.setItem('tops_logq',JSON.stringify(old));
+  const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k==='tops_logq')throw new DOMException('full','QuotaExceededError');return set.call(this,k,v);};
+  window.__ins2=[];const of=NET.sb.from;NET.sb.from=t=>({insert:(r)=>{__ins2.push(JSON.parse(JSON.stringify(r)));return Promise.resolve({error:{code:'08006',message:'offline'},status:0});}});
+  let res;try{TOPS_LOG.log('error',{m:'mem-test'});const r=TOPS_LOG.row('error');const kept=TOPS_LOG._keep(r);const q=TOPS_LOG.queue();
+   res={kept,inQueue:q.some(x=>x.upload_id===r.upload_id),diskOnly:JSON.parse(localStorage.getItem('tops_logq')).length,persist:r.diag&&r.diag.persist,id:r.upload_id};}
+  finally{Storage.prototype.setItem=set;}
+  // storage works again: the memory queue (with the new incident) uploads on the next retry
+  NET.sb.from=t=>({insert:(r)=>{__ins2.push(JSON.parse(JSON.stringify(r)));return Promise.resolve({error:null,status:201});}});TOPS_LOG.retry();await new Promise(r=>setTimeout(r,800));
+  res.uploaded=__ins2.some(x=>x.upload_id===res.id);NET.sb.from=of;return res;});
+ if(!memc.kept||!memc.inQueue||!memc.uploaded)f.push('memory fallback: '+JSON.stringify(memc));
+ const mp=await p.evaluate(()=>{const r=TOPS_LOG.row('error');const d=r.diag;const S2=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k==='tops_logq')throw new Error('q');return S2.call(this,k,v);};try{TOPS_LOG._keep(TOPS_LOG.row('error'));return TOPS_LOG.row('error').diag.persist;}finally{Storage.prototype.setItem=S2;}});
+ if(mp!=='memory')f.push('diag.persist after a failed write: '+mp);
+ // ChatGPT r3 P1-2: bytes = the body actually sent (local fields stripped)
+ const by=await p.evaluate(()=>{const r=TOPS_LOG.row('error');const w=Object.assign({},r);delete w.made;delete w.rev;return {bytes:r.bytes,real:new TextEncoder().encode(JSON.stringify(w)).length};});
+ if(by.bytes!==by.real)f.push('bytes field '+by.bytes+' vs sent body '+by.real);
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
  console.log(JSON.stringify({kinds:me&&me.ev.reduce((a,e)=>(a[e.k]=(a[e.k]||0)+1,a),{}),sample:me&&me.ev.filter(e=>e.k==="warn"||e.k==="net_fail").slice(0,3),boot,res:me&&me.ev.filter(e=>e.k==='res').map(e=>e.d).slice(0,2),bytes:me&&me.bytes,cap}));
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: boot, match, per-visit darts, errors kept at once and coalesced, resource snapshots with cached characters, hidden+pagehide one keepalive id, failed upload kept and retried, ring 300, body <48 KiB, no query strings');})();

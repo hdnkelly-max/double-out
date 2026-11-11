@@ -72,13 +72,13 @@ const QK='tops_logq',INC_MAX=3;
 const enc=s=>{try{return new TextEncoder().encode(s).length;}catch(e){return s.length*3;}};
 // the body is measured exactly as sent; trimming continues until it fits (oldest events first)
 function row(reason){let ev=events();const head0={made:Date.now(),upload_id:rid(),session_id:SID,page_id:PAGE,schema_ver:SCHEMA,ver:VER(),reason,dropped,suppressed:Object.keys(supp).length?Object.assign({},supp):null,seq_first:null,seq_last:null,trimmed_events:0,bytes:0,events:ev};
- const fit=()=>{head0.seq_first=ev.length?ev[0].q:null;head0.seq_last=ev.length?ev[ev.length-1].q:null;head0.events=ev;head0.diag=diag();let n=0;for(let i=0;i<4;i++){head0.bytes=n;const m=enc(JSON.stringify(head0));if(m===n)break;n=m;}head0.bytes=n;return n;};/* the bytes field's own digits included */
+ const fit=()=>{head0.seq_first=ev.length?ev[0].q:null;head0.seq_last=ev.length?ev[ev.length-1].q:null;head0.events=ev;head0.diag=diag();let n=0;for(let i=0;i<4;i++){head0.bytes=n;const w=Object.assign({},head0);delete w.made;delete w.rev;const m=enc(JSON.stringify(w));if(m===n)break;n=m;}head0.bytes=n;return n;};/* measured on the body actually sent (local fields stripped), its own digits included (ChatGPT r3 P1-2) */
  let n=fit();const total=ev.length;while(n>BODY_MAX&&ev.length){ev=ev.slice(Math.max(1,Math.ceil(ev.length/8)));head0.trimmed_events=total-ev.length;n=fit();}return head0;}
 const OWN='tops_logq_owner';
-let mem=null;/* in-memory copy if storage fails */
-function qGet(){try{const v=localStorage.getItem(QK);return v?JSON.parse(v):(mem||[]);}catch(e){return mem||[];}}
+let mem=null,memOnly=false;/* ChatGPT r3 P0-1: once a write fails, the in-memory queue is the truth (the disk copy is stale) until a full write succeeds */
+function qGet(){if(memOnly&&mem)return mem.slice();try{const v=localStorage.getItem(QK);return v?JSON.parse(v):(mem||[]);}catch(e){return mem||[];}}
 let failN=0,lastFail=null,keepFail=0,incOverflow=0,lastOk=0;const submitted=new Set();
-function qSet(q){mem=q;try{localStorage.setItem(QK,JSON.stringify(q));return true;}catch(e){keepFail++;/* quota: drop the checkpoint and try again */try{const q2=q.filter(r=>r.reason==='error');mem=q2.length<q.length?q.concat():q;localStorage.setItem(QK,JSON.stringify(q2));return q2.length===q.length;}catch(x){return false;}}}
+function qSet(q){mem=q.slice();try{localStorage.setItem(QK,JSON.stringify(q));memOnly=false;return true;}catch(e){keepFail++;memOnly=true;/* the full queue lives in memory for this page; disk keeps what fits (incidents first) for the next load */try{localStorage.setItem(QK,JSON.stringify(q.filter(r=>r.reason==='error')));}catch(x){}return 'memory';}}/* truthy 'memory' = kept for this page only; true = on disk; false = not kept (overflow) */
 let revN=0;
 // a row's payload is immutable once it has been sent: refreshing it then makes a NEW row (new id); an unsent row may be refreshed in place.
 // Up to 3 unsent incidents are kept; a 4th is not added (counted in diag.inc_overflow) - its events stay in the ring for the next upload.
@@ -88,7 +88,7 @@ function keep(r){r.rev=++revN;const q=qGet();const same=q.findIndex(x=>x.upload_
  else{const k=q.findIndex(x=>x.reason!=='error');if(k>=0&&!inflight.has(q[k].upload_id))q.splice(k,1,r);else q.push(r);}return qSet(q);}
 function release(id,rev){qSet(qGet().filter(r=>!(r.upload_id===id&&r.rev===rev)));/* only the exact version that was sent */}
 function diag(){let oldest=null;try{const q=qGet();for(const r of q)if(r.made&&(oldest==null||r.made<oldest))oldest=r.made;}catch(e){}
- return {fail_n:failN,last_fail:lastFail,keep_fail:keepFail,inc_overflow:incOverflow,last_ok_age_s:lastOk?Math.round((Date.now()-lastOk)/1000):null,oldest_pending_age_s:oldest?Math.round((Date.now()-oldest)/1000):null};}
+ return {persist:memOnly?'memory':'disk',fail_n:failN,last_fail:lastFail,keep_fail:keepFail,inc_overflow:incOverflow,last_ok_age_s:lastOk?Math.round((Date.now()-lastOk)/1000):null,oldest_pending_age_s:oldest?Math.round((Date.now()-oldest)/1000):null};}
 let KA=null;const signedIn=()=>typeof NET!=='undefined'&&NET.user&&NET.sb;
 function prepKA(){try{if(!signedIn()){KA=null;return;}const u=NET.sb.supabaseUrl,k=NET.sb.supabaseKey,who=NET.user.id;NET.sb.auth.getSession().then(({data})=>{const s=data&&data.session;KA=(u&&k&&s&&s.access_token&&(!s.user||s.user.id===who))?{u,k,t:s.access_token,who}:null;}).catch(()=>{KA=null;});}catch(e){KA=null;}}
 const inflight=new Set();
