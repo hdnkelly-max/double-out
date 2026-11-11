@@ -549,7 +549,7 @@
 "lv": 22
 },
 {
-"who": "LeePace t2 pro st60 vapor8",
+"who": "LeePace t2 pro st60 zen",
 "from": "club 339 darts",
 "arm": 0,
 "observed": 73.6,
@@ -657,7 +657,7 @@
 "rh": 60,
 "co": 60
 },
-"barrel": "vapor8",
+"barrel": "zen",
 "setup": {
 "point": "std",
 "shaft": "med",
@@ -732,7 +732,7 @@
 "lv": 30
 },
 {
-"who": "LeePace t3 arr st60 vapor8",
+"who": "LeePace t3 arr st60 zen",
 "from": "club 339 darts",
 "arm": 0,
 "observed": 73.6,
@@ -840,7 +840,7 @@
 "rh": 60,
 "co": 60
 },
-"barrel": "vapor8",
+"barrel": "zen",
 "setup": {
 "point": "std",
 "shaft": "med",
