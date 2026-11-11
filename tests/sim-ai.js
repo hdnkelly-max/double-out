@@ -5,10 +5,11 @@
 // usage: node tests/sim-ai.js [legs per cell = 200] [--report-only]
 const {chromium}=require('playwright');const path=require('path');
 const LEGS=+process.argv[2]||200, REPORT=process.argv.includes('--report-only');
-// draft bands (Overseer rule 11, pending Hayden): opponent 3-dart average on the Club ("as written") setting
+// draft bands (Overseer rule 11, pending Hayden): opponent 3-dart average on Competitive; Club and Rookie sit below
 const BANDS=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
 // settings to check: [label, diff level, placement]. Placement +15 is the cap (a pub player averaging ~77).
-const SETS=[['none',null,null],['rookie',  'rookie',0],['club','club',0],['comp','comp',0],['club+15','club',15],['comp+15','comp',15],['rookie+14 (Lee)','rookie',14]];
+// Lee's case: Competitive, ~70 player average at the pub -> old placement round((70-52)*0.6) = +11; Leemus's live save is Rookie +14
+const SETS=[['none',null,null],['rookie','rookie',0],['club','club',0],['comp','comp',0],['comp+11 (Lee)','comp',11],['rookie+14 (Leemus save)','rookie',14],['comp+15 (max)','comp',15]];
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});
  const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
@@ -41,9 +42,14 @@ const SETS=[['none',null,null],['rookie',  'rookie',0],['club','club',0],['comp'
  const fails=[];const pad=(s,n)=>String(s).padEnd(n);
  console.log(pad('setting',18)+pad('tier',6)+pad('band',9)+pad('targets',12)+pad('sim avg',9)+pad('180s/100 visits',17)+'b2b 180s/100 legs');
  res.forEach(r=>{const [lo,hi]=BANDS[r.tier];console.log(pad(r.set,18)+pad(r.tier,6)+pad(lo+'-'+hi,9)+pad(r.targetMin+'-'+r.targetMax,12)+pad(r.avg,9)+pad(r.p180,17)+r.b2bPer100Legs);
-  // gate: "as written" (no setting / Club, no placement) must sit inside the band; every setting may not exceed the band top by more than 5
-  if((r.set==='none'||r.set==='club')&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
-  if(r.avg>hi+5)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} more than 5 above band top ${hi}`);
+  // gate (rule 11): Competitive inside the band (1 point of sim noise); no setting above the band top; placement must not change anything
+  if(/^comp/.test(r.set)&&(r.avg<lo-1||r.avg>hi+1))fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} outside band ${lo}-${hi}`);
+  if(r.avg>hi+1)fails.push(`tier ${r.tier} ${r.set}: sim avg ${r.avg} above band top ${hi}`);
+  if(r.targetMax>hi+((r.tier<=1)?4:7))fails.push(`tier ${r.tier} ${r.set}: an opponent target of ${r.targetMax} is far above band top ${hi}`);
   if(r.tier<=2&&r.b2bPer100Legs>1)fails.push(`tier ${r.tier} ${r.set}: back-to-back 180s in ${r.b2bPer100Legs} of 100 legs`);});
+ // tiers climb in order on every setting
+ const bySet={};res.forEach(r=>(bySet[r.set]=bySet[r.set]||[])[r.tier]=r.avg);Object.entries(bySet).forEach(([k,a])=>{for(let t=1;t<a.length;t++)if(!(a[t]>a[t-1]))fails.push(`${k}: tier ${t} (${a[t]}) not above tier ${t-1} (${a[t-1]})`);});
+ // placement has no effect: Lee's case and the max case match plain Competitive targets
+ const tg=(set,t)=>{const r=res.find(x=>x.set===set&&x.tier===t);return r&&r.targetMean;};for(let t=0;t<7;t++)['comp+11 (Lee)','comp+15 (max)'].forEach(k=>{if(tg(k,t)!==tg('comp',t))fails.push(`${k}: tier ${t} target ${tg(k,t)} differs from Competitive ${tg('comp',t)} (placement still applied)`);});
  if(fails.length){console.log('SIM-AI FAILED\n- '+fails.join('\n- '));if(!REPORT)process.exit(1);}else console.log('sim-ai: every tier inside its band');
 })();
