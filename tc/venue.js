@@ -7,10 +7,10 @@
   const SPOTS = {
     0: { bake_wallR: [
       // left → right on the side wall: p4, p2, p1, p3. Faces map the texture rotated 180°.
-      { r: [1719, 474, 1801, 585], img: 'pub_1.webp', rot: 180 },
-      { r: [1724, 1100, 1805, 1211], img: 'pub_2.webp', rot: 180 },
-      { r: [1724, 1241, 1805, 1351], img: 'pub_3.webp', rot: 180 },
-      { r: [1696, 1365, 1777, 1476], img: 'pub_4.webp', rot: 180 }
+      { r: [1719, 474, 1801, 585], img: 'pub_1.webp', rot: 180, dim: .32 },
+      { r: [1724, 1100, 1805, 1211], img: 'pub_2.webp', rot: 180, dim: .32 },
+      { r: [1724, 1241, 1805, 1351], img: 'pub_3.webp', rot: 180, dim: .32 },
+      { r: [1696, 1365, 1777, 1476], img: 'pub_4.webp', rot: 180, dim: .32 }
     ] },
     // the club: plain painted walls, so these get a frame, a mat and a shadow. Faces map the texture rotated 90° (wall up = texture -x).
     1: {
@@ -36,7 +36,25 @@
     '  float flr = exp(-pow(length((w - vec3(2.4, 0., 3.4)) * vec3(.9, 4., .9)), 2.)) * (1. - oche);', // carpet behind the player, kept off the oche pool
     '  float L = clamp(.74 + .42 * lane + .3 * oche + .3 * side + .5 * hon - edge - .13 * flr, .36, 1.28);',
     '  outgoingLight *= L * mix(vec3(1.), vec3(1.07, .97, .82), clamp(lane + oche + hon, 0., 1.)); }'
-  ].join('\n') };
+  ].join('\n'),
+    // pub: one lit board in a dim, warm boozer. The board lane is the brightest thing, the brick wall the side
+    // camera faces (x 3.2) gets only a low wash, the bar glows as a warm pocket, ceiling and corners go dark.
+    0: [
+    '{ vec3 w = vTopsW;',
+    '  float lane = exp(-pow(length((w - vec3(0., 1.75, .25)) * vec3(.95, 1.05, .95)), 2.));',  // hood light over the board
+    '  float oche = exp(-pow(length((w - vec3(0., .05, 2.4)) * vec3(.9, 1.6, .9)), 2.));',
+    '  float side = exp(-pow(length((w - vec3(3.2, 1.6, 2.0)) * vec3(.9, .9, .6)), 2.));',     // brick behind the thrower: low wash
+    '  float bar = exp(-pow(length((w - vec3(-3.4, 1.2, 4.2)) * vec3(.7, .9, .55)), 2.));',     // warm pocket at the bar
+    '  float low = exp(-pow(length((w - vec3(3.1, .55, 2.0)) * vec3(.9, 2.2, .6)), 2.));',      // oche spill kissing the lower wall: separates carpet, panels, brick
+    '  float corner = exp(-pow(length((w - vec3(3.2, 1.9, .5)) * vec3(.9, .9, .9)), 2.));',     // board-light spill on the side wall near the board corner
+    '  float head = exp(-pow(length((w - vec3(3.2, 1.75, 2.0)) * vec3(.9, .75, .95)), 2.));',  // the brick right behind the thrower\'s head and arm
+    '  float edge = smoothstep(2.0, 3.3, w.y) * .32 + smoothstep(4.4, 7., w.z) * .22 + smoothstep(3.4, 4.5, w.x) * .12;',
+    '  float L = clamp(.6 + .62 * lane + .26 * oche + .14 * side + .22 * bar + .2 * low + .22 * corner - edge, .3, 1.24);',
+    '  float lm = dot(outgoingLight, vec3(.2126, .7152, .0722));',
+    '  outgoingLight = mix(outgoingLight, vec3(lm) * vec3(1.15, .92, .7), .38 * head);',          // calmer, less contrasty brick behind the thrower
+    '  outgoingLight = mix(outgoingLight, vec3(.13, .09, .065), .2 * head);',
+    '  outgoingLight *= L * mix(vec3(1.03, .97, .88), vec3(1.08, .95, .78), clamp(lane + oche + bar + corner, 0., 1.)); }'
+    ].join('\n') };
   function venueMat(tier, name, mat) {
     if (!LIGHT[tier] || !mat || !/^bake_/.test(name)) return;
     mat.customProgramCacheKey = () => 'topsVenue' + tier;   // one program per venue light setup; club and pub never share or clash

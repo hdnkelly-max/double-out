@@ -1062,8 +1062,8 @@ const V=(function(){try{return (()=>{
    for(const [blur,a] of [[42,.55],[22,.75],[8,1]]){c.shadowColor=col;c.shadowBlur=blur;c.strokeStyle=col;c.globalAlpha=a;c.lineWidth=10;c.strokeText(txt,x,y);}
    c.globalAlpha=1;c.shadowBlur=6;c.lineWidth=4;c.strokeStyle='#fffbe8';c.strokeText(txt,x,y);};
   c.clearRect(0,0,1024,384);neon(t===0?'TOPS':'TOPS',512,150,200,'#C6F36B');neon(t===0?'DARTS · BEER · BANTER':'MEMBERS · DARTS · POOL',512,300,64,t===0?'#ff4a3d':'#4CA3E0');tex.needsUpdate=true;
-  if(t===0){const m=new T.Mesh(new T.PlaneGeometry(1.06,.4),new T.MeshBasicMaterial({map:tex,transparent:true,toneMapped:false,depthWrite:false}));m.position.set(wx-.04,2.27,OCHE_Z-.4);m.rotation.y=-Math.PI/2;G.add(m);
-  const glow=new T.PointLight(t===0?0xb8ff6a:0x8fd0ff,.4,3.2);glow.position.set(wx-.4,2.27,OCHE_Z-.4);G.add(glow);}
+  if(t===0){const m=new T.Mesh(new T.PlaneGeometry(1.06,.4),new T.MeshBasicMaterial({map:tex,transparent:true,toneMapped:false,depthWrite:false}));m.material.color.setScalar(.64);m.position.set(wx-.04,2.27,OCHE_Z-.4);m.rotation.y=-Math.PI/2;G.add(m);
+  const glow=new T.PointLight(t===0?0xb8ff6a:0x8fd0ff,.26,3.2);glow.position.set(wx-.4,2.27,OCHE_Z-.4);G.add(glow);}
   // warm pools on the wall either side
   [[-.6],[2.6]].forEach(([dz])=>{const l=t===0?new T.SpotLight(0xf3c17c,.9,4,.5,.8,1.4):new T.SpotLight(0xfff1de,.35,4,.5,.8,1.4);l.position.set(wx-.9,3.1,OCHE_Z+dz);const tg=new T.Object3D();tg.position.set(wx,1.6,OCHE_Z+dz);G.add(tg);l.target=tg;G.add(l);});
   // LOOK v1.39: dust motes drifting in the lamp light
@@ -1154,7 +1154,7 @@ const V=(function(){try{return (()=>{
   const fill=new T.PointLight(new T.Color(ACC),big?1.1:.6,7);fill.position.set(X-.2,2.2,Z0+.4);G.add(fill);sideLed=led;}
 
  // GFX: baked venues (Blender, lighting baked into textures). Loaded once, swapped in for the code-built room.
- const VENUE_GLB={0:'pub.glb',1:'club2.glb'},VENUE_SC={}; // Art: club2 = the baked club with the Art colour grade applied offline (wip/art/bake)
+ const VENUE_GLB={0:'pub2.glb',1:'club2.glb'},VENUE_SC={}; // Art: pub2/club2 = the baked venues with the Art colour grade applied offline (wip/art/bake)
  function venueGlb(t){if(window.GFX_LEGACY||!VENUE_GLB[t])return null;if(VENUE_SC[t]&&VENUE_SC[t]!=='loading')return VENUE_SC[t];if(VENUE_SC[t]==='loading')return null;VENUE_SC[t]='loading';
   const ld=(file,retry)=>{try{new T.GLTFLoader().load((window.TOPS_ASSETS||'assets/')+file,g=>{const k=(window.GFX_BAKE_K||1)*({0:1,1:.8}[t]||1);g.scene.traverse(o=>{if(o.isMesh){let mp=o.material.map;if(mp&&window.TOPS_VENUE_TEX){try{mp=TOPS_VENUE_TEX(t,o.name,mp)||mp;}catch(e){}}if(mp){mp.encoding=T.sRGBEncoding;mp.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}o.material=new T.MeshBasicMaterial({map:mp,color:new T.Color().setRGB(k,k,k)});if(window.TOPS_VENUE_MAT){try{TOPS_VENUE_MAT(t,o.name,o.material);}catch(e){}}o.castShadow=false;o.receiveShadow=false;if(/board/i.test(o.name))o.position.z-=.018;o.matrixAutoUpdate=false;o.updateMatrix();}});g.scene.userData.keep=1;VENUE_SC[t]=g.scene;if(lastTier===t)buildVenue(t);},null,e=>{if(retry){ld(retry,null);return;}console.warn('venue glb',e);VENUE_SC[t]=null;});}catch(e){VENUE_SC[t]=null;}};ld(VENUE_GLB[t],/2\.glb$/.test(VENUE_GLB[t])?VENUE_GLB[t].replace('2.glb','.glb'):null);return null;}   // Art: graded club2/pub2, falling back to the original file if it isn't on the server yet
  function buildVenueInner(t){lastTier=t;setEnv(t<=1?'pub':t<=3?'club':'stage');ledWall=null;clearGroup(venue);clearGroup(lights);extras.length=0;let spots=[];renderer.toneMappingExposure=[1.05,.78,1.05,1.0,1.0,1.1,.95][t]||1.05;document.body.dataset.tier=t;scene.fog=t>=2?new T.FogExp2([0,0,0x0a0c18,0x04101e,0x04101e,0x0a1d3a,0x0a0414][t],t===5?.03:.045):null;
