@@ -12,7 +12,7 @@ const r=await p.evaluate(async()=>{save.authSeen=true;save.name='Lee';save.match
    return {corners:[at(0,0),at(c.width-1,0),at(0,c.height-1),at(c.width-1,c.height-1),at(5,(c.height/2)|0)],opaquePct:Math.round(1000*opaque/(d.length/4))/10};};
  const store=V.dartShot(save.flight,parts());out.store=await alpha(store);
  const teal='#2BB3A8';const tealCustom=V.dartShot(teal,Object.assign(parts(),{custom:true}));out.custom=await alpha(tealCustom);
- out.rIco=typeof rIco==='function';
+ const rIco=window.C3&&C3.rIco;out.rIco=typeof rIco==='function';
  if(out.rIco){const h=rIco({k:'flight',v:teal});const m=h.match(/src="([^"]+)"/);out.tileIsCustom=!!m&&m[1]===tealCustom;out.tileIsSet=!!m&&m[1]===V.dartShot(teal,Object.assign(parts(),{custom:false}));}
  return out;});
 const clean=a=>a.corners.every(v=>v===0)&&a.opaquePct>2&&a.opaquePct<80;
