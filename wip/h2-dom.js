@@ -11,7 +11,7 @@ const log = o => { fs.appendFileSync(OUT, JSON.stringify(o) + '\n'); };
   await p.route(/supabase\.co|fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await p.route(/cdnjs\.cloudflare\.com.*three\.min\.js/, r => r.fulfill({ path: root + '/node_modules/three/build/three.min.js', contentType: 'application/javascript' }));
   await p.goto('file://' + root + '/double-out-standalone.html', { waitUntil: 'domcontentloaded', timeout: 180000 }); await p.waitForTimeout(5000);
-  await p.evaluate(() => { save.authSeen = true; const l = $('login'); if (l) l.hidden = true; newCareer(); try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {} showHub(); });
+  await p.evaluate(() => { save.authSeen = true; const l = $('login'); if (l) l.hidden = true; newCareer(); save.tcIntro = Date.now(); try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {} showHub(); });   /* existing player: the one-time card welcome is already seen */
   const measure = tag => p.evaluate(tag => {
     const all = document.getElementsByTagName('*'); const st = { nodes: all.length, bodyKids: document.body.children.length };
     const cats = { backdrop: {}, filter: {}, willChange: {}, fixed: {}, anim: {} }; const big = [];
@@ -41,6 +41,7 @@ const log = o => { fs.appendFileSync(OUT, JSON.stringify(o) + '\n'); };
       if (st === 'done' || /^ERR/.test(st)) return st; await p.waitForTimeout(600); }
     return 'timeout'; };
   const startFromHub = async () => { await p.evaluate(() => { try { showHub(); } catch (e) {} }); await p.waitForTimeout(800);
+    const closed = await p.evaluate(() => { let n = 0; document.querySelectorAll('.tc-sheet').forEach(sh => { const x = sh.querySelector('#tcWelLater, .tc-x'); if (x && sh.getClientRects().length) { x.click(); n++; } }); return n; }); if (closed) { log({ tag: 'closed_sheets', closed }); await p.waitForTimeout(600); }   /* close any open sheet the way a player must before Walk on */
     const ok = (await clickIf('#c3Go')) || (await clickIf('#btnPlayNext')); await p.waitForTimeout(6000); return ok; };
   const resultButtons = () => p.evaluate(() => [...document.querySelectorAll('button')].filter(e => e.getClientRects().length && !e.disabled).map(e => (e.id || String(e.className).split(' ')[0]) + ':' + e.textContent.trim().replace(/\s+/g, ' ').slice(0, 40)));
   const nextFixture = async () => { const bs = await resultButtons(); log({ tag: 'result_buttons', bs });
