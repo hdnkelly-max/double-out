@@ -330,3 +330,13 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
 .tc-wk-ban span{font:600 11px Manrope,sans-serif;margin:3px 0 0 13px}
 #tcWalk::after{background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(4,6,10,.55) 55%,rgba(4,6,10,0))}
 .tc-wk-ban em{font-size:13px}.tc-wk-ban span{font-size:12px}
+
+/* #13 What are cards? */
+.tc-whatbtn{display:inline-flex;align-items:center;gap:6px;margin:-4px 0 12px;padding:6px 0;background:none;border:0;color:var(--acc,#D8F25A);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.tc-intro .tc-sh-in{max-width:520px;margin:0 auto}
+.tc-introl{list-style:none;counter-reset:ti;margin:6px 0 22px;padding:0;display:grid;gap:10px}
+.tc-introl li{counter-increment:ti;display:grid;grid-template-columns:30px 1fr;column-gap:12px;row-gap:2px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07)}
+.tc-introl li::before{content:counter(ti);grid-row:1/span 2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--acc,#D8F25A);color:#10191A;font:900 15px Manrope,system-ui,sans-serif}
+.tc-introl b{font:800 15px Manrope,system-ui,sans-serif;color:var(--text,#EDECE5)}
+.tc-introl span{font-size:14px;line-height:1.4;color:var(--muted,#9AA7A5)}
+.tc-introgo{width:100%}
