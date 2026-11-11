@@ -3,7 +3,7 @@
 // 1) the board face texture has real colour (red and green rings, numbers drawn, not blank),
 // 2) the board on screen shows that colour,
 // 3) the player's and opponent's shirt textures are drawn,
-// 4) GPU textures and geometries stay flat across matches (needs 3+ matches; the default run plays 4),
+// 4) GPU textures and geometries stay flat across matches (needs 4+ matches; the default run plays 4),
 // 5) with the character model requests failing, one Club match still shows a coloured board and drawn kits. (not a blank or near-black canvas).
 // Usage: node tests/regress_assets.js [matches=3]   exits 1 on any failure.
 const { chromium } = require('playwright');
@@ -78,8 +78,11 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // match 1 and match 4 are both Club, so the
     }
     // 4) GPU memory stays flat match to match (#10 root cause: v1.75 leaked ~50-100 textures a match until uploads failed).
     //    Compare like tiers (match 1 vs the last tier-1 match) so a venue's own texture count doesn't read as a leak.
-    if (mems.length >= 3) { const last = mems[mems.length - 1], first = mems[0];
-      if (last.tex > first.tex + 15 || last.geo > first.geo + 40) fails.push(`${vn}: GPU memory grows across matches ${JSON.stringify(mems)}`); }
+    //    Desktop caches each character model once (seen as 57 -> 85 -> 128 then flat), so compare the last Club match with
+    //    the second Club match (match 3), after that one-off cache has filled; a per-match leak still shows as +50-100 a match.
+    if (mems.length >= 4) { const t1 = mems.map((m, i) => [m, TIERS[i % TIERS.length]]).filter(x => x[1] === 1).map(x => x[0]);
+      const base = t1[1] || mems[0], last = t1[t1.length - 1];
+      if (last.tex > base.tex + 15 || last.geo > base.geo + 40) fails.push(`${vn}: GPU memory grows across matches ${JSON.stringify(mems)}`); }
     if (errs.length) fails.push(`${vn}: page errors: ${[...new Set(errs)].slice(0, 3).join(' | ')}`);
     await p.close();
   }
