@@ -26,17 +26,8 @@ const _ic=introCard;introCard=function(p0,p1,opts,t){const r=_ic.apply(this,argu
 const _sp=showPlayer;showPlayer=function(){const r=_sp.apply(this,arguments);try{const host=$('plPerks');if(!host)return r;let sec=$('walkSec');if(!sec){sec=document.createElement('section');sec.id='walkSec';sec.className='walk-sec';host.parentNode.insertBefore(sec,host);}
  const cur=save.walkon||'off';sec.innerHTML=`<div class="c3x-sh"><b>Walk-on music</b><span>Career Club and up, and online when you throw first</span></div><div class="walk-row">${WALK.map(w=>`<button type="button" class="walk-b${w.id===cur?' on':''}" data-id="${w.id}" aria-pressed="${w.id===cur}">${w.n}</button>`).join('')}</div>`;
  sec.querySelectorAll('.walk-b').forEach(b=>b.onclick=()=>{save.walkon=b.dataset.id;persist();try{audioInit&&audioInit();}catch(e){}playWalk(b.dataset.id);showPlayer(true);});}catch(e){}return r;};
-// --- clips of big moments: records the follow cam, offers "Save clip" ---
-let rec=null,chunks=[],clipUrl=null,recSt=null;
-/* #16: a canvas capture track stays live (and keeps copying the WebGL canvas every frame) until it is stopped; stopping the recorder doesn't stop it. Every cinematic moment used to leave one running for the rest of the session. */
-function endSt(){try{if(recSt)recSt.getTracks().forEach(t=>t.stop());}catch(e){}recSt=null;}
-function startRec(){try{const cv=$('scene');if(!cv||!cv.captureStream||!window.MediaRecorder||rec)return;const st=recSt=cv.captureStream(30);const mt=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(m=>MediaRecorder.isTypeSupported(m));if(!mt){endSt();return;}chunks=[];rec=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:2500000});rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};rec.onstop=()=>{endSt();const blob=new Blob(chunks,{type:mt});if(clipUrl)URL.revokeObjectURL(clipUrl);clipUrl=URL.createObjectURL(blob);offer(mt.indexOf('mp4')>=0?'mp4':'webm');rec=null;};rec.start(200);}catch(e){rec=null;endSt();}}
-function stopRec(){try{if(rec&&rec.state==='recording')setTimeout(()=>{try{rec.stop();}catch(e){endSt();rec=null;}},400);}catch(e){}}
-function offer(ext){let b=$('clipBtn');if(!b){b=document.createElement('a');b.id='clipBtn';b.className='clip-btn';document.body.appendChild(b);}b.href=clipUrl;b.download='TOPS-moment.'+ext;b.textContent='🎬 Save clip';b.hidden=false;clearTimeout(b._t);b._t=setTimeout(()=>{b.hidden=true;},9000);}
-new MutationObserver(()=>{const on=document.body.classList.contains('lk-cine');if(on&&!rec)startRec();else if(!on&&rec)stopRec();}).observe(document.body,{attributes:true,attributeFilter:['class']});
 })();
 </script>
 <style id="v07-css">
 .walk-sec{margin:18px 0}.walk-row{display:flex;flex-wrap:wrap;gap:8px}.walk-b{padding:10px 14px;min-height:44px;border-radius:999px;border:1px solid rgba(237,236,229,.18);background:#192426;color:#EDECE5;font:700 13px Manrope,sans-serif}.walk-b.on{background:#C6F36B;color:#10191A;border-color:#C6F36B}
-.clip-btn{position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 56px);z-index:120;padding:10px 14px;border-radius:999px;background:rgba(16,25,26,.92);border:1px solid #C6F36B;color:#C6F36B;font:800 13px Manrope,sans-serif;text-decoration:none;box-shadow:0 8px 20px rgba(0,0,0,.4)}.clip-btn[hidden]{display:none}
 </style>
