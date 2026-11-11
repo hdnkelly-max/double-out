@@ -114,7 +114,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 // ===== v1.55 difficulty: Rookie / Club / Competitive + placement from your first 120 career darts =====
 // Open, not secret: the level and the shift are shown to the player. No rubber-banding mid-match.
 (function(){
- const LV={rookie:{n:'Rookie',off:-11,d:'Opponents a step below the pub field. Learn the throw.'},club:{n:'Club',off:-5,d:'The field as written. Pub regulars play their usual.'},comp:{n:'Competitive',off:0,d:'Everyone brings their best night. For players already averaging 60+.'}};
+ const LV={rookie:{n:'Rookie',off:-6,d:'Opponents a step below the pub field. Learn the throw.'},club:{n:'Club',off:0,d:'The field as written. Pub regulars play their usual.'},comp:{n:'Competitive',off:5,d:'Everyone brings their best night. For players already averaging 60+.'}};
  const D=()=>save.diff||null;window.TOPS_DIFF=LV;
  // v1.77 (#12, rule 11): the 120-dart placement no longer touches opponent strength. Opponents come from tier, opponent and difficulty only.
  const placeEff=()=>0;
@@ -124,17 +124,19 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // shift opponent averages in career (not practice, drills or the intro tutorial)
  // v1.77 (#12, rule 11): opponents are mapped into their tier's band instead of taking raw offsets. Before this, placement
  // (measured once off the player's own average, usually against the pub) and the level offset were added at every tier, so a
- // 75-average pub player met 85-average Club opponents even on Rookie. The bands are for Competitive; Club and Rookie sit below.
+ // 75-average pub player met 85-average Club opponents even on Rookie. The bands are for the default setting (Club); Competitive sits up to 5 above, Rookie below.
  // Bands are Hayden's drafts; tests/sim-ai.js gates them.
  const BAND=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
  // target that makes the simulated match average land mid-band: pub and club AIs finish less efficiently, and stage pressure widens the spread at higher tiers, so each centre sits above its band middle by the measured gap
  const CEN=[58,63,69,76,84,91,97];
- const LVO={rookie:-11,club:-5,comp:0};
+ // Competitive headroom over the Club top per tier: Trans-Tasman and Pro Tour fields have the widest spread (stage pressure), so their toughest opponents run hottest; less headroom there keeps them inside the +5 hard cap with margin (sim-ai 200 legs, 20:47)
+ const CX=[3,3,3,3,1,1,3];
+ const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
  const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,d=D();const lv=d&&LVO[d.lv]!=null?d.lv:'club';
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
   const tgt=CEN[k]+rel+LVO[lv];
-  const top=hi+adj,bot=lo+adj-(lv==='comp'?0:16);   // Competitive stays inside the band; easier settings may sit below it, never above
+  const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // Club inside the band; Competitive targets at most 3 over (realised toughest opponents stay inside the +5 hard cap); Rookie below
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
  // save migration (v1.77): opponents stored by v1.75 (the queued next opponent, a revenge match) carry the old inflated average.
