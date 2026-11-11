@@ -33,6 +33,12 @@ if(shown){await p.waitForTimeout(2000);
  r.top=await p.evaluate(()=>{const o=document.getElementById('c3rw');[o,...o.querySelectorAll('*')].forEach(e=>{if(e.scrollHeight>e.clientHeight)e.scrollTop=0;});const t=(o.querySelector('.c3rw-top')||o.querySelector('#c3rwRes')).getBoundingClientRect();const hi=o.querySelector('.rwhero');const hr=hi&&getComputedStyle(hi).display!=='none'?hi.getBoundingClientRect():null;return {resTop:t.top|0,onScreen:t.top>=0&&t.bottom<=innerHeight,hero:hr?{top:hr.top|0,h:hr.height|0}:null,heroWhole:!hr||hr.top>=-1};});
  // and the bottom: scroll to the end, then where are the buttons?
  r.bottom=await p.evaluate(()=>{const o=document.getElementById('c3rw');[o,...o.querySelectorAll('*')].forEach(e=>{if(e.scrollHeight>e.clientHeight)e.scrollTop=e.scrollHeight;});const bs=[...o.querySelectorAll('.c3rw-act button, .c3rw-act a')].filter(x=>x.offsetParent||x.getClientRects().length);const last=bs[bs.length-1];const q=last&&last.getBoundingClientRect();return {n:bs.length,lastTxt:last&&last.textContent.trim().slice(0,22),lastBottom:q&&q.bottom|0,onScreen:!!q&&q.top>=0&&q.bottom<=innerHeight};});
- await p.screenshot({path:out+tag+'_end.png',timeout:120000});}
+ await p.screenshot({path:out+tag+'_end.png',timeout:120000});
+ // rule 22: text under 11px and taps under 44px anywhere in the reward card (scrolled through)
+ r.small={};r.taps=[];{const o0=await p.evaluate(()=>document.getElementById('c3rw').scrollHeight);for(let y=0;y<o0;y+=Math.max(200,h-100)){await p.evaluate(y=>{document.getElementById('c3rw').scrollTop=y;},y);await p.waitForTimeout(150);
+  const m=await p.evaluate(()=>{const res={};const o=document.getElementById('c3rw');o.querySelectorAll('*').forEach(e=>{const own=[...e.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();if(!own)return;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity<.3)return;const q=e.getBoundingClientRect();if(!q.width||q.bottom<0||q.top>innerHeight)return;const fs=parseFloat(cs.fontSize);if(fs<11)res[own.slice(0,20)+'@'+fs]=String(e.className).slice(0,18);});
+   const taps=[...o.querySelectorAll('button,a,[role=button]')].filter(e=>{const q=e.getBoundingClientRect();return q.width&&q.bottom>0&&q.top<innerHeight&&(q.height<44||q.width<44);}).map(e=>e.textContent.trim().slice(0,18)+'@'+(e.getBoundingClientRect().width|0)+'x'+(e.getBoundingClientRect().height|0));return {res,taps};});
+  Object.assign(r.small,m.res);m.taps.forEach(t=>{if(!r.taps.includes(t))r.taps.push(t);});}}
+}
 const pass=r.shown&&r.open.resTop>=0&&r.top.onScreen&&r.top.heroWhole&&r.bottom.onScreen&&!pe.length;
 console.log(tag,pass?'PASS':'FAIL',JSON.stringify(r),pe.slice(0,2).join(' | '));await b.close();process.exit(pass?0:1);})();
