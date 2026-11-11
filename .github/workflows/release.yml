@@ -1,0 +1,168 @@
+# TOPS release from a QA pass (SHIP-3b spec v1, design v2: ChatGPT 8.4 APPROVE to build + dry-run, 12 Nov 12:20).
+# Dispatch: gh workflow run release.yml -f commit=<sha> -f tree=<QA tree> -f risk=R2|R3 -f attest="R2/R3 confirmed by Shipping" -f item="<name>" [-f dry_run=false]
+# Rules: exact QA tree only (no merge exceptions); R0/R1 refused (manual on the Overseer's call); main is the release record
+# (RELEASES.log: prepared -> live|failed); rollback runs inside this run and redeploys the last *live* release's tag.
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      commit: { description: 'QA-passed commit (sha on this repo)', required: true }
+      tree:   { description: 'QA-tested source tree hash (pre-bump)', required: true }
+      risk:   { description: 'R2 or R3 (R0/R1 are refused)', required: true }
+      attest: { description: 'Type exactly: R2/R3 confirmed by Shipping', required: true }
+      item:   { description: 'Item name for the release log', required: true }
+      dry_run: { description: 'Gate + build only; nothing pushed or deployed', type: boolean, default: true }
+concurrency:
+  group: tops-production-release
+  queue: max
+  cancel-in-progress: false
+permissions: { contents: read }
+jobs:
+  gate_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      mode: ${{ steps.gate.outputs.mode }}
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+    steps:
+      - name: Refuse R0/R1 and unattested runs
+        env: { RISK: '${{ inputs.risk }}', ATTEST: '${{ inputs.attest }}' }
+        run: |
+          case "$RISK" in R2|R3) ;; *) echo "::error::REFUSED: risk '$RISK' is not R2/R3 (R0/R1 ship by hand on the Overseer's call)"; exit 1;; esac
+          [ "$ATTEST" = "R2/R3 confirmed by Shipping" ] || { echo "::error::REFUSED: attest input missing or wrong"; exit 1; }
+      - uses: actions/checkout@v4
+        with: { ref: main, path: site, fetch-depth: 1 }
+      - uses: actions/checkout@v4
+        with: { ref: src, path: src, fetch-depth: 0 }
+      - name: Gate (exact QA tree, inside the lock, against the current remote src)
+        id: gate
+        env: { COMMIT: '${{ inputs.commit }}', TREE: '${{ inputs.tree }}' }
+        run: |
+          cd src
+          git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
+          git fetch -q origin "$COMMIT" || { echo "::error::REFUSED: commit $COMMIT not found on this repo"; exit 1; }
+          C=$(git rev-parse "$COMMIT"); T=$(git rev-parse "$C^{tree}")
+          LOG=../site/RELEASES.log; touch $LOG
+          if grep -q " live .*tree=${TREE}" $LOG; then echo "mode=noop" >> $GITHUB_OUTPUT; echo "::notice::tree $TREE is already live; nothing to do"; exit 0; fi
+          if git merge-base --is-ancestor origin/src "$C"; then
+            git checkout -q --detach "$C"
+          else
+            git checkout -q --detach origin/src
+            git merge -q --no-edit "$C" || { echo "::error::REFUSED: merge conflict onto src"; exit 1; }
+          fi
+          GOT=$(git rev-parse HEAD^{tree})
+          case "$GOT" in "$TREE"*) ;; *) echo "::error::REFUSED: tree mismatch: QA $TREE, candidate $GOT (src moved or wrong commit; ship by hand)"; exit 1;; esac
+          echo "mode=new" >> $GITHUB_OUTPUT
+          echo "base=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "candidate $(git rev-parse --short HEAD) tree $GOT = QA $TREE" >> $GITHUB_STEP_SUMMARY
+      - name: Allocate version (integer hundredths) and bump
+        id: ver
+        if: steps.gate.outputs.mode == 'new'
+        env: { ITEM: '${{ inputs.item }}' }
+        run: |
+          cd src
+          CUR=$(grep -o "TOPS_VER='[0-9.]*'" v051.js | head -1 | grep -o "[0-9.]*")
+          LOGMAX=$(grep -o "version=[0-9.]*" ../site/RELEASES.log | cut -d= -f2 | sort -V | tail -1)
+          HI=$(printf '%s\n%s\n' "$CUR" "${LOGMAX:-0}" | sort -V | tail -1)
+          H=$(echo "$HI" | awk -F. '{printf "%d", $1*100+$2}'); N=$((H+1)); V=$(printf '%d.%02d' $((N/100)) $((N%100)))
+          sed -i "s/TOPS_VER='[0-9.]*'/TOPS_VER='$V'/" v051.js
+          git commit -qam "v$V: $ITEM (release run ${{ github.run_id }})"
+          echo "version=$V" >> $GITHUB_OUTPUT; echo "tag=rel-$V" >> $GITHUB_OUTPUT
+          git bundle create ../src.bundle origin/src..HEAD
+          echo "version $V" >> $GITHUB_STEP_SUMMARY
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.mode == 'new'
+        with: { node-version: '20' }
+      - name: Build (same steps as ship.sh)
+        if: steps.gate.outputs.mode == 'new'
+        run: |
+          cd src
+          npm i --no-save three@0.128.0 >/dev/null
+          node build.js
+          V=${{ steps.ver.outputs.version }}
+          mkdir -p ../out/next ../out/assets/ui ../out/assets/voice ../out/img
+          cp double-out-standalone.html ../out/index.html
+          python3 -c "import sys;s=open(sys.argv[1],encoding='utf-8').read().replace('<meta charset=\"utf-8\">','<meta charset=\"utf-8\"><base href=\"../\">',1);open(sys.argv[2],'w',encoding='utf-8').write(s)" double-out-standalone.html ../out/next/index.html
+          echo "{\"v\":\"$V\"}" > ../out/version.json
+          cp assets/ui/* ../out/assets/ui/ 2>/dev/null || true
+          cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
+          cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
+          grep -q "TOPS_VER='$V'" ../out/index.html || { echo "::error::BUILD: index.html does not carry $V"; exit 1; }
+          echo "built index.html $(wc -c < ../out/index.html) bytes, sha256 $(sha256sum ../out/index.html | cut -c1-16)" >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.mode == 'new'
+        with: { name: release-files, path: 'out/**', retention-days: 30, include-hidden-files: true }
+      - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.mode == 'new'
+        with: { name: src-bundle, path: src.bundle, retention-days: 30 }
+      - name: Dry run stops here
+        if: inputs.dry_run && steps.gate.outputs.mode == 'new'
+        run: |
+          echo "DRY RUN - gate and build passed for v${{ steps.ver.outputs.version }}; nothing pushed, tagged or deployed." >> $GITHUB_STEP_SUMMARY
+
+  publish:
+    needs: gate_build
+    if: ${{ !inputs.dry_run && needs.gate_build.outputs.mode == 'new' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions: { contents: write, pages: write, id-token: write }
+    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url }}' }
+    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}' }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: site, fetch-depth: 0 }
+      - uses: actions/download-artifact@v4
+        with: { name: release-files, path: out }
+      - uses: actions/download-artifact@v4
+        with: { name: src-bundle, path: . }
+      - name: Record the release on main (prepared) and tag it
+        run: |
+          cd site
+          git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
+          cp -r ../out/. .
+          echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
+          git add -A index.html version.json next assets img RELEASES.log
+          git commit -qm "v$V: $ITEM (release run ${{ github.run_id }}, prepared)"
+          git tag -a "$TAG" -m "v$V $ITEM tree $QTREE"
+          git push -q origin HEAD:main "$TAG" || { echo "::error::SYNC: push to main failed; nothing deployed"; exit 1; }
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Live check (version.json cache-busted, then a headless load with no page errors)
+        id: live
+        run: |
+          U="${{ steps.deploy.outputs.page_url }}"
+          ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
+          [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
+          npm i --no-save playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});const e=[];p.on('pageerror',x=>e.push(x.message));await p.goto('${U}?cb='+Date.now());await p.waitForTimeout(8000);const v=await p.evaluate(()=>window.TOPS_VER);await b.close();console.log('TOPS_VER',v,'errors',e.length);if(v!=='$V'||e.length){console.error(e.join('\n'));process.exit(1)}})()"
+          echo "LIVE: $U shows $V, no page errors" >> $GITHUB_STEP_SUMMARY
+      - uses: actions/checkout@v4
+        with: { ref: src, path: srcrepo, fetch-depth: 0 }
+      - name: Mark live on main and push the bump to src
+        run: |
+          cd site
+          sed -i "s/ prepared version=$V / live version=$V /" RELEASES.log
+          git commit -qam "v$V live (release run ${{ github.run_id }})" && git push -q origin HEAD:main || echo "::warning::SYNC: could not mark live on main"
+          cd ../srcrepo
+          git fetch -q ../src.bundle && git push -q origin FETCH_HEAD:refs/heads/src || { echo "::error::SYNC: src push failed (live and main agree; push src by hand)"; exit 1; }
+          echo "src -> $(git rev-parse --short FETCH_HEAD)" >> $GITHUB_STEP_SUMMARY
+      - name: Roll back to the last live release
+        if: failure() && steps.deploy.outcome == 'success'
+        run: |
+          cd site
+          PREV=$(grep " live " RELEASES.log | grep -v "version=$V " | tail -1 | grep -o "tag=[^ ]*" | cut -d= -f2)
+          [ -n "$PREV" ] || { echo "::error::ROLLBACK: no earlier live release in RELEASES.log; restore by hand"; exit 1; }
+          sed -i "s/ prepared version=$V / failed version=$V /" RELEASES.log
+          git commit -qam "v$V failed live check; rolling back to $PREV" && git push -q origin HEAD:main || true
+          git worktree add -q ../rb "$PREV"
+          echo "ROLLBACK to $PREV" >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-pages-artifact@v3
+        if: failure() && steps.deploy.outcome == 'success'
+        with: { path: rb, name: rollback }
+      - uses: actions/deploy-pages@v4
+        if: failure() && steps.deploy.outcome == 'success'
+        with: { artifact_name: rollback }
