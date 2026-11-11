@@ -251,8 +251,9 @@
   if (typeof beginMatch === 'function') {
     const _bm = beginMatch;
     window.beginMatch = beginMatch = function (opts) {
+      walkAbort();   // #17: a walk-on left from the last match ends here
       const r = _bm.apply(this, arguments);
-      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) setTimeout(() => { try { walkOnStart(opts); } catch (e) {} }, d); else walkOnStart(opts); } catch (e) { console.warn('tc begin', e); }
+      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) { const s0 = S; setTimeout(() => { try { if (S === s0 && S && !S.done) walkOnStart(opts); } catch (e) {} }, d); } else walkOnStart(opts);   /* #17: the delayed walk-on only starts if the same match is still running */ } catch (e) { console.warn('tc begin', e); }
       return r;
     };
   }
@@ -382,7 +383,11 @@
   if (typeof hubTab === 'function') { const _ht = hubTab; window.hubTab = hubTab = function () { const r = _ht.apply(this, arguments); try { hubTiles(); } catch (e) {} return r; }; }
   if (typeof showHub === 'function') {
     const _sh = showHub;
-    window.showHub = showHub = function () { const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+  }
+  if (typeof showTitle === 'function') {   // #17: quitting to the title ends a walk-on too
+    const _st = showTitle;
+    window.showTitle = showTitle = function () { walkAbort(); return _st.apply(this, arguments); };
   }
   // Player tab: collection + loadout + tiers
   if (typeof showPlayer === 'function') {
@@ -728,6 +733,15 @@
     setTimeout(end, 3200);
     return 3500;
   }
+  /* #17: every exit that isn't a completed walk (quit, back to the hub or title, the next beginMatch) ends the walk-on the same way:
+     figures it hid come back, the player figure goes back to how the walk found it, its clip stops, lights/overlay/body class clear. */
+  function walkAbort() {
+    const w = WK; if (!w) return; WK = null;
+    try { if (w.hid) w.hid.forEach(o => { o.visible = true; }); } catch (e) {}
+    try { if (w.act) w.act.stop(); } catch (e) {}
+    try { if (w.me && w.vis0 !== undefined) w.me.visible = !!w.vis0; } catch (e) {}
+    walkEnd();
+  }
   function walkEnd() {
     walkLights(null);
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
@@ -756,6 +770,7 @@
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
+      WK.vis0 = !!me.visible;   // #17/#18 (from Experience's exp-fix18 b500b3d): the figure's visibility before the walk-on shows it (hidden in a match)
       WK.rot = me.rotation.y;
       // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
       // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
@@ -792,6 +807,7 @@
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
       walkLights(null);
+      me.visible = !!WK.vis0;   // #17/#18: hand the figure back as the walk-on found it. Left visible, a whole extra skinned figure rendered every frame for the rest of the match and stood where the opponent throws.
       WK = null; walkEnd(); return null;
     }
     // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold
