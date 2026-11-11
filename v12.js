@@ -4,7 +4,10 @@
 /* locked: dart render dimmed to ~58%; name, body and requirement stay readable (ChatGPT 19:10) */
 #hub .opt.v12lock{border-style:dashed!important;border-color:rgba(237,236,229,.16)!important}
 #hub .opt.v12lock .n em{opacity:.58}
-#hub .opt.v12lock .n img{filter:grayscale(.6) brightness(.62)!important}
+#hub .opt.v12lock .n img{filter:grayscale(.35) brightness(.82)!important}
+/* phones (ChatGPT 01:2x): names hold to two lines so rows stay even; the full name is in the preview */
+@media (max-width:420px){#hub.c3 #shopList .bopt .t{font-size:19px!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
+.st2x .v12name{margin:10px 2px 0;font:italic 800 20px/1.1 "Barlow Condensed",sans-serif;text-transform:uppercase;color:#EDECE5}
 #hub .opt.v12lock .s>*:not(.v12why):not(.v12sp):not(.v12gate),#hub .opt.v12lock .v12d{opacity:.88}
 #hub .opt.v12lock .t{color:#EDECE5!important;opacity:1}
 /* card descriptions cap at two lines; the full text sits in the preview */
@@ -133,7 +136,7 @@ function levelStrip(){const L=$('shopList');if(!L)return;let s=$('v12lv');const 
 function clampDesc(el){const s0=el.querySelector('.s');if(!s0||s0.querySelector('.v12d'))return '';const sp=document.createElement('span');sp.className='v12d';
  while(s0.firstChild&&!(s0.firstChild.nodeType===1&&s0.firstChild.matches('.kitpts,.v12why,.swtag,br')))sp.appendChild(s0.firstChild);s0.insertBefore(sp,s0.firstChild);return sp.textContent.trim();}
 function previewFull(el,txt){if(!txt||!el.dataset.st2w||el.dataset.v12f)return;el.dataset.v12f='1';const tap=el.onclick;if(!tap)return;
- el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')&&!x.querySelector('.v12full')){const big=x.querySelector('.st2big');const p=document.createElement('p');p.className='v12full';p.textContent=txt;if(big)big.after(p);else x.prepend(p);}};}
+ el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')&&!x.querySelector('.v12full')){const big=x.querySelector('.st2big');const p=document.createElement('p');p.className='v12full';p.textContent=txt;if(big)big.after(p);else x.prepend(p);const tn=el.querySelector('.t');if(tn&&!x.querySelector('.v12name')){const h=document.createElement('div');h.className='v12name';h.textContent=tn.textContent;p.before(h);}}};}
 function buyBtn(el,cost,doBuy){const pr=el.querySelector('.price');if(!pr)return;const bank=career()?career().bank:0;const ok=bank>=cost;pr.className='price v12bp';
  pr.innerHTML=`<span class="v12buy${ok?'':' poor'}" aria-label="Buy for ${money(cost)}"><i>Buy</i><b>${money(cost)}</b></span>`+(ok?'':`<span class="v12need">Need ${money(cost-bank)} more</span>`);
  const btn=pr.querySelector('.v12buy');btn.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(ok)doBuy();});}
