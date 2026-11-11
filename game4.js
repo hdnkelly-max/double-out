@@ -1091,13 +1091,28 @@ const V=(function(){try{return (()=>{
   // truss + beams
   const tm=new T.MeshStandardMaterial({color:0x2a2d33,metalness:.8,roughness:.35});const ty=big?5.2:3.3,TX=big?X+2.2:X+.2;if(!PLATE){const tr=new T.Mesh(new T.BoxGeometry(.18,.18,big?8:5.5),tm);tr.position.set(TX,ty,Z0+.4);G.add(tr);}
   const bfc=document.createElement('canvas');bfc.width=4;bfc.height=128;{const bx=bfc.getContext('2d');const gr=bx.createLinearGradient(0,0,0,128);gr.addColorStop(0,'#fff');gr.addColorStop(.55,'#777');gr.addColorStop(1,'#000');bx.fillStyle=gr;bx.fillRect(0,0,4,128);}const bfade=new T.CanvasTexture(bfc);
-  const beamMat=new T.MeshBasicMaterial({alphaMap:bfade,color:new T.Color(ACC),transparent:true,opacity:big?.07:.06,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide});const whiteBeam=beamMat.clone();whiteBeam.color=new T.Color('#fff2d8');
+  const beamMat=new T.MeshBasicMaterial({alphaMap:bfade,color:new T.Color(ACC),transparent:true,opacity:t===4?.045:big?.07:.06,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide});const whiteBeam=beamMat.clone();whiteBeam.color=new T.Color('#fff2d8');
   const nb=PLATE?0:(big?7:4);for(let i=0;i<nb;i++){const z=Z0+.4-(big?3.4:2.4)+i*((big?6.8:4.8)/(nb-1));const can=new T.Mesh(new T.CylinderGeometry(.09,.12,.22,10),tm);can.position.set(TX,ty-.18,z);G.add(can);
    const len=ty-.2;const cone=new T.Mesh(new T.ConeGeometry(big?.85:.6,len,18,1,true),i%2?whiteBeam:beamMat);cone.position.set(TX-.4,ty-.2-len/2,z);cone.rotation.z=-.12;cone.userData.ph=i*1.3;G.add(cone);
    if(big)cone.onBeforeRender=()=>{const s=performance.now()/1000;cone.rotation.z=-.12+Math.sin(s*.18+cone.userData.ph)*.12;cone.rotation.x=Math.cos(s*.14+cone.userData.ph)*.08;};}
   // crowd: stepped seating, varied shirts, rim-lit, phone lights (v1.70)
   const rows=PLATE?0:({4:4,5:5,6:7}[t]||0),per={4:14,5:16,6:20}[t]||0;
-  if(rows){const SH=[0x2a3550,0x5a1f22,0x1f3a2a,0x3c3c44,0x50402a,0x223048,0x472447,0x606068,0x1a1a1e,0x6a4a20];
+  // Art (Trans-Tasman, ChatGPT 6.5 'too empty, no event identity'): a qualifier, not an arena. The same stepped
+  // stands, but ~a dozen believable seated spectators from the crowd atlas instead of 56 box figures, and a
+  // trackside hoarding banner at the front of the stands, low enough to read behind the thrower's legs.
+  if(t===4&&rows&&CROWD_TEX){   // the hall's side wall is at x 5.5, so the arena stands sit behind it: put the people in front of it instead
+   const cellW=1.08,cellH=2.16,mk=k=>new T.MeshBasicMaterial({map:CROWD_TEX,transparent:true,alphaTest:.45,side:T.DoubleSide,fog:false,color:new T.Color().setRGB(k,k*.97,k*.92)});
+   const back=mk(.5),front=mk(.66);   // spectators sit a step below the lit lane: secondary, not competing with the thrower
+   const person=(x,yb,z,col,row,mat,sc)=>{const g=new T.PlaneGeometry(cellW*sc,cellH*sc),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(col+uv.getX(i))/8,1-(row+1-uv.getY(i))/3);const m=new T.Mesh(g,mat);m.position.set(x,yb+cellH*sc/2,z);m.rotation.y=-Math.PI/2;G.add(m);};
+   const dark=new T.MeshStandardMaterial({color:0x0b0d12,roughness:.85});
+   const riser=new T.Mesh(new T.BoxGeometry(.5,.3,5.6),dark);riser.position.set(5.22,.15,Z0+.5);G.add(riser);
+   const hb=new T.Mesh(new T.PlaneGeometry(3.8,.24),new T.MeshBasicMaterial({map:textTexture('TRANS-TASMAN CHAMPIONSHIP   ·   NZ  v  AUS','#0b1428','#d9d3c6',2048,130,84),color:new T.Color().setRGB(.8,.8,.8)}));hb.position.set(4.955,.15,Z0+.7);hb.rotation.y=-Math.PI/2;G.add(hb);   // on the riser face, behind the seated row: layered, not a strip across the frame
+   const hl=new T.Mesh(new T.PlaneGeometry(3.8,.02),new T.MeshBasicMaterial({color:0xb88934}));hl.position.set(4.95,.28,Z0+.7);hl.rotation.y=-Math.PI/2;G.add(hl);
+   // two deliberate groups either side of the lane; the band behind the thrower's head and throwing arm (z about 0.8-2.9) stays clear; the second group sits behind his back on both cameras
+   [[-.55,0,.06],[.05,3,-.08],[3.05,5,.1],[3.5,1,-.05],[4.0,6,.04]].forEach(([z,c,jx],k)=>person(5.25+jx,.3,z,c,2,back,.95+((k*7)%5)*.025));   // standing at the back, clapping
+   [[-.85,2,.1],[-.25,4,-.12],[.35,7,.05],[3.2,0,-.06],[3.65,6,.12],[4.1,5,0]].forEach(([z,c,jx],k)=>person(4.72+jx,0,z,c,0,front,.95+((k*3)%5)*.025));   // seated in front, staggered
+   G.userData.ttDim=1;}
+  else if(rows){const SH=[0x2a3550,0x5a1f22,0x1f3a2a,0x3c3c44,0x50402a,0x223048,0x472447,0x606068,0x1a1a1e,0x6a4a20];
    const body=new T.MeshStandardMaterial({color:0xffffff,roughness:.85}),skin=new T.MeshStandardMaterial({color:0x3a2c26,roughness:.85});
    const rim=new T.MeshBasicMaterial({color:new T.Color(ACC).multiplyScalar(.7),toneMapped:false});
    const bG=new T.BoxGeometry(.3,.46,.4),hG=new T.SphereGeometry(.095,10,8),rG=new T.BoxGeometry(.015,.04,.36);
