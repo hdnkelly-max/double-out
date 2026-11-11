@@ -44,6 +44,15 @@ const {chromium}=require('playwright');const path=require('path');
  const two=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');window.__failIns=true;TOPS_LOG.log('x','A marker');TOPS_LOG.incident(true);await new Promise(r=>setTimeout(r,200));const a=TOPS_LOG.queue().filter(r=>r.reason==='error').map(r=>r.upload_id);
    TOPS_LOG.log('x','B marker');TOPS_LOG.incident(true);await new Promise(r=>setTimeout(r,200));const b=TOPS_LOG.queue().filter(r=>r.reason==='error');window.__failIns=false;return {a,b:b.map(r=>r.upload_id),aHasA:b.some(r=>JSON.stringify(r.events).includes('A marker'))};});
  if(!two.a.length||!two.b.includes(two.a[0])||!two.aHasA)f.push('an unsent incident was replaced or lost: '+JSON.stringify(two));
+ // in-flight refresh: incident A is uploading when more errors arrive; A's success must not delete the newer evidence (new id)
+ const inf=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');let resolveA;const orig=NET.sb.from;NET.sb.from=t=>({upsert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return new Promise(res=>{resolveA=()=>res({error:null});});}});
+   const A=TOPS_LOG.row('error');A.reason='error';const qa=[A];localStorage.setItem('tops_logq',JSON.stringify(qa));TOPS_LOG.retry();await new Promise(r=>setTimeout(r,50));
+   const refreshed=Object.assign(TOPS_LOG.row('error'),{upload_id:A.upload_id});TOPS_LOG._keep(refreshed);const ids=TOPS_LOG.queue().map(r=>r.upload_id);
+   resolveA();await new Promise(r=>setTimeout(r,50));NET.sb.from=orig;const left=TOPS_LOG.queue();return {ids,left:left.map(r=>r.upload_id),aId:A.upload_id};});
+ if(!(inf.left.length===1&&inf.left[0]!==inf.aId))f.push('in-flight refresh lost the newer evidence or reused the sent id: '+JSON.stringify(inf));
+ // queue full: a 4th unsent incident is not added over the 3 (counted), the 3 stay
+ const full=await p.evaluate(()=>{localStorage.setItem('tops_logq','[]');for(let i=0;i<4;i++){const r=TOPS_LOG.row('error');TOPS_LOG._keep(r);}const q=TOPS_LOG.queue().filter(r=>r.reason==='error').length;return {q,diag:TOPS_LOG.row('error').diag};});
+ if(full.q!==3||!(full.diag.inc_overflow>=1))f.push('queue full not handled: '+JSON.stringify(full));
  // redaction before the ring
  const red=await p.evaluate(()=>{console.error('login failed for joe@example.com token=abc123secret Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c');return JSON.stringify(TOPS_LOG.events().slice(-3));});
  if(/joe@example|abc123secret|eyJhbGci/.test(red))f.push('secrets reached the ring: '+red.slice(0,200));

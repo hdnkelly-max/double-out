@@ -15,6 +15,7 @@ create table if not exists public.tops_log (
   seq_first int, seq_last int,             -- event sequence numbers in this row (rows overlap; use these to stitch)
   trimmed_events int,                      -- oldest events cut to keep the body under 48 KiB
   bytes int,
+  diag jsonb,                              -- uploader health: failures, last failure code, storage failures, incident overflow, last success age, oldest pending age
   events jsonb not null,
   constraint tops_log_size check (octet_length(events::text) <= 60000)  -- the client keeps the whole body under 48 KiB
 );
