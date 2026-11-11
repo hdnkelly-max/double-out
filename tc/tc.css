@@ -54,6 +54,7 @@
 .tc-chips button[aria-pressed="true"]{background:var(--lime,#C6F36B);color:#0c1410;border-color:var(--lime,#C6F36B)}
 .tc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 10px;--card-w:min(28vw,128px);justify-items:center;padding-top:12px}
 .tc-grid .tc{cursor:pointer}
+.tc-grid .tc,.tc-sets .tc{touch-action:pan-y}   /* #14: binder cards don't tilt, so a swipe that starts on one scrolls the sheet (cards.css keeps none for pack and inspect cards) */
 .tc.is-locked .tc__back{filter:grayscale(.6) brightness(.45)}
 .tc-lockno{position:absolute;left:0;right:0;bottom:8%;text-align:center;font:800 12px "Barlow Condensed",sans-serif;letter-spacing:.12em;color:var(--muted,#9AA7A5)}
 .tc-sets{margin-top:24px;display:flex;flex-direction:column;gap:8px}
