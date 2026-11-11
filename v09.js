@@ -152,10 +152,10 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 // Timing-window calibration (Hayden 22:28): the perfect window is the lever. Starter 6 ms at Rhythm 20 (plus a 6 ms soft edge), growing to 21 ms
 // at Rhythm 95 on a convex curve (e), so early stat points matter less than late ones; Control and Scoring/Finishing move sway
 // and scatter only part of the way along the throw table (ka, ks). Fitted on testers' real darts (tests/sim-player.js).
-const CAL_W={p0:5.25,pk:11,ka:.6,ks:.4,e:1.9};window.TOPS_CAL_W=CAL_W;
+const CAL_W={p0:5.25,pk:11,e:1.9};window.TOPS_CAL_W=CAL_W;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
- const CK=window.TOPS_CALW||CAL_W;const CE=v=>Math.pow(v,CK.e!=null?CK.e:1);const q0=ttAt(tp.L),qc=ttAt(CE(Lof('ct'))*(CK.ka!=null?CK.ka:1)),qr=ttAt(Lof('rh')),qs=ttAt(CE(Lof(fin?'fi':'sc'))*(CK.ks!=null?CK.ks:1)); /* ka/ks: how far Control and Scoring/Finishing move sway and scatter along the throw table (calibration) */
+ const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc')); /* Control, Scoring and Finishing keep their live effect: the perfect window is the only lever (Overseer 01:08, product rule 2) */
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
  const Lr=Lof('rh');const CW=window.TOPS_CALW||CAL_W;tp.P*=(CW.p0+CW.pk*Math.pow(Lr,CW.e!=null?CW.e:1))/(q0.P*tolMult()*.85); /* perfect window (ms) at Rhythm 20 and its growth to Rhythm 95 (calibration, Hayden 22:28) */
  let m=1;const tr=trait();const me=S.p[S.cur];
