@@ -3,20 +3,10 @@
 (function(){
 // --- 1. A perfect release lands tight (Hayden: "the dopamine of doing it correctly"); window 15% smaller to hold averages ---
 const _tp=throwParams;throwParams=function(){const tp=_tp.apply(this,arguments);tp.P*=.85;return tp;};
-const _lf=landFrom;landFrom=function(lock,tp,dt){const perfect=Math.abs(dt)<=tp.P;if(!perfect){const ed=window.TOPS_EDGE!=null?window.TOPS_EDGE:6;if(ed>0&&tp.perfSig!=null&&Math.abs(dt)<tp.P+ed&&window.TOPS_ringR){const sg=TOPS_ringR(dt,tp)/1.794;return {x:lock.x+gauss()*sg*.95,y:lock.y+gauss()*sg*.85,e:Math.sign(dt)*(Math.abs(dt)-tp.P)};}return _lf.apply(this,arguments);}
- let k=1;try{if(S&&S.fx&&S.fx.some(f=>f.mods&&f.mods.tight))k*=.75;}catch(e){}const ps=tp.perfSig!=null?tp.perfSig:tp.s0*.6;const sg=ps*k; /* perfect-release scatter (mm): career throws carry the calibrated 2.8 mm (tp.perfSig, set in v09); other modes keep the old 0.6 x s0 */
+const _lf=landFrom;landFrom=function(lock,tp,dt){const perfect=Math.abs(dt)<=tp.P;if(!perfect)return _lf.apply(this,arguments);
+ let k=.6;try{if(S&&S.fx&&S.fx.some(f=>f.mods&&f.mods.tight))k*=.75;}catch(e){}const sg=tp.s0*k;
  try{if(S&&S.aim&&Math.hypot(lock.x-S.aim.x,lock.y-S.aim.y)>14)S.lockedOff=performance.now();}catch(e){}
- /* every perfect dart lands inside the ring the player sees (radius 1.794 x scatter: 5 mm, just over the treble wires) */
- if(tp.perfSig==null)return {x:lock.x+gauss()*sg*.95,y:lock.y+gauss()*sg*.85,e:0};
- const RR=1.794*sg;let dx=0,dy=0;for(let i=0;i<12;i++){dx=gauss()*sg*.95;dy=gauss()*sg*.85;if(dx*dx+dy*dy<=RR*RR)break;if(i===11){const f=RR/Math.hypot(dx,dy);dx*=f;dy*=f;}}
- return {x:lock.x+dx,y:lock.y+dy,e:0};};
-// the ring shown while pulling: inside the perfect window it snaps to the perfect-release ring; just outside it (a short
-// band, TOPS_EDGE ms, default 6) it widens smoothly to the normal ring, so 0.1 ms outside the window isn't a cliff (ChatGPT 22:52)
-const perfR=tp=>{let k=1;try{if(S&&S.fx&&S.fx.some(f=>f.mods&&f.mods.tight))k*=.75;}catch(e){}return 1.794*tp.perfSig*k;};
-const EDGE=()=>window.TOPS_EDGE!=null?window.TOPS_EDGE:6;
-const _rr=ringR;ringR=function(dt,tp){if(!tp||tp.perfSig==null)return _rr.apply(this,arguments);const a=Math.abs(dt),ed=EDGE();if(a<=tp.P)return perfR(tp);
- if(ed>0&&a<tp.P+ed){const rEnd=_rr.call(this,Math.sign(dt)*(tp.P+ed),tp),f=(a-tp.P)/ed;return perfR(tp)+(rEnd-perfR(tp))*f;}return _rr.apply(this,arguments);};
-window.TOPS_ringR=ringR;
+ return {x:lock.x+gauss()*sg*.95,y:lock.y+gauss()*sg*.85,e:0};};
 setInterval(()=>{if(S&&S.lockedOff&&performance.now()-S.lockedOff<300){const v=$('paVerdict');if(v&&/perfect/i.test(v.textContent)&&!/locked/i.test(v.textContent))v.textContent='Perfect · locked off target';}},60);
 // --- 2. Career opponents show a heart rate (their choke already scales with it) ---
 setInterval(()=>{if(!S||S.online||S.practice||!S.p||S.p.length<2)return;const p=S.p[1];const host=$('avg1');if(!host)return;let b=document.getElementById('ohr1');if(!b){b=document.createElement('span');b.id='ohr1';b.className='ohr';host.appendChild(b);}

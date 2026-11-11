@@ -548,17 +548,17 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
  let M=null;let gpu='';try{const gl=document.createElement('canvas').getContext('webgl');const ex=gl&&gl.getExtension('WEBGL_debug_renderer_info');gpu=ex?String(gl.getParameter(ex.UNMASKED_RENDERER_WEBGL)).slice(0,60):'';}catch(e){}
  const dev=()=>{const ua=navigator.userAgent;const m=ua.match(/iPhone|iPad|Android [0-9.]+|Windows|Mac OS X/);return {os:m?m[0]:'other',dpr:+(devicePixelRatio||1).toFixed(2),mem:navigator.deviceMemory||null,cores:navigator.hardwareConcurrency||null,gpu,pwa:!!(matchMedia&&matchMedia('(display-mode: standalone)').matches)};};
  // frame sampler
- let last=0,frames=[],on=false;function tick(t){if(!on)return;if(last){const d=t-last;if(d<1000)frames.push(d);}last=t;requestAnimationFrame(tick);}
- function startS(){frames=[];last=0;if(!on){on=true;requestAnimationFrame(tick);}}
+ let last=0,frames=[],on=false,gen=0;/* #15: one sampler loop at a time. Restarting (app back from the background, TOPS_perfNow) used to start a second loop while the first one's next frame was still pending */function loop(g){const tick=t=>{if(!on||g!==gen)return;if(last){const d=t-last;if(d<1000){frames.push(d);if(frames.length>24000)frames=frames.slice(-20000);}}last=t;requestAnimationFrame(tick);};requestAnimationFrame(tick);}function run(){on=true;loop(++gen);}
+ function startS(){frames=[];last=0;if(!on)run();}
  function stopS(){on=false;if(frames.length<30)return null;const s=frames.slice().sort((a,b)=>a-b);const q=p=>s[Math.min(s.length-1,Math.floor(s.length*p))];const long=frames.filter(d=>d>50).length;return {fps:+(1000/q(.5)).toFixed(0),p95ms:+q(.95).toFixed(1),p99ms:+q(.99).toFixed(1),long50:long,longPct:+(long/frames.length*100).toFixed(1),n:frames.length};}
- document.addEventListener('visibilitychange',()=>{if(document.hidden){on=false;}else if(M&&!M.done){last=0;on=true;requestAnimationFrame(tick);}});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){on=false;}else if(M&&!M.done){last=0;run();}});
  const _bm=beginMatch;beginMatch=function(o){const r=_bm.apply(this,arguments);try{M={t0:performance.now(),first:false,done:false};startS();}catch(e){}return r;};
  const _rl=release;release=function(){const was=!!(S&&S.pulling);const r=_rl.apply(this,arguments);try{if(was&&M&&!M.first){M.first=true;trackEv('match_dart1',{ms:Math.round(performance.now()-M.t0)});}}catch(e){}return r;};
  function fin(reason){if(!M||M.done)return;M.done=true;const perf=stopS();try{trackEv('match_exit',{reason,threw:M.first,ms:Math.round(performance.now()-M.t0),darts:S&&S.p?S.p[0].darts:0,perf,dev:dev()});}catch(e){}}
  const _em=endMatch;endMatch=function(){fin('finished');return _em.apply(this,arguments);};
  const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>fin('quit'),true);
  window.addEventListener('pagehide',()=>fin('closed'));
- window.TOPS_perfNow=()=>({live:on,...(()=>{const a=on;const r=stopS();if(a){on=true;requestAnimationFrame(tick);}return r;})()});
+ window.TOPS_perfNow=()=>({live:on,...(()=>{const a=on;const r=stopS();if(a)run();return r;})()});
 })();
 </script>
 <script>
