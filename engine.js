@@ -49,6 +49,7 @@ const BOGEY=new Set([169,168,166,165,163,162,159]);
 const CANDS=[];for(let n=20;n>=1;n--)CANDS.push('T'+n);for(let n=20;n>=1;n--)CANDS.push('S'+n);CANDS.push('25','BULL');
 // how good is it to be left on r at the start of a fresh visit (or with the darts you still hold)
 function leaveQ(r){if(r<2||r===1)return -1e9;
+  if(r===50)return 55;                              // a Bull leave is a hard finish, not a top double (70/1 aims T10, not T20 for a Bull)
   const o=oneDart(r);if(o){const i=PL.indexOf(r);return 100-(i<0?30:i);}
   if(r<=110&&twoDart(r))return 62-r*.12-(r<=40&&r%2?4:0); // two-dart out; odd under 40 is clumsier
   if(r<=170&&route(r,3))return 40-r*.05;          // three-dart out
@@ -85,7 +86,10 @@ function routesFor(s,d,pref){if(s<2||s>170||d<1)return [];const out=new Map();co
  if(d>=2){for(const f of RFIRST){if(fin(f))continue;const left=s-valOf(f);if(left<2)continue;const o2=oneDart(left);if(o2)add([f,o2]);}}
  if(d>=3){for(const f of RFIRST){if(fin(f))continue;const l1=s-valOf(f);if(l1<2)continue;for(const g of RFIRST){if(fin(g))continue;const l2=l1-valOf(g);if(l2<2)continue;const o3=oneDart(l2);if(o3)add([f,g,o3]);}}}
  const pl=prefLeft(pref);const chain=pref?pl.slice(0,pl.indexOf(PREF_LEFT[0])>0?pl.indexOf(PREF_LEFT[0]):1):[];
- const score=(r)=>{let q=0;const last=r[r.length-1];const lv=valOf(last);const pi=pl.indexOf(lv);q+=pi<0?0:(40-pi*2);if(chain.includes(lv))q+=10;q-=r.length*12;r.slice(0,-1).forEach(x=>{if(x[0]==='T'){const n=+x.slice(1);q+=n>=16?6:n>=10?2:-2;}else if(x==='BULL')q+=2;else if(x==='25')q-=4;else q+=0;});q+=routeStyle(r)*1.5;return q;};
+ const score=(r)=>{let q=0;const last=r[r.length-1];const lv=valOf(last);const pi=pl.indexOf(lv);q+=pi<0?0:(40-pi*2);if(chain.includes(lv))q+=10;q-=r.length*12;r.slice(0,-1).forEach(x=>{if(x[0]==='T'){const n=+x.slice(1);q+=n>=16?6:n>=10?2:-2;}else if(x==='BULL')q+=2;else if(x==='25')q-=4;else q+=0;});q+=routeStyle(r)*1.5;
+   // miss recovery (ChatGPT r2): if the first dart lands in its single bed, is it still a finish with the darts left?
+   if(r.length>1&&d>=2){const f=r[0],sv=f==='BULL'?25:f==='25'?50:f[0]==='T'?+f.slice(1):null;if(sv!=null){const lf=s-sv;q+=(lf>=2&&route(lf,d-1))?8:-6;}}
+   return q;};
  const stdLen=(route(s,d)||[]).length||d,OKD=new Set(['D20','D16','D8','D18','D12','D10','D14','D4','BULL']);
  const sane=(r)=>{const last=r[r.length-1],pre=r.slice(0,-1);
    if(r.length>stdLen)return false;                                                     // never more darts than the standard route

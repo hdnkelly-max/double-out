@@ -31,8 +31,8 @@ for (let s = 2; s <= 170; s++) for (const d of [1, 2]) {
 // 3. Hayden's anchors and set-ups
 const A = [[60, 3, 'S20 D20'], [86, 3, 'T18 D16'], [82, 3, 'BULL D16'], [72, 3, 'T16 D12'], [170, 3, 'T20 T20 BULL'], [50, 1, 'BULL'], [110, 2, 'T20 BULL']];
 A.forEach(([s, d, w]) => { if (J(route(s, d)) !== w) bad(`anchor ${s}/${d}: got ${J(route(s, d))}, want ${w}`); });
-const SU = [[60, 1, 'S20'], [56, 1, 'S16'], [45, 1, 'S13'], [41, 1, 'S9'], [39, 1, 'S7'], [120, 2, 'T20'], [99, 2, 'T19']];
-SU.forEach(([s, d, w]) => { const a = aimFor(s, d); if (a !== w) bad(`set-up ${s}/${d}: aims ${a}, want ${w}`); });
+const SU = [[80, 1, 'T16'], [70, 1, /^(T10|T18)$/], [64, 1, 'T16'], [60, 1, 'S20'], [56, 1, 'S16'], [45, 1, 'S13'], [41, 1, 'S9'], [39, 1, 'S7'], [120, 2, 'T20'], [99, 2, 'T19']];
+SU.forEach(([s, d, w]) => { const a = aimFor(s, d); if (w instanceof RegExp ? !w.test(a) : a !== w) bad(`set-up ${s}/${d}: aims ${a}, want ${w}`); });
 // one dart, 41-60, no finish: always a single that leaves a double
 for (let s = 41; s <= 60; s++) { if (s === 50) continue; const a = aimFor(s, 1); if (!/^S/.test(a) || ((s - valOf(a)) % 2) || s - valOf(a) > 40) bad(`set-up ${s}/1: ${a} doesn't leave a double`); }
 // 4. the picker: standard route first, at most 4, every alternative sane
