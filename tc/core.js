@@ -395,24 +395,37 @@
   // P6 (a11y): a Collection card is a real button for keyboard and screen-reader users (Tab to it, Enter or Space opens it)
   function kbCard(k, label) {
     k.tabIndex = 0; k.setAttribute('role', 'button'); k.setAttribute('aria-label', label);
+    /* QA 05:10: open once per press. Enter opens on keydown; Space on keyup (as native buttons do); a held key never repeats */
     k.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault(); k.click();
-      /* when the card view it opened closes, put keyboard focus back on this card (ChatGPT a11y review) */
-      const view = [...document.querySelectorAll('.tc-inspect')].pop(); if (!view) return;
-      /* keyboard users: focus moves into the card view, Tab stays inside it, Escape closes it */
-      const foc = () => [...view.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent);
-      const onKey = ev => {
-        if (ev.key === 'Escape') { ev.preventDefault(); const x = view.querySelector('.tc-x'); x ? x.click() : view.remove(); return; }
-        if (ev.key !== 'Tab') return; const f = foc(); if (!f.length) return;
-        const i = f.indexOf(document.activeElement);
-        if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (!ev.shiftKey && (i === -1 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
-      };
-      document.addEventListener('keydown', onKey, true);
-      const x0 = view.querySelector('.tc-x'); if (x0) x0.focus({ preventScroll: true });
-      const mo = new MutationObserver(() => { if (!view.isConnected) { mo.disconnect(); document.removeEventListener('keydown', onKey, true); if (k.isConnected) k.focus({ preventScroll: true }); } });
-      mo.observe(view.parentNode || document.body, { childList: true });
+      e.preventDefault(); if (e.repeat || e.key === ' ') return; openKb(k);
     });
+    k.addEventListener('keyup', e => { if (e.key === ' ') { e.preventDefault(); openKb(k); } });
+  }
+  function openKb(k) {
+    if (document.querySelector('.tc-inspect')) return;
+    const id = k.dataset.id; k.click();
+    const view = [...document.querySelectorAll('.tc-inspect')].pop(); if (!view) return;
+    /* keyboard users: focus moves into the card view, Tab stays inside it, Escape closes it.
+       getClientRects, not offsetParent: the close button is position:fixed, so its offsetParent is null (QA 05:10) */
+    const foc = () => [...view.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.getClientRects().length);
+    const onKey = ev => {
+      if (ev.key === 'Escape') { ev.preventDefault(); if (ev.repeat) return; const x = view.querySelector('.tc-x'); x ? x.click() : view.remove(); return; }
+      /* the Enter that opened the view, held down, must not auto-repeat onto ✕ and close it (QA 05:10) */
+      if (ev.repeat && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); return; }
+      if (ev.key !== 'Tab') return; const f = foc(); if (!f.length) { ev.preventDefault(); return; }
+      const i = f.indexOf(document.activeElement);
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (!ev.shiftKey && (i === -1 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    const x0 = view.querySelector('.tc-x'); if (x0) x0.focus({ preventScroll: true });
+    /* when the view closes, focus goes back to this card; if the binder redrew meanwhile, to the same card in the new grid */
+    const mo = new MutationObserver(() => {
+      if (view.isConnected) return; mo.disconnect(); document.removeEventListener('keydown', onKey, true);
+      const back = k.isConnected ? k : [...document.querySelectorAll('.tc-grid .tc[role=button]')].find(c => c.dataset.id === id);
+      if (back) back.focus({ preventScroll: true });
+    });
+    mo.observe(view.parentNode || document.body, { childList: true });
   }
   // Collection binder
   function binder() {
