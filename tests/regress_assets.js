@@ -2,13 +2,14 @@
 // Plays several Club singles matches back to back in one session, at phone and desktop size, and checks that
 // 1) the board face texture has real colour (red and green rings, numbers drawn, not blank),
 // 2) the board on screen shows that colour,
-// 3) the player's and opponent's shirt textures are drawn (not a blank or near-black canvas).
+// 3) the player's and opponent's shirt textures are drawn,
+// 4) GPU textures and geometries stay flat across matches (needs 3+ matches; the default run plays 4). (not a blank or near-black canvas).
 // Usage: node tests/regress_assets.js [matches=3]   exits 1 on any failure.
 const { chromium } = require('playwright');
 const path = require('path');
-const N = +process.argv[2] || 3;
+const N = +process.argv[2] || 4;
 const VIEWS = { phone: { width: 390, height: 844 }, desktop: { width: 1280, height: 800 } };
-const TIERS = [1, 0, 1, 1, 0, 1];   // Club singles, with a pub rebuild in between to exercise venue swaps
+const TIERS = [1, 0, 1, 1, 0, 1];   // match 1 and match 4 are both Club, so the memory check compares like with like   // Club singles, with a pub rebuild in between to exercise venue swaps
 
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
@@ -28,6 +29,7 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // Club singles, with a pub rebuild in betwe
     await p.waitForTimeout(4000);
     const ok = await p.evaluate(() => { try { save.authSeen = true; const l = $('login'); if (l) l.hidden = true; V.walkOn = () => {}; newCareer(); return 'ok'; } catch (e) { return e.message; } });
     if (ok !== 'ok') { fails.push(`${vn}: setup ${ok}`); await p.close(); continue; }
+    const mems = [];
     for (let m = 0; m < N; m++) {
       const tier = TIERS[m % TIERS.length], tag = `${vn} match ${m + 1} (tier ${tier})`;
       await p.evaluate((tier) => { try { if (window.S && !S.done) S.done = true; } catch (e) {} try { sessionStorage.setItem('tcWalkSeen', '1'); } catch (e) {}
@@ -35,6 +37,7 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // Club singles, with a pub rebuild in betwe
       await p.waitForTimeout(6000);
       const r = await p.evaluate(() => {
         const out = {};
+        try { const mem = V._qa.renderer.info.memory; out.mem = { geo: mem.geometries, tex: mem.textures }; } catch (e) {}
         // 1) board face canvas
         const G = window.__G, img = G && G.boardTex && G.boardTex.image;
         if (!img || !img.getContext) out.board = 'no board canvas captured';
@@ -59,7 +62,8 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // Club singles, with a pub rebuild in betwe
       const shot = await p.screenshot({ type: 'png', clip: vn === 'phone' ? { x: 0, y: 40, width: 390, height: 300 } : { x: 0, y: 48, width: 740, height: 560 }, timeout: 90000 }).catch(() => null);
       let screen = null;
       if (shot) screen = await p.evaluate(async (b64) => { const im = new Image(); im.src = 'data:image/png;base64,' + b64; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; let red = 0, green = 0, n = 0; for (let i = 0; i < d.length; i += 4 * 5) { n++; if (d[i] > 120 && d[i + 1] < 90 && d[i + 2] < 90) red++; if (d[i + 1] > 90 && d[i] < 90 && d[i + 2] < 120) green++; } return { red: +(red / n * 100).toFixed(2), green: +(green / n * 100).toFixed(2) }; }, shot.toString('base64'));
-      notes.push(`${tag}: board ${JSON.stringify(r.boardPct || r.board)} screen ${JSON.stringify(screen)} figures ${r.figs} shirts ${JSON.stringify(r.shirts)}`);
+      if (r.mem) mems.push(r.mem);
+      notes.push(`${tag}: gpu ${JSON.stringify(r.mem)} board ${JSON.stringify(r.boardPct || r.board)} screen ${JSON.stringify(screen)} figures ${r.figs} shirts ${JSON.stringify(r.shirts)}`);
       if (r.board) fails.push(`${tag}: ${r.board}`);
       else if (r.boardPct.red < .3 || r.boardPct.green < .3 || r.boardPct.opaque < 50) fails.push(`${tag}: board face blank or missing colour ${JSON.stringify(r.boardPct)}`);
       if (!screen) fails.push(`${tag}: board screenshot failed`);
@@ -67,6 +71,10 @@ const TIERS = [1, 0, 1, 1, 0, 1];   // Club singles, with a pub rebuild in betwe
       if (!r.figs) fails.push(`${tag}: no character figures in the scene`);
       r.shirts.forEach((sh, i) => { if (sh === 'none' || sh === 'image not decoded') fails.push(`${tag}: figure ${i} shirt texture ${sh === 'none' ? 'missing' : 'not decoded'}`); else if (typeof sh === 'object' && (sh.mean < 25 || sh.sd < 2 || sh.opaque < 50)) fails.push(`${tag}: figure ${i} shirt blank or black ${JSON.stringify(sh)}`); });
     }
+    // 4) GPU memory stays flat match to match (#10 root cause: v1.75 leaked ~50-100 textures a match until uploads failed).
+    //    Compare like tiers (match 1 vs the last tier-1 match) so a venue's own texture count doesn't read as a leak.
+    if (mems.length >= 3) { const last = mems[mems.length - 1], first = mems[0];
+      if (last.tex > first.tex + 15 || last.geo > first.geo + 40) fails.push(`${vn}: GPU memory grows across matches ${JSON.stringify(mems)}`); }
     if (errs.length) fails.push(`${vn}: page errors: ${[...new Set(errs)].slice(0, 3).join(' | ')}`);
     await p.close();
   }
