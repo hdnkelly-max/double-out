@@ -1,0 +1,7 @@
+# build output and local installs (npm i three@0.128.0 && node build.js)
+node_modules/
+package.json
+package-lock.json
+index.html
+double-out.html
+double-out-standalone.html
