@@ -194,7 +194,7 @@ function barHTML(id,opt){opt=opt||{};const s=st();const v=s.v[id],k=kitPts()[id]
 function rowHTML(x){const s=st();const k=kitPts()[x.id];const fp=Math.min(100,s.form[x.id]/formSize(x.id)*100);
  return `<div class="st2r"><b>${s.flame[x.id]?'🔥':''}${x.n}</b>${barHTML(x.id)}<span class="num">${s.v[x.id]}${k?`<i class="${k<0?'neg':''}">${k>0?'+':''}${k}</i>`:''}</span><div class="st2fm" title="Form"><i style="width:${fp.toFixed(0)}%"></i></div></div>`;}
 function cardHTML(){const s=st();const cap=Math.min(85,capNow());const lv=lvNow();const t=TRAITS.find(x=>x.id===s.trait);
- return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap}${capBoost()&&cap<85?` (+${capBoost()} for another season here)`:''} · max 85</span></div></div>
+ return `<div class="c3-card st2c" id="st2Card"><div class="st2h"><div class="ovr"><small>OVR</small>${ovr()}</div><div class="idn">${ident()}<span>Chapter cap ${cap}${capBoost()&&cap<85?` (incl. +${capBoost()} season bonus)`:''} · max 85</span></div></div>
  ${STATS.map(rowHTML).join('')}
  <div class="st2key"><span><i style="background:#C6F36B"></i>You</span><span><i style="background:#5f9fe8"></i>Kit</span><span><i style="background:#e2362f"></i>Kit penalty</span><span><i style="background:#ffb13b"></i>Form</span></div>
  <div class="st2act">${s.bank>0?`<button type="button" class="st2pts" id="st2Spend">${canSpend()?`Spend ${s.bank} point${s.bank>1?'s':''}`:`${s.bank} banked · promote to use`}</button>`:`<button type="button" class="ghost" id="st2How">How stats grow</button>`}<button type="button" class="ghost" id="st2Kit">Change darts</button></div>
