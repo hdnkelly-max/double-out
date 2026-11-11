@@ -101,6 +101,7 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
+{const b0=build;build=function(){const r=b0.apply(this,arguments);try{window.TOPS_LOG_PERF&&TOPS_LOG_PERF(r);}catch(e){}return r;};}/* v14 flight recorder keeps a summary of each row */
 window.TOPS_perf={get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>

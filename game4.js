@@ -703,6 +703,7 @@ const V=(function(){try{return (()=>{
  function keepAssets(root){try{root.traverse(o=>{if(o.geometry)KEEP.add(o.geometry);if(o.isSkinnedMesh&&o.skeleton)KEEP.add(o.skeleton);const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(!m)return;KEEP.add(m);TEX_KEYS.forEach(k=>{if(m[k])KEEP.add(m[k]);});});});}catch(e){}return root;}
  // GFX: character registry. Every Mixamo model shares the skeleton; bones get a per-model prefix so rest poses never collide.
  const CHARS=['brian','bryce','pete','lewis','david','leonard','megan','elizabeth'],CHAR_F={megan:1,elizabeth:1},RIGS={},RIG_WAIT={};
+ window.TOPS_RIGS=()=>{let anim=null;try{anim=Object.keys(ANIM_CACHE).length;}catch(e){}return {n:Object.keys(RIGS).length,ids:Object.keys(RIGS),wait:Object.keys(RIG_WAIT).length,anim};};/* v14 flight recorder: which character templates are cached (read only) */
  function rigFrom(gltf,key){if(!RIG.rest)RIG.rest={};const sc=gltf.scene;sc.traverse(o=>{if(o.isBone)o.name=key+'_'+o.name.replace(/^mixamorig\d*:?/,'');});sc.updateMatrixWorld(true);
   if(key==='remy'){const box=new T.Box3().setFromObject(sc);const h=box.max.y-box.min.y;const k=(h>1.45&&h<2.1)?1:1.78/h;sc.scale.setScalar(k);sc.position.y=-box.min.y*k;}sc.updateMatrixWorld(true); /* Mixamo cast: metric, feet at the origin (bbox is unreliable on quantised meshes) */
   const root=new T.Group();sc.rotation.y=Math.PI;root.add(sc);root.updateMatrixWorld(true);
