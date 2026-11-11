@@ -107,6 +107,8 @@ function rewardCards(list){const bs=list.filter(u=>u.k==='barrel');const ps=list
 function onReward(){const el=$('c3rw');if(!el||el.hidden)return;const card=el.querySelector('.c3rw-card');if(!card||card.dataset.v12)return;card.dataset.v12='1';
  const v=v3();if(!v)return;if(v.bSeen==null){v.bSeen=v.lv;return;}if(v.lv<=v.bSeen)return;
  const list=unlocksIn(v.bSeen,v.lv);v.bSeen=v.lv;try{persist();}catch(e){}if(!list.length)return;
+ // one unlock section on the card: the barrel becomes the hero render, parts list beneath with their own dart renders (career3 addUnlocks)
+ if(window.C3&&C3.addUnlocks){C3.addUnlocks(list.map(u=>u.k==='barrel'?{k:'barrel',v:u.it.id,lv:u.lv,n:u.it.n,sub:ptsOf(u.it.id),note:`Yours for <em>${money(price(u.it.price))}</em> in the Store`}:{k:'part',key:u.k,id:u.it.id,lv:u.lv,n:u.it.n,sub:u.it.s}));return;}
  const html=rewardCards(list);const anchor=card.querySelector('.c3rw-ach,.c3rw-con,.c3rw-hook,.c3rw-act');if(anchor)anchor.insertAdjacentHTML('beforebegin',html);else card.insertAdjacentHTML('beforeend',html);}
 window.TOPS_v12Reward=onReward;
 new MutationObserver(()=>{try{onReward();}catch(e){}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden'],childList:true});

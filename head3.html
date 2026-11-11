@@ -6662,3 +6662,77 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(show,1500);})
 .c3rw-unl .ri.ri-hero{width:118px!important;height:118px!important;overflow:hidden;border-radius:10px}.c3rw-unl .ri.ri-hero img{width:100%!important;height:150%!important;max-width:none!important;object-fit:cover;object-position:50% 40%;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
 </style>
 <style id="c3rw-unl2">#c3rw .c3rw-unl,.c3rw .c3rw-unl{border:1px solid rgba(198,243,107,.35)!important}.c3rw-unl::after{content:"";position:absolute;right:0;top:0;bottom:0;width:62%;background:radial-gradient(ellipse 60% 70% at 62% 50%,rgba(255,240,210,.10),rgba(0,0,0,0) 70%);pointer-events:none;z-index:0;border-radius:inherit}</style>
+<style id="rw-sweep">
+/* ===== reward items (RWI): the real thing, rendered by the game. Wrapper sizes come from the context below ===== */
+.rwi{position:relative;display:block;overflow:hidden;width:100%;height:100%}
+.rwi>img{position:absolute;left:0;top:0;width:100%;height:100%;max-width:none;object-fit:contain;display:block}
+.rwi>img[hidden]{display:none}
+.rwi-hero>img{object-fit:cover;object-position:50% 8%}
+.rwi-hero.rwi-head>img{width:190%;height:190%;left:-45%;top:-4%;object-position:50% 0}
+.rwi-wait{background:linear-gradient(100deg,rgba(237,236,229,.03) 30%,rgba(237,236,229,.09) 50%,rgba(237,236,229,.03) 70%) 0 0/250% 100%;border-radius:8px;animation:rwiShim 1.3s linear infinite}
+@keyframes rwiShim{to{background-position:-250% 0}}
+.rwi-plate{display:flex;align-items:center;justify-content:center;overflow:visible}
+.rwi-pl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;height:100%;padding:6px 12px;border-radius:8px;text-align:center;
+ background:linear-gradient(180deg,#2E3A3C 0%,#172022 100%);border:1px solid rgba(217,173,82,.7);box-shadow:inset 0 1px 0 rgba(255,240,210,.14),inset 0 0 0 3px rgba(16,25,26,.9),inset 0 0 0 4px rgba(217,173,82,.28),0 8px 18px rgba(0,0,0,.45)}
+.rwi-pl small{font:800 11px/1 Manrope,system-ui,sans-serif!important;letter-spacing:.22em;text-transform:uppercase;color:#D9AD52!important}
+.rwi-pl b{font:italic 800 22px/1 "Barlow Condensed",sans-serif!important;text-transform:uppercase;color:#EDECE5!important;letter-spacing:.02em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rwi-pl i{display:none;font:italic 800 18px/1 "Barlow Condensed",sans-serif;color:#D9AD52;font-style:italic}
+.rwi-cash{display:flex;align-items:center;justify-content:center;gap:6px;overflow:visible}
+.rwi-cash>img{position:static;width:auto;height:70%;flex:none}
+.rwi-cash b{font:800 22px/1 "Barlow Condensed",sans-serif;color:#D9AD52;font-variant-numeric:tabular-nums}
+.rwi-cash b:empty{display:none}
+.rwi-fx{border-radius:8px;background:linear-gradient(rgba(10,14,15,.55),rgba(10,14,15,.7)),url(assets/ui/bg_stage.webp) 50% 40%/cover}
+.rwi-fx>img{object-fit:cover}
+.rwi-card>img{object-fit:cover;object-position:50% 30%}
+
+/* ===== post-match unlock section: one hero card, compact rows beneath ===== */
+.rwu[hidden]{display:none!important}
+.rwu{display:flex;flex-direction:column;gap:8px;animation:c3in .35s ease-out}
+.rwu-hero{position:relative;overflow:hidden;border-radius:12px;border:1px solid rgba(198,243,107,.45);background:radial-gradient(ellipse 70% 80% at 50% 38%,rgba(255,240,210,.10),transparent 70%),linear-gradient(160deg,#2a3739,#162022 80%);box-shadow:0 12px 28px rgba(0,0,0,.4)}
+.rwu-stage{position:relative;height:132px;display:flex;align-items:center;justify-content:center}
+.rwu-stage:after{content:"";position:absolute;left:18%;right:18%;bottom:10px;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.45),transparent);pointer-events:none}
+.rwu-hero .rwu-art{position:relative;z-index:1}
+.rwu-dart .rwu-art{width:100%;height:112px;transform:rotate(-7deg)}.rwu-dart .rwu-art>img{filter:drop-shadow(-8px 10px 10px rgba(0,0,0,.55))}
+.rwu-hero.rwu-dart .rwu-art.rwi-dart{width:108%;margin-left:-4%}
+.rwu-hero.rwu-hero .rwu-art{width:150px;height:132px;border-radius:0}
+.rwu-hero.rwu-hero .rwu-stage{height:150px}.rwu-hero.rwu-hero .rwu-art{height:150px;-webkit-mask:linear-gradient(#000 75%,transparent);mask:linear-gradient(#000 75%,transparent)}
+.rwu-plate .rwu-art{width:82%;height:84px}.rwu-plate .rwu-art .rwi-pl b{font-size:32px!important}
+.rwu-cash .rwu-art{width:100%;height:80px}.rwu-cash .rwu-art b{font-size:40px}
+.rwu-fx .rwu-art{width:100%;height:132px;border-radius:0}
+.rwu-copy{position:relative;z-index:2;padding:2px 16px 14px;display:flex;flex-direction:column;gap:3px}
+.rwu-copy small{font:800 11px/1.2 Manrope,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C6F36B}
+.rwu-copy b{font:italic 800 26px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;color:#EDECE5}
+.rwu-sub{font:700 13px/1.35 Manrope,system-ui,sans-serif;color:#C6F36B}
+.rwu-note{font:600 12px/1.35 Manrope,system-ui,sans-serif;color:#ADB2BA}.rwu-note em{font-style:normal;font-weight:800;color:#D9AD52}
+.rwu-rows{display:flex;flex-direction:column;border-radius:10px;overflow:hidden;border:1px solid rgba(237,236,229,.1);background:rgba(16,25,26,.55)}
+.rwu-row{display:grid;grid-template-columns:76px 1fr;align-items:center;gap:12px;min-height:56px;padding:6px 14px 6px 8px}
+.rwu-row+.rwu-row{border-top:1px solid rgba(237,236,229,.08)}
+.rwu-th{position:relative;display:block;width:76px;height:44px;border-radius:7px;background:radial-gradient(ellipse at 50% 45%,rgba(255,240,210,.08),transparent 70%),#1b2628;overflow:hidden}
+.rwu-th .rwu-mini{width:100%;height:100%}
+.rwu-row.rwu-dart .rwu-mini>img{transform:rotate(-7deg) scale(1.12)}
+.rwu-row.rwu-hero .rwu-mini>img{width:100%;height:200%;object-position:50% 0;top:-14%}
+.rwu-row.rwu-plate .rwu-th{background:none}.rwu-row .rwu-mini .rwi-pl{padding:2px 4px;gap:0}.rwu-row .rwu-mini .rwi-pl small,.rwu-row .rwu-mini .rwi-pl b{display:none}.rwu-row .rwu-mini .rwi-pl i{display:block;font-size:20px}
+.rwu-row.rwu-cash .rwu-th{background:none}.rwu-row .rwu-mini.rwi-cash>img{height:88%}
+.rwu-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rwu-t small{font:700 11px/1.2 Manrope,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#ADB2BA}
+.rwu-t b{font:italic 800 18px/1.05 "Barlow Condensed",sans-serif;text-transform:uppercase;color:#EDECE5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* with unlocks on the card, cash and XP step back */
+.c3rw-card.has-unl{gap:12px!important}
+.c3rw-card.has-unl .c3rw-cash b{font-size:32px!important}
+.c3rw-card.has-unl .c3rw-xp>b{font-size:22px!important}
+.c3rw-card.has-unl .c3rw-stats b{font-size:20px!important}
+
+/* ===== level track dots and next-unlock tiles ===== */
+.c3-dot .rwi{width:100%;height:100%;border-radius:50%}
+.c3-dot .rwi-dart>img{width:300%;left:-196%;transform:rotate(-8deg)}
+.c3-dot .rwi-hero>img{width:170%;height:170%;left:-35%;top:0}
+.c3-dot .rwi-plate .rwi-pl{border-radius:50%;padding:0}.c3-dot .rwi-pl small,.c3-dot .rwi-pl b{display:none}.c3-dot .rwi-pl i{display:block;font-size:14px}
+.c3-dot .rwi-cash>img{height:80%}
+#hub.c3 .c3x-item:has(.rwi-dart){width:220px;height:72px;right:-22px;transform:translateY(-50%) rotate(-12deg)}
+#hub.c3 .c3x-item:has(.rwi-hero){width:120px;height:136px;right:4px;transform:translateY(-50%);-webkit-mask:linear-gradient(#000 78%,transparent);mask:linear-gradient(#000 78%,transparent)}
+#hub.c3 .c3x-item:has(.rwi-plate){width:150px;height:74px;right:12px;transform:translateY(-50%) rotate(-5deg)}
+#hub.c3 .c3x-item .rwi>img{filter:drop-shadow(-10px 12px 14px rgba(0,0,0,.6))}
+#hub.c3 .c3x-item .rwi-hero>img{filter:none}
+#hub.c3 .c3x-item .rwi-pl b{font-size:20px!important;white-space:normal;line-height:.95}
+#hub.c3 .c3x-unl:has(.rwi-dart) .c3x-ucopy,#hub.c3 .c3x-unl:has(.rwi-hero) .c3x-ucopy,#hub.c3 .c3x-unl:has(.rwi-plate) .c3x-ucopy{position:relative;z-index:2;max-width:56%}
+</style>

@@ -220,7 +220,7 @@
       if (r === 'rare' || r === 'epic' || r === 'legendary') fanfare(ov, row, mine, r, quick);
       const owned = (res.owned && res.owned[def.id]) || 1;
       if (owned > 1) { mine.classList.add('is-dupe'); mine.dataset.dupe = `Duplicate · ${owned} owned`; Sfx.play('dupe', .5); }
-      else { const cs = def.cosmetic && root.TC_DATA && root.TC_DATA.COS[def.cosmetic]; tag(mine, def.cosmetic ? `New · unlocks ${cs ? cs.n : 'a reward'}` : 'New', 'new'); }
+      else { const cs = def.cosmetic && root.TC_DATA && root.TC_DATA.COS[def.cosmetic]; tag(mine, def.cosmetic ? `New · unlocks ${cs ? cs.n : 'a reward'}` : 'New', 'new'); if (def.cosmetic && root.RWI) { try { const tg = mine.querySelector('.tc__tag'), h = root.RWI.html(def.cosmetic, 'tc-tagart'); if (h) { tg.insertAdjacentHTML('afterbegin', h); tg.classList.add('has-art'); } } catch (e) {} } }
       mine.dataset.inspect = '1';
       got.push({ def, dupe: owned > 1 });
       await wait(quick ? 120 : T.react);

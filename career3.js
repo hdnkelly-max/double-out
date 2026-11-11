@@ -7,12 +7,53 @@ const CONPAY=[15,40,120,350,1000,3000,8000];
 const FL_X=[['#ff8a00','Blaze'],['#1f1f1f','Blackout'],['#e9e4d8','Chalk'],['#ff3ea5','Hot pink'],['#00c2a8','Teal'],['#c0c0c0','Silver'],['#d4af37','Gold leaf'],['#7a0019','Claret'],['#2b59ff','Royal'],['#9be15d','Lime'],['#5b2a86','Grape'],['#ff2d2d','Signal'],['#00e5ff','Ice'],['#ffd400','Taxi'],['#ff7b9c','Flamingo'],['#3d3d3d','Gunmetal'],['#0a7d46','Bottle'],['#ff5500','Hi-vis'],['#a0d8ef','Sky'],['#f5f5dc','Ivory']];
 const SH_X=[['#0b3d2e','Racing green'],['#3a1f5c','Purple haze'],['#c9a227','Old gold'],['#5a5a5a','Slate'],['#0e6ba8','Ocean'],['#8a1c1c','Oxblood'],['#f4f1ea','Bone'],['#ff6b00','Hi-vis'],['#111a3a','Midnight'],['#d6336c','Raspberry'],['#2d6a4f','Fern'],['#b08968','Tan'],['#6c757d','Smoke'],['#e63946','Poppy'],['#1d3557','Navy'],['#ffb703','Amber'],['#023047','Deep sea'],['#9d0208','Blood'],['#4a4e69','Storm'],['#000000','Jet']];
 const TITLES={10:'The Fill-in',20:'Pub Hero',30:'Club Hustler',40:'Stage Ready',50:'Circuit Grinder',60:'Ditch Crosser',70:'Card Holder',80:'Floor Assassin',90:'Palace Bound',100:'Legend of the Oche'};
-function rIco(r){if(!r)return '';
- // flights and shirts show the real thing in the colour you unlocked: the game's own dart render and player render
- try{if(r.k==='flight'&&V.dartShot){const src=V.dartShot(r.v,Object.assign({barrel:barrel()},setupParts()));if(src)return `<span class="ri ri-dart"><img src="${src}" alt=""></span>`;}
-  if(r.k==='shirt'&&V.heroShot){const src=V.heroShot(Object.assign({},save.look,{shirt:r.v,shirtTint:true}),save.name||'You',tierOf(),save.flight);if(src&&typeof src==='string')return `<span class="ri ri-hero"><img src="${src}" alt=""></span>`;}}catch(e){}
- const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<span class="ri"><img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}</span>`;}
-function bigIco(r){if(!r)return '';const f={flight:'flights',shirt:'shirt',title:'title',cash:'cash'}[r.k]||'star';return `<img src="assets/ui/ic_${f}.webp" alt="">${(r.k==='flight'||r.k==='shirt')?`<i class="sw" style="background:${r.v}"></i>`:''}`;}
+// ===== reward items: every reward shows the real thing, drawn by the game's own renderers =====
+// flights/barrels/finishes/kit parts -> V.dartShot of your dart with that change; shirts and wearables -> V.heroShot of you wearing it;
+// titles -> a nameplate in the game's type; celebrations/walk-ons -> a still of the real effect (TC_FX.still); cash -> the gold cash mark.
+// Renders are sync and cached by the viewer; anything not ready yet (the rig still loading) is queued and filled in place, never swapped for a stock icon.
+const RWI=(function(){
+ const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const D=()=>window.TC_DATA||{COS:{},CARDS:[]};
+ const partKey={shaft:'shaft',point:'pt',pt:'pt',flight:'fl',fl:'fl'};const partList=k=>k==='shaft'?SHAFTS:(k==='point'||k==='pt')?POINTS:FSHAPES;
+ // normalise anything reward-shaped into {k, ...}
+ function norm(r){if(!r)return null;if(r.cos||(r.k==='cos'))return fromCos(r.cos||r.v);if(typeof r==='string')return fromCos(r);return r;}
+ function fromCos(id){const c=D().COS[id];if(!c)return null;
+  if(c.kind==='wear')return {k:'wear',cos:id,slot:c.slot,n:c.n};if(c.kind==='title')return {k:'title',v:c.n,n:c.n};if(c.kind==='cel')return {k:'cel',cos:id,slot:c.slot,n:c.n};
+  if(c.slot==='flight')return {k:'flight',v:c.flight,n:c.n};if(c.slot==='barrel')return {k:'finish',v:c.barrel,n:c.n};return null;}
+ // which renderer an item uses
+ function kind(r){return ({flight:'dart',barrel:'dart',finish:'dart',part:'dart',shirt:'hero',wear:'hero',title:'plate',cash:'cash',cel:'fx'})[r.k]||'none';}
+ function src(r){try{
+  if(r.k==='flight')return V.dartShot(r.v,Object.assign({barrel:barrel()},setupParts()));
+  if(r.k==='barrel'){const b=BARRELS.find(x=>x.id===r.v)||r.it;return b?V.dartShot(save.flight,Object.assign({},setupParts(),{barrel:b})):'';}
+  if(r.k==='finish')return V.dartShot(save.flight,Object.assign({barrel:barrel()},setupParts(),{finish:r.v}));
+  if(r.k==='part'){const sp=Object.assign({barrel:barrel()},setupParts());(r.parts||[[r.key,r.id]]).forEach(([k,id])=>{const it=partList(k).find(x=>x.id===id);if(it)sp[partKey[k]]=it;});return V.dartShot(save.flight,sp);}
+  const tier=career()?career().tier:0,nm=save.name||'You';
+  if(r.k==='shirt')return V.heroShot(Object.assign({},save.look,{shirt:r.v,shirtTint:true}),nm,tier,save.flight);
+  if(r.k==='wear'){const L=Object.assign({},save.look);L.wear=Object.assign({},L.wear||{},{[r.slot]:r.cos});if(r.slot==='hat')L.cap=0;return V.heroShot(L,nm,tier,save.flight);}
+  if(r.k==='cel'){if(r.cos==='cel_chant')return '';return window.TC_FX&&TC_FX.still?TC_FX.still(r.cos,(save.name||'').toUpperCase()):'';}
+ }catch(e){console.warn('rwi',e);}return '';}
+ function cardFor(cos){const d=D();const c=(d.CARDS||[]).find(x=>x.cosmetic===cos);if(c)return c;const s=(d.SETS||[]).find(x=>x.reward===cos);return s?(d.CARDS||[]).find(x=>x.set===s.id):null;}
+ // HTML for one item. cls: extra classes on the wrapper (size/context). The wrapper keeps the legacy .ri class so older CSS still sizes it.
+ function html(r0,cls){const r=norm(r0);if(!r)return '';const K=kind(r);cls=cls||'';
+  if(K==='plate'){const t=String(r.v||r.n||'').replace(/^Title:\s*/,'');const ini=t.split(/\s+/).filter(w=>/^[A-Z0-9]/i.test(w)).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+   return `<span class="ri rwi rwi-plate ${cls}"><span class="rwi-pl"><small>Title</small><b>${esc(t)}</b><i>${esc(ini)}</i></span></span>`;}
+  if(K==='cash'){const v=+r.v||0;return `<span class="ri rwi rwi-cash ${cls}"><img src="assets/ui/ic_cash.webp" alt=""><b>${v?esc(money(v)):''}</b></span>`;}
+  if(K==='fx'&&r.cos==='cel_chant'){const c=cardFor(r.cos);return `<span class="ri rwi rwi-fx rwi-card ${cls}">${c?`<img src="${c.art}" alt="">`:''}</span>`;}
+  const key=JSON.stringify(r);let u='';try{u=src(r);}catch(e){}
+  const k2=K==='dart'?'ri-dart rwi-dart':K==='hero'?('ri-hero rwi-hero'+(r.k==='wear'&&r.slot!=='shoulder'?' rwi-head':'')):K==='fx'?'rwi-fx':'';
+  if(u&&typeof u==='string')return `<span class="ri rwi ${k2} ${cls}"><img src="${u}" alt=""></span>`;
+  return `<span class="ri rwi ${k2} rwi-wait ${cls}" data-rwi="${esc(key)}"><img alt="" hidden></span>`;}
+ // fill anything that couldn't render yet (rig loading). One render per tick so a long list never blocks a frame for long.
+ let busy=0;function pump(){if(busy)return;const el=document.querySelector('[data-rwi]');if(!el)return;busy=1;
+  setTimeout(()=>{busy=0;const els=[...document.querySelectorAll('[data-rwi]')];let did=0;for(const e of els){if(did)break;let r;try{r=JSON.parse(e.dataset.rwi);}catch(x){e.removeAttribute('data-rwi');continue;}
+    const u=src(r);if(u&&typeof u==='string'){const im=e.querySelector('img');im.src=u;im.hidden=false;e.classList.remove('rwi-wait');e.removeAttribute('data-rwi');did=1;}else{e.dataset.tries=(+e.dataset.tries||0)+1;if(+e.dataset.tries>80){e.removeAttribute('data-rwi');}}}
+   if(document.querySelector('[data-rwi]'))setTimeout(pump,did?30:400);},30);}
+ new MutationObserver(()=>{if(document.querySelector('[data-rwi]'))pump();}).observe(document.documentElement,{subtree:true,childList:true});
+ return {html,src,norm,fromCos,cardFor,kind,pump};})();
+window.RWI=RWI;
+function rIco(r){return r?RWI.html(r):'';}
+// the big angled item on the Play / Player "next unlock" tiles
+function bigIco(r){return r?RWI.html(r,'rwi-big'):'';}
 function heroImg(cls){let u='';try{u=V.heroShot&&V.heroShot(save.look,save.name||'You',tierOf(),save.flight);}catch(e){}return u?`<img class="c3x-pl ${cls||''}" src="${u}" alt="">`:'';}
 function lvNeed(L){return Math.round(150+25*L+.6*L*L);}
 // reward for reaching level L: deterministic so the track can be previewed
@@ -84,23 +125,39 @@ function ensureOverlay(){let el=$('c3rw');if(el)return el;el=document.createElem
 function countUp(node,from,to,ms,fmt){const t0=performance.now();const f=()=>{const k=Math.min(1,(performance.now()-t0)/ms);const e=1-Math.pow(1-k,3);node.textContent=fmt(Math.round(from+(to-from)*e));if(k<1&&!node._skip)requestAnimationFrame(f);else node.textContent=fmt(to);};f();}
 function sfxC(kind){try{if(!AU||!AU.ctx||!AU.on)return;if(kind==='thud')noiseBurst({dur:.18,freq:140,q:.7,gain:.12});else if(kind==='coin')noiseBurst({dur:.06,freq:3200,q:4,gain:.035});else if(kind==='tick')noiseBurst({dur:.05,freq:1800,q:6,gain:.04});else if(kind==='lvl')sfxPerfect(2);}catch(e){}}
 function buzz(p){try{if(navigator.vibrate&&save.haptics!==false)navigator.vibrate(p);}catch(e){}}
+// ----- unlock section: the most important unlock is the hero card with a big real render; the rest are compact rows with small renders -----
+// order: barrel > shirt / flights / finish > title > kit parts > cash. Level cash bonuses fold into one row.
+const UPRI={barrel:0,shirt:1,flight:1,finish:1,wear:1,title:2,part:3,cash:4};
+const UKIND={barrel:'Barrel · now in the Store',shirt:'Shirt',flight:'Flights',finish:'Barrel finish',wear:'Wearable',title:'Title',part:'Kit · now in the Store',cash:'Level bonus'};
+let curUnl=null;
+function unlockList(ups,extra){const out=[];let cash=null;
+ (ups||[]).forEach(u=>{if(u.k==='cash'){if(!cash){cash={k:'cash',v:0,lv:u.lv,n:'',cnt:0};out.push(cash);}cash.v+=(+u.v||0);cash.lv=Math.max(cash.lv,u.lv);cash.cnt++;}else out.push(u);});
+ if(cash)cash.n=cash.cnt>1?`${money(cash.v)} in level bonuses`:`${money(cash.v)} bonus`;
+ (extra||[]).forEach(x=>out.push(x));
+ return out.sort((a,b)=>(UPRI[a.k]??5)-(UPRI[b.k]??5)||(b.big?1:0)-(a.big?1:0)||b.lv-a.lv);}
+function unlockHTML(U){if(!U.length)return '';const h=U[0],rest=U.slice(1);const nm=x=>String(x.n||'').replace(/^Title:\s*/,'');
+ const kick=`Level ${h.lv} unlocked${h.k==='barrel'||h.k==='part'?' · Store':''}`;
+ return `<div class="rwu-hero rwu-${RWI.kind(h)}"><div class="rwu-stage">${RWI.html(h,'rwu-art')}</div><div class="rwu-copy"><small>${kick}</small><b>${nm(h)}</b>${h.sub?`<span class="rwu-sub">${h.sub}</span>`:''}${h.note?`<span class="rwu-note">${h.note}</span>`:''}</div></div>
+ ${rest.length?`<div class="rwu-rows">${rest.map(u=>`<div class="rwu-row rwu-${RWI.kind(u)}"><span class="rwu-th">${RWI.html(u,'rwu-mini')}</span><span class="rwu-t"><small>Lv ${u.lv} · ${UKIND[u.k]||'Unlock'}</small><b>${nm(u)}</b></span></div>`).join('')}</div>`:''}`;}
+// other systems (v12 store unlocks) add to the section while the card is up
+function addUnlocks(extra){if(!curUnl||!extra||!extra.length)return;curUnl.extra=curUnl.extra.concat(extra);const el=$('c3rwUnl');if(!el)return;const U=unlockList(curUnl.ups,curUnl.extra);el.innerHTML=unlockHTML(U);if(el.dataset.rev)el.hidden=!U.length;const card=el.closest('.c3rw-card');if(card)card.classList.toggle('has-unl',!!U.length);}
 function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);const el=ensureOverlay();const c=career(),v=V3();const op=S?S.p[1]:null;
  const res=P.m.won?'Win':'Loss';const sc=`${S?S.p[0].legs:0}–${op?op.legs:0} v ${op?(op.disp||op.name):''}`;
  const src=P.L.filter(x=>!/^Contract/.test(x[0])).sort((a,b)=>b[1]-a[1]);const top=src.slice(0,2);const rest=src.length-top.length;
- const hero=P.ups.find(u=>u.big)||P.ups[P.ups.length-1]||null;const cos=hero&&(hero.k==='flight'||hero.k==='shirt');
+ const U=unlockList(P.ups,[]);const hero=U[0]||null;const eqi=U.find(u=>u.k==='flight'||u.k==='shirt')||null;const cos=!!eqi;curUnl={ups:P.ups,extra:[]};
  const pct0=Math.min(100,P.before.xp/lvNeed(P.before.lv)*100),pct1=Math.min(100,v.xp/lvNeed(v.lv)*100);
  const hook=(()=>{const h=hookLine();return /^Contract/.test(h)?'':h;})();
- el.innerHTML=`<div class="c3rw-card ${P.m.won?'w':'l'}" role="dialog" aria-label="Match rewards">${heroImg('rwhero')}
+ el.innerHTML=`<div class="c3rw-card ${P.m.won?'w':'l'}${U.length?' has-unl':''}" role="dialog" aria-label="Match rewards">${heroImg('rwhero')}
   <div class="c3rw-top"><b class="c3rw-res" id="c3rwRes">${res}</b><span class="c3rw-sc">${sc}</span></div>
   ${(()=>{const me=S&&S.p[0];if(!me||!me.darts)return '';const avg=(me.pts/me.darts*3).toFixed(1);const co=me.coAtt?Math.round(me.coHit/me.coAtt*100)+'%':'–';const t=[['Average',avg],[me.t180>1?'180s':'Best visit',me.t180>1?me.t180:(me.bestVisit||'–')],[me.hf?'High out':'Checkout',me.hf?me.hf:co]];return `<div class="c3rw-stats">${t.map(([k,v])=>`<div><b>${v}</b><small>${k}</small></div>`).join('')}</div>`;})()}
   <div class="c3rw-cash${P.cash>0?'':' none'}"><b class="c3-cash" id="c3rwCash">+$0</b><small>${P.cash>0?(P.m.won?'prize & bonuses':'appearance & bonuses'):'no prize this time'}</small></div>
   <div class="c3rw-xp"><b id="c3rwXp">+0 career XP</b><div class="c3-lvrow"><span class="c3-lvn" id="c3rwLv">Lv ${P.before.lv}</span><div class="c3-bar"><i id="c3rwBar" style="width:${pct0}%"></i></div><span class="c3-lvn dim" id="c3rwLv2">${P.before.lv+1}</span></div>
    <p class="c3rw-src">${top.map(([n,x])=>`${n} <b>+${x}</b>`).join(' · ')}${rest>0?` · +${rest} more`:''}</p></div>
-  ${hero?'':'<!--nohero-->'}<div class="c3rw-unl" id="c3rwUnl" hidden>${hero?`<small>Level ${hero.lv} unlocked</small><b>${hero.n}</b>${P.ups.length>1?`<span>Plus ${P.ups.length-1} more · see Player</span>`:''}${rIco(hero)}`:''}</div>
+  <div class="rwu" id="c3rwUnl" hidden>${unlockHTML(U)}</div>
   ${achs.map(a=>`<div class="c3rw-ach t-${a.t}"><i>${achIco(a)}</i><div><small>Achievement \u00b7 ${(ACHR[a.t]||ACHR.R).lab}</small><b>${a.n}</b><span>${a.d}</span></div><em>+${a._xp} XP<br>+${money(a._cash)}</em></div>`).join('')}
   ${P.done.length?`<div class="c3rw-con" id="c3rwCon">${P.done.map(k=>`<span><i>✓</i>${k.t} <em>${money(k.cash)}</em></span>`).join('')}</div>`:''}
   ${hook?`<p class="c3rw-hook" id="c3rwHook">${hook}</p>`:''}
-  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip new '+(hero.k==='flight'?'flights':'shirt'):'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep current '+(hero.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
+  <div class="c3rw-act"><button type="button" class="big" id="c3rwGo">${cos?'Equip new '+(eqi.k==='flight'?'flights':'shirt'):'Continue'}</button>${cos?'<button type="button" class="c3rw-keep" id="c3rwKeep">Keep current '+(eqi.k==='flight'?'flights':'shirt')+'</button>':''}<button type="button" class="c3rw-det" id="c3rwDet">Match details</button></div></div>`;
  const R=$('result');if(R)R.classList.add('c3-dim');
  el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
  const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const big=!!P.ups.length;
@@ -112,12 +169,12 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
   if(big){bar.style.transition=rm?'none':'width .3s ease-in';bar.style.width='100%';at(980,()=>{bar.style.transition='none';bar.style.width='0%';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);lvN.parentNode.classList.add('pop');sfxC('lvl');buzz([15,40,15]);requestAnimationFrame(()=>{bar.style.transition=rm?'none':'width .4s ease-out';bar.style.width=pct1+'%';});});}
   else{bar.style.transition=rm?'none':'width .45s ease-out';bar.style.width=pct1+'%';}});
  at(big?1100:1100,()=>{const k=$('c3rwCon');if(k){k.classList.add('in');sfxC('tick');}});
- at(big?1450:1250,()=>{const u=$('c3rwUnl');if(u&&hero)u.hidden=false;});
+ at(big?1450:1250,()=>{const u=$('c3rwUnl');if(u){u.dataset.rev=1;u.hidden=!u.innerHTML.trim();}});
  at(big?2100:1400,()=>{const h=$('c3rwHook');if(h)h.classList.add('in');});
- const finish=()=>{T.forEach(clearTimeout);cashN._skip=xpN._skip=1;cashN.textContent='+'+money(Math.max(0,P.cash));xpN.textContent='+'+P.xp+' career XP';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);bar.style.transition='none';bar.style.width=pct1+'%';$('c3rwRes').classList.add('in');const u=$('c3rwUnl');if(u&&hero)u.hidden=false;['c3rwCon','c3rwHook'].forEach(id=>{const e=$(id);if(e)e.classList.add('in');});};
+ const finish=()=>{T.forEach(clearTimeout);cashN._skip=xpN._skip=1;cashN.textContent='+'+money(Math.max(0,P.cash));xpN.textContent='+'+P.xp+' career XP';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);bar.style.transition='none';bar.style.width=pct1+'%';$('c3rwRes').classList.add('in');const u=$('c3rwUnl');if(u){u.dataset.rev=1;u.hidden=!u.innerHTML.trim();}['c3rwCon','c3rwHook'].forEach(id=>{const e=$(id);if(e)e.classList.add('in');});};
  const close=then=>{finish();el.classList.remove('on');el.hidden=true;if(R)R.classList.remove('c3-dim');if(then)then();};
  el.querySelector('.c3rw-card').addEventListener('pointerdown',e=>{if(!e.target.closest('button'))finish();});
- $('c3rwGo').onclick=()=>{if(cos){if(hero.k==='flight')save.flight=hero.v;else{save.look.shirt=hero.v;save.look.shirtTint=true;}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};
+ $('c3rwGo').onclick=()=>{if(cos){if(eqi.k==='flight')save.flight=eqi.v;else{save.look.shirt=eqi.v;save.look.shirtTint=true;}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};
  {const kp=$('c3rwKeep');if(kp)kp.onclick=()=>close(()=>$('btnResultNext').click());}
  $('c3rwDet').onclick=()=>close();}
 const _em=endMatch;endMatch=function(){const r=_em.apply(this,arguments);if(pre&&ui.mode==='career')setTimeout(showReward,850);return r;};
@@ -222,6 +279,6 @@ const _sp=showPlayer;showPlayer=function(){const r=_sp.apply(this,arguments);ren
 const _gx=gainXP;gainXP=function(id,amt,mult){const c=career();if(c&&!c.run&&amt>0){const cap=attrCap();const r=cap?lvOf(id)/cap:0;const k=r<.6?1.25:r<.8?1:r<.95?.65:.35;amt*=k;}return _gx.call(this,id,amt,mult);};
 // title-card / creator pick up unlocked colours on load
 try{applyUnlocks();}catch(e){}
-window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,showRewardTest:p=>{pre=p;showReward();}};
+window.C3={addUnlocks,unlockList,gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>

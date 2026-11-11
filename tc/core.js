@@ -63,7 +63,7 @@
     D.SETS.forEach(s => {
       if (!s.reward || t.sets[s.id]) return;
       const need = D.CARDS.filter(c => c.set === s.id && !c.exclusive);
-      if (need.length && need.every(c => t.own[c.id])) { t.sets[s.id] = Date.now(); unlockCos(s.reward, 'set:' + s.id); toast('Set complete', s.name, 'Unlocked: ' + D.COS[s.reward].n, 'legendary'); }
+      if (need.length && need.every(c => t.own[c.id])) { t.sets[s.id] = Date.now(); unlockCos(s.reward, 'set:' + s.id); toast('Set complete', s.name, 'Unlocked: ' + D.COS[s.reward].n, 'legendary', { cos: s.reward }); }
     });
   }
   // resolve a pick (same shape as the server RPC tc_choose)
@@ -172,10 +172,14 @@
     host.appendChild(el); try { noiseBurst({ dur: .08, freq: 1600, q: 9, gain: .08 }); } catch (e) {}
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2800);
   }
-  function toast(kicker, title, line, rar) {
+  // real-item thumbnail for a cosmetic (career3 RWI: dart render, player render, nameplate, effect still), card art as the last resort
+  function itemHTML(cos, cls) { try { if (window.RWI) { const h = RWI.html(cos, cls); if (h) return h; } } catch (e) {} const s0 = srcOf(cos); return s0.card ? `<span class="ri rwi rwi-card ${cls || ''}"><img src="${s0.card.art}" alt=""></span>` : ''; }
+  function toast(kicker, title, line, rar, item) {
     let host = $id('achToasts'); if (!host) { host = document.createElement('div'); host.id = 'achToasts'; host.className = 'ach-toasts'; document.body.appendChild(host); }
     const mat = ({ legendary: 'gold', epic: 'gold', rare: 'silver' }[rar] || 'bronze'); const el = document.createElement('div'); el.className = 'ach-t tc-tier ' + ({ legendary: 't-L', epic: 't-E', rare: 'R' }[rar] || 't-R');
-    el.innerHTML = `<i class="tc-medal tc-${mat}"><b>★</b></i><div><small>${esc(kicker)}</small><b>${esc(title)}</b><span>${esc(line)}</span></div>`;
+    const art = item ? (item.img ? `<span class="ri rwi tc-tart tc-timg"><img src="${item.img}" alt=""></span>` : itemHTML(item.cos, 'tc-tart')) : '';
+    if (art) el.classList.add('tc-item');
+    el.innerHTML = `${art ? `<i class="tc-tthumb">${art}</i>` : `<i class="tc-medal tc-${mat}"><b>★</b></i>`}<div><small>${esc(kicker)}</small><b>${esc(title)}</b><span>${esc(line)}</span></div>`;
     host.appendChild(el); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2800);
   }
 
@@ -293,7 +297,7 @@
     H.inPack = true; try { TCC.Sfx.ctx || TCC.Sfx.init('assets/cards/sfx/'); } catch (e) {}
     const done = got => {
       H.inPack = false; badge();
-      (got || []).forEach(g => { const c = g.def; if (!g.dupe && c.cosmetic) { const cs = D.COS[c.cosmetic]; if (cs) toast('Reward unlocked', cs.n, 'Equip it in Player · Loadout', c.rarity); } });
+      (got || []).forEach(g => { const c = g.def; if (!g.dupe && c.cosmetic) { const cs = D.COS[c.cosmetic]; if (cs) toast('Reward unlocked', cs.n, 'Equip it in Player · Loadout', c.rarity, { cos: c.cosmetic }); } });
       after && after();
     };
     TCC.openPack({ picks: picks.map(p => ({ id: p.id, reason: p.reason })), resolve: choose, backdrop: 'assets/ui/bg_pub.webp', onDone: done, onLater: () => done([]) });
@@ -420,7 +424,7 @@
       });
       el.querySelector('#tcSets').innerHTML = `<div class="tcpk__kicker">Sets</div>` + sets.filter(s => !s.exclusive).map(s => {
         const cs = D.CARDS.filter(c => c.set === s.id && !c.exclusive), have = cs.filter(c => t.own[c.id]).length;
-        return `<div class="tc-setrow${t.sets[s.id] ? ' done' : ''}"><b>${esc(s.name)}</b><span>${have}/${cs.length}</span><i style="--p:${have / cs.length}"></i><small>${s.reward ? (t.sets[s.id] ? 'Unlocked: ' : 'Complete for: ') + esc(D.COS[s.reward].n) : ''}</small></div>`;
+        return `<div class="tc-setrow${t.sets[s.id] ? ' done' : ''}${s.reward ? ' has-rw' : ''}">${s.reward ? `<span class="tc-setart">${itemHTML(s.reward, 'tc-rwi')}</span>` : ''}<b>${esc(s.name)}</b><span>${have}/${cs.length}</span><i style="--p:${have / cs.length}"></i><small>${s.reward ? (t.sets[s.id] ? 'Unlocked: ' : 'Complete for: ') + esc(D.COS[s.reward].n) : ''}</small></div>`;
       }).join('');
     };
     chips.querySelectorAll('button').forEach(b => b.onclick = () => { filt = b.dataset.s; chips.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); });
@@ -499,7 +503,7 @@
   }
   function inspect(c) {
     const cs = c.cosmetic && D.COS[c.cosmetic];
-    const el = sheet('tc-inspect', `<div class="tc-big"></div><div class="tc-info"><div class="tcpk__kicker">${esc(c.setName)}</div><h2 class="tc-h">${esc(c.name)}</h2><p>${c.rarity[0].toUpperCase() + c.rarity.slice(1)} · owned ×${ownedN(c.id)}</p>${cs ? `<div class="tc-rew"><small>Reward</small><b>${esc(cs.n)}</b>${unlocked(c.cosmetic) ? `<button type="button" class="tcpk__btn tcpk__btn--go" id="tcEq">${isEquipped(c.cosmetic) ? 'Equipped' : 'Equip'}</button>` : ''}${cs.kind === 'cel' ? '<button type="button" class="tcpk__btn" id="tcTry">Preview</button>' : ''}</div>` : '<p class="tc-dim">Collection card. Completes the set.</p>'}${c.rarity === 'legendary' && ownedN(c.id) > 1 ? '<p class="tc-dim">Spare legendary: swap it with a mate from Collection · Trades.</p>' : ''}</div>`);
+    const el = sheet('tc-inspect', `<div class="tc-big"></div><div class="tc-info"><div class="tcpk__kicker">${esc(c.setName)}</div><h2 class="tc-h">${esc(c.name)}</h2><p>${c.rarity[0].toUpperCase() + c.rarity.slice(1)} · owned ×${ownedN(c.id)}</p>${cs ? `<div class="tc-rew"><small>Reward</small><span class="tc-rewart">${itemHTML(c.cosmetic, 'tc-rwi')}</span><b>${esc(cs.n)}</b>${unlocked(c.cosmetic) ? `<button type="button" class="tcpk__btn tcpk__btn--go" id="tcEq">${isEquipped(c.cosmetic) ? 'Equipped' : 'Equip'}</button>` : ''}${cs.kind === 'cel' ? '<button type="button" class="tcpk__btn" id="tcTry">Preview</button>' : ''}</div>` : '<p class="tc-dim">Collection card. Completes the set.</p>'}${c.rarity === 'legendary' && ownedN(c.id) > 1 ? '<p class="tc-dim">Spare legendary: swap it with a mate from Collection · Trades.</p>' : ''}</div>`);
     const k = TCC.card(c); k.classList.add('is-flipped'); k.dataset.inspect = '1'; el.querySelector('.tc-big').appendChild(k);
     if (c.rarity === 'legendary') setTimeout(() => k.classList.add('do-sweep'), 250);
     const eq = el.querySelector('#tcEq'); if (eq) eq.onclick = () => { equip(c.cosmetic); eq.textContent = 'Equipped'; };
@@ -533,7 +537,7 @@
       el.querySelector('#tcSlots').innerHTML = D.SLOTS.map(([slot, nm]) => {
         const cur = slotOf(slot), opts = Object.entries(D.COS).filter(([, c]) => c.slot === slot), have = opts.filter(([id]) => t.unl[id]).length;
         const sc = cur && srcOf(cur).card;
-        return `<button type="button" class="tc-lrow" data-slot="${slot}"><i class="tc-lthumb">${sc ? `<img src="${sc.art}" alt="">` : ''}</i><span><small>${nm}</small><b class="${cur ? '' : 'tc-none'}">${cur ? esc(D.COS[cur].n) : 'Not equipped'}</b></span><em>${have}/${opts.length}</em><i class="tc-chev">›</i></button>`;
+        return `<button type="button" class="tc-lrow" data-slot="${slot}"><i class="tc-lthumb${cur ? ' rw' : ''}">${cur ? itemHTML(cur, 'tc-rwi') : ''}</i><span><small>${nm}</small><b class="${cur ? '' : 'tc-none'}">${cur ? esc(D.COS[cur].n) : 'Not equipped'}</b></span><em>${have}/${opts.length}</em><i class="tc-chev">›</i></button>`;
       }).join('');
       el.querySelectorAll('.tc-lrow').forEach(b => b.onclick = () => pickSlot(b.dataset.slot, draw));
     };
@@ -545,7 +549,7 @@
     const bs = document.createElement('div'); bs.className = 'tc-bsheet';
     bs.innerHTML = `<div class="tc-bs-in"><i class="tc-bs-grab"></i><div class="tc-bs-h"><b>${esc(nm)}</b><button type="button" class="tc-bs-x">Done</button></div>
       <button type="button" class="tc-opt${cur ? '' : ' on'}" data-id=""><i class="tc-othumb none"></i><span><b>None</b></span></button>
-      ${opts.map(([id, c]) => { const s0 = srcOf(id), on = t.unl[id]; return `<button type="button" class="tc-opt${cur === id ? ' on' : ''}${on ? '' : ' locked'}" data-id="${id}" ${on ? '' : 'disabled'}><i class="tc-othumb">${s0.card ? `<img src="${s0.card.art}" alt="">` : ''}</i><span><b>${esc(c.n)}</b><small>${on ? (c.kind === 'cel' ? 'Tap to preview' : 'Unlocked') : 'Locked · ' + esc(s0.how)}</small></span>${on && cur === id ? '<em>Equipped</em>' : ''}</button>`; }).join('')}</div>`;
+      ${opts.map(([id, c]) => { const s0 = srcOf(id), on = t.unl[id]; return `<button type="button" class="tc-opt${cur === id ? ' on' : ''}${on ? '' : ' locked'}" data-id="${id}" ${on ? '' : 'disabled'}><i class="tc-othumb rw">${itemHTML(id, 'tc-rwi')}</i><span><b>${esc(c.n)}</b><small>${on ? (c.kind === 'cel' ? 'Tap to preview' : 'Unlocked') : 'Locked · ' + esc(s0.how)}</small></span>${on && cur === id ? '<em>Equipped</em>' : ''}</button>`; }).join('')}</div>`;
     document.body.appendChild(bs); requestAnimationFrame(() => bs.classList.add('in'));
     const shut = () => { bs.classList.remove('in'); setTimeout(() => bs.remove(), 220); after && after(); };
     bs.querySelector('.tc-bs-x').onclick = shut; bs.addEventListener('click', e => { if (e.target === bs) shut(); });
@@ -643,6 +647,8 @@
     const k = save.look && save.look.tkit && save.look.tkit.barrel, c = k && D.COS[k];
     if (c && c.barrel != null) { mat.color.setHex(c.barrel); mat.metalness = c.barrel === 0x1a1d1f ? .5 : .95; mat.roughness = c.barrel === 0x1a1d1f ? .45 : .22; }
   };
+  // the equipped finish as a colour (makeDart applies it after the barrel's own colours, and dartShot previews it)
+  window.TOPS_FINISH = function () { const k = save.look && save.look.tkit && save.look.tkit.barrel, c = k && D.COS[k]; return c && c.barrel != null ? c.barrel : null; };
   // ---------- walk-on: character walks to the oche, effect fires on arrival ----------
   // Hook in the viewer's frame loop calls TOPS_WALKFX each frame; we own the camera while walking.
   let WK = null; const WA = .5;   // walk arrives at half time
@@ -821,7 +827,7 @@
     const ex = t.troph.find(x => x.id === T.id);
     const rec = { at: Date.now(), opp: m.opp || '', score: m.me != null ? `${m.me}–${m.op}` : '', avg: m.avg, venue: m.venue || '', co: m.co };
     if (ex) { ex.wins.push(rec); } else t.troph.push({ id: T.id, tier, wins: [rec] });
-    keep(); toast('Title won', T.n, 'A new trophy for the cabinet', 'legendary');
+    keep(); toast('Title won', T.n, 'A new trophy for the cabinet', 'legendary', { img: `assets/cards/${T.img}.webp` });
   }
   // shelf slots on hub_cabinet.webp (fractions of the image), measured from the art
   const SHELF = [ // bottom shelf: club night, club champs, regional; middle: DPNZ, Trans-Tasman, Pro Tour; top centre: the Palace
@@ -870,6 +876,7 @@
   function poster(ex, L, isNew) {
     const el = sheet('tc-poster', `<div class="tc-post"><img src="assets/cards/exh_poster.webp" alt=""><div class="tc-post-t"><small>${isNew ? 'Just announced' : 'Exhibition night'}</small><b>${esc(L.name)}</b><em>"${esc(L.nick)}"</em><span>Live at ${esc(ex.venue)}</span></div><div class="tc-post-b"><span>${esc(L.blurb)}</span><span>Best of 3 legs · plays near a ${L.avg} average · ${ex.tries} ${ex.tries === 1 ? 'chance' : 'chances'} in the next ${ex.weeksLeft} weeks · uses your spare night</span></div></div>
       <div class="tc-stakes"><div><b>Best of 3</b><small>legs</small></div><div><b>${ex.tries} ${ex.tries === 1 ? 'try' : 'tries'}</b><small>in ${ex.weeksLeft} weeks</small></div><div class="tc-st-card"><i class="tc-st-mini" data-card="${L.card}"></i><span><b>${esc(L.nick)}</b><small>foil card</small></span></div></div>
+      <div class="tc-st-title"><small>Win and you also get the title</small>${itemHTML(L.cos, 'tc-rwi')}</div>
       <div class="tc-post-act"><button type="button" class="tcpk__btn tcpk__btn--go" id="tcPGo">Accept invite</button><button type="button" class="tcpk__later" id="tcPLater">Not tonight</button></div>`);
     { const m = el.querySelector('.tc-st-mini'); if (m) { const k0 = TCC.card(CARD[m.dataset.card]); k0.classList.add('is-flipped', 'is-mini'); m.appendChild(k0); } }
     el.querySelector('#tcPLater').onclick = () => el.querySelector('.tc-x').click();
@@ -888,7 +895,7 @@
       const id = 'exh_' + L.id;
       if (!ACH.find(a => a.id === id)) ACH.push({ id, n: 'Beat ' + L.name, d: `Win an exhibition against ${L.name}`, t: 'L', ic: '🏆' });
       try { achUnlock(id); } catch (e) {}
-      toast('Exhibition won', 'You beat ' + L.name, `${L.nick} foil card + title "${D.COS[L.cos].n}"`, 'legendary');
+      toast('Exhibition won', 'You beat ' + L.name, `${L.nick} foil card + title "${D.COS[L.cos].n}"`, 'legendary', { cos: L.cos });
     } else {
       if (!t.own.ticket) { grant('ticket', 'exhibition'); if (t.srv) { (t.q = t.q || []).push({ g: 'exh:ticket', c: 'ticket' }); srvSync(); } toast('Exhibition', 'Lost to ' + L.name, 'You kept the ticket. Commemorative card added.', 'common'); }
       else toast('Exhibition', 'Lost to ' + L.name, E.active && E.active.tries > 0 ? `${E.active.tries} ${E.active.tries === 1 ? 'chance' : 'chances'} left` : 'The legend has left town', 'common');
@@ -908,5 +915,5 @@
     clearInterval(zoneTimer);
     if (want) zoneTimer = setInterval(() => { try { if (!zoneOn) return; sfxHeart(); } catch (e) {} }, 820);
   }
-  window.TC_API = { oppWalk, trades, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
+  window.TC_API = { inspect, itemHTML, oppWalk, trades, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
 })();
