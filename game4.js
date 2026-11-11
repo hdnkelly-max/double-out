@@ -948,7 +948,7 @@ const V=(function(){try{return (()=>{
  // --- opponent
  let opp=null;const O={};
  let lastOpp=null,lastMe=null;
- let _chT=0;function charsChanged(){clearTimeout(_chT);_chT=setTimeout(()=>{try{if(lastMe)setPlayerLook(...lastMe);if(lastOpp)setOpponentLook(...lastOpp);if(lastTier>=0)buildVenue(lastTier);}catch(e){console.warn('chars',e);}},120);}
+ let _chT=0;function charsChanged(){clearTimeout(_chT);_chT=setTimeout(()=>{try{if(lastMe)setPlayerLook(...lastMe);if(lastOpp)setOpponentLook(...lastOpp);if(lastTier>=0)buildVenue(lastTier);}catch(e){console.warn('chars',e);}try{if(window.__avPending){window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}}catch(e){}},120);}
  function setOpponentLook(look,name,tier){lastOpp=[look,name,tier];if(lastMe&&!window.GFX_LEGACY){const mk=charKey(lastMe[0],lastMe[2]),ok=charKey(look,name);if(ok===mk){const fem=CHAR_F[ok],pool=CHARS.filter(c=>!!CHAR_F[c]===!!fem&&c!==mk);look=Object.assign({},look,{model:pool[(String(name||'').length)%pool.length]});}}if(opp)scene.remove(opp);opp=makeFigure(look,name,tier);Object.assign(O,opp.userData);opp.position.set(-.06,0,OCHE_Z+.08);opp.rotation.y=1.0;stance(opp);opp.visible=false;scene.add(opp);poseOpp(0,0);}
  function stance(fig){const u=fig.userData;if(u.rigged){stanceRigged(fig);fig.rotation.x=.03;return;}if(u.hips){u.hips.forEach(h=>{const right=h.position.x>0;h.rotation.set(right?.14:-.06,0,right?.03:-.05);});}fig.rotation.x=.04;}
  function poseOpp(oa){if(!opp)return;poseFigure(opp,oa||{phase:'idle'},boardC);}
@@ -1325,7 +1325,7 @@ const V=(function(){try{return (()=>{
   pCam.position.set(.14,hy+.03,-.74);pCam.lookAt(0,hy-.02,0);const prevT=renderer.toneMapping;renderer.setRenderTarget(pRT);renderer.render(pScene,pCam);const buf=new Uint8Array(PR*PR*4);renderer.readRenderTargetPixels(pRT,0,0,PR,PR,buf);renderer.setRenderTarget(null);pScene.remove(fig);
   const c=document.createElement('canvas');c.width=c.height=PR;const x=c.getContext('2d');const id=x.createImageData(PR,PR);const g=new Uint8Array(256);for(let i=0;i<256;i++)g[i]=Math.round(Math.pow(Math.min(1,i/255*1.0),1/2.2)*255);
   for(let y=0;y<PR;y++){const src=(PR-1-y)*PR*4,dst=y*PR*4;for(let i=0;i<PR*4;i+=4){id.data[dst+i]=g[buf[src+i]];id.data[dst+i+1]=g[buf[src+i+1]];id.data[dst+i+2]=g[buf[src+i+2]];id.data[dst+i+3]=255;}}
-  x.putImageData(id,0,0);const url=c.toDataURL('image/jpeg',.85);portraitCache[key]=url;return url;}
+  x.putImageData(id,0,0);const url=c.toDataURL('image/jpeg',.85);{const ck=charKey(look,name);if(ck==='remy'||RIGS[ck])portraitCache[key]=url;else window.__avPending=1;}return url;}
  // AFTER HOURS hero render: waist-up 3/4 front view in the set pose, transparent background (for hub/reward hero banners)
  const HW=480,HH=600;const hRT=new T.WebGLRenderTarget(HW,HH,{depthBuffer:true,encoding:window.GFX_LIN?T.sRGBEncoding:T.LinearEncoding});const heroCache={};const hCam=new T.PerspectiveCamera(30,HW/HH,.05,10);
  function heroShot(look,name,tier,flight){const key=JSON.stringify([look,name,tier,!!RIG.ready,flight||'']);if(heroCache[key])return heroCache[key];let fig;try{fig=makeFigure(look,name,tier);}catch(e){return '';}if(!fig.userData.rigged)return '';
@@ -1337,7 +1337,7 @@ const V=(function(){try{return (()=>{
   renderer.setRenderTarget(hRT);renderer.clear();renderer.render(pScene,hCam);const buf=new Uint8Array(HW*HH*4);renderer.readRenderTargetPixels(hRT,0,0,HW,HH,buf);renderer.setRenderTarget(null);renderer.setClearColor(cc,ca);pScene.background=bg;pRim.color.setHex(rc);pRim.intensity=ri;pScene.remove(fig);
   const c=document.createElement('canvas');c.width=HW;c.height=HH;const x=c.getContext('2d');const id=x.createImageData(HW,HH);const g=new Uint8Array(256);for(let i=0;i<256;i++)g[i]=Math.round(Math.pow(i/255,1/2.2)*255);
   for(let y=0;y<HH;y++){const src=(HH-1-y)*HW*4,dst=y*HW*4;for(let i=0;i<HW*4;i+=4){const a=buf[src+i+3];id.data[dst+i]=g[buf[src+i]];id.data[dst+i+1]=g[buf[src+i+1]];id.data[dst+i+2]=g[buf[src+i+2]];id.data[dst+i+3]=a;}}
-  x.putImageData(id,0,0);const url=c.toDataURL('image/png');heroCache[key]=url;return url;}
+  x.putImageData(id,0,0);const url=c.toDataURL('image/png');{const ck=charKey(look,name);if(ck==='remy'||RIGS[ck])heroCache[key]=url;else window.__avPending=1;}return url;}
  const dScene=new T.Scene();dScene.background=new T.Color(0x12161c);dScene.add(new T.HemisphereLight(0xffffff,0x202428,.8));const dKey=new T.DirectionalLight(0xffffff,1.4);dKey.position.set(1,2,1.5);dScene.add(dKey);const dRim=new T.DirectionalLight(0xe8382c,.8);dRim.position.set(-1,-.5,-1);dScene.add(dRim);
  const dCam=new T.OrthographicCamera(-.082,.082,.0256,-.0256,.01,5);dCam.position.set(0,.25,1);dCam.lookAt(0,0,0);const DW=768,DH=240;const dRT=new T.WebGLRenderTarget(DW,DH,{encoding:window.GFX_LIN?T.sRGBEncoding:T.LinearEncoding});const dartCache={};
  function dartShot(color,setup){setup=Object.assign({custom:!!save.flightCustom},setup);const key=JSON.stringify([color,setup.shaft.id,setup.fl.id,setup.pt.id,setup.barrel.id,setup.custom]);if(dartCache[key])return dartCache[key];const d=makeDart(color,setup);d.rotation.y=Math.PI/2;d.rotation.z=-.08;d.rotation.x=.35;d.position.x=.004;dScene.add(d);renderer.setRenderTarget(dRT);renderer.render(dScene,dCam);const buf=new Uint8Array(DW*DH*4);renderer.readRenderTargetPixels(dRT,0,0,DW,DH,buf);renderer.setRenderTarget(null);dScene.remove(d);

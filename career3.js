@@ -113,7 +113,7 @@ function showReward(){const P=pre;pre=null;if(!P)return;const achs=payAch(P);con
  const finish=()=>{T.forEach(clearTimeout);cashN._skip=xpN._skip=1;cashN.textContent='+'+money(Math.max(0,P.cash));xpN.textContent='+'+P.xp+' career XP';lvN.textContent='Lv '+v.lv;lv2.textContent=Math.min(100,v.lv+1);bar.style.transition='none';bar.style.width=pct1+'%';$('c3rwRes').classList.add('in');const u=$('c3rwUnl');if(u&&hero)u.hidden=false;['c3rwCon','c3rwHook'].forEach(id=>{const e=$(id);if(e)e.classList.add('in');});};
  const close=then=>{finish();el.classList.remove('on');el.hidden=true;if(R)R.classList.remove('c3-dim');if(then)then();};
  el.querySelector('.c3rw-card').addEventListener('pointerdown',e=>{if(!e.target.closest('button'))finish();});
- $('c3rwGo').onclick=()=>{if(cos){if(hero.k==='flight')save.flight=hero.v;else{save.look.shirt=hero.v;save.look.model='remy';}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};
+ $('c3rwGo').onclick=()=>{if(cos){if(hero.k==='flight')save.flight=hero.v;else{save.look.shirt=hero.v;}persist();try{V.setPlayerLook(save.look,save.flight);}catch(e){}}close(()=>$('btnResultNext').click());};
  $('c3rwDet').onclick=()=>close();}
 const _em=endMatch;endMatch=function(){const r=_em.apply(this,arguments);if(pre&&ui.mode==='career')setTimeout(showReward,850);return r;};
 // ----- achievements pay out and show in the reward overlay -----

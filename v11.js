@@ -221,3 +221,8 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  #btnResAction{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:0 -8px 24px rgba(16,25,26,.9)}
 }
 </style>
+<script>
+// v1.68 avatars: portraits drawn before your chosen character loaded were cached as the default bloke. Redraw once it's in.
+let __avN=0;setInterval(()=>{try{if(!window.__avPending||__avN>12)return;__avN++;window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}catch(e){}},2500);
+document.addEventListener('tops-avatars',()=>{try{if(typeof S!=='undefined'&&S&&!S.done)return;if(document.querySelector('#hub:not([hidden])')){const t=hubTab.cur;showHub();try{if(t)hubTab(t);}catch(e){}}else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}});
+</script>

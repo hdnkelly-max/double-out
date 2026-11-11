@@ -92,3 +92,4 @@
 - SHIPPED v1.65: fix Lee's pack freeze at pick 5: the server catalogue had Tangaroa cards his 1.63 build didn't know, so the reveal crashed. Unknown cards now show as 'New card' instead of hanging, and hub counts skip them
 - SHIPPED v1.66: result details: objective chips full width (were squeezed into a word-per-line column), Next fixture button text readable on lime
 - SHIPPED v1.67: ChatGPT round 3 (match flow 7.7/10): details screen opens on the score, Next fixture pinned to the bottom, 'career XP' on the reward card vs 'Skill XP' on details, objective chips no longer overlap
+- SHIPPED v1.68: Lee's avatar bug: portraits drawn before your chosen character finished loading were cached as the default bloke and stuck (hub header, hub hero, cards). Now never cached until the right character is in, and screens redraw when it arrives. Equipping an unlocked shirt no longer resets your character to the default model
