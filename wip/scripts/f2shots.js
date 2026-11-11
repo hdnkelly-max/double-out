@@ -13,7 +13,7 @@ const shop=async(lv,sp,tab,name,scroll)=>{await p.evaluate(([lv,sp,tab,scroll])=
 await shop(1,null,'barrel','lv1_top');
 await shop(12,null,'barrel','lv12_top');
 await shop(12,null,'barrel','lv12_bottom',900);
-await shop(26,'rd','barrel','lv26_rd_bottom',900);
+await shop(26,'rd','barrel','lv26_rd_bottom',900);await shop(26,'rd','barrel','lv26_rd_end',3000);
 await shop(12,null,'setup','lv12_parts');
 // tap a locked row to see its preview
 await p.evaluate(()=>{const v=C3.V3();v.lv=12;save.sponsor=null;showShop('barrel');const r=[...document.querySelectorAll('#shopList .opt.v12lock')][0];if(r){r.scrollIntoView({block:'center'});r.click();}});await p.waitForTimeout(900);
