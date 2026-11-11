@@ -744,7 +744,7 @@
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
     me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .6 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; FX.run(WK.fx, WK.name); }
+    if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
     let cam, tgt, fov;
@@ -754,8 +754,14 @@
     } else if (k < WA) {    // tracking close-up alongside: face and chest
       cam = up(p0.clone().addScaledVector(F, .55).addScaledVector(Sd, -1.15), 1.5); tgt = up(p0.clone().addScaledVector(F, .1), 1.4); fov = 41;
     } else {                // low rear 3/4 at the oche, board in frame, slow push
-      const q = Math.min(1, (k - WA) / (1 - WA));
-      cam = up(WK.home.clone().addScaledVector(F, -2.2 + q * .35).addScaledVector(Sd, -.9), 1.12); tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .6), 1.45); fov = 50;
+      // slow 10° orbit round the player and a 5% push until the hero hold (last .5 s)
+      const q = Math.min(1, (k - WA) / (.9 - WA)), qe = q * q * (3 - 2 * q), ang = -qe * .175;
+      const off = new T3().addScaledVector(F, -2.2).addScaledVector(Sd, -.9), c = Math.cos(ang), sn = Math.sin(ang);
+      cam = up(new T3(off.x * c - off.z * sn, 0, off.x * sn + off.z * c).multiplyScalar(1 - qe * .08).add(WK.home), 1.12 + qe * .06);
+      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .6), 1.45); fov = 50 - qe * 2.5;
+      // where the board sits on screen, so the lightning strikes it (board at the origin, ~1.73 m up)
+      { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
+        if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
     }
     // lightning shake: 2–3 px for a quarter second
     if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
@@ -778,7 +784,7 @@
     spot.position.set(p.x + Sd.x * -.4, p.y + 3.6, p.z + Sd.z * -.4 + .3); spot.target.position.set(p.x, p.y + 1.1, p.z);
     rim.position.set(p.x - F.x * 1.1 + Sd.x * .6, p.y + 1.9, p.z - F.z * 1.1 + Sd.z * .6);
     fill.position.set(p.x + F.x * 1.2 + Sd.x * -1, p.y + 1.5, p.z + F.z * 1.2 + Sd.z * -1);
-    const fl = WK.flash ? Math.max(0, 1 - (now - WK.flash) / 120) : 0;
+    const dtf = WK.flash ? now - WK.flash : 1e9, fl = Math.max(0, 1 - dtf / 110, 1 - Math.abs(dtf - 190) / 90) + (dtf < 600 ? .25 * (1 - dtf / 600) : 0);   // two strikes then a fading afterglow
     rim.intensity = 3 + fl * 40; rim.color.setHex(fl > .1 ? 0xe8f2ff : 0x9cc8ff); fill.intensity = 1.4 + fl * 10;
   }
 
