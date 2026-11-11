@@ -22,7 +22,7 @@
 /* v1.79 visit score (Hayden 21:52): just the number, white 0-59, silver 60-99, gold 100+, bottom-right of the board view, clear of the treble 20 (ChatGPT "Darts UI Design Review": steel silver, tighter plate, 40 px desktop, 160/1200/180 ms, short finish label) */
 #vscore{position:fixed;z-index:9000;pointer-events:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 #vscore .vs-n{font:italic 900 46px/.9 "Barlow Condensed",Barlow,system-ui,sans-serif;letter-spacing:-.01em;padding:8px 11px 7px;border-radius:6px;background:rgba(10,13,16,.78);box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.08);animation:v11sc 1.54s linear both}
-#vscore.desk .vs-n{font-size:40px}
+#vscore.desk .vs-n{font-size:40px}#vscore small.vs-pb{color:#F3D27A}#vscore small+small{margin-top:3px}
 #vscore .vs-n i{font-style:normal;color:#F1EDE4}
 #vscore.silver .vs-n i{background:linear-gradient(180deg,#F1F4F5,#8C9BA3);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.55))}
 #vscore.gold .vs-n{box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(246,210,120,.35)}
@@ -66,14 +66,14 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
   host.innerHTML='';const d=document.createElement('div');d.className='vmed '+tier;
   d.innerHTML=`<i class="vmed-c"><b>${n}</b>${pb?'<em>PB</em>':''}</i>${sub?`<small>${sub}</small>`:''}`;host.appendChild(d);setTimeout(()=>{if(d.parentNode)d.remove();},1500);};
  let scEl=null,scT=0;
- const scoreNum=(n,band,sub)=>{try{if(!scEl){scEl=document.createElement('div');scEl.id='vscore';document.body.appendChild(scEl);}
+ const scoreNum=(n,band,sub,pb)=>{try{if(!scEl){scEl=document.createElement('div');scEl.id='vscore';document.body.appendChild(scEl);}
   const R=V.lkRects&&V.lkRects(),B=R&&R.board;const W=innerWidth,H=innerHeight;
   if(B&&B.w>0){scEl.style.right=Math.max(14,W-(B.x+B.w)+14)+'px';scEl.style.bottom=Math.max(14,H-(B.y+B.h)+14)+'px';scEl.style.left='auto';scEl.style.top='auto';}
   else{scEl.style.right='16px';scEl.style.bottom='45%';}
-  let desk=false;try{desk=!(V.lkPhone&&V.lkPhone());}catch(e){}scEl.className=band+(desk?' desk':'');scEl.innerHTML=`<div class="vs-n"><i>${n}</i></div>${sub?`<small>${sub}</small>`:''}`;
+  let desk=false;try{desk=!(V.lkPhone&&V.lkPhone());}catch(e){}scEl.className=band+(desk?' desk':'');scEl.innerHTML=`<div class="vs-n"><i>${n}</i></div>${pb?'<small class="vs-pb">New PB</small>':''}${sub?`<small class="vs-left">${sub}</small>`:''}`;
   // ChatGPT round 2: keep >=12 px between the finish label and the HR chip on narrow phones (the gap was 8 px at 360):
   // shorten to "120 LEFT · FINISH", and if that still doesn't fit, drop the label (the number stays)
-  const sm=sub&&scEl.querySelector('small'),hrE=document.getElementById('hr');
+  const sm=sub&&scEl.querySelector('small.vs-left'),hrE=document.getElementById('hr');
   if(sm&&hrE){const tight=()=>{const a=sm.getBoundingClientRect(),h=hrE.getBoundingClientRect();return h.width>0&&a.bottom>h.top-10&&a.top<h.bottom+10&&a.left-h.right<12;};
    if(tight()){sm.textContent=sub.replace(' · on a finish',' · finish');if(tight())sm.remove();}}
   clearTimeout(scT);scT=setTimeout(()=>{if(scEl)scEl.innerHTML='';},1560);}catch(e){}};
@@ -92,7 +92,10 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
    // visit score (Hayden 21:52, replaces the medals): just the number after every visit, white 0-59, silver 60-99, gold 100+; 180 keeps its own moment
    const pb=!S.practice&&seasoned&&prev>=60&&gained>prev;
    if(labs.some(l=>/^T/.test(l)))S.v11.tre=true;
-   scoreNum(gained,gained>=100?'gold':gained>=60?'silver':'white',left);if(pb){try{sfxLevel();}catch(e){}}
+   // a PB plays the level sound, so say why on screen (QA 22:30 pre-review)
+   scoreNum(gained,gained>=100?'gold':gained>=60?'silver':'white',left,pb);if(pb){try{sfxLevel();}catch(e){}}
+   // the game's own #callout also flashes this number; today the 3D scene covers it (elementFromPoint = scene at 390 px and desktop), clear it so a layering change can never show it twice
+   try{const c=document.getElementById('callout');if(c&&/^\d+$/.test((c.textContent||'').trim()))c.className='callout';}catch(e){}
  })();return r;};
  const _bm=beginMatch;beginMatch=function(){const r=_bm.apply(this,arguments);try{if(S)S.v11={ton:false,tre:false};}catch(e){}return r;};
 
