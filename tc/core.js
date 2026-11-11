@@ -755,10 +755,10 @@
       cam = up(p0.clone().addScaledVector(F, .55).addScaledVector(Sd, -1.15), 1.5); tgt = up(p0.clone().addScaledVector(F, .1), 1.4); fov = 41;
     } else {                // low rear 3/4 at the oche, board in frame, slow push
       // slow 10° orbit round the player and a 5% push until the hero hold (last .5 s)
-      const q = Math.min(1, (k - WA) / (.9 - WA)), qe = q * q * (3 - 2 * q), ang = -qe * .175;
-      const off = new T3().addScaledVector(F, -2.2).addScaledVector(Sd, -.9), c = Math.cos(ang), sn = Math.sin(ang);
+      const q = Math.min(1, (k - WA) / (.9 - WA)), qe = q * q * (3 - 2 * q), ang = qe * .09;
+      const off = new T3().addScaledVector(F, -2.5).addScaledVector(Sd, -.95), c = Math.cos(ang), sn = Math.sin(ang);
       cam = up(new T3(off.x * c - off.z * sn, 0, off.x * sn + off.z * c).multiplyScalar(1 - qe * .08).add(WK.home), 1.12 + qe * .06);
-      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .6), 1.45); fov = 50 - qe * 2.5;
+      tgt = up(WK.home.clone().addScaledVector(F, 1.5).addScaledVector(Sd, .15), 1.45); fov = 50 - qe * 2.5;   // board two-thirds across, player a third
       // where the board sits on screen, so the lightning strikes it (board at the origin, ~1.73 m up)
       { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
         if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
