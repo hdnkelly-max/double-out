@@ -14,6 +14,7 @@ let opp=null;for(let tries=0;tries<3&&!opp;tries++){
  await p.evaluate(()=>{const v=document.getElementById('vscore');if(v)v.innerHTML='';S.cur=1;S.dart=0;S.visit=[];startTurn();});
  for(let i=0;i<40&&!opp;i++){await p.waitForTimeout(500);opp=await p.evaluate(()=>{const e=document.getElementById('vscore');const w=e&&e.querySelector('.vs-who');const n=e&&e.querySelector('.vs-n');return w&&n?{who:w.textContent,n:n.textContent,rec:S.lastRec&&S.lastRec.tot,finish:!!e.querySelector('.vs-left')}:null;});}
 }
+if(opp&&process.env.SHOT)await p.screenshot({path:process.env.SHOT,timeout:120000,animations:'disabled'});
 r.aiVisitShows=!!opp;r.opp=opp;r.matchesReceipt=!!opp&&+opp.n===opp.rec;r.noFinishLine=!!opp&&!opp.finish;
 // 2. a tap on the play area clears it; Space does too
 r.tapClears=opp?await p.evaluate(()=>{document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));return document.getElementById('vscore').innerHTML==='';}):false;
