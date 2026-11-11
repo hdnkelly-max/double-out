@@ -39,7 +39,7 @@ function devInfo(){try{const d=window.TOPS_perf&&TOPS_perf.dev?TOPS_perf.dev():{
 log('boot',{v:VER(),build:window.TOPS_BUILD||'',os:devInfo().os,osv:devInfo().os_major,br:devInfo().browser,brv:devInfo().browser_major,scr:devInfo().screen,dpr:devInfo().dpr,gpu:devInfo().gpu,sa:devInfo().standalone,page:PAGE});
 let lastScreen=null;if(typeof showScreen==='function'){const ss=showScreen;showScreen=function(id){if(id!==lastScreen){lastScreen=id;log('screen',String(id));}return ss.apply(this,arguments);};}
 let inMatch=false,matchN=0;
-function leftMatch(how,extra){if(!inMatch)return;inMatch=false;const m=MID;log('match_end',Object.assign({how},extra||{}));
+function leftMatch(how,extra){if(!inMatch)return;inMatch=false;try{if(atBreak.length)idle(flushBreak);}catch(e){}/* anything held during the match goes now */const m=MID;log('match_end',Object.assign({how},extra||{}));
  setTimeout(()=>{if(MID===m&&!inMatch){res('after');}},1500);/* only if no new match has started meanwhile */upload('match_end');}
 if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){if(inMatch)leftMatch('replaced');MID=rid().slice(0,8);matchN++;
  log('match_try',{opp:o&&o.oppName,legs:o&&o.legs,n:matchN});/* logged before, so a start that throws still shows */
@@ -94,11 +94,18 @@ function prepKA(){try{if(!signedIn()){KA=null;return;}const u=NET.sb.supabaseUrl
 const inflight=new Set();
 const wire=r=>{const o=Object.assign({},r);delete o.rev;delete o.made;return o;};/* local bookkeeping fields aren't sent */
 function insert(r){if(!signedIn()||inflight.has(r.upload_id))return;inflight.add(r.upload_id);submitted.add(r.upload_id);const rev=r.rev;
- try{NET.sb.from('tops_log').upsert(wire(r),{onConflict:'upload_id',ignoreDuplicates:true}).then(({error})=>{inflight.delete(r.upload_id);if(!error){lastOk=Date.now();release(r.upload_id,rev);}else{failN++;lastFail=String(error.code||error.message||'?').slice(0,40);}}).catch(()=>{inflight.delete(r.upload_id);failN++;});}catch(e){inflight.delete(r.upload_id);}}
-function beacon(r){if(!KA||!signedIn()||KA.who!==NET.user.id)return;/* never with another account's token */submitted.add(r.upload_id);const rev=r.rev;try{fetch(KA.u+'/rest/v1/tops_log?on_conflict=upload_id',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(wire(r))}).then(x=>{if(x.ok){lastOk=Date.now();release(r.upload_id,rev);}}).catch(()=>{});}catch(e){}}
+ try{NET.sb.from('tops_log').insert(wire(r)).then(({error,status})=>{inflight.delete(r.upload_id);if(!error||dupErr(error,status)){lastOk=Date.now();release(r.upload_id,rev);/* plain INSERT (the table grants INSERT only, Q&D 09:03); a duplicate upload_id means it's already stored */}else{failN++;lastFail=String(error.code||error.message||'?').slice(0,40);}}).catch(()=>{inflight.delete(r.upload_id);failN++;});}catch(e){inflight.delete(r.upload_id);}}
+function beacon(r){if(!KA||!signedIn()||KA.who!==NET.user.id)return;/* never with another account's token */submitted.add(r.upload_id);const rev=r.rev;try{fetch(KA.u+'/rest/v1/tops_log',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(wire(r))}).then(x=>{if(x.ok||x.status===409){lastOk=Date.now();release(r.upload_id,rev);}}).catch(()=>{});}catch(e){}}
 const idle=f=>{let done=false;const go=()=>{if(done)return;done=true;f();};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:2000});}catch(e){}setTimeout(go,2500);/* never starve */};
 // wait for the player's pull to finish, but at most 20 s
-function whenNotPulling(f){const t0=Date.now();const go=()=>{try{if(typeof S!=='undefined'&&S&&S.pulling&&Date.now()-t0<20000){setTimeout(go,800);return;}}catch(e){}f();};idle(go);}
+function dupErr(e,st){return st===409||(e&&(e.code==='23505'||/duplicate key/i.test(e.message||'')));}
+// uploads never go during play (Q&D 08:23 / 11:00): outside a match at once (idle); during a match only at a real break (a leg end at a
+// quiet moment: no pull, not busy, no dart in the air) or at the match end. Evidence is already on disk, so waiting costs nothing.
+let atBreak=[];function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
+function whenNotPulling(f){try{if(!inMatch){idle(f);return;}atBreak.push(f);}catch(e){}}
+function flushBreak(){try{const fs=atBreak;atBreak=[];fs.forEach(f=>{try{f();}catch(e){}});}catch(e){}}
+function legBreak(m,tries){try{if(MID!==m||!inMatch)return;if(!quiet()){if((tries||0)<20)setTimeout(()=>legBreak(m,(tries||0)+1),250);return;}if(atBreak.length)idle(flushBreak);}catch(e){}}
+if(typeof endLeg==='function'){const el0=endLeg;endLeg=function(){const r=el0.apply(this,arguments);try{if(inMatch&&atBreak.length){const m=MID;setTimeout(()=>legBreak(m,0),600);}}catch(e){}return r;};}
 // errors: a serious one (exception, rejection, GL loss) is kept at once; console.error and later errors only mark the log dirty, and one
 // coalesced snapshot is kept + sent per 60 s (10 a session), carrying everything since
 let errUps=0,lastErrUp=0,errTimer=null,dirty=false;
@@ -112,14 +119,14 @@ setInterval(()=>{if(dirty&&!errTimer&&errUps<10){dirty=false;incident(false);}},
 function upload(reason){try{whenNotPulling(()=>{const r=row(reason);keep(r);prepKA();insert(r);});}catch(e){}}/* match end: built and kept off the end-of-match path */
 // hidden is the reliable exit on iOS (pagehide may never come): keep + send now with keepalive; pagehide repeats it (same upload_id)
 let hideRow=null;function onHide(why){try{log('vis',why);if(!hideRow){hideRow=row('pagehide');keep(hideRow);}beacon(hideRow);/* pagehide after hidden re-sends the identical row (same id, no duplicate) */}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide('hidden');else{hideRow=null;log('vis','visible');retry();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide('hidden');else{hideRow=null;log('vis','visible');if(!inMatch)retry();}});
 addEventListener('pagehide',()=>onHide('pagehide'));
 // anything left in the queue (a failed upload, a killed page, a guest) goes up at the next signed-in foreground moment; a guest's queue is
 // only sent for the account that signs in on this page load (not attributed to a later, different account on a shared phone)
 function retry(){if(!signedIn())return;let own=null;try{own=localStorage.getItem(OWN);}catch(e){}
  if(own&&own!==NET.user.id){qSet([]);try{localStorage.setItem(OWN,NET.user.id);}catch(e){}return;}/* a different account on this phone: the old queue isn't sent as theirs */
  if(!own){try{localStorage.setItem(OWN,NET.user.id);}catch(e){}}prepKA();for(const r of qGet())insert(r);}
-setInterval(()=>{if(!document.hidden){prepKA();retry();}},15000);/* also keeps the keepalive token fresh and clears it after sign-out */
+setInterval(()=>{if(!document.hidden&&!inMatch){prepKA();retry();if(atBreak.length)idle(flushBreak);}},15000);/* never during a match *//* also keeps the keepalive token fresh and clears it after sign-out */
 setTimeout(retry,6000);
 window.TOPS_LOG={log,events,res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
 })();

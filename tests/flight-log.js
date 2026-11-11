@@ -12,20 +12,24 @@ const {chromium}=require('playwright');const path=require('path');
  const f=[];
  const boot=await p.evaluate(()=>{const e=TOPS_LOG.events().find(x=>x.k==='boot');return e&&e.d;});if(!boot||!boot.v||!boot.os||!boot.br||boot.page==='<id>')f.push('no boot event with version and device: '+JSON.stringify(boot));
  // stub the signed-in client: inserts captured; keepalive fetches to tops_log captured
- await p.evaluate(()=>{window.__ins=[];window.__ka=[];NET.user={id:'u1'};NET.sb={supabaseUrl:'https://x.supabase.co',supabaseKey:'k',from:t=>({upsert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return Promise.resolve({error:window.__failIns?{message:'nope'}:null});}}),auth:{getSession:()=>Promise.resolve({data:{session:{access_token:'tok'}}})}};
+ await p.evaluate(()=>{window.__ins=[];window.__ka=[];NET.user={id:'u1'};NET.sb={supabaseUrl:'https://x.supabase.co',supabaseKey:'k',from:t=>({insert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return Promise.resolve({error:window.__failIns?{message:'nope'}:null});}}),auth:{getSession:()=>Promise.resolve({data:{session:{access_token:'tok'}}})}};
   const f0=window.fetch;window.fetch=function(u,o){if(/tops_log/.test(String(u))){__ka.push({u:String(u),keepalive:o&&o.keepalive,n:o&&o.body?o.body.length:0,id:o&&o.body?JSON.parse(o.body).upload_id:null});return Promise.resolve(new Response(null,{status:201}));}return f0.apply(this,arguments);};
   save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;TOPS_LOG.retry();});
  await p.waitForTimeout(500);
  // a match: start, three darts (one visit), an error and a console.error, end
- await p.evaluate(()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'Phil Taylor',oppAvg:60,legs:1});});await p.waitForTimeout(2500);
+ await p.evaluate(()=>{window.__ins0=__ins.length;beginMatch({mode:'career',tier:1,p0:'P',oppName:'Phil Taylor',oppAvg:60,legs:1});});await p.waitForTimeout(2500);
  await p.evaluate(()=>{if(S.bull)S.bull=null;S.busy=false;S.cur=0;const tg=targetPoint('T20');for(let i=0;i<3;i++){try{land(tg.x,tg.y);}catch(e){}}});
  await p.evaluate(()=>{setTimeout(()=>{throw new Error('flight-test boom');},0);});await p.waitForTimeout(300);
  const inc=await p.evaluate(()=>{const q=JSON.parse(localStorage.getItem('tops_logq')||'[]');return q.find(r=>r.reason==='error')||null;});
  if(!inc||!inc.events.some(e=>e.k==='error'&&/flight-test/.test(e.d&&e.d.m)))f.push('the error was not kept locally at once');
  await p.evaluate(()=>{console.error('flight-test console');console.error('flight-test again');});
+ // Q&D 08:23 / 11:00 rule: nothing uploads during play; the error row waits on disk for the next break
+ await p.waitForTimeout(4000);const during=await p.evaluate(()=>__ins.slice(__ins0).filter(x=>x[0]==='tops_log').length);
+ if(during)f.push('an upload went during play: '+JSON.stringify(await p.evaluate(()=>__ins.slice(__ins0).map(x=>[x[0],x[1].reason]))));
+ await p.evaluate(()=>{S.won=true;endMatch();});/* the match ends: the held error upload goes now */
  let up1=0;for(let i=0;i<20&&!up1;i++){await p.waitForTimeout(500);up1=await p.evaluate(()=>__ins.filter(x=>x[0]==='tops_log'&&x[1].reason==='error').length);}
- const qLeft=await p.evaluate(()=>TOPS_LOG.queue().filter(r=>r.reason==='error').length);if(up1===1&&qLeft)f.push('the uploaded incident stayed queued (duplicate copy): '+qLeft);if(up1!==1)f.push('error uploads in the first minute: '+up1+' (want exactly 1, coalesced) '+JSON.stringify(await p.evaluate(()=>({e:TOPS_LOG._err(),ins:__ins.map(x=>[x[0],x[1].reason]),user:!!NET.user}))));
- await p.evaluate(()=>{S.won=true;endMatch();});await p.waitForTimeout(5500);
+ const qLeft=await p.evaluate(()=>TOPS_LOG.queue().filter(r=>r.reason==='error').length);if(up1===1&&qLeft)f.push('the uploaded incident stayed queued (duplicate copy): '+qLeft);if(up1!==1)f.push('error uploads after the match ended: '+up1+' (want exactly 1, coalesced) '+JSON.stringify(await p.evaluate(()=>({e:TOPS_LOG._err(),ins:__ins.map(x=>[x[0],x[1].reason]),user:!!NET.user}))));
+ await p.waitForTimeout(5500);/* match already ended above */
  const me=await p.evaluate(()=>{const r=__ins.filter(x=>x[0]==='tops_log'&&x[1].reason==='match_end').map(x=>x[1]);const last=r[r.length-1];return last?{n:r.length,ev:last.events,bytes:last.bytes}:null;});
  if(!me)f.push('no match_end upload');else{const k=me.ev.map(e=>e.k);for(const want of ['match_start','visit','error','console_error','match_end','res'])if(!k.includes(want))f.push('match_end upload has no '+want+' event');
   const rs=me.ev.filter(e=>e.k==='res').map(e=>e.d);if(!rs.some(r=>r.w==='start'&&r.chars!=null&&r.char_ids!=null&&r.geo!=null))f.push('resource snapshot lacks GPU counts or cached characters: '+JSON.stringify(rs[0]));
@@ -45,7 +49,7 @@ const {chromium}=require('playwright');const path=require('path');
    TOPS_LOG.log('x','B marker');TOPS_LOG.incident(true);await new Promise(r=>setTimeout(r,200));const b=TOPS_LOG.queue().filter(r=>r.reason==='error');window.__failIns=false;return {a,b:b.map(r=>r.upload_id),aHasA:b.some(r=>JSON.stringify(r.events).includes('A marker'))};});
  if(!two.a.length||!two.b.includes(two.a[0])||!two.aHasA)f.push('an unsent incident was replaced or lost: '+JSON.stringify(two));
  // in-flight refresh: incident A is uploading when more errors arrive; A's success must not delete the newer evidence (new id)
- const inf=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');let resolveA;const orig=NET.sb.from;NET.sb.from=t=>({upsert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return new Promise(res=>{resolveA=()=>res({error:null});});}});
+ const inf=await p.evaluate(async()=>{localStorage.setItem('tops_logq','[]');let resolveA;const orig=NET.sb.from;NET.sb.from=t=>({insert:(r)=>{__ins.push([t,JSON.parse(JSON.stringify(r))]);return new Promise(res=>{resolveA=()=>res({error:null});});}});
    const A=TOPS_LOG.row('error');A.reason='error';const qa=[A];localStorage.setItem('tops_logq',JSON.stringify(qa));TOPS_LOG.retry();await new Promise(r=>setTimeout(r,50));
    const refreshed=Object.assign(TOPS_LOG.row('error'),{upload_id:A.upload_id});TOPS_LOG._keep(refreshed);const ids=TOPS_LOG.queue().map(r=>r.upload_id);
    resolveA();await new Promise(r=>setTimeout(r,50));NET.sb.from=orig;const left=TOPS_LOG.queue();return {ids,left:left.map(r=>r.upload_id),aId:A.upload_id};});
