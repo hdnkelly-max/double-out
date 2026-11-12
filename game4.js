@@ -315,7 +315,9 @@ function audioWarm(){if(audioWarm.done||!AU.ctx)return;audioWarm.done=true;setTi
  if(SSN&&SP0){SSN.stop=function(){if(this.__q20k)return;return SP0.apply(this,arguments);};}
  try{wrap(window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype);wrap(window.AudioBufferSourceNode&&AudioBufferSourceNode.prototype);wrap(window.OscillatorNode&&OscillatorNode.prototype);}catch(e){}
  window.TOPS_AU=()=>{const r=[AUC.live,AUC.started,AU.ctx?AU.ctx.state:'none'];AUC.started=0;return r;};}
-function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
+function audioWake(){/* ENG-11: iOS leaves the context 'suspended' (made outside a tap) or 'interrupted' (app switch, lock, call); only a resume() inside a tap brings it back. In a 'no game audio' match the context's resume() is held off (#20 A/B), so this does nothing there */try{if(AU.ctx&&AU.ctx.state!=='running'&&AU.ctx.state!=='closed'){const p=AU.ctx.resume();if(p&&p.catch)p.catch(()=>{});}}catch(e){}}
+['touchend','pointerup','click','keydown'].forEach(t=>document.addEventListener(t,audioWake,{capture:true,passive:true}));/* the events that count as a tap for audio unlock: the tap that starts the walk-on wakes the context before the walk-on music is queued */
+function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx){audioWake();return;}try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
  const len=c.sampleRate*3,buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);let last=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*8;}
  const src=c.createBufferSource();src.buffer=buf;src.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=520;bp.Q.value=.6;
  const bp2=c.createBiquadFilter();bp2.type='lowpass';bp2.frequency.value=1400;AU.crowdGain=c.createGain();AU.crowdGain.gain.value=0;src.connect(bp);bp.connect(bp2);bp2.connect(AU.crowdGain);AU.crowdGain.connect(AU.master);src.start();
@@ -1619,7 +1621,7 @@ function currentSigma(){if(S&&S.mp)return mpSigma();const b=S.barrel;const nv=sp
 // ===== INPUT =====
 function setAim(x,y){const d=Math.hypot(x,y);if(d>180){x*=180/d;y*=180/d;}S.aim={x,y};}
 let dragging=false;const cvEl=$('scene');
-cvEl.addEventListener('pointerdown',e=>{audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!S||S.done||S.busy||S.p[S.cur].ai||S.view===1)return;
+cvEl.addEventListener('pointerdown',e=>{audioInit();if(!S||S.done||S.busy||S.p[S.cur].ai||S.view===1)return;
  const p=V.pointToBoardMM(e.clientX,e.clientY);const onBoard=p&&Math.hypot(p.x,p.y)<260&&(V.isSplit()||e.clientY<V.boardBottomY());
  /* FEEL: board drag only aims; board pane outside the board does nothing; desktop player pane still pulls */
  if(onBoard){cvEl.setPointerCapture(e.pointerId);dragging=true;setAim(p.x,p.y);return;}
@@ -2185,7 +2187,7 @@ function feelPaneHold(e){if(feelPhone()||!V.isSplit())return false;return e.clie
 // --- pull pad ---
 const PA=$('pullArea'),PAD=$('pullPad'),PAL=$('paLabel'),PAV=$('paVerdict'),PAM=$('paMark'),PAWIN=$('paWin');let paState='',paVerdT=0,paWinKey='';
 function padCanPull(){return !!(S&&!S.done&&!S.busy&&!S.p[S.cur].ai&&!S.mateTurn&&S.view!==1&&!S.breathe&&!V.walking());}
-if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!padCanPull())return;try{PAD.setPointerCapture(e.pointerId);}catch(x){}S.padPtr=e.pointerId;startPull('pad');});
+if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if(!padCanPull())return;try{PAD.setPointerCapture(e.pointerId);}catch(x){}S.padPtr=e.pointerId;startPull('pad');});
  PAD.addEventListener('pointerup',e=>{if(S&&S.pulling&&S.pullSrc==='pad')release(e,'pad');});
  PAD.addEventListener('pointercancel',()=>{if(S&&S.pullSrc==='pad')cancelPull();});
  PAD.addEventListener('lostpointercapture',()=>{if(S&&S.pulling&&S.pullSrc==='pad')cancelPull();});
