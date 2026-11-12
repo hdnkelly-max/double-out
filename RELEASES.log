@@ -8,3 +8,4 @@
 2026-11-12T03:26:27Z live version=3.05 tag=rel-3.05 tree=79afe23 commit=e321cc12c8a89014c6b944ebb196ab9a450cd7e4 risk=R3 run=43148139197 item=EXP-VOICE caller preloads only possible scores (QA tree 607f763 on 3.02; rule-2 recheck on 3.04)
 2026-11-12T04:49:39Z live version=3.06 tag=89dc013 tree=35a9f6f commit=aa49964 risk=R0 run=manual item=R0-20 part 1 match-start clear-up + CAR-6 diagnostics
 2026-11-12T04:54:11Z live version=3.07 tag=0b2424f tree=3724829 commit=ddd9b9a risk=R1 run=manual item=REGULARS named regulars + Worlds knockout fix (rule-2 on 3.06)
+2026-11-12T04:55:29Z live version=3.08 tag=744fca6 tree=35620cc commit=088a850 risk=R1 run=manual item=ENG-5 invisible animations stopped (rule-2 on 3.07)
