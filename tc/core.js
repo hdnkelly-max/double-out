@@ -251,8 +251,9 @@
   if (typeof beginMatch === 'function') {
     const _bm = beginMatch;
     window.beginMatch = beginMatch = function (opts) {
+      walkAbort();   // #17: a walk-on left from the last match ends here
       const r = _bm.apply(this, arguments);
-      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) setTimeout(() => { try { walkOnStart(opts); } catch (e) {} }, d); else walkOnStart(opts); } catch (e) { console.warn('tc begin', e); }
+      try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) { const s0 = S; setTimeout(() => { try { if (S === s0 && S && !S.done) walkOnStart(opts); } catch (e) {} }, d); } else walkOnStart(opts);   /* #17: the delayed walk-on only starts if the same match is still running */ } catch (e) { console.warn('tc begin', e); }
       return r;
     };
   }
@@ -382,7 +383,11 @@
   if (typeof hubTab === 'function') { const _ht = hubTab; window.hubTab = hubTab = function () { const r = _ht.apply(this, arguments); try { hubTiles(); } catch (e) {} return r; }; }
   if (typeof showHub === 'function') {
     const _sh = showHub;
-    window.showHub = showHub = function () { const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+  }
+  if (typeof showTitle === 'function') {   // #17: quitting to the title ends a walk-on too
+    const _st = showTitle;
+    window.showTitle = showTitle = function () { walkAbort(); return _st.apply(this, arguments); };
   }
   // Player tab: collection + loadout + tiers
   if (typeof showPlayer === 'function') {
@@ -411,6 +416,41 @@
     return el;
   }
 
+  // P6 (a11y): a Collection card is a real button for keyboard and screen-reader users (Tab to it, Enter or Space opens it)
+  function kbCard(k, label) {
+    k.tabIndex = 0; k.setAttribute('role', 'button'); k.setAttribute('aria-label', label);
+    /* QA 05:10: open once per press. Enter opens on keydown; Space on keyup (as native buttons do); a held key never repeats */
+    k.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); if (e.repeat || e.key === ' ') return; openKb(k);
+    });
+    k.addEventListener('keyup', e => { if (e.key === ' ') { e.preventDefault(); openKb(k); } });
+  }
+  function openKb(k) {
+    if (document.querySelector('.tc-inspect')) return;
+    const id = k.dataset.id; k.click();
+    const view = [...document.querySelectorAll('.tc-inspect')].pop(); if (!view) return;
+    /* keyboard users: focus moves into the card view, Tab stays inside it, Escape closes it.
+       getClientRects, not offsetParent: the close button is position:fixed, so its offsetParent is null (QA 05:10) */
+    const foc = () => [...view.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.getClientRects().length);
+    const onKey = ev => {
+      if (ev.key === 'Escape') { ev.preventDefault(); if (ev.repeat) return; const x = view.querySelector('.tc-x'); x ? x.click() : view.remove(); return; }
+      /* the Enter that opened the view, held down, must not auto-repeat onto ✕ and close it (QA 05:10) */
+      if (ev.repeat && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); return; }
+      if (ev.key !== 'Tab') return; const f = foc(); if (!f.length) { ev.preventDefault(); return; }
+      const i = f.indexOf(document.activeElement);
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); } else if (!ev.shiftKey && (i === -1 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    const x0 = view.querySelector('.tc-x'); if (x0) x0.focus({ preventScroll: true });
+    /* when the view closes, focus goes back to this card; if the binder redrew meanwhile, to the same card in the new grid */
+    const mo = new MutationObserver(() => {
+      if (view.isConnected) return; mo.disconnect(); document.removeEventListener('keydown', onKey, true);
+      const back = k.isConnected ? k : [...document.querySelectorAll('.tc-grid .tc[role=button]')].find(c => c.dataset.id === id);
+      if (back) back.focus({ preventScroll: true });
+    });
+    mo.observe(view.parentNode || document.body, { childList: true });
+  }
   // Collection binder
   function binder() {
     const t = st(); let filt = 'all';
@@ -425,8 +465,8 @@
       grid.innerHTML = '';
       D.CARDS.filter(c => filt === 'all' || c.set === filt).filter(c => !c.exclusive || t.own[c.id]).sort((a, b) => (!t.own[a.id]) - (!t.own[b.id]) || a.no - b.no).forEach(c => {
         const n = t.own[c.id] || 0; const k = TCC.card(c); k.classList.add('is-mini');
-        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); }
-        else { k.classList.add('is-locked'); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
+        if (n) { k.classList.add('is-flipped'); if (n > 1) { const tg = k.querySelector('.tc__tag'); tg.textContent = c.rarity === 'legendary' ? `×${n} · tradeable` : `×${n}`; tg.className = 'tc__tag is-dupe'; k.classList.add('show-tag'); } k.onclick = () => inspect(c); kbCard(k, `${c.name}, ${c.rarity} card${n > 1 ? `, ${n} owned` : ''}`); }
+        else { k.classList.add('is-locked'); k.setAttribute('role', 'img'); k.setAttribute('aria-label', `Card ${c.no}, not collected`); k.insertAdjacentHTML('beforeend', `<span class="tc-lockno" aria-hidden="true">No. ${String(c.no).padStart(3, '0')}<em>Not collected</em></span>`); }
         grid.appendChild(k);
       });
       el.querySelector('#tcSets').innerHTML = `<div class="tcpk__kicker">Sets</div>` + sets.filter(s => !s.exclusive).map(s => {
@@ -693,6 +733,15 @@
     setTimeout(end, 3200);
     return 3500;
   }
+  /* #17: every exit that isn't a completed walk (quit, back to the hub or title, the next beginMatch) ends the walk-on the same way:
+     figures it hid come back, the player figure goes back to how the walk found it, its clip stops, lights/overlay/body class clear. */
+  function walkAbort() {
+    const w = WK; if (!w) return; WK = null;
+    try { if (w.hid) w.hid.forEach(o => { o.visible = true; }); } catch (e) {}
+    try { if (w.act) w.act.stop(); } catch (e) {}
+    try { if (w.me && w.vis0 !== undefined) w.me.visible = !!w.vis0; } catch (e) {}
+    walkEnd();
+  }
   function walkEnd() {
     walkLights(null);
     window.TOPS_WALKFULL = false; document.body.classList.remove('tc-walking');
@@ -727,6 +776,7 @@
       return { fov: 50 }; }
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
+      WK.vis0 = !!me.visible;   // #17/#18 (from Experience's exp-fix18 b500b3d): the figure's visibility before the walk-on shows it (hidden in a match)
       WK.rot = me.rotation.y;
       // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
       // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
@@ -776,6 +826,7 @@
       if (!WK.fired && WK.fx) FX.run(WK.fx, WK.name);
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
       walkLights(null);
+      me.visible = !!WK.vis0;   // #17/#18: hand the figure back as the walk-on found it. Left visible, a whole extra skinned figure rendered every frame for the rest of the match and stood where the opponent throws.
       WK = null; walkEnd(); return null;
     }
     // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold

@@ -73,8 +73,11 @@
 // ===== F2 (11 Nov): barrels unlock by player level, sponsor-only sets, level-gated kit parts =====
 // Ladder anchors set by the owner: Club Brass 1, Supergrip 8, Razor Edge 15, Zen Jutsu 25, Power 9Five 40.
 // Everything else is slotted by its kit points (2*accuracy + rhythm + control; see v09 kitPts):
-//  0 brass 1 · 7 neutron 4 · 9 core xl 6 · 12 supergrip 8 · 16 razor 15 · 17 vapor8 18 · 19 zen 25 · 22 asp 30 · 22 ga 32 · 27 power 40
-const LV={assassin:1,neutron:4,corexl:6,supergrip:8,razor:15,vapor8:18,zen:25,asp:30,ga:32,power:40};
+//  0 brass 1 · 7 neutron 4 · 9 core xl 6 · 12 supergrip 8 · 16 razor 15 · 17 vapor8 18 · 19 zen 25 · 22 asp 33 · 22 ga 34 · 27 power 40
+// Pacing (Overseer 05:58): Asp was 30, GA 32. Level 30 is where a typical player is promoted from Regional, so Asp landed exactly at
+// Regional promotion and DPNZ arrival (Lee's real Club darts, best barrel each level: Regional promotion 69%, target <=65). Asp 33 / GA 34
+// gives 66% and DPNZ arrival 48%; every other tier unchanged (tests/profiles/README.md, row 1p-pace). Owned barrels stay owned.
+const LV={assassin:1,neutron:4,corexl:6,supergrip:8,razor:15,vapor8:18,zen:25,asp:33,ga:34,power:40};
 // sponsor exclusives: never sold, only arrive with that deal; you keep them if the deal ends
 const EXCL={iceman:'rd',mvg:'winmau',littler:'target'};
 // kit parts that are straight upgrades get a level; trade-off parts (short/long shaft, slim/kite/pear) stay open
@@ -105,18 +108,23 @@ function syncReserve(equipNow){const out=[];try{if(!save||!save.owned)return out
 window.TOPS_v12Res=syncReserve;
 const _os12=offerSponsors;offerSponsors=function(done){try{const sh=SPONSORS.find(x=>x.id==='shot');if(sh){const lv=lvNow();const need=LV[sh.v12gift]||1;sh.lines[1]=(lv!=null&&lv<need)?`We back Kiwi players coming through. A set of Zen Jutsu 23g is put aside for you, no charge, the day you hit level ${need}. 15% off anything in the range now.`:'We back Kiwi players coming through. Set of Zen Jutsu 23g on us, 15% off anything in the range.';}}catch(e){}
  return _os12.call(this,()=>{const got=syncReserve(true);if(got.length){try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}}done&&done();});};
-const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};persist();}catch(e){}return r;};
+const _nc12=newCareer;newCareer=function(){const r=_nc12.apply(this,arguments);try{save.v12res={};save.v12ent=[];save.v12pace=1;persist();}catch(e){}return r;};
+// Pacing (Overseer 05:58, ChatGPT 8.7): Asp moved 30 -> 33 and GA 32 -> 34. A career that had already reached the old level keeps the
+// barrel unlocked (one-time entitlement, decided the first time this version sees the career; never for a new career, never in The Run).
+const PACE_OLD={asp:30,ga:32};
+function paceEntitle(){try{if(save.v12pace)return;const c0=career();if(!c0||c0.run||!c0.v3)return;/* QA 06:36: no level data yet, decide later */const lv=lvNow();if(lv==null)return;/* only decide inside a career (The Run and no-career wait) */
+ save.v12ent=Object.keys(PACE_OLD).filter(id=>lv>=PACE_OLD[id]&&lv<(LV[id]||1));save.v12pace=1;persist();}catch(e){}}
 // gate for an item you don't own: null (open) | {lv} | {sp}
-function gateBarrel(b){if(lvNow()==null)return null;/* outside a career (The Run, no career) nothing is gated, sponsor sets included (QA 02:29, Overseer 03:16) */if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
+function gateBarrel(b){if(lvNow()==null)return null;/* outside a career (The Run, no career) nothing is gated, sponsor sets included (QA 02:29, Overseer 03:16) */if(EXCL[b.id])return {sp:EXCL[b.id]};const rs=save.v12res&&save.v12res[b.id];if(rs)return {res:rs,lv:LV[b.id]||1};const need=LV[b.id]||1;const lv=lvNow();if(lv==null||lv>=need)return null;if(save.v12ent&&save.v12ent.includes(b.id))return null;return {lv:need};}
 function gatePart(key,id){const need=PART_LV[key+':'+id];if(!need)return null;const lv=lvNow();if(lv==null||lv>=need)return null;return {lv:need};}
-window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart};
+window.TOPS_GATE={LV,EXCL,PART_LV,gateBarrel,gatePart,paceEntitle,nextUnlock,unlocksIn};
 // migration: a player already signed with Red Dragon, Target or Winmau gets that deal's exclusive set (not equipped). Owned barrels are never taken away.
 function grantSponsorSet(){try{if(!save||!save.owned||!save.sponsor)return false;const id=Object.keys(EXCL).find(k=>EXCL[k]===save.sponsor);if(id&&!save.owned.includes(id)){save.owned.push(id);persist();return true;}}catch(e){}return false;}
-grantSponsorSet();syncReserve(false);
+grantSponsorSet();syncReserve(false);paceEntitle();/* QA 06:36: guests never pass the wrapped migrate */
 // rule 17 (QA 21:55 #4): whenever the save is replaced (cloud copy at sign-in: netAdopt; a newer save from another device: adopt),
 // run the same F2 upkeep as page load: sponsor exclusive granted, due reserved gifts handed over. Owned barrels are never removed.
 // Reserved gifts (QA 21:55 #5): a set a sponsor put aside for you stays yours if you later change sponsor; it arrives at its level, no charge.
-{const _m=window.TOPS_v11Migrate;window.TOPS_v11Migrate=function(){let r;try{r=_m&&_m.apply(this,arguments);}catch(e){}grantSponsorSet();syncReserve(false);return r;};}
+{const _m=window.TOPS_v11Migrate;window.TOPS_v11Migrate=function(){let r;try{r=_m&&_m.apply(this,arguments);}catch(e){}grantSponsorSet();syncReserve(false);paceEntitle();return r;};}
 function spLabel(sid,top){return `<span class="v12sp" style="--bc:${bc(sid)}"><small>${top}</small><b>${brandOf(sid)}</b></span>`;}
 function gateHTML(g,short){if(short&&g.res)return spLabel(g.res,'Sponsor set');if(short&&g.sp)return spLabel(g.sp,'Sponsor only');if(g.res)return spLabel(g.res,'Sponsor set')+`<span class="v12sub">Unlocks for you at Lv ${g.lv} · no charge</span>`;
  if(short&&g.lv)return `<span class="v12gate">${LOCK}Lv ${g.lv}</span>`;
@@ -129,7 +137,7 @@ function lockRow(el,g,priceTxt,short){el.classList.add('v12lock');el.classList.r
  const tap=el.onclick;
  if(el.dataset.st2w&&tap){el.onclick=function(e){tap.call(el,e);const x=el.nextElementSibling;if(x&&x.classList.contains('st2x')){x.querySelectorAll('button').forEach(bt=>bt.remove());x.insertAdjacentHTML('beforeend',noteHTML(g,priceTxt));}};}
  else el.onclick=null;}
-function nextUnlock(lv){let best=null;BARRELS.forEach(b=>{const n=LV[b.id];if(!EXCL[b.id]&&n>lv&&!save.owned.includes(b.id)&&(!best||n<best.lv))best={lv:n,n:b.n};});return best;}
+function nextUnlock(lv){let best=null;BARRELS.forEach(b=>{const n=LV[b.id];if(!EXCL[b.id]&&n>lv&&!save.owned.includes(b.id)&&!(save.v12ent&&save.v12ent.includes(b.id))&&(!best||n<best.lv))best={lv:n,n:b.n};});return best;}
 function levelStrip(){const L=$('shopList');if(!L)return;let s=$('v12lv');const lv=lvNow();if(lv==null){if(s)s.remove();return;}
  if(!s){s=document.createElement('div');s.id='v12lv';s.className='v12lv';L.parentNode.insertBefore(s,L);}
  const nx=nextUnlock(lv);s.innerHTML=`<div class="lvn"><small>Level</small><b>${lv}</b></div>`+(nx?`<span class="nx">Next barrel · level ${nx.lv}</span><span class="nn">${nx.n}</span>`:`<span class="nx">Every barrel unlocked</span><span class="nn">Sponsor sets come <i>with a deal</i></span>`);}
@@ -142,7 +150,7 @@ function buyBtn(el,cost,doBuy){const pr=el.querySelector('.price');if(!pr)return
  const btn=pr.querySelector('.v12buy');btn.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(ok)doBuy();});}
 function buyBarrel(b){const c=career();const p=price(b.price);if(!c||c.bank<p||save.owned.includes(b.id)||gateBarrel(b))return;c.bank-=p;save.owned.push(b.id);save.barrel=b.id;try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}persist();showShop();}
 function buyPart(key,it){const c=career();const p=price(it.price);if(!c||c.bank<p||gatePart(key,it.id))return;c.bank-=p;save.ownedSetup=(save.ownedSetup||[]).concat(key+':'+it.id);try{noiseBurst({dur:.08,freq:3000,q:3,gain:.15});}catch(e){}save.setup=Object.assign({},save.setup||{},{[key]:it.id});persist();try{V.setPlayerLook(save.look,save.flight,save.name,career()?career().tier:0);}catch(e){}showShop();}
-function decorate(){if(grantSponsorSet()|syncReserve(false).length>0&&!decorate.again){decorate.again=1;try{showShop(showShop.tab,true);}finally{decorate.again=0;}return;}
+function decorate(){paceEntitle();if(grantSponsorSet()|syncReserve(false).length>0&&!decorate.again){decorate.again=1;try{showShop(showShop.tab,true);}finally{decorate.again=0;}return;}
  const rows=[...document.querySelectorAll('#shopList .opt')];
  rows.forEach((el,i)=>{const b=BARRELS[i];if(!b)return;el.dataset.v12id=b.id;const full=clampDesc(el);
   if(save.owned.includes(b.id)){const sid=EXCL[b.id]||((SPONSORS.find(s=>s.v12gift===b.id&&s.id===save.sponsor)||{}).id);if(EXCL[b.id]){const s0=el.querySelector('.s');if(s0&&!s0.querySelector('.v12why'))s0.insertAdjacentHTML('beforeend',`<span class="v12why spo" style="--bc:${bc(sid)}"><b>${brandOf(sid)}</b> sponsor set · yours to keep</span>`);}}
@@ -171,7 +179,7 @@ function v3(){try{const c=career();if(!c||c.run)return null;return C3.V3();}catc
 function seenInit(){const v=v3();if(v&&v.bSeen==null)v.bSeen=v.lv;}
 const _cam12=careerAfterMatch;careerAfterMatch=function(){seenInit();const r=_cam12.apply(this,arguments);try{syncReserve(false);}catch(e){}return r;};
 const _bm12=beginMatch;beginMatch=function(){seenInit();return _bm12.apply(this,arguments);};
-function unlocksIn(a,b){const out=[];BARRELS.forEach(x=>{const n=LV[x.id];if(!EXCL[x.id]&&n>a&&n<=b&&n>1)out.push({k:'barrel',lv:n,it:x});});
+function unlocksIn(a,b){const out=[];BARRELS.forEach(x=>{const n=LV[x.id];if(!EXCL[x.id]&&n>a&&n<=b&&n>1&&!(save.v12ent&&save.v12ent.includes(x.id)))out.push({k:'barrel',lv:n,it:x});});
  Object.entries(PART_LV).forEach(([tag,n])=>{if(n>a&&n<=b){const [key,id]=tag.split(':');const list=key==='shaft'?SHAFTS:key==='flight'?FSHAPES:POINTS;const it=list.find(x=>x.id===id);if(it)out.push({k:key,lv:n,it});}});return out;}
 function ptsOf(id){try{if(!window.TOPS_kitPts)return '';const sb=save.barrel,ss=save.setup;save.barrel=id;save.setup={shaft:'med',flight:'standard',point:'std'};let k;try{k=TOPS_kitPts();}finally{save.barrel=sb;save.setup=ss;}
  return [['Scoring','sc'],['Finishing','fi'],['Control','ct'],['Rhythm','rh']].filter(([n,x])=>k[x]>0).map(([n,x])=>`${n} ▲${k[x]}`).join(' · ');}catch(e){return '';}}
