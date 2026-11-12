@@ -4174,6 +4174,9 @@ one(window,'w');one(document,'d');one(document.body,'b');document.querySelectorA
 
 </script>
 <style>
+/* EXP-MENU: the top safe area (status bar in the iPhone home-screen app), one token so layout code and tests read the same value */
+:root{--tops-sat:env(safe-area-inset-top,0px)}
+
 /* Layout: full-bleed first-person canvas, broadcast HUD layered on top. Single dark look by design (you are standing in a venue). */
 :root{
   --stage:#0b0e12; --panel:rgba(12,16,20,.86); --line:rgba(255,255,255,.12);
@@ -5190,7 +5193,7 @@ body.feel-desk.split .hint{left:auto;right:12px;transform:none;bottom:200px;max-
 body.lk-match #grade,body.lk-match #grain,body.lk-match #vig{opacity:0!important}
 body.lk-match #grain{animation:none}/* ENG-5: invisible in matches, so its 6-step background animation does nothing there */
 body.lk-match .hud{padding:0;display:block;font-variant-numeric:tabular-nums}
-body.lk-match .hud .top{position:absolute;left:0;right:0;top:0;height:var(--lk-hdr);display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;background:var(--match-surface);border-bottom:1px solid var(--match-line);z-index:30}
+body.lk-match .hud .top{position:absolute;left:0;right:0;top:0;height:var(--lk-hdr);box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:var(--tops-sat,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));background:var(--match-surface);border-bottom:1px solid var(--match-line);z-index:30}
 body.lk-match .hud .wm{display:inline-flex;position:static;transform:none;font-size:18px;opacity:1;text-shadow:none}
 body.lk-match .hud .wm svg{filter:none}
 body.lk-match .event{background:none;border:0;padding:0;display:flex;align-items:baseline;gap:10px;min-width:0;flex:1;font-size:12px;letter-spacing:.06em;color:var(--match-muted)}
@@ -5207,7 +5210,8 @@ body.lk-match .lk-menu{display:none;position:absolute;right:0;top:calc(100% + 8p
 body.lk-match .tr.open .lk-menu{display:flex}
 body.lk-match .hud .top:has(.tr.open){z-index:60}
 /* EXP-MENU hotfix 12 Nov: in the home-screen app the match header sits under the iOS status bar, so Menu can't be tapped. Float the Menu control just below the status bar. No inset (browser/desktop): unchanged position. */
-@supports (top:env(safe-area-inset-top)){body.lk-match #hudTr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);right:max(8px,env(safe-area-inset-right,0px));z-index:61;pointer-events:auto}body.lk-match #btnMenu{min-height:44px;min-width:64px}}
+/* EXP-REBRAND (Overseer 22:08, option A): the whole match header now sits below the status bar (--lk-hdr includes the inset, game4.js lkRects), so the Menu hotfix's fixed position is no longer needed; its 44 px target stays */
+body.lk-match #btnMenu{min-height:44px;min-width:64px}/* phone header row is 44 px (game4.js lkRects), so the 44 px Menu fits below the inset */
 body.lk-match .tr.open .ghost{width:auto}
 body.lk-match .lk-menu .ghost{width:100%;text-align:left;display:flex;justify-content:space-between;text-decoration:none;min-height:36px;align-items:center}
 body.lk-match .lk-menu .ghost[aria-pressed]::after{content:"On";color:var(--match-muted);font-size:11px}
