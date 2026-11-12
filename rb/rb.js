@@ -299,9 +299,58 @@
     return r;
   };
   // any other game screen (messages, online lobby, title, creator, the Run's screens, perk, results) takes over from the new look
-  const _scr = window.showScreen; window.showScreen = showScreen = function (id) { const r = _scr.apply(this, arguments); try { if (id === 'result' && resOn) return r; /* the reward overlay sits on the result screen: our Result stays over both */ if (id !== 'hub') { if (resOn) endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; } } catch (e) { console.warn('rb screen', e); } return r; };
+  const _scr = window.showScreen; window.showScreen = showScreen = function (id) { const r = _scr.apply(this, arguments); try { if (id === 'result' && resOn) return r; /* the reward overlay sits on the result screen: our Result stays over both */ if (id !== 'title') titleOff(); if (id !== 'hub') { if (resOn) endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; } } catch (e) { console.warn('rb screen', e); } return r; };
   const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } clearInterval(armT); endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
-  const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
+  const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; const r = _st.apply(this, arguments); try { titleRb(); } catch (e) { console.warn('rb title', e); } return r; };
+  /* ---------- Title: the Broadcast welcome (Hayden 06:18: "Broadcast for main screen, same thing we mocked up").
+     Every control presses the game's own title button, so New career, the Run, lessons, sign-in and credits behave exactly as before.
+     Only change from the prototype: the walk-out hero is the player's own 3D render, lit red to sit in the arena. */
+  let tTry = 0;
+  const TI = {
+    snd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+    go: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>'
+  };
+  const press = id => { const b = $id(id); if (b) b.click(); };
+  function titleRb() {
+    let el = $id('rbTitle'); if (!el) { el = document.createElement('div'); el.id = 'rbTitle'; document.body.appendChild(el); }
+    const c = career(), r = (save.slots && save.slots.run && save.slots.run.career) || null;
+    let lv = 0; try { lv = C3.V3().lv; } catch (e) {}
+    let hero = ''; try { if (save.look && V.heroShot) hero = V.heroShot(save.look, save.name || 'You', c ? c.tier : 0, save.flight) || ''; } catch (e) {}
+    const sn = c && c.season, wk = sn ? Math.min(sn.week, sn.len) : 0;
+    const goSub = !c ? 'Start at the Kauri Arms' : sn && sn.ko ? `Next fixture · round ${wk} of ${sn.len}` : sn ? `Next fixture · week ${wk} of ${sn.len}` : 'Next fixture';
+    const snd = $id('btnTSound'), cal = $id('btnTCaller'), on = b => !b || b.getAttribute('aria-pressed') !== 'false';
+    const u = save.cloudUser;
+    const html = `<div class="rbt-bg"></div><div class="rbt-st"></div>
+      <div class="rbt-top"><span class="rbt-sp"></span><button class="rbt-tg" type="button" id="rbtSnd" aria-pressed="${on(snd)}" aria-label="Sound ${on(snd) ? 'on' : 'off'}">${TI.snd}</button><button class="rbt-tg" type="button" id="rbtCal" aria-pressed="${on(cal)}" aria-label="Caller ${on(cal) ? 'on' : 'off'}">${TI.mic}</button></div>
+      <img class="rbt-logo" src="${IMG}t_logo.webp" alt="TOPS · From the Kauri to the Palace">
+      <div class="rbt-stage" aria-hidden="true"><div class="rbt-hero" id="rbtHero" hidden><img alt=""><i></i></div></div>
+      <div class="rbt-ui">
+        ${c ? `<div class="rbt-card"><div class="rbt-who"><b>${esc(save.name || 'You')}${lv ? ` <span class="rbt-lv">LV ${lv}</span>` : ''}</b><small>${esc(TIERS[c.tier].n)} · ${c.wins}–${c.losses}</small></div><em>${money(c.bank)}</em></div>` : ''}
+        <button class="rbt-go" type="button" id="rbtGo"><span><span>${c ? 'Continue career' : 'New career'}</span><small>${esc(goSub)}</small></span>${TI.go}</button>
+        <div class="rbt-tiles">
+          <button class="rbt-tile" type="button" id="rbtMate"><img src="${IMG}t_ic_mate.webp" alt=""><b>Play a<br>mate</b><small>Live online · Games night</small></button>
+          <button class="rbt-tile" type="button" id="rbtRun"><img src="${IMG}t_ic_run.webp" alt=""><b>The<br>Run</b><small>${r ? `Tier ${r.tier + 1} · ${r.wins}–${r.losses} · carry on` : 'Three lives, a card each win'}</small></button>
+          <button class="rbt-tile" type="button" id="rbtThrow"><img src="${IMG}t_ic_throw.webp" alt=""><b>Have a<br>throw</b><small>Practice and drills</small></button>
+        </div>
+        <div class="rbt-links">${c ? '<button class="rbt-lk" type="button" id="rbtNew">New career</button>' : ''}${r ? '<button class="rbt-lk" type="button" id="rbtNewRun">Restart the Run</button>' : ''}<button class="rbt-lk" type="button" id="rbtLesson">How to throw</button><button class="rbt-lk" type="button" id="rbtCalib">Tap timing</button></div>
+        <div class="rbt-foot"><span>${u ? `Signed in as <b>${esc(u.name || 'you')}</b> · <button type="button" id="rbtOut">Sign out</button>` : 'Guest · <button type="button" id="rbtIn">Sign in with Google</button>'}</span><span><button type="button" class="rbt-cr" id="rbtCred">Credits</button>${window.TOPS_VER ? ' · v' + esc(String(window.TOPS_VER)) : ''}</span></div>
+      </div>`;
+    el.hidden = false; document.documentElement.classList.add('rb-title');
+    const again = el.__h === html; if (!again) { el.innerHTML = html; el.__h = html; }  // the game re-runs showTitle while portraits load: only redraw when something changed, so a tap never lands on a vanishing button
+    { const h = $id('rbtHero'); if (h && hero && h.__src !== hero) { h.__src = hero; h.firstChild.src = hero; h.style.setProperty('--h', `url(${hero})`); } if (h) h.hidden = !hero; }  // the render changes as hair/models stream in: swap the picture, never the buttons
+    const W = (id, f) => { const b = $id(id); if (b) b.onclick = f; };
+    W('rbtGo', () => press(c ? 'btnContinue' : 'btnNewCareer')); W('rbtNew', () => press('btnNewCareer')); W('rbtNewRun', () => press('btnNewRun'));
+    W('rbtMate', () => press('btnFriends')); W('rbtRun', () => press('btnRun')); W('rbtThrow', () => press('btnThrow'));
+    W('rbtLesson', () => press('btnLesson')); W('rbtCalib', () => press('btnCalib')); W('rbtCred', () => press('btnCredits'));
+    W('rbtIn', () => { const a = $id('tlIn'); if (a) a.click(); }); W('rbtOut', () => { const a = $id('tlOut'); if (a) a.click(); });
+    [['rbtSnd', 'btnTSound', 'Sound'], ['rbtCal', 'btnTCaller', 'Caller']].forEach(([m, g, n]) => W(m, () => { press(g); const b = $id(g), x = $id(m), v = on(b); x.setAttribute('aria-pressed', v); x.setAttribute('aria-label', n + (v ? ' on' : ' off')); }));
+    // the player's render arrives once the 3D rig has loaded: try again for a few seconds while the title is up
+    clearTimeout(tTry.t); if (!hero && save.look) { tTry.n = (tTry.n || 0) + 1; if (tTry.n < 12) tTry.t = setTimeout(() => { if (titleUp()) titleRb(); }, 1500); } else tTry.n = 0;
+  }
+  tTry = { n: 0, t: 0 };
+  const titleUp = () => { const t = $id('title'); return !!(t && !t.hidden && t.classList.contains('show') !== false && $id('rbTitle') && !$id('rbTitle').hidden); };
+  const titleOff = () => { const t = $id('rbTitle'); if (t) t.hidden = true; document.documentElement.classList.remove('rb-title'); clearTimeout(tTry.t); };
   const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
