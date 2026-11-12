@@ -1,0 +1,100 @@
+// TOPS rebrand (EXP-REBRAND) · the new menu set, behind one switch.
+// ?rebrand=1 turns it on for this device (remembered), ?rebrand=0 turns it off. Off = this file installs nothing.
+// Rule: the new screens only PRESENT the game. Every action calls the game's own function or button
+// (Walk on → the hub's #c3Go / playNext path, money match → moneyMatch()), so the match lifecycle, money and saves stay the game's.
+(function () {
+  const ON = (() => { try { const q = new URLSearchParams(location.search); if (q.has('rebrand')) localStorage.setItem('tops_rebrand', q.get('rebrand') === '1' ? '1' : '0'); return localStorage.getItem('tops_rebrand') === '1'; } catch (e) { return false; } })();
+  window.TOPS_REBRAND = ON;
+  if (!ON) return;
+  const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
+  const IMG = 'assets/rb/';   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
+  const IC = {
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    up: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l6 8H6z"/></svg>'
+  };
+  // opponents with a generated photo (one consistent set); everyone else gets the tier's empty venue and their face in the head-to-head
+  const OPP_PHOTO = { 'Big Mal': 'opp_bigmal.jpg' };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* ---------- components (same as the v9.1 prototype) ---------- */
+  const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
+  const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
+  const ring = (pct, lv, sz = 64, lab = 'LEVEL') => { const r = sz / 2 - 4, c = 2 * Math.PI * r, w = sz > 40 ? 6 : 3; return `<svg viewBox="0 0 ${sz} ${sz}"><circle cx="${sz / 2}" cy="${sz / 2}" r="${r}" fill="none" stroke="#2b3135" stroke-width="${w}"/><circle cx="${sz / 2}" cy="${sz / 2}" r="${r}" fill="none" stroke="#7fd19a" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${c * Math.max(0, Math.min(1, pct))} ${c}"/></svg><b style="${sz < 40 ? 'font-size:13px' : ''}">${lv}</b>${sz > 40 ? `<small>${lab}</small>` : ''}`; };
+  const sh = t => `<div class="rb-sh"><h3>${t}</h3></div>`;
+  /* ---------- reads from the real save (no writes here) ---------- */
+  function model() {
+    const c = career(), v = (window.C3 && C3.V3) ? C3.V3() : null; if (!c || !v) return null;
+    const t = TIERS[c.tier], sn = c.season, n = c.next || nextOpponent();
+    const rows = sn && !sn.ko ? seasonPos(sn) : null, yi = rows ? rows.findIndex(r => r.you) : -1;
+    const need = C3.lvNeed(v.lv), avgs = c.tierAvgs || [], form = avgs.length ? Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length) : null;
+    return { c, v, t, sn, n, rows, yi, need, pct: v.xp / need, form, bank: c.bank, name: save.name || 'You' };
+  }
+  /* ---------- shell ---------- */
+  const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
+  const OLD = { season: 'play', shop: 'kit', locker: 'player', practice: 'practice' };   // until each new screen lands, the tab opens the old one
+  let tab = 'tonight';
+  function ensure() {
+    let el = $id('rbApp'); if (el) return el;
+    el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
+    el.innerHTML = `<header class="rb-hd"><span class="rb-wm">TOPS</span><button class="rb-me" type="button" id="rbMe" aria-label="Your level, open Locker"><span class="rb-face" id="rbFace" style="width:30px;height:30px;flex-basis:30px"></span><span class="rb-nm" id="rbName"></span><span class="rb-ring" id="rbRing" style="width:30px;height:30px;flex-basis:30px"></span></button><span class="rb-bank rb-num" id="rbBank"></span><button class="rb-ib" type="button" id="rbMenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></header><nav class="rb-tabs" id="rbTabs" role="tablist"></nav><main id="rbMain" style="flex:1;display:flex;flex-direction:column;min-height:0"></main>`;
+    document.body.appendChild(el);
+    const back = document.createElement('button'); back.id = 'rbBack'; back.type = 'button'; back.hidden = true; back.textContent = 'New look ›'; back.onclick = () => open('tonight'); document.body.appendChild(back);
+    el.querySelector('#rbMe').onclick = () => toOld('locker');
+    el.querySelector('#rbMenu').onclick = () => { close(); try { showTitle(); } catch (e) {} };
+    return el;
+  }
+  function open(t) { const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
+  function close() { const el = $id('rbApp'); if (el) el.hidden = true; }
+  function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; try { hubTab(OLD[t] || 'play'); } catch (e) { console.warn('rb old tab', e); } }
+  function render() {
+    const M = model(); if (!M) { close(); return; }
+    $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
+    try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
+    $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
+    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (k === 'tonight') { tab = k; render(); } else toOld(k); });
+    let html = ''; try { html = tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
+    $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M);
+  }
+  /* ---------- Tonight (live data) ---------- */
+  function tonight(M) {
+    const { c, t, sn, n, rows, yi } = M;
+    const oppPt = (() => { try { return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })();
+    const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
+    const wk = sn ? Math.min(sn.week, sn.len) : 1, kick = sn && !sn.ko ? `${t.n} · week ${wk} of ${sn.len}` : sn && sn.ko ? `${t.n} · round ${wk} of ${sn.len}` : t.n;
+    const cost = (c.run || n.intro) ? { fee: 0, trav: 0 } : { fee: FIXPAY[c.tier][2], trav: c.travelCredit > 0 ? 0 : ((typeof TRAVEL !== 'undefined' && TRAVEL[c.tier]) || 0) },   /* same as career3 fixtureCost */ tot = cost.fee + cost.trav, short = tot > c.bank;
+    const fp = FIXPAY[c.tier], winTxt = n.intro ? 'a place in the team' : sn && sn.ko ? 'the next round' : `+2 pts · ${money(fp[0] + fp[3])}`;
+    const hero = `<div class="rb-hero" style="height:262px"><div class="rb-im" style="background-image:${OPP_PHOTO[n.oppName] ? `url(${IMG}${OPP_PHOTO[n.oppName]})` : `url(${IMG}venue_t${c.tier}.jpg)`};background-position:${OPP_PHOTO[n.oppName] ? '72% 28%' : '60% 40%'}"></div><div class="rb-sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 36%,rgba(10,12,14,.7) 64%,rgba(10,12,14,.96) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0,rgba(10,12,14,0) 48%)"></div><div class="rb-tx"><span class="rb-kick">${esc(kick)}</span><span class="rb-big" style="font-size:40px">vs ${esc(n.oppName)}</span><div class="rb-chips">${chip('Win: ' + esc(winTxt), 'l')}</div></div></div>`;
+    const me = M.form, op = n.oppAvg, tot2 = (me || op) + op;
+    const h2h = `<div class="rb-card" style="gap:8px"><div class="rb-h2h"><span class="rb-face" style="${mePt ? `background-image:url(${mePt})` : 'background:#2b3135'}"></span><div class="rb-vs2"><div class="rb-nums"><b class="rb-num">${me != null ? me : '–'}</b><span>${me != null ? 'Average · recent' : 'Your first match'}</span><b class="rb-num">${op}</b></div><div class="rb-tug"><i class="rb-a" style="width:${(me || op) / tot2 * 100}%"></i><i class="rb-b" style="width:${op / tot2 * 100}%"></i></div></div><span class="rb-face" style="${oppPt ? `background-image:url(${oppPt})` : 'background:#2b3135'}"></span></div><div class="rb-sub" style="text-align:center">${me != null ? `You ${me} (last ${(c.tierAvgs || []).length})` : 'Your first match'} · Him ${op} · Best of ${n.legs}</div></div>`;
+    const cta = short
+      ? `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.cash}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${money(tot - c.bank)} short of the ${money(tot)} entry</span><div class="rb-chips">${chip('Entry ' + money(tot))}${chip('You have ' + money(c.bank), 'l')}</div></div></div><div class="rb-bar"><i style="width:${Math.min(100, c.bank / tot * 100)}%"></i></div></div><button class="rb-primary" type="button" id="rbMoney"><b>Play the money match</b><small>Back room · best of 1</small></button>`
+      : `<button class="rb-primary" type="button" id="rbGo"><b>Walk on</b><small>${tot ? `Entry ${money(tot)} · leaves ${money(c.bank - tot)}` : 'Free entry'}</small></button>`;
+    let season = '';
+    if (rows && yi >= 0) { const gap = yi <= 1 ? 0 : rows[1].pts - rows[yi].pts; season = `<button class="rb-row" type="button" id="rbSeason"><span class="rb-tx"><small>Season · week ${wk} of ${sn.len}</small><span class="rb-t2">${ord(yi + 1)}${yi <= 1 ? ' · promotion places' : ` · ${gap} pt${gap === 1 ? '' : 's'} off 2nd`}</span></span><span class="rb-pos" aria-hidden="true">${rows.slice(0, 5).map((r, i) => `${i === 2 ? '<span class="rb-cut"></span>' : ''}<i class="${r.you ? 'rb-me' : i < 2 ? 'rb-up' : ''}">${i + 1}</i>`).join('')}</span><span class="rb-chev">›</span></button>`; }
+    const used = !!(sn && sn.side);
+    const side = n.intro ? '' : `<div class="rb-g2"><button class="rb-card" type="button" id="rbMoneyTile" ${used ? 'disabled' : ''} style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-wide"><div class="rb-im" style="background-image:url(${IMG}backroom.jpg);background-position:70% 50%"></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px"><span class="rb-t1" style="font-size:19px">Money match</span><span class="rb-sub" style="font-size:12.5px">${used ? 'Used this week' : 'Back room · best of 1'}</span><div class="rb-chips">${chip(IC.cash + ' Win ' + money(MM_PAY[c.tier] || 30), 'g')}</div></div></button>
+      <button class="rb-card" type="button" id="rbNext" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-wide"><div class="rb-im" style="background-image:url(${IMG}dw_razor.jpg)"></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px"><span class="rb-t1" style="font-size:19px">Next unlock</span><span class="rb-sub" style="font-size:12.5px">Level ${M.v.lv + 1}</span><div class="rb-mlab"><span>Lv ${M.v.lv}</span><span>${M.v.xp} / ${M.need} XP</span></div>${meter(10, Math.round(M.pct * 10))}</div></button></div>`;
+    return hero + h2h + cta + season + side;
+  }
+  function wire(M) {
+    const go = $id('rbGo'); if (go) go.onclick = () => {
+      const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
+      g.click();   // the game's own Walk on: it may ask for a second tap on a big entry
+      if (g.dataset.arm) { go.querySelector('small').textContent = g.textContent; go.querySelector('b').textContent = 'Tap again'; setTimeout(() => { try { render(); } catch (e) {} }, 3000); }
+    };
+    const mm = () => { try { moneyMatch(); } catch (e) { console.warn('rb money', e); } };
+    const m1 = $id('rbMoney'); if (m1) m1.onclick = mm;
+    const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
+    const s = $id('rbSeason'); if (s) s.onclick = () => toOld('season');
+    const nx = $id('rbNext'); if (nx) nx.onclick = () => toOld('locker');
+  }
+  /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */
+  const _sh = window.showHub; window.showHub = showHub = function (t) {
+    const r = _sh.apply(this, arguments);
+    try { const c = career(); if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
+    return r;
+  };
+  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
+  const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
+  window.TOPS_RB = { open, close, render, model };
+})();
