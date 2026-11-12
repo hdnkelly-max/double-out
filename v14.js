@@ -57,7 +57,7 @@ if(typeof land==='function'){const ld=land;land=function(x,y){let who=null;try{w
 function errInfo(m,src,line,err){return {m:String(m||'').slice(0,180),at:src?String(src).split(/[?#]/)[0].split('/').pop()+':'+(line||0):undefined,st:err&&err.stack?String(err.stack).split('\n').slice(1,4).map(s=>s.trim().split(/[?#]/)[0].replace(/^.*\//,'')).join(' | ').slice(0,200):undefined};}
 addEventListener('error',e=>{if(e.target&&e.target!==window){log('res_error',{tag:e.target.tagName,src:String(e.target.src||e.target.href||'').split(/[?#]/)[0].split('/').pop().slice(0,80)});return;}log('error',errInfo(e.message,e.filename,e.lineno,e.error));incident(true);},true);
 addEventListener('unhandledrejection',e=>{const r=e.reason;log('error',Object.assign({rej:1},errInfo(r&&r.message||String(r),null,null,r)));incident(true);});
-for(const lvl of ['error','warn']){const o=console[lvl];if(!o||o.__fr)continue;let inside=false;const w=function(){if(!inside){inside=true;try{const m=Array.from(arguments).map(a=>a&&a.message?a.message:(typeof a==='object'?'[object]':String(a))).join(' ');log(lvl==='error'?'console_error':'warn',m.slice(0,200));if(lvl==='error')incident(false);}catch(e){}inside=false;}return o.apply(console,arguments);};w.__fr=true;console[lvl]=w;}
+for(const lvl of ['error','warn']){const o=console[lvl];if(!o||o.__fr)continue;let inside=false;const w=function(){if(!inside){inside=true;try{const m=Array.from(arguments).map(a=>a&&a.message?a.message:(typeof a==='object'?'[object]':String(a))).join(' ');if(!(lvl==='error'&&shaderConsole(Array.from(arguments)))){log(lvl==='error'?'console_error':'warn',m.slice(0,200));if(lvl==='error')incident(false);}}catch(e){}inside=false;}return o.apply(console,arguments);};w.__fr=true;console[lvl]=w;}
 // network: failures (host + path only) and cloud-save successes; the recorder's own uploads aren't logged
 if(window.fetch&&!window.fetch.__fr){const f0=window.fetch;const w=function(input){const t=performance.now();const url=(()=>{try{const s=input instanceof Request?input.url:(input instanceof URL?input.href:String(input));const u=new URL(s,location.href);return u.host+u.pathname;}catch(e){return '?';}})();if(/tops_log/.test(url))return f0.apply(this,arguments);
  return f0.apply(this,arguments).then(r=>{if(!r.ok)log('net_fail',{u:url.slice(0,100),st:r.status,ms:Math.round(performance.now()-t)});else if(/tops_saves/.test(url))log('cloud_save',{ms:Math.round(performance.now()-t)});return r;},e=>{log('net_fail',{u:url.slice(0,100),err:String(e&&e.message||e).slice(0,80),ms:Math.round(performance.now()-t)});throw e;});};w.__fr=true;window.fetch=w;}
@@ -132,6 +132,77 @@ function retry(){if(!signedIn()||inMatch)return;/* never during a match (incl. t
  if(!own){try{localStorage.setItem(OWN,NET.user.id);}catch(e){}}prepKA();for(const r of qGet())insert(r);}
 setInterval(()=>{if(!document.hidden&&!inMatch){prepKA();retry();if(atBreak.length)idle(flushBreak);}},15000);/* never during a match *//* also keeps the keepalive token fresh and clears it after sign-out */
 setTimeout(retry,6000);
-window.TOPS_LOG={log,events,res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_brk:()=>({atBreak:atBreak.length,held:held.size,brkIn:brkUntil-Date.now(),inMatch,quiet:quiet(),pend:!!pendBuild}),_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
+// ===== CAR-6: diagnostics that name the cause (Overseer 15:21, after R0 #19; ChatGPT design 7.5 -> its 3 changes applied) =====
+// Per frame only an O(n<=~60) signature of the program cache (ids summed, no allocation) and a slow-run counter. Everything heavier
+// (scene traversal, attribution, health checks, diffs, the thumbnail) waits for a quiet moment (not aiming, pulling or darts flying).
+// No WebGL patching: three.js r128's own renderer.info.programs, renderer.properties and program.diagnostics.
+const BIG_MAX=2600;
+const RED_SH=RED.filter(r=>String(r[0])!==String(/\b[A-Za-z0-9_]{32,}\b/g));/* shader logs: no long-identifier rule (it would hide the failing GLSL/MSL function name; shader text carries no user data) */
+function bigText(s,n){s=String(s);for(const [re,to] of RED_SH)s=s.replace(re,to);return s.slice(0,n);}
+function logBig(k,o){try{let s=JSON.stringify(o);if(s.length>BIG_MAX){if(o.log)o.log=String(o.log).slice(0,Math.max(200,o.log.length-(s.length-BIG_MAX)));s=JSON.stringify(o);}
+ const t=now();const e={t,q:++seq,k,d:JSON.parse(s)};if(MID)e.m=MID;if(count===CAP)dropped++;else count++;RING[head]=e;head=(head+1)%CAP;return e;}catch(x){return null;}}
+const SHADER_RE=/WebGLProgram|shader|MSL|getProgramInfoLog/i;
+let progSig=-1,progLen=-1,progIds=new Set(),progPend=[],pendFail=null,diagPend=false,fails=0;
+const R_=()=>{try{return window.TOPS_R||(typeof V!=='undefined'&&V&&V._qa&&V._qa.renderer)||null;}catch(e){return null;}};
+const SC_=()=>{try{return (typeof V!=='undefined'&&V&&V._qa&&V._qa.scene)||null;}catch(e){return null;}};
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+// full console text for shader errors (the generic console_error keeps 200 chars): captured from the console arguments themselves
+function shaderConsole(args){try{const txt=args.map(a=>a&&a.message?a.message:(typeof a==='object'?'':String(a))).join(' ');if(!SHADER_RE.test(txt))return false;
+ fails++;pendFail={t:now(),log:bigText(txt,2000)};diagPend=true;thumbWant('shader_fail');/* attribution + upload at the next quiet moment */
+ logBig('shader_fail',{log:pendFail.log,scr:lastScreen,n:fails});incident(true);return true;}catch(e){return false;}}
+// per frame (after the game's own frame): program-cache signature and the slow-frame run
+let lastF=0,slowRun=0,slowFired=false;
+function frameTick(nowT){try{const R=R_();const P=R&&R.info&&R.info.programs;if(P){let s=P.length*1000003;for(let i=0;i<P.length;i++)s+=P[i].id*(i+7);if(s!==progSig){progSig=s;progLen=P.length;onProgChange(P,nowT-lastF);}}
+ const d=lastF?nowT-lastF:0;lastF=nowT;if(inMatch&&d>50&&d<5000){slowRun+=d;if(slowRun>=2000&&!slowFired){slowFired=true;thumbWant('slow2s');log('slow_run',{ms:Math.round(slowRun),scr:lastScreen});}}else if(d<=50)slowRun=0;/* 2 s of back-to-back frames over 50 ms, once a match */
+ if(thumbReq&&quiet())thumbShot();
+ if((diagPend||healthDue())&&quiet()&&!thumbBusy)idleDiag();}catch(e){}}
+// a change in the program cache: which programs came and went (ids only now; names and owners at the quiet moment)
+function onProgChange(P,frameMs){const ids=new Set();const add=[];for(const p of P){ids.add(p.id);if(!progIds.has(p.id))add.push(p);}let gone=0;for(const id of progIds)if(!ids.has(id))gone++;progIds=ids;
+ if(!add.length&&!gone)return;for(const p of add){progPend.push(p);if(progPend.length>40)progPend.shift();}
+ log('prog',{n:P.length,add:add.length,gone,ms:Math.round(frameMs||0),scr:lastScreen});
+ for(const p of add)if(p.diagnostics&&p.diagnostics.runnable===false){diagPend=true;thumbWant('shader_fail');}diagPend=diagPend||add.length>0;}
+// which mesh/material uses each program (one traversal, quiet moments only)
+function owners(){const R=R_(),sc=SC_();const map=new Map();if(!R||!sc||!R.properties)return map;sc.traverse(o=>{if(!o.material)return;const ms=Array.isArray(o.material)?o.material:[o.material];
+ for(const m of ms){let pr=null;try{pr=R.properties.get(m);}catch(e){}const cp=pr&&pr.currentProgram;if(!cp)continue;let a=map.get(cp.id);if(!a){a=[];map.set(cp.id,a);}if(a.length<3)a.push(tagOf(o)+'/'+(m.name||m.type));}});return map;}
+function tagOf(o){let q=o,path=[];for(let i=0;q&&i<4;i++){const n=(q.userData&&(q.userData.ck||q.userData.tag))||q.name;if(n)path.push(n);q=q.parent;}return path.slice(0,2).join('<')||o.type;}
+function lightCounts(){const sc=SC_();const c={dir:0,point:0,spot:0,hemi:0,amb:0,rect:0,shadow:0};if(!sc)return c;sc.traverse(o=>{if(!o.isLight)return;let v=true,q=o;while(q){if(!q.visible){v=false;break;}q=q.parent;}if(!v)return;
+ if(o.isDirectionalLight)c.dir++;else if(o.isPointLight)c.point++;else if(o.isSpotLight)c.spot++;else if(o.isHemisphereLight)c.hemi++;else if(o.isAmbientLight)c.amb++;else if(o.isRectAreaLight)c.rect++;if(o.castShadow)c.shadow++;});return c;}
+function defs(p){const pre=p&&p.diagnostics?(p.diagnostics.fragmentShader.prefix||''):'';const o={};for(const k of ['NUM_DIR_LIGHTS','NUM_POINT_LIGHTS','NUM_SPOT_LIGHTS','NUM_HEMI_LIGHTS','NUM_DIR_LIGHT_SHADOWS','NUM_SPOT_LIGHT_SHADOWS','NUM_POINT_LIGHT_SHADOWS']){const m=pre.match(new RegExp('#define '+k+' (\\d+)'));if(m)o[k.replace('NUM_','').toLowerCase()]=+m[1];}
+ for(const k of ['USE_MAP','USE_ENVMAP','USE_SKINNING','USE_FOG','USE_SHADOWMAP','USE_BUMPMAP','USE_NORMALMAP','USE_EMISSIVEMAP','USE_INSTANCING','PHYSICAL'])if(pre.indexOf('#define '+k)>=0)(o.on=o.on||[]).push(k.replace('USE_',''));return o;}
+let idleBusy=false;function idleDiag(){if(idleBusy)return;idleBusy=true;const go=()=>{idleBusy=false;if(!quiet())return;try{runDiag();}catch(e){}};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:400});else setTimeout(go,0);}catch(e){setTimeout(go,0);}}
+function runDiag(){const R=R_();if(!R)return;let own=null;
+ if(diagPend){diagPend=false;own=owners();const lc=lightCounts();
+  const news=progPend.splice(0);const bad=[];for(const p of news){const o={id:p.id,sh:p.name,key:hashStr(String(p.cacheKey||'')),by:own.get(p.id)||null};if(p.diagnostics&&p.diagnostics.runnable===false){o.fail=1;o.defs=defs(p);bad.push({p,o});}log('prog_new',o);}
+  for(const p of (R.info.programs||[]))if(p.diagnostics&&p.diagnostics.runnable===false&&!bad.some(b=>b.p===p))bad.push({p,o:{id:p.id,sh:p.name,key:hashStr(String(p.cacheKey||'')),by:own.get(p.id)||null,defs:defs(p)}});
+  for(const b of bad){const d=b.p.diagnostics;logBig('shader_fail_at',Object.assign({},b.o,{lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)}));}
+  if(pendFail||bad.length){pendFail=null;incident(true);}}
+ health(own);}
+// ---- match health: first quiet frame after the start, and again from 5 s in ----
+let hDue=[],h1=null,boardFace=null;
+function healthDue(){return hDue.length&&inMatch&&now()>=hDue[0].at;}
+function findBoard(){const sc=SC_();if(!sc)return null;let best=null;sc.traverse(o=>{if(best||!o.isMesh||!o.geometry||o.geometry.type!=='CircleGeometry')return;const r=o.geometry.parameters&&o.geometry.parameters.radius;const mp=o.material&&o.material.map;if(r&&Math.abs(r-.2255)<.002&&mp&&mp.image&&mp.image.width>=1024)best=o;});return best;}
+function objState(o){if(!o)return {ok:false,why:'missing'};const R=R_();let v=true,q=o;while(q){if(!q.visible){v=false;break;}q=q.parent;}const st={vis:v};let meshes=0,noProg=0,bad=0,noTex=0;
+ o.traverse(m=>{if(!m.isMesh||!m.material)return;meshes++;const ms=Array.isArray(m.material)?m.material:[m.material];for(const mt of ms){let pr=null;try{pr=R.properties.get(mt);}catch(e){}const cp=pr&&pr.currentProgram;if(!cp)noProg++;else if(cp.diagnostics&&cp.diagnostics.runnable===false)bad++;const im=mt.map&&mt.map.image;if(mt.map&&(!im||(im.width===0)||(im.complete===false)))noTex++;}});
+ Object.assign(st,{meshes,noProg,bad,noTex});return st;}
+function health(own){if(!healthDue())return;const h=hDue.shift();const R=R_();if(!R)return;if(!boardFace||!boardFace.parent)boardFace=findBoard();
+ const opp=(()=>{try{return V._qa.opp();}catch(e){return null;}})();const b=objState(boardFace),o=opp?objState(opp):null;
+ const progs=R.info.programs||[];const keys=progs.map(p=>hashStr(String(p.cacheKey||''))).sort();
+ const snap={w:h.w,n:matchN,lights:lightCounts(),progs:progs.length,calls:R.info.render.calls,geo:R.info.memory.geometries,tex:R.info.memory.textures,board:b,opp:o,figs:visibleFigs()};
+ const miss=[];if(!b||b.vis===false)miss.push('board hidden');if(b&&b.meshes&&(b.bad||(b.noProg&&h.w==='5s')))miss.push('board program '+(b.bad?'failed':'missing'));/* 'missing' only from 5 s in: the first frames may not have drawn it yet */if(b&&b.noTex)miss.push('board texture');if(o&&o.bad)miss.push('opponent program failed');if(o&&o.noTex)miss.push('opponent texture');
+ log('health',snap);if(miss.length){logBig('health_fail',{w:h.w,miss,board:b,opp:o,lights:snap.lights,progs:snap.progs});thumbWant('health_fail');incident(true);}
+ if(h.w==='5s'){const k={keys,lights:snap.lights,figs:snap.figs,geo:snap.geo,tex:snap.tex,progs:snap.progs};if(!h1)h1=k;else{const d={};const add=k.keys.filter(x=>h1.keys.indexOf(x)<0),gone=h1.keys.filter(x=>k.keys.indexOf(x)<0);if(add.length)d.prog_new=add.slice(0,12);if(gone.length)d.prog_gone=gone.length;
+  for(const t in k.lights)if(k.lights[t]!==h1.lights[t])d['l_'+t]=h1.lights[t]+'>'+k.lights[t];if(k.figs!==h1.figs)d.figs=h1.figs+'>'+k.figs;d.geo=k.geo-h1.geo;d.tex=k.tex-h1.tex;d.progs=h1.progs+'>'+k.progs;
+  if(add.length||gone.length||Object.keys(d).some(x=>x[0]==='l')||d.figs)log('health_diff',d);}}}
+function visibleFigs(){const sc=SC_();let n=0;if(!sc)return 0;sc.traverse(o=>{if(!(o.userData&&o.userData.ck))return;let v=true,q=o;while(q){if(!q.visible){v=false;break;}q=q.parent;}if(v)n++;});return n;}
+// ---- thumbnail: 160 px JPEG of our own canvas, right after a quiet render, max 2 a session, blank captures rejected ----
+let thumbReq=null,thumbN=0,thumbBusy=false;function thumbWant(why){if(thumbN<2&&!thumbReq)thumbReq=why;}
+function thumbShot(){const why=thumbReq;thumbReq=null;try{const R=R_();const cv=R&&R.domElement;if(!cv||!cv.width)return;const W=160,H=Math.max(1,Math.round(cv.height*W/cv.width));const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');const a=performance.now();
+ x.drawImage(cv,0,0,W,H);/* same task as the render: the drawing buffer is still valid without preserveDrawingBuffer */const px=x.getImageData(0,0,W,H).data;let mn=255,mx=0;for(let i=0;i<px.length;i+=64){const v=px[i]+px[i+1]+px[i+2];if(v<mn)mn=v;if(v>mx)mx=v;}
+ if(mx-mn<12){log('thumb_blank',{why});return;}thumbN++;thumbBusy=true;const cap=Math.round(performance.now()-a);
+ const done=url=>{thumbBusy=false;if(url&&url.length<14000){const e=logBig('thumb',{why,w:W,h:H,cap_ms:cap,img:url});}else log('thumb_big',{why,len:url?url.length:0});};
+ if(c.toBlob)c.toBlob(bl=>{if(!bl){done(null);return;}const fr=new FileReader();fr.onload=()=>done(fr.result);fr.onerror=()=>done(null);fr.readAsDataURL(bl);},'image/jpeg',.5);else done(c.toDataURL('image/jpeg',.5));}catch(e){thumbBusy=false;}}
+if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf2=V.frame;V.frame=function(nowT){const r=vf2.apply(this,arguments);/* the game's frame always runs first, outside any try */try{frameTick(typeof nowT==='number'?nowT:performance.now());}catch(e){}return r;};}
+if(typeof beginMatch==='function'){const bm2=beginMatch;beginMatch=function(){const r=bm2.apply(this,arguments);try{slowRun=0;slowFired=false;const t=now();hDue=[{w:'start',at:t+1000},{w:'5s',at:t+5000}];}catch(e){}return r;};}
+window.TOPS_LOG={log,events,_car6:()=>({progLen,fails,thumbN,h1:!!h1,hDue:hDue.length,board:!!boardFace}),_health:()=>{hDue=[{w:'5s',at:0}];},_tick:t=>frameTick(t),res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_brk:()=>({atBreak:atBreak.length,held:held.size,brkIn:brkUntil-Date.now(),inMatch,quiet:quiet(),pend:!!pendBuild}),_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
 })();
 </script>
