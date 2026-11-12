@@ -67,6 +67,13 @@ const {chromium}=require('playwright');const path=require('path');
  const rap=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));S.won=true;endMatch();beginMatch({mode:'career',tier:1,p0:'P',oppName:'B',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,2000));
    const ev=TOPS_LOG.events();const startB=ev.filter(e=>e.k==='match_start').pop();const afterA=ev.filter(e=>e.k==='res'&&e.d.w==='after'&&e.q>startB.q);return {after:afterA.length};});
  if(rap.after)f.push('a previous match\'s after-cleanup snapshot landed inside the next match');
+ // CAR-8: match_end carries this match's result, decided by the game's own endMatch (not the previous match's S.won)
+ const res8=await p.evaluate(async()=>{const out=[];const end=(me,op,stale)=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'R'+out.length,oppAvg:60,legs:3});S.p[0].legs=me;S.p[1].legs=op;S.won=stale;endMatch();const e=TOPS_LOG.events().filter(x=>x.k==='match_end').pop();out.push({me,op,won:e&&e.d.won,how:e&&e.d.how,legs:e&&e.d.legs});};
+   end(2,0,false);await new Promise(r=>setTimeout(r,300));end(0,2,true);await new Promise(r=>setTimeout(r,300));end(2,1,false);await new Promise(r=>setTimeout(r,300));end(1,2,true);await new Promise(r=>setTimeout(r,300));
+   // a quit straight after a win: no result carried over
+   beginMatch({mode:'career',tier:1,p0:'P',oppName:'Q',oppAvg:60,legs:3});S.won=true;document.getElementById('btnQuit').click();await new Promise(r=>setTimeout(r,300));const q=TOPS_LOG.events().filter(x=>x.k==='match_end').pop();out.push({quit:1,won:q&&q.d.won,how:q&&q.d.how});return out;});
+ [[0,true],[1,false],[2,true],[3,false]].forEach(([i,w])=>{if(res8[i].won!==w)f.push('match_end won '+JSON.stringify(res8[i].won)+' for legs '+res8[i].me+'-'+res8[i].op+' (want '+w+')');});
+ if(res8[4].how!=='quit'||res8[4].won===true)f.push('a quit after a win logs '+JSON.stringify(res8[4]));
  // sign-out: no keepalive with the old token
  const so=await p.evaluate(async()=>{const n0=__ka.length;NET.user=null;await new Promise(r=>setTimeout(r,100));let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));await new Promise(r=>setTimeout(r,200));hidden=false;document.dispatchEvent(new Event('visibilitychange'));NET.user={id:'u1'};return __ka.length-n0;});
  if(so)f.push('sent with a token after sign-out');
