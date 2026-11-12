@@ -6,7 +6,7 @@
 /* Layout: one phone (390 wide, 844 tall) centred on a dark desk; tier-2 calm frame: flat graphite panels, hairline borders,
    real game renders inside panel frames, red only on the one primary button and the active main tab. Single dark look by design. */
 :root{
-  --desk:#0b0d0f; --bg:#14171a; --panel:#1c2024; --panel2:#22272c; --line:#3a4043; --ink:#f2f3f1; --ink2:#b7bdb9; --ink3:#868d89;
+  --desk:#0b0d0f; --bg:#14171a; --panel:#1c2024; --panel2:#22272c; --line:#3a4043; --ink:#f2f3f1; --ink2:#b7bdb9; --ink3:#a0a6a3;
   --red:#d7232d; --red2:#b81c25; --good:#8fc49a; --badge:#5b6266;
   --display:"Barlow Condensed","Arial Narrow",Impact,sans-serif; --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:dark;
@@ -79,7 +79,7 @@ button.panel{color:var(--ink);font:inherit}
 .cmp{padding:10px 14px;display:flex;flex-direction:column;gap:6px}
 .cmp h3{margin:0;font-size:13px;color:var(--ink2);font-weight:600}
 .cmp div{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
-.up{color:var(--good);font-weight:700}.neutral{color:var(--ink3)}
+.up{color:var(--good);font-weight:700}.down{color:#e0a2a2;font-weight:700}.neutral{color:var(--ink3)}
 .strip{display:flex;align-items:center;gap:6px}
 .strip{gap:2px}.strip .arr{width:44px;height:78px;flex:0 0 44px;margin:0 -6px}
 .thumbs{display:flex;gap:8px;flex:1;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
@@ -96,9 +96,9 @@ button.panel{color:var(--ink);font:inherit}
 .me .fig{position:absolute;right:6px;bottom:0;height:100%;aspect-ratio:4/5;background-size:contain;background-repeat:no-repeat;background-position:right bottom}
 .setbar{padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px}
 .setbar .bar{flex:1}
-.packs{padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px}
+.packs{padding:14px;display:flex;flex-direction:column;align-items:stretch;gap:4px}
 .packs .t{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.4px;flex:1}
-.packs .primary{width:112px;flex:0 0 112px;height:48px}
+.packs .primary{width:100%;flex:0 0 52px;height:52px;margin-top:8px}.packs .s{font-size:13px;color:var(--ink2)}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
 .chips::-webkit-scrollbar{display:none}
 .chips button{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
@@ -129,7 +129,7 @@ button.panel{color:var(--ink);font:inherit}
 .th .tp{position:absolute;inset:4px 4px 22px;border-radius:5px}
 .r .tp{width:60px;height:30px;flex:0 0 60px}
 .res .lock{position:absolute;right:14px;top:0;bottom:0;width:132px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;text-align:center}
-.res .lock small{font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.res .lock small{font-size:22px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
 .res .lock b{font-family:var(--display);font-weight:800;font-size:56px;line-height:.9;font-variant-numeric:tabular-nums}
 .res .lock span{font-size:13px;color:var(--ink2)}
 .res.lost .lock small{color:var(--ink2)}
@@ -138,6 +138,24 @@ button.panel{color:var(--ink);font:inherit}
 .poster .pi{aspect-ratio:2/3;background-size:cover;background-position:50% 20%;position:relative}
 .poster .pt{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 14px;background:linear-gradient(transparent,rgba(8,9,10,.92));display:flex;flex-direction:column;gap:2px}
 .poster .pb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.lvp{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.lvp .xp{display:flex;justify-content:space-between;font-size:14px;font-weight:600}
+.lvp .xp span+span{color:var(--ink2);font-weight:500;font-size:13px}
+.stats{padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.stats .sh{display:flex;justify-content:space-between;align-items:baseline}.stats .sh b{font-size:14px}.stats .sh span{font-size:13px;color:var(--good);font-weight:600}
+.sr{display:grid;grid-template-columns:92px 1fr 28px;align-items:center;gap:10px;font-size:14px}.sr b{text-align:right;font-variant-numeric:tabular-nums}.sr .bar{height:6px}
+button.panel.r{width:100%;text-align:left;cursor:pointer;min-height:56px}
+.r .sp small.lbl{display:block;font-size:12px;color:var(--ink3);margin-bottom:1px}
+.r .chev{color:var(--ink3);font-size:20px}
+.r .sw{width:60px;height:30px;flex:0 0 60px;border-radius:4px;background:linear-gradient(180deg,#2b2f33 0 44%,#d7232d 44% 52%,#2b2f33 52%)}
+.sub .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink);margin-left:4px;vertical-align:2px}
+.lkv{display:flex;flex-direction:column;gap:12px}
+.h2h{display:flex;align-items:center;gap:10px}.h2h .line{flex:1;min-width:0}
+.face{width:36px;height:36px;flex:0 0 36px;border-radius:50%;background-size:cover;background-position:50% 50%;border:1px solid var(--line)}
+.exh{padding:4px 14px}.exh .er{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:14px}.exh .er+.er{border-top:1px solid var(--line)}.exh .er span{color:var(--ink3)}.exh .er b{font-weight:600;text-align:right}
+.inset{position:absolute;right:16px;top:14px;bottom:14px;aspect-ratio:2/3;background-size:cover;background-position:50% 20%;border-radius:8px;border:1px solid #6b5a3a;box-shadow:0 10px 30px rgba(0,0,0,.6);z-index:1}
+#tInset~.shade{z-index:2}#tInset~.txt{z-index:3}
+.mv{width:22px;flex:0 0 22px;text-align:center;color:var(--good);font-size:13px}.mv.dn{color:#e0a2a2}
 /* toast */
 .toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
 .toast.on{opacity:1;transform:none}
@@ -176,11 +194,12 @@ button.panel{color:var(--ink);font:inherit}
   <!-- TONIGHT -->
   <section class="scr" data-scr="tonight">
     <div class="hero" style="height:265px">
+      <div class="inset" id="tInset" hidden style="background-image:url(img/g_exh_barney_poster.jpg)"></div>
       <div class="img photo" id="tImg" style="background-image:url(img/g_tonight_club.jpg);background-position:70% 30%"></div>
-      <div class="shade" style="background:linear-gradient(180deg,rgba(10,12,14,0) 30%,rgba(10,12,14,.92) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,0) 55%)"></div>
+      <div class="shade" style="background:linear-gradient(180deg,rgba(10,12,14,0) 38%,rgba(10,12,14,.6) 62%,rgba(10,12,14,.95) 100%),linear-gradient(90deg,rgba(10,12,14,.6) 0%,rgba(10,12,14,0) 50%)"></div>
       <div class="txt"><span class="kick" id="tKick">Club singles · Week 5 of 8</span><span class="h1" id="tOpp">vs Big Mal</span><span class="lead" id="tStake">Win: a place in the team</span></div>
     </div>
-    <div class="line" id="tForm">You 47 (last 10) · Him 42 · Best of 3</div>
+    <div class="h2h"><span class="face" style="background-image:url(img/g_face_me.jpg)" aria-hidden="true"></span><div class="line" id="tForm">You 47 (last 10) · Him 42 · Best of 3</div><span class="face" id="tFaceOpp" style="background-image:url(img/g_face_mal.jpg)" aria-hidden="true"></span></div>
     <button class="primary" type="button" id="walkOn"><b>Walk on</b><small id="tEntry">Entry $40</small></button>
     <button class="meta" type="button" data-go="season" id="tSeason">Week 5 of 8 · 3rd · 2 pts off 2nd ›</button>
     <div class="row2" id="tTiles">
@@ -188,6 +207,7 @@ button.panel{color:var(--ink);font:inherit}
       <button class="panel tile" type="button" data-go="shop"><span class="t">Next dart</span><span class="s">Razor Edge · Lv 15</span><span class="tp" style="background-image:url(img/g_d_razor.jpg)"></span></button>
     </div>
     <div class="meta" id="tGoal" style="margin-top:-4px;min-height:24px">Goal: average 61+ → $40</div>
+    <div class="panel exh" id="tExh" hidden><div class="er"><span>Prize</span><b>$250 + his signed shirt</b></div><div class="er"><span>Card</span><b>Barney foil card (epic)</b></div><div class="er"><span>Him</span><b>5× world champion · averages 96</b></div><div class="er"><span>Tries</span><b>2 left · invite ends in 3 weeks</b></div></div>
   </section>
 
   <!-- SEASON (out of this round's scope: a stub so the tab answers) -->
@@ -218,16 +238,29 @@ button.panel{color:var(--ink);font:inherit}
 
   <!-- LOCKER / CARDS -->
   <section class="scr" data-scr="locker" hidden>
-    <div class="sub" role="tablist" style="margin:0"><button aria-selected="false">Loadout</button><button aria-selected="true">Cards</button><button aria-selected="false">Stats</button><button aria-selected="false">Trophies</button></div>
+    <div class="sub" id="lkSub" role="tablist" style="margin:0"><button aria-selected="true" data-lk="load">Loadout</button><button aria-selected="false" data-lk="cards">Cards <i class="dot" aria-label="3 packs waiting"></i></button><button aria-selected="false">Stats</button><button aria-selected="false">Trophies</button></div>
     <div class="hero me" style="height:140px">
       <div class="img photo" style="background-image:url(img/g_locker.jpg);background-position:80% 35%"></div>
       <div class="shade" style="background:linear-gradient(90deg,rgba(10,12,14,.85) 0%,rgba(10,12,14,.2) 70%)"></div>
       <div class="txt" style="right:45%"><span class="h1" style="font-size:30px">Hayden</span><span class="lead">The Fill-in · Lv 14</span></div>
     </div>
-    <div class="panel packs" id="packRow"><span class="t" id="packTxt">3 packs waiting</span><button class="primary" type="button" id="openPack"><b>Open</b></button></div>
+    <div id="lkLoad" class="lkv">
+      <div class="panel lvp"><div class="xp"><span>Level 14 · The Fill-in</span><span>618 XP to 15</span></div><div class="bar"><i style="width:32%"></i></div></div>
+      <div class="panel stats"><div class="sh"><b>Your game</b><span>2 points to spend</span></div>
+        <div class="sr"><span>Scoring</span><div class="bar"><i style="width:58%"></i></div><b>20</b></div>
+        <div class="sr"><span>Finishing</span><div class="bar"><i style="width:52%"></i></div><b>18</b></div>
+        <div class="sr"><span>Control</span><div class="bar"><i style="width:55%"></i></div><b>19</b></div>
+        <div class="sr"><span>Composure</span><div class="bar"><i style="width:47%"></i></div><b>16</b></div></div>
+      <button class="panel r" type="button" data-go="shop" id="lkDart"><span class="tp" id="lkDartImg"></span><span class="sp"><small class="lbl">Darts</small><span id="lkDartN">Harrows Club Brass 22g</span></span><span class="chev">›</span></button>
+      <button class="panel r" type="button" id="lkShirt"><span class="sw"></span><span class="sp"><small class="lbl">Shirt</small>Charcoal, red stripe</span><span class="chev">›</span></button>
+      <button class="meta" type="button" id="lkToCards">3 packs waiting in Cards ›</button>
+    </div>
+    <div id="lkCards" class="lkv" hidden>
+    <div class="panel packs" id="packRow"><span class="t" id="packTxt">3 packs waiting</span><span class="s">Each pack holds 3 cards · Kiwi Pub Life 7/9</span><button class="primary" type="button" id="openPack"><b>Open a pack</b></button></div>
     <div class="panel setbar"><span>Closest set: Kiwi Pub Life</span><div class="bar"><i style="width:78%"></i></div><span style="font-variant-numeric:tabular-nums">7/9</span></div>
     <div class="chips" role="group" aria-label="Filter cards"><button aria-pressed="true">All · 37/142</button><button>Regulars</button><button>Venues</button><button>Moments</button><button>Disasters</button><button>Kit</button><button>House rules</button></div>
     <div class="grid" id="grid"></div>
+    </div>
   </section>
 
   <!-- PRACTICE (stub) -->
@@ -248,11 +281,11 @@ button.panel{color:var(--ink);font:inherit}
     </div>
     <div class="line" id="rLine">You 51 · Him 44 · Checkout 38%</div>
     <div class="rw">
-      <h3>Rewards</h3>
+      <h3 id="rHead">Rewards</h3>
       <div class="panel two"><div><span class="cash" id="rCash">+$55</span></div><div><div class="xp"><span id="rXp">+240 XP</span><span>Lv 14</span></div><div class="bar"><i style="width:78%"></i></div></div></div>
-      <div class="panel r"><span class="tp" style="background-image:url(img/g_d_razor.jpg)"></span><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
+      <div class="panel r" id="rWantRow"><span class="tp" id="rWantImg" style="background-image:url(img/g_d_razor.jpg)"></span><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
       <div class="panel r"><span class="sp">🂠 1 card pack</span><button class="ghost" type="button" id="rOpen">Open</button></div>
-      <div class="panel r"><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
+      <div class="panel r"><span class="mv" id="rMv">▲</span><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
     </div>
     <button class="meta" type="button" id="rMsgs" style="color:var(--ink2)">✉ 2 new · See all stats ›</button>
     <div class="pin"><button class="primary" type="button" id="cont"><b>Continue</b></button></div>
@@ -263,7 +296,7 @@ button.panel{color:var(--ink);font:inherit}
 
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const st={bank:640,owned:{assassin:1},sel:'supergrip',packs:3,first:false,broke:false};
+const st={eq:'assassin',bank:640,owned:{assassin:1},sel:'supergrip',packs:3,first:false,broke:false};
 const DARTS=[
  {id:'assassin',n:'Harrows Club Brass 22g',line:'Brass starter set. Where everyone begins.',lv:1,price:0,img:'g_d_assassin.jpg',sc:0,co:0,w:22},
  {id:'supergrip',n:'Harrows Supergrip Ultra 22g',line:'Micro-grip tungsten. Holds in a sweaty hand.',lv:8,price:95,img:'g_d_supergrip.jpg',sc:2,co:3,w:22,isNew:1},
@@ -282,13 +315,17 @@ function show(tab){
   $$('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const s=$('.scr[data-scr="'+tab+'"]');if(s)s.scrollTop=0;
   if(tab==='shop')centerThumb();
+  if(tab==='result')animRes();
 }
+function animRes(){const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const c=$('#rCash'),x=$('#rXp'),b=$('.res .two .bar i');const C=+c.textContent.replace(/\D/g,''),X=+x.textContent.replace(/\D/g,'');if(rm){return;}b.style.transition='none';b.style.width='40%';const t0=performance.now();const f=t=>{const k=Math.min(1,(t-t0)/700),e=1-Math.pow(1-k,3);c.textContent='+$'+Math.round(C*e);x.textContent='+'+Math.round(X*e)+' XP';if(k<1)requestAnimationFrame(f);};requestAnimationFrame(f);requestAnimationFrame(()=>{b.style.transition='width .7s ease-out';b.style.width='78%';});}
 $$('#tabs button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 $$('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
-$('#lvBtn').onclick=()=>show('locker');
+$('#lvBtn').onclick=()=>{show('locker');lkTab('load');};$('#lkToCards').onclick=()=>lkTab('cards');$('#lkShirt').onclick=()=>toast('Shirts: next round of the prototype.');
 $('#msgBtn').onclick=()=>{$('#msgN').hidden=true;$('#msgBtn').setAttribute('aria-label','Messages');toast('Messages: Big Mal says see you on the oche. Club secretary: subs due Friday.');};
 $('#menuBtn').onclick=()=>toast('Menu: settings, how to throw, credits. Not part of this prototype.');
-$$('.sub button').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-selected')==='true')return;toast(b.textContent+' comes in the next round of the prototype.');});
+$$('.sub button').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-selected')==='true')return;if(b.dataset.lk){lkTab(b.dataset.lk);return;}toast(b.textContent.trim()+' comes in the next round of the prototype.');});
+function lkTab(k){$$('#lkSub button').forEach(x=>x.setAttribute('aria-selected',x.dataset.lk===k));$('#lkLoad').hidden=k!=='load';$('#lkCards').hidden=k!=='cards';}
+function renderLoadout(){const d=DARTS.find(x=>x.id===st.eq);$('#lkDartImg').style.backgroundImage='url(img/'+d.img+')';$('#lkDartN').textContent=d.n;}
 $('#moneyTile').onclick=()=>toast('Money match: best of 1 in the back room, $100 to the winner.');
 // Tonight states
 function renderTonight(){
@@ -307,8 +344,8 @@ function renderResult(){const L=!!st.lost,E=!!st.exh;$('.res').classList.toggle(
   $('#rWho').textContent=L?'Lost':'Won';$('#rScore').textContent=L?'1–2':'2–1';$('#rVs').textContent='vs '+(E?'Barney':'Big Mal');
   $('#rLine').textContent=L?'You 41 · Him 44 · Checkout 22%':'You 51 · Him 44 · Checkout 38%';
   $('#rCash').textContent=L?'+$5':'+$55';$('#rXp').textContent=L?'+100 XP':'+240 XP';
-  $('#rWant').textContent=L?'Best visit 100 · keep going':'Razor Edge: $45 to go';$('#rSeason').textContent=L?'Now 4th · 2 pts off 2nd':'Now 2nd · top two go up';}
-function renderExh(){const E=!!st.exh;$('#tImg').style.backgroundImage='url(img/'+(E?'g_exh_barney_tonight.jpg':'g_tonight_club.jpg')+')';
+  $('#rWant').textContent=L?'Checkout 22% · practise doubles':'Razor Edge: $45 to go';$('#rHead').textContent=L?'Match summary':'Rewards';$('#rMv').textContent=L?'▼':'▲';$('#rMv').className='mv '+(L?'dn':'');$('#rWantImg').hidden=L;$('#rSeason').textContent=L?'Now 4th · 2 pts off 2nd':'Now 2nd · top two go up';}
+function renderExh(){const E=!!st.exh;$('#tImg').style.backgroundImage=E?'radial-gradient(ellipse at 75% 40%,#2a3a30 0%,#121815 55%,#0b0d0c 100%)':'url(img/g_tonight_club.jpg)';$('#tInset').hidden=!E;$('#tExh').hidden=!E;$('#tFaceOpp').style.backgroundImage='url(img/'+(E?'g_exh_barney_poster.jpg':'g_face_mal.jpg')+')';$('#tFaceOpp').style.backgroundPosition=E?'50% 18%':'50% 50%';$('#tFaceOpp').style.backgroundSize=E?'230%':'cover';if(E){$('#tTiles').hidden=true;$('#tGoal').hidden=true;$('#tSeason').hidden=true;}
   $('#tOpp').textContent=E?'vs Barney':'vs Big Mal';if(E){$('#tKick').textContent='Exhibition · one night only';$('#tStake').textContent='Win: $250 and his signed shirt';$('#tForm').textContent='You 47 (last 10) · Him 96 · Best of 3';$('#tEntry').textContent='Free entry';}}
 function poster(){const p=document.createElement('div');p.className='poster';p.innerHTML=`<div class="pc" role="dialog" aria-label="Exhibition invite"><div class="pi" style="background-image:url(img/g_exh_barney_poster.jpg)"><div class="pt"><span class="kick">Exhibition · Friday</span><span class="h1" style="font-size:34px">Barney is in town</span><span class="lead">Five-time world champion. Best of 3 at the Club.</span></div></div><div class="pb"><button class="primary" type="button" id="pGo"><b>Take him on</b></button><button class="link" type="button" id="pLater">Not tonight</button></div></div>`;$('#phone').appendChild(p);
   $('#pGo').onclick=()=>{p.remove();show('tonight');};$('#pLater').onclick=()=>{p.remove();st.exh=false;renderTonight();renderExh();};}
@@ -317,22 +354,23 @@ $$('.legend button').forEach(b=>b.onclick=()=>{const k=b.dataset.state;document.
   if(k==='lost'){show('result');}else{show('tonight');if(k==='exh')poster();}toast(b.textContent+' state');});
 // Shop
 function renderShop(){
-  const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>LV,mine=DARTS.find(x=>x.id==='assassin');
+  const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>LV,mine=DARTS.find(x=>x.id===st.eq),isEq=d.id===st.eq;
   $('#sImg').style.backgroundImage='url(img/'+d.img+')';$('#sImg').setAttribute('aria-label',d.n+' dart');{const sp=d.n.match(/^(Harrows|Red Dragon|Target|Shot|Winmau|Unicorn) (.*)$/);$('#sBrand').textContent=sp?sp[1]:'';$('#sName').textContent=sp?sp[2]:d.n;}$('#sLine').textContent=d.line;
-  $('#sBadge').textContent=owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · LV '+d.lv:'LV '+d.lv);
-  const rows=owned&&d.id==='assassin'?[['Your current dart','','neutral']]:[['Scoring','+'+(d.sc-mine.sc),'up'],['Control','+'+(d.co-mine.co),'up']].concat(d.w===mine.w?[['Weight','Same, '+d.w+' g','neutral']]:[[d.w>mine.w?'Heavier':'Lighter',d.w+' g vs '+mine.w+' g','neutral']]);
-  $('#sCmp').innerHTML='<h3>vs your Club Brass</h3>'+rows.map(r=>`<div><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join('');
+  $('#sBadge').textContent=isEq?'EQUIPPED':owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · LV '+d.lv:'LV '+d.lv);
+  const dl=(a,b)=>{const v=a-b;return [(v>0?'+':v<0?'−':'±')+Math.abs(v),v>0?'up':v<0?'down':'neutral'];};const rows=isEq?[['This is your dart','','neutral']]:[['Scoring',...dl(d.sc,mine.sc)],['Control',...dl(d.co,mine.co)]].concat(d.w===mine.w?[['Weight','Same, '+d.w+' g','neutral']]:[[d.w>mine.w?'Heavier':'Lighter',d.w+' g vs '+mine.w+' g','neutral']]);
+  $('#sCmp').innerHTML='<h3>'+(isEq?'Equipped now':'vs your '+mine.n.replace(/^(Harrows|Red Dragon|Target|Shot|Winmau|Unicorn) /,''))+'</h3>'+rows.map(r=>`<div><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join('');
   let a='';
-  if(owned)a=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
+  if(isEq)a=`<div class="lockline"><b>Equipped for your next match</b><span>Pick another dart to compare</span></div>`;
+  else if(owned)a=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
   else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${LV}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
   else if(st.bank<d.price)a=`<div class="lockline"><b>${money(d.price)} · you have ${money(st.bank)}</b><span>${money(d.price-st.bank)} to go</span><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   $('#sAct').innerHTML=a;
-  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><span class="tp" style="background-image:url(img/${x.img})"></span><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
+  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><span class="tp" style="background-image:url(img/${x.img})"></span><small>${x.id===st.eq?'● Equipped':st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
   $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
-  const buy=$('#sBuy');if(buy)buy.onclick=()=>{if(st.bank<d.price){renderShop();return;}st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
+  const buy=$('#sBuy');if(buy)buy.onclick=()=>{if(st.bank<d.price){renderShop();return;}st.owned[d.id]=1;st.eq=d.id;st.bank-=d.price;$('#bank').textContent=money(st.bank);renderShop();renderLoadout();};
   const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
-  const eq=$('#sEquip');if(eq)eq.onclick=()=>toast(d.n+' equipped.');
+  const eq=$('#sEquip');if(eq)eq.onclick=()=>{st.eq=d.id;renderShop();renderLoadout();};
   $$('[data-go2]').forEach(b=>b.onclick=()=>show(b.dataset.go2));
 }
 const idx=()=>DARTS.findIndex(x=>x.id===st.sel);
@@ -349,5 +387,5 @@ $('#openPack').onclick=()=>{st.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='
 $('#rOpen').onclick=()=>{toast('Pack opened: The Chalk (duplicate, +10 XP)');$('#rOpen').disabled=true;$('#rOpen').textContent='Opened';};
 $('#rMsgs').onclick=()=>toast('Full stats: 3 tons, best visit 140, checkout 3 of 8.');
 $('#cont').onclick=()=>{show('tonight');toast('Next fixture: vs Shazza, Week 6 of 8');};
-renderTonight();renderShop();renderGrid();renderPacks();
+renderTonight();renderShop();renderGrid();renderPacks();renderLoadout();
 </script>
