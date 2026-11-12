@@ -62,7 +62,7 @@
 
   // ---- particles over the board pane ----
   function drop(o) { PF.parts.push(Object.assign({ t0: now(), age: 0 }, o)); kick(); }
-  function kick() { if (!PF.raf) { PF.last = now(); PF.raf = requestAnimationFrame(tick); } }
+  function kick() { if (cv) cv.style.display = ''; if (!PF.raf) { PF.last = now(); PF.raf = requestAnimationFrame(tick); } }
   function tick(t) {
     PF.raf = 0; if (!cv) return;
     const dt = Math.min(.05, (t - PF.last) / 1000); PF.last = t;
@@ -71,7 +71,7 @@
     PF.on.forEach(e => draw(e, W, H, t));
     PF.parts = PF.parts.filter(p => (p.age += dt) < p.life);
     PF.parts.forEach(p => part(p, W, H, dt));
-    if (PF.on.length || PF.parts.length || PF.cam.length) PF.raf = requestAnimationFrame(tick);
+    if (PF.on.length || PF.parts.length || PF.cam.length) PF.raf = requestAnimationFrame(tick); else cv.style.display = 'none'; /* #20: idle canvas out of the page (no compositing layer over the 3D view) */
   }
   function part(p, W, H, dt) {
     const k = p.age / p.life;
@@ -164,6 +164,7 @@
     const r = _ca.apply(this, arguments);
     try {
       if (!S || !S.pub || S.done || !m) return r;
+      if (window.TOPS_q20has && TOPS_q20has('nofx')) return r; /* #20 test switch: no pub card effects */
       const c = (typeof CARD !== 'undefined' && CARD[m.id]) || {}, fi = pubIdx(m.from), ti = pubIdx(m.to);
       const mm = Object.assign({}, m, { fl: c.fl, fromName: fi >= 0 ? S.p[fi].name : '' });
       if (m.res === 'blocked' && m.by === 'bouncer') { door(); return r; }

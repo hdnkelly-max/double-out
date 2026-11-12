@@ -239,7 +239,7 @@
         const won = w === 0 || (s0.teams && w === 2);
         const wp = s0.p[w]; const cel = (w === 0 ? (save.look && save.look.cel) : (wp.look && wp.look.cel)) || {};
         if (cel.win) setTimeout(() => FX.run(cel.win, wp.disp || wp.name), 400);
-        if (w === 0) try { V.tcCelebrate && V.tcCelebrate(); } catch (e) {}
+        if (w === 0 && !(window.TOPS_q20has && TOPS_q20has('nofx'))) try { V.tcCelebrate && V.tcCelebrate(); } catch (e) {}
         if (!s0.practice && !s0.drill && won) bump('wins');
         if (s0.tcExh) exhibitionResult(s0, won);
         H.lastMatch = { opp: s0.p[1] && (s0.p[1].disp || s0.p[1].name), me: s0.p[0].legs, op: s0.p[1] ? s0.p[1].legs : 0, avg: s0.p[0].darts ? +(s0.p[0].pts / s0.p[0].darts * 3).toFixed(1) : null, venue: s0.tier && s0.tier.venue, co: s0.p[0].hf || null };
@@ -898,6 +898,7 @@
   let WK = null; const WA = .5;   // walk arrives at half time
   function walkOnStart(opts) {
     if (!opts || opts.practice || opts.money) return;
+    if (window.TOPS_q20has && TOPS_q20has('nowalk')) return;   // #20 test switch: no walk-on at all
     const stage = opts.online || (opts.mode === 'career' && (opts.tier | 0) >= 1) || opts.tcExh;
     const cel = (save.look && save.look.cel) || {};
     if (!stage && !cel.walkon) return;
@@ -918,6 +919,7 @@
   // online: your mate's equipped walk-on plays on your screen too (banner + their effect), before yours
   function oppWalk(opts) {
     if (!opts || !opts.online || !S || !S.p || !S.p[1]) return 0;
+    if (window.TOPS_q20has && TOPS_q20has('nowalk')) return 0;   // #20 test switch
     const P = S.p[1], L = P.look || {}, cel = L.cel || {};
     if (!cel.walkon) return 0;
     const title = L.title && D.COS[L.title], nm = P.disp || P.name || 'Your opponent';
