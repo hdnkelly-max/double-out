@@ -13,6 +13,8 @@ if [ -z "$SKIP_REGRESS" ] && [ -n "$QA_PASSED" ] && git -C $SRC diff --quiet "$Q
   echo "regress: skipped, release = QA-passed $QA_PASSED + version bump (QA ran regress.js on it)"; SKIP_REGRESS=1
 elif [ -n "$QA_PASSED" ]; then echo "regress: release differs from QA-passed $QA_PASSED beyond the version bump, running the gate"; fi
 if [ -z "$SKIP_REGRESS" ]; then set +e; OUT=$(node $SRC/tests/regress.js 2 2>&1); RC=$?; set -e; echo "$OUT" | grep -E "^regress|REGRESSION|^- (match|page)"; if [ $RC -ne 0 ]; then echo "SHIP BLOCKED by regression suite"; exit 1; fi; fi
+# the main checkout can fall behind when main is pushed from elsewhere (12 Nov 13:24 reject): sync it first
+git -C $R fetch -q origin main && git -C $R merge -q --ff-only origin/main || { echo "SHIP BLOCKED: $R main is not a fast-forward of origin/main"; exit 1; }
 cp $SRC/double-out-standalone.html $R/index.html
 # preview shares the live assets: one base tag, no duplicate files
 python3 - "$SRC/double-out-standalone.html" "$R/next/index.html" <<'P'
