@@ -294,7 +294,7 @@
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */
   const _sh = window.showHub; window.showHub = showHub = function (t) {
     const r = _sh.apply(this, arguments);
-    try { const c = career(); if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
+    try { const c = career(), app = $id('rbApp'); if (window.__hubSoft) { /* the game's portrait refresh (tops-avatars, every 2.5 s while models load) re-runs showHub: keep the player's tab and scroll, and stay out of the way of an old screen */ if (app && !app.hidden && !resOn) { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; } } else if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
     return r;
   };
   // any other game screen (messages, online lobby, title, creator, the Run's screens, perk, results) takes over from the new look
