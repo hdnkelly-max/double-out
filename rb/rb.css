@@ -91,10 +91,11 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 #rbRing .rb-lvt{font-size:12px;font-weight:600;color:var(--ink2);line-height:1}
 #rbRing .rb-lvb{width:56px}
 .rb-meter{height:6px}
-.rb-meter i.rb-f{background:#d9dcda}
-.rb-meter i.rb-gh{background:repeating-linear-gradient(135deg,#a0a6a3 0 2px,#3a4044 2px 4px)}
-.rb-kf{background:#d9dcda}
-.rb-kg{background:repeating-linear-gradient(135deg,#a0a6a3 0 2px,#3a4044 2px 4px)}
+.rb-meter i.rb-f{background:#4a8fe0}
+.rb-meter i.rb-gh{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}
+.rb-kf{background:#4a8fe0}
+.rb-kg{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}
+.rb-kt{background:#d9dcda}
 .rb-bar{height:6px}
 .rb-bar i{background:#d9dcda}
 .rb-tug .rb-a{background:var(--ink)}
@@ -235,7 +236,7 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 #rbBack{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:49;height:40px;padding:0 14px;border-radius:20px;border:1px solid #4a5156;background:#1a1e21;color:#f3f4f2;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.5)}
 #rbBack[hidden]{display:none}
 
-#rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:#d9dcda}.rb-kg{background:repeating-linear-gradient(135deg,#a0a6a3 0 2px,#3a4044 2px 4px)}}
+#rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:#4a8fe0}.rb-kg{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}.rb-kt{background:#d9dcda}}
 
 #rbApp.rb-resmode{z-index:95}
 #rbApp.rb-resmode .rb-tabs{display:none}
@@ -295,3 +296,11 @@ html.rb-on #rbMenuSheet{}
 html.rb-on .st2o .g small{font-size:11px}
 html.rb-on .tc-chips button,html.rb-on .tcpk__skip{min-height:44px}
 html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
+
+/* EXP-STATS (Lee 07:27, Hayden approved 08:20): player stat bars are blue for what you have, green dashed for what you'd gain, red only for a real
+   penalty. Overrides the launch lime->red recolour (rb-lime.css) on the game's own stat screens (level-up pick, player card) and reward XP. */
+html.rb-on body .st2bar .base,html.rb-on body .st2bar .me{background:#4a8fe0!important;color:#fff!important}
+html.rb-on body .st2bar .kb{background:repeating-linear-gradient(135deg,#9cc6f5 0 3px,rgba(156,198,245,.4) 3px 6px)!important}
+html.rb-on body .st2bar .gain{background:rgba(127,209,154,.45)!important;outline:1px dashed #7fd19a!important}
+html.rb-on body .c3-bar i{background:#4a8fe0!important}
+html.rb-on body #c3rwXp{color:#7fd19a!important}
