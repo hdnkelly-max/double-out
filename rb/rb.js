@@ -46,7 +46,7 @@
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
   const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1 };   // until each new screen lands, the tab opens the old one
-  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all';
+  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
     el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
@@ -148,9 +148,45 @@
      so price, level gates, sponsor sets, the bank and the save stay entirely the game's (v12 buyBtn → buyBarrel; owned row → equip). ---------- */
   const bPts = b => { const acc = Math.round((5.6 - b.base) / 1.8 * 7); return { sc: acc, fi: acc, rh: Math.round((b.tol - 1) / .15 * 6), ct: Math.round((1.25 - b.sway) / .6 * 7) }; };   // same formula as the game's v09 barrelPts (display only)
   function dState(b) { const G = window.TOPS_GATE, own = (save.owned || []).includes(b.id), eq = save.barrel === b.id || (!save.barrel && b.id === BARRELS[0].id), g = !own && G ? G.gateBarrel(b) : null; return { own, eq, g, sp: !!(g && g.sp), lockLv: g && g.lv && !g.res ? g.lv : 0, res: !!(g && g.res), cost: price(b.price) }; }
+  /* Round 2 #1 (Hayden 06:05): Setup & gear in the new look, inside Shop (no old Store shell, no second bottom nav). Data is the game's own
+     (SHAFTS, FSHAPES, POINTS, FLIGHTS, GEAR, kit points); every pick or buy presses the game's own control, rendered off-screen by showShop, so
+     prices, the bank, ownership and the save stay the game's. */
+  const shopSeg = () => `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="${shopSub !== 'setup'}" data-sub="darts">Darts</button><button type="button" role="tab" aria-selected="${shopSub === 'setup'}" data-sub="setup">Setup &amp; gear</button></div>`;
+  const SETUP_KEYS = () => [['flight', 'Flight shape', typeof FSHAPES !== 'undefined' ? FSHAPES : []], ['shaft', 'Shaft', typeof SHAFTS !== 'undefined' ? SHAFTS : []], ['point', 'Point', typeof POINTS !== 'undefined' ? POINTS : []]];
+  const partState = (key, it) => { const own = (save.ownedSetup || []).includes(key + ':' + it.id) || it.price === 0, cur = ((save.setup || {})[key] || (key === 'flight' ? 'standard' : key === 'shaft' ? 'med' : 'std')) === it.id, cost = price(it.price), bank = career() ? career().bank : 0; return { own, cur, cost, short: !own && bank < cost ? cost - bank : 0 }; };
+  function setup(M) {
+    const b = barrel(); let img = ''; try { img = V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { img = dartImg(b, 'ds'); }
+    const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st(); let meters = '';
+    if (A && st && window.TOPS_ST2 && TOPS_ST2()) { const kp = A.kitPts(), cap = Math.min(85, A.capNow()), s10 = x => Math.round(Math.max(0, Math.min(cap, x)) / cap * 10); meters = A.STATS.map(x => { const me = st.v[x.id], k = kp[x.id] || 0, f = s10(me), g = Math.max(0, s10(me + k) - f); return `<div class="rb-stt" style="grid-template-columns:96px 1fr 30px"><span>${esc(x.n)}</span>${meter(10, f, { ghost: g })}<b>${me + k}</b></div>`; }).join('') + `<div class="rb-mlab"><span><span class="rb-key rb-kf"></span>You</span><span><span class="rb-key rb-kg"></span>From your kit</span></div>`; }
+    const hero = `<div class="rb-card">${sh('Your setup · ' + esc(b.n))}<div class="rb-slot rb-dart rb-r8" style="aspect-ratio:3.2/1;background:var(--dartbg)"><div class="rb-im" style="background-image:url(${img});background-size:92% auto"></div></div>${meters}</div>`;
+    const msg = shopMsg ? `<div class="rb-card" role="status" style="padding:10px 14px"><span class="rb-sub">${esc(shopMsg)}</span></div>` : ''; shopMsg = '';
+    const flights = (typeof FLIGHTS !== 'undefined' ? FLIGHTS : []).concat((window.C3 && C3.lvFlights ? C3.lvFlights() : []).filter(c => !FLIGHTS.includes(c)));
+    const fcur = save.flightCustom ? save.flight : null;
+    const fRow = `<div class="rb-card" style="gap:10px">${sh('Flight colour')}<div class="rb-sw" role="group" aria-label="Flight colour"><button type="button" class="rb-swb rb-swset" data-fl="set" aria-pressed="${!fcur}" aria-label="The set's own flights">Set</button>${flights.map(c => `<button type="button" class="rb-swb" data-fl="${esc(c)}" aria-pressed="${fcur === c}" aria-label="${esc(c)}" style="background:${esc(c)}"></button>`).join('')}</div></div>`;
+    const parts = SETUP_KEYS().map(([key, title, list]) => { const curIt = list.find(it => partState(key, it).cur) || list[0]; if (!curIt) return ''; const open = setOpen === key;
+      const opts = open ? list.map(it => { const p = partState(key, it); const right = p.cur ? chip('Using', 'g') : p.own ? chip('Owned') : p.short ? chip(money(p.cost) + ' · ' + money(p.short) + ' short', 'l') : `<span class="rb-buyp">${money(p.cost)}</span>`; return `<button type="button" class="rb-opt" data-part="${key}" data-pid="${it.id}" aria-pressed="${p.cur}" ${p.short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}</b><small>${esc(it.s)}</small></span>${right}</button>`; }).join('') : '';
+      return `<div class="rb-card" style="padding:4px 14px"><button type="button" class="rb-acc" data-acc="${key}" aria-expanded="${open}"><span class="rb-optx"><small class="rb-kick">${title}</small><b>${esc(curIt.n)}</b></span><span class="rb-chev" style="transform:rotate(${open ? 90 : 0}deg)">›</span></button>${opts ? `<div class="rb-opts">${opts}</div>` : ''}</div>`; }).join('');
+    const gear = typeof GEAR !== 'undefined' ? GEAR : []; const gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
+    const gOpts = gOpen ? gear.map(it => { const cnt = gearCount(it.id), max = it.rep || 1, owned = cnt >= max, bank = career() ? career().bank : 0, short = !owned && bank < it.price ? it.price - bank : 0; const right = owned ? chip('Owned', 'g') : short ? chip(money(it.price) + ' · ' + money(short) + ' short', 'l') : `<span class="rb-buyp">${money(it.price)}</span>`; return `<button type="button" class="rb-opt" data-gear="${it.id}" aria-pressed="${owned}" ${owned || short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}${it.rep ? ` <span class="rb-sub">${cnt}/${max}</span>` : ''}</b><small>${esc(it.s)}</small></span>${right}</button>`; }).join('') : '';
+    const gRow = `<div class="rb-card" style="padding:4px 14px"><button type="button" class="rb-acc" data-acc="gear" aria-expanded="${gOpen}"><span class="rb-optx"><small class="rb-kick">Gear</small><b>${gOwned} of ${gear.length} owned</b></span><span class="rb-chev" style="transform:rotate(${gOpen ? 90 : 0}deg)">›</span></button>${gOpts ? `<div class="rb-opts">${gOpts}</div>` : ''}</div>`;
+    return hero + msg + fRow + parts + gRow;
+  }
+  // press the game's own setup control (the off-screen Store's Setup or Gear list), then put the hub back as it was
+  function gameSetup(kind, a, b) {
+    const before = JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]), prevTab = (typeof hubTab !== 'undefined' && hubTab.cur) || null;
+    try { showShop(kind === 'gear' ? 'gear' : 'setup', true); } catch (e) { console.warn('rb setup', e); }
+    try {
+      if (kind === 'flight') { const w = $id('swFlight2'); const bt = w && (a === 'set' ? w.querySelector('.setfl') : [...w.querySelectorAll('.sw')].find(x => x.getAttribute('aria-label') === a)); if (bt) bt.click(); }
+      else if (kind === 'gear') { const i = GEAR.findIndex(x => x.id === a); const row = $id('gearList') && $id('gearList').querySelectorAll(':scope > .opt')[i]; if (row) row.click(); }
+      else { const lists = { shaft: SHAFTS, flight: FSHAPES, point: POINTS }, order = ['shaft', 'flight', 'point']; let idx = 0; for (const k of order) { if (k === a) break; idx += lists[k].length; } idx += lists[a].findIndex(x => x.id === b);
+        const row = $id('setupList') && $id('setupList').querySelectorAll('.opt')[idx]; if (row) { const was = JSON.stringify([save.setup, save.ownedSetup]); row.click(); if (JSON.stringify([save.setup, save.ownedSetup]) === was) { const go = row.nextElementSibling && row.nextElementSibling.querySelector('.st2go'); if (go) go.click(); } } }
+    } catch (e) { console.warn('rb setup press', e); }
+    try { if (prevTab && hubTab.cur !== prevTab) hubTab(prevTab); } catch (e) {}
+    return JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]) !== before;
+  }
   function shop(M) {
     const c = M.c, mine = barrel(); if (!sel) sel = mine.id; const b = BARRELS.find(x => x.id === sel) || mine, st = dState(b);
-    const seg = `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="true">Darts</button><button type="button" role="tab" aria-selected="false" data-go="kit">Setup &amp; gear</button></div>`;
+    const seg = shopSeg(); if (shopSub === 'setup') return seg + setup(M);
     const wt = (b.n.match(/(\d+)g$/) || [])[1], name = b.n.replace(/ \d+g$/, '').replace(new RegExp('^' + b.brand + ' '), '');
     const badge = st.eq ? chip('Equipped') : st.sp ? chip('Sponsor set', 'w') : st.own ? chip('Owned') : st.lockLv ? chip(IC.lock + ' Level ' + st.lockLv, 'l') : '';
     const photo = DART_PHOTO[b.id] ? `${IMG}d_${b.id}.jpg` : dartImg(b, 'ds');
@@ -280,6 +316,12 @@
     qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
+    qa('#rbApp [data-sub]').forEach(b => b.onclick = () => { shopSub = b.dataset.sub; setOpen = ''; render(); });
+    qa('#rbApp [data-acc]').forEach(b => b.onclick = () => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; setOpen = setOpen === b.dataset.acc ? '' : b.dataset.acc; render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; });
+    const keepY = f => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; f(); render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; };
+    qa('#rbApp [data-fl]').forEach(b => b.onclick = () => keepY(() => { gameSetup('flight', b.dataset.fl); }));
+    qa('#rbApp [data-part]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true' || b.getAttribute('aria-pressed') === 'true') return; keepY(() => { const ok = gameSetup('part', b.dataset.part, b.dataset.pid); shopMsg = ok ? 'Set up. You throw with it from your next match.' : 'The shop said no. Nothing was charged.'; }); });
+    qa('#rbApp [data-gear]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true') return; keepY(() => { const ok = gameSetup('gear', b.dataset.gear); shopMsg = ok ? 'Bought. It\'s in your kit.' : 'The shop said no. Nothing was charged.'; }); });
     const bu = $id('rbBuy'); if (bu) bu.onclick = () => { const r = gameShop(sel, 'buy'); shopMsg = r.ok ? 'Bought and equipped.' : 'The shop said no. Nothing was charged.'; render(); };
     const eqb = $id('rbEquip'); if (eqb) eqb.onclick = () => { const r = gameShop(sel, 'equip'); shopMsg = r.ok ? 'Equipped. You throw it from your next match.' : 'Couldn\'t equip it.'; render(); };
     qa('#rbApp [data-cf]').forEach(b => b.onclick = () => { cardF = b.dataset.cf; render(); });
