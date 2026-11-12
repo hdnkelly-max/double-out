@@ -39,7 +39,33 @@ const CON_T=[
  {id:'avg',mk:t=>{const n=TIERS[t].avg-4;return {n,t:`Average ${n}+ in a match`};},ok:(m,n)=>m.avg>=n},
  {id:'clean',mk:t=>({t:'Win a match without dropping a leg'}),ok:m=>m.won&&m.opLegs===0},
  {id:'t180',mk:t=>({t:'Hit a 180'}),min:1,ok:m=>m.n180>0}];
-function fillContracts(){const v=V3();if(!v)return;const t=tierOf();let guard=0;while(v.con.length<3&&guard++<30){const pool=CON_T.filter(x=>!v.con.some(c=>c.id===x.id)&&!(x.min&&t<x.min));const T=pool[Math.floor(Math.random()*pool.length)];if(!T)break;const m=T.mk(t);v.con.push({id:T.id,n:m.n,t:m.t,from:FROM[Math.floor(Math.random()*FROM.length)],cash:CONPAY[t],tier:t});}}
+function fillContracts(){const v=V3();if(!v)return;const t=tierOf();if(t>=POOL_T){makePool();if(poolLive())return;}else if(v.cpool)v.cpool=null;/* ECON-M2: below DPNZ the drip contracts, as before */let guard=0;while(v.con.length<3&&guard++<30){const pool=CON_T.filter(x=>!v.con.some(c=>c.id===x.id)&&!(x.min&&t<x.min));const T=pool[Math.floor(Math.random()*pool.length)];if(!T)break;const m=T.mk(t);v.con.push({id:T.id,n:m.n,t:m.t,from:FROM[Math.floor(Math.random()*FROM.length)],cash:CONPAY[t],tier:t});}}
+// ECON-M2 S1 (Hayden 21:41, Director 04 §5 M2): from DPNZ (tier index 3) up, contracts are a season pool: three a season
+// (attainable · stretch · demanding) paying 1 · 1.5 · 2.5 × 0.75 of the tier's contract value (DPNZ $263 · $394 · $656).
+// A contract is met in any competitive career match (as before) but pays once, at the mid-season check or at season end.
+// Below DPNZ nothing changes. A DPNZ+ season already under way when this version first sees the save keeps the old contracts
+// until the next season starts (no clawback, nothing lost: contracts already paid stay paid).
+const POOL_T=3,POOL_G=[['Attainable',1,-1],['Stretch',1.5,0],['Demanding',2.5,1]],POOL_SCAL=['tons','co','leg','perf','avg'];
+function seasonKey(sn){if(!sn)return null;if(!sn.pk)sn.pk=Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);/* each season object gets its own id the first time it's seen */return sn.tier+'.'+sn.n+'.'+sn.pk;}
+function poolLive(){const c=career(),v=V3();const sn=c&&c.season;return !!(v&&v.cpool&&sn&&v.cpool.key===seasonKey(sn));}
+function makePool(){const c=career(),v=V3();if(!c||!v)return;const sn=c.season;const t=tierOf();if(!sn||sn.done||t<POOL_T||sn.tier!==t)return;const key=seasonKey(sn);
+ if(v.cpool&&v.cpool.key===key)return;
+ if(v.cpLegacy===undefined)v.cpLegacy=(sn.week>1||(sn.results&&sn.results.length))?key:null;/* first sight of this save: a season under way stays on the old contracts */
+ if(v.cpLegacy===key)return;
+ const h=hash((save.name||'')+'|'+key+'|pool');const used=new Set();
+ const items=POOL_G.map(([g,mult,dt],i)=>{const cand=CON_T.filter(x=>!used.has(x.id)&&!(x.min&&t<x.min)&&(i<2||POOL_SCAL.includes(x.id)));const T=cand[(h+i*7)%cand.length];used.add(T.id);
+  const m=T.mk(Math.max(0,Math.min(6,t+dt)));return {id:T.id,n:m.n,t:m.t,g,cash:Math.round(CONPAY[t]*.75*mult),from:FROM[(h+i)%FROM.length],tier:t,st:'open'};});
+ v.cpool={key,tier:t,items,mid:false,end:false};v.con=[];}
+// after a career match: mark met contracts; pay what's met at the mid-season check (first fixture past half way) and at season end
+function poolAfter(m,L){const c=career(),v=V3();if(!poolLive())return [];const P=v.cpool,sn=c.season;
+ P.items.forEach(k=>{if(k.st!=='open')return;const T=CON_T.find(x=>x.id===k.id);if(T&&T.ok(m,k.n)){k.st='met';v.conDone++;v.fame=Math.min(100,v.fame+3);L.push([`Contract met: ${k.t}`,100]);}});
+ const pay=[];if(!P.mid&&(sn.week-1)>=Math.ceil(sn.len/2)){P.mid=true;pay.push(...P.items.filter(k=>k.st==='met'));}
+ if(sn.done&&!P.end){P.end=true;P.items.forEach(k=>{if(k.st==='met'&&!pay.includes(k))pay.push(k);});}
+ pay.forEach(k=>{k.st='paid';c.bank+=k.cash;if(typeof S!=='undefined'&&S)S.earned=(S.earned||0)+k.cash;});return pay;}
+// what the screens list as contracts: the drip contracts, or this season's pool (open and met first, paid last)
+function conList(){const v=V3();if(!v)return [];if(!poolLive())return v.con;const o={open:0,met:1,paid:2};
+ return v.cpool.items.slice().sort((a,b)=>o[a.st]-o[b.st]).map(k=>Object.assign({},k,{t:`${k.g}: ${k.t}`,from:k.st==='met'?(v.cpool.mid?'Met · paid at season end':'Met · paid at mid-season'):k.st==='paid'?'Paid':k.from}));}
+
 // ----- match summary from the finished match -----
 function summary(){const me=S.p[0],op=S.p[1];const vl=me.vlog||[],ol=me.olog||[];return {won:!!S.won,tons:me.tons||0,maxV:vl.length?Math.max(...vl):0,n180:me.t180||0,maxCo:ol.length?Math.max(...ol.map(o=>o[0])):0,bestLeg:me.bestLeg||99,perf:me.perfects||0,avg:avg(me),opLegs:op?op.legs:0,vl,ol,legs:me.legs};}
 function xpBreakdown(m,ranked,side){const t=tierOf(),mul=XPMUL[t];const L=[];const add=(n,x)=>{if(x>0)L.push([n,Math.round(x)]);};
@@ -63,6 +89,7 @@ const _cam=careerAfterMatch;careerAfterMatch=function(){const c=career();const v
  // contracts (any competitive career match)
  const done=[];v.con=v.con.filter(k=>{const T=CON_T.find(x=>x.id===k.id);if(T&&T.ok(m,k.n)){done.push(k);return false;}return true;});
  done.forEach(k=>{c.bank+=k.cash;S.earned=(S.earned||0)+k.cash;v.fame=Math.min(100,v.fame+3);L.push([`Contract: ${k.t}`,100]);v.conDone++;});
+ done.push(...poolAfter(m,L));/* ECON-M2: pool payouts show on the reward card like contracts */
  // fame
  if(ranked&&m.won)v.fame=Math.min(100,v.fame+2);if(m.won&&S.rival)v.fame=Math.min(100,v.fame+3);if(S.after==='promo')v.fame=Math.min(100,v.fame+8);if(S.after==='champion')v.fame=Math.min(100,v.fame+10);if(ranked&&!m.won&&S.hard)v.fame=Math.max(0,v.fame-1);
  // revenge: a ranked loss to a named opponent opens a rematch for the spare night
@@ -77,7 +104,7 @@ function hookLine(){const c=career(),v=V3();if(!v)return '';const sn=c.season;
  if(sn&&!sn.ko&&!sn.done){const rows=seasonPos(sn);const yi=rows.findIndex(r=>r.you);const left=sn.len-sn.week+1;if(left<=2&&left>0){return yi<=1?`${left===1?'Last fixture':'Two to go'}. Hold your spot and you’re promoted.`:`${left===1?'Last fixture':'Two to go'}. ${rows[1].pts-rows[yi].pts} points off promotion.`;}}
  if(v.rev&&c.season&&v.rev.wk===c.season.week&&v.rev.tier===c.tier)return `${c3First(v.rev.name)} wants another go. ${money(v.rev.stake)} on it.`;
  const need=lvNeed(v.lv),left=need-v.xp;const nx=rewardAt(v.lv+1);if(left<need*.3)return `${left} XP to level ${v.lv+1}: ${nx.k==='cash'?'cash bonus':nx.n}.`;
- const k=v.con[0];if(k)return `Contract: ${k.t} · ${money(k.cash)}`;
+ const k=conList().find(x=>x.st!=='paid'&&x.st!=='met')||conList()[0];if(k&&k.st!=='paid')return `Contract: ${k.t} · ${money(k.cash)}`;
  return v.best?`Career-best match average ${v.best}. Beat it.`:'';}
 window.c3HookLine=hookLine;
 function ensureOverlay(){let el=$('c3rw');if(el)return el;el=document.createElement('div');el.id='c3rw';el.className='c3rw';el.hidden=true;document.body.appendChild(el);return el;}
@@ -157,7 +184,7 @@ function renderPlay(){const c=career(),v=V3();const host=$('c3play');if(!host||!
  const alts=[];const revOn=v.rev&&sn&&v.rev.wk===sn.week&&v.rev.tier===c.tier;if(revOn)alts.push({id:'rev',k:'Revenge',h:`Rematch ${c3First(v.rev.name)}`,s:`Win ${money(v.rev.stake)}`,hot:1});
  alts.push({id:'money',k:'Money match',h:'Kauri back room',s:`Win ${money(MM_PAY[c.tier]||30)}`});
  if(alts.length<2)alts.push({id:'local',k:'Local night',h:'Open draw',s:`Win ${money(Math.max(15,Math.round(TIERS[Math.max(0,c.tier-1)].purse*.15)))}`});
- const k0=v.con[0];const nx=rewardAt(v.lv+1);const pct=Math.min(100,v.xp/lvNeed(v.lv)*100);
+ const k0=conList().find(x=>!x.st||x.st==='open');const nx=rewardAt(v.lv+1);const pct=Math.min(100,v.xp/lvNeed(v.lv)*100);
  // only promotion or a near unlock earn the hook line here (revenge already has its card, contract has its line)
  let hook='';{const h=hookLine();if(h&&!/wants another go|^Contract/.test(h))hook=h;}
  const big=race.match(/^(\d+(?:st|nd|rd|th))\s*·\s*(.*)$/);const bigA=big?big[1]:(sn&&sn.ko?`Rd ${Math.min(sn.week,sn.len)}`:n.intro?'Fill‑in':'Wk '+(sn?Math.min(sn.week,sn.len):1));const bigB=big?big[2]:(sn&&sn.ko?`of ${sn.len} · lose and you’re out`:race);
@@ -193,7 +220,7 @@ function renderSeason(){const c=career(),v=V3();const host=$('c3season');if(!hos
  <div class="c3x-sh"><b>Road to the Palace</b><span>${c.tier+1} of 7</span></div>
  <div class="c3x-road">${TIERS.map((T,i)=>`<div class="c3x-ven${i<c.tier?' done':i===c.tier?' cur':' lock'}" style="--art:url(assets/ui/${ROADV[i]}.webp),url(assets/ui/bg_stage.webp);--pos:${ROADP[i]}"><span class="c3x-vn">${i+1}</span>${i>c.tier?'<img class="lk" src="assets/ui/ic_lock.webp" alt="">':''}<b>${T.venue.split(' · ')[0]}</b><small>${i<c.tier?'Done':i===c.tier?'You are here':T.n}</small></div>`).join('')}</div>
  <div class="c3x-sh"><b>Contracts</b><span>${v.conDone} done</span></div>
- <div class="c3x-cons">${v.con.map((k,i)=>`<div class="c3x-crow${i===0?' pin':''}"><img src="assets/ui/ic_${i===0?'star':'cash'}.webp" alt=""><div><small>${i===0?'Pinned · ':''}${k.from}</small><b>${k.t}</b></div><em>${money(k.cash)}<span>+100 XP</span></em></div>`).join('')}</div>
+ <div class="c3x-cons">${conList().map((k,i)=>`<div class="c3x-crow${i===0?' pin':''}"><img src="assets/ui/ic_${i===0?'star':'cash'}.webp" alt=""><div><small>${i===0?'Pinned · ':''}${k.from}</small><b>${k.t}</b></div><em>${money(k.cash)}<span>+100 XP</span></em></div>`).join('')}</div>
  <div class="c3x-feat c3x-rep"><img src="assets/ui/ic_trophy.webp" alt=""><div><div class="c3-ch"><b>${rep[1]}</b><span>Reputation</span></div><div class="c3-bar"><i style="width:${v.fame}%"></i></div><p class="help">${nextRep?`${nextRep[0]-Math.floor(v.fame)} to “${nextRep[1]}”: ${nextRep[2].toLowerCase()}.`:rep[2]+'.'}</p></div></div>
  <div class="c3x-strip"><div><small>Best avg</small><b>${v.best||'–'}</b></div><div><small>Rival</small><b>${c.rivalW||0}–${c.rivalL||0}</b></div><div><small>Titles</small><b>${c.titles||0}</b></div></div>
  <button type="button" class="ghost wide c3x-board" id="c3Board">Mates leaderboard</button>`;
@@ -224,6 +251,6 @@ const _gx=gainXP;gainXP=function(id,amt,mult){const c=career();if(c&&!c.run&&amt
 try{applyUnlocks();}catch(e){}
 // every flight colour a level you've reached has awarded stays yours, equipped or not (needed once 'Keep current flights' exists); derived from your level, so nothing extra is stored
 const lvFlights=()=>{const out=[];try{const lv=V3().lv;for(let L=2;L<=lv;L++){const r=rewardAt(L);if(r&&r.k==='flight'&&!out.includes(r.v))out.push(r.v);}}catch(e){}return out;};
-window.C3={gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
+window.C3={conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
