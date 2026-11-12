@@ -390,7 +390,7 @@
   if (typeof hubTab === 'function') { const _ht = hubTab; window.hubTab = hubTab = function () { const r = _ht.apply(this, arguments); try { hubTiles(); } catch (e) {} return r; }; }
   if (typeof showHub === 'function') {
     const _sh = showHub;
-    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); { const wp = bf || (st() && st().welPend); if (wp) setTimeout(() => { try { if (!matchOn()) welcome(wp); } catch (e) {} }, 700); } } catch (e) { console.warn('tc hub', e); } return r; };
+    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); { const t0 = st(); if (bf && t0) { t0.welPend = bf; keep(); } if (t0 && t0.welPend) setTimeout(() => { try { const t = st(); if (t && t.welPend && !matchOn() && !document.querySelector('.tc-sheet.tc-welcome')) welcome(t.welPend); } catch (e) { console.warn('tc welcome', e); } }, 700); }   /* EXP-6: read the pending welcome when the timer fires, so a dismissed one never comes back from an older timer */ } catch (e) { console.warn('tc hub', e); } return r; };
   }
   if (typeof showTitle === 'function') {   // #17: quitting to the title ends a walk-on too
     const _st = showTitle;
