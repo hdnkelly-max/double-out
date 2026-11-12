@@ -772,7 +772,10 @@
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE;
     if (k < 0) {   // pre-roll: no T-pose either; waiting here counts toward the same 4 s cap as the hold below
       if (v.me && !(v.me.userData && v.me.userData.mixer) && !WK.holdSkip) { if (!WK.hold0) WK.hold0 = now;
-        if (now - WK.hold0 < 4000) { v.me.visible = false; WK.holding = true; } else { WK.t0 = now - WK.dur; WK.holdSkip = true; return null; } }
+        if (now - WK.hold0 < 4000) { v.me.visible = false; WK.holding = true;
+          // the same establishing shot as the hold below (WK.home isn't set yet: the oche spot is fixed, 3.4 m back, 0.6 m to the side)
+          const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0); return { fov: 52 }; }
+        else { WK.t0 = now - WK.dur; WK.holdSkip = true; return null; } }
       return { fov: 50 }; }
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
