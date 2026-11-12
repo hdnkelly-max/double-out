@@ -105,7 +105,7 @@ window.TC_FX = (function () {
       flashes.push({ kind: 'bolt', x: .3, y: .7, seed: seed(), a: 1, life: .5, age: 0 }, { kind: 'bolt', x: .72, y: .6, seed: seed(), a: 1, life: .5, age: -.25 }, { kind: 'fill', c: '#EEF5FF', a: .62, life: .12, age: 0 }, { kind: 'fill', c: '#DDEBFF', a: .25, life: .3, age: -.05 }, { kind: 'fill', c: '#EEF5FF', a: .5, life: .12, age: -.25 }, { kind: 'bolt', x: .5, y: .45, seed: seed(), a: .8, life: .35, age: -.12 }); thunder(); smoke(cap(10), .98); },
   };
   const MAP = { cel_pyro: 'pyro', cel_nuke: 'nuke', cel_confetti: 'confetti', cel_chant: 'chant', cel_goldflash: 'goldflash', cel_green: 'green', walk_smoke: 'smoke', walk_lasers: 'lasers', walk_power: 'power', cel_cool: 'cool', walk_saltire: 'saltire' };
-  function run(cosId, name) { const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }
+  function run(cosId, name) { if (window.TOPS_q20has && TOPS_q20has('nofx')) return false; /* #20 test switch */ const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }
 
   // ---------- audio (uses the game's AudioContext when present) ----------
   const hasAU = () => typeof AU !== 'undefined' && AU;

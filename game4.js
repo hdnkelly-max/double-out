@@ -3106,17 +3106,42 @@ window.TOPS_matchTeardown=matchTeardown;
 // once its toasts are gone, the reward card's content (career3 rebuilds it with innerHTML) and the result stats (endMatch rebuilds them).
 {const _bm20=beginMatch;beginMatch=function(){try{const fx=$('fxLayer');if(fx&&!fx.children.length)fx.remove();const at=$('achToasts');if(at&&!at.children.length)at.remove();
  const rw=$('c3rw');if(rw&&rw.hidden)rw.innerHTML='';const rs=$('resStats');if(rs&&$('result')&&$('result').hidden)rs.innerHTML='';}catch(e){}return _bm20.apply(this,arguments);};}
-// #20 phone bisect switches (Overseer 20:34), off unless asked for: ?q20=fresh,nolayers,dpr1 (any mix) in the address, kept for this tab.
+// #20 phone bisect switches (Overseer 20:34/21:07), off unless asked for: ?q20=fresh,nolayers,dpr1,nowalk,nofx,... (any mix) in the address, kept for
+// this tab; nowalk and nofx also from the hub Menu.
+//  nowalk   no walk-on at all (yours or an online mate's)
+//  nofx     no celebrations or effects: win/180/checkout/walk-on effect canvas, the 3D win celebration, pub card effects, perk/pub DOM effects
 //  fresh    after match 1 ends and the hub shows, save and reload the page once, so match 2 runs on a fresh page on a phone that's just as warm
 //           (fast match 2 = something the page built up; slow = heat or time)
 //  nolayers no backdrop-filter / filter / will-change / blend modes anywhere, and the full-screen overlay layers (grade, grain, vignette, nerve,
 //           loading, card fog, effect canvases and layers, hub backdrop) out of the page
 //  dpr1     3D drawn at 1 pixel per CSS pixel (phones normally 1.5): tells whether the GPU is short of fill rate
+//  keepvenue  no venue rebuild when the hub comes back on the same tier (match 2 draws match 1's venue objects and textures)
+//  keepfig    the teardown between matches frees nothing (opponent figure, character templates, hair tints stay as they were)
+//  nohub3d    no 3D drawing while the hub is up and no match is live (the GPU rests between matches)
+//  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames)
 // Each perf row carries the switch in dev.t20.q20.
 {let q='';try{const u=new URLSearchParams(location.search).get('q20');if(u!=null){q=u;sessionStorage.setItem('tops_q20',u);}else q=sessionStorage.getItem('tops_q20')||'';}catch(e){}
- q=String(q).toLowerCase().replace(/[^a-z0-9,]/g,'');const has=k=>q.split(',').indexOf(k)>=0;if(q){window.TOPS_Q20=q;try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
+ q=String(q).toLowerCase().replace(/[^a-z0-9,]/g,'');const has=k=>q.split(',').indexOf(k)>=0;
+ /* Overseer 21:10: the home-screen app can't take a URL, so two switches also live in the hub Menu ('Test: no walk-on', 'Test: no effects'),
+    kept in localStorage; they act from the next walk-on/effect, show a small TEST tag in the match, and are logged with the URL ones. */
+ const APPK='tops_q20_app',appQ=()=>{try{return String(localStorage.getItem(APPK)||'').replace(/[^a-z0-9,]/g,'');}catch(e){return '';}};
+ const cur=()=>{const s=[];(q+','+appQ()).split(',').forEach(k=>{if(k&&s.indexOf(k)<0)s.push(k);});return s.join(',');};
+ window.TOPS_q20has=k=>cur().split(',').indexOf(k)>=0;
+ const sync=()=>{const c=cur();if(c)window.TOPS_Q20=c;else{try{delete window.TOPS_Q20;}catch(e){window.TOPS_Q20=undefined;}}
+  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');
+  if(lab.length&&live){if(!t){t=document.createElement('div');t.id='q20tag';t.style.cssText='position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:95;pointer-events:none;font:700 11px/1 Manrope,sans-serif;letter-spacing:.06em;color:#0b0d0c;background:#C6F36B;border-radius:4px;padding:4px 6px;text-transform:uppercase';document.body.appendChild(t);}t.textContent='TEST · '+lab.join(' · ');}else if(t)t.remove();};
+ sync();if(q){try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
+ {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
+ const menu=()=>{const pop=document.getElementById('hubPop');if(!pop)return;[['nowalk','Test: no walk-on'],['nofx','Test: no effects']].forEach(([k,n])=>{let b=document.getElementById('q20b_'+k);
+   if(!b){b=document.createElement('button');b.type='button';b.id='q20b_'+k;b.onclick=e=>{e.stopPropagation();const s=appQ().split(',').filter(Boolean);const i=s.indexOf(k);if(i>=0)s.splice(i,1);else s.push(k);try{localStorage.setItem(APPK,s.join(','));}catch(er){}menu();sync();};pop.appendChild(b);}
+   const on=appQ().split(',').indexOf(k)>=0;b.textContent=n+(on?': on':': off');b.setAttribute('aria-pressed',on?'true':'false');});};
+ try{menu();}catch(e){}
  if(has('nolayers')){const st=document.createElement('style');st.textContent='body *:not(canvas#scene){-webkit-backdrop-filter:none!important;backdrop-filter:none!important;filter:none!important;will-change:auto!important;mix-blend-mode:normal!important}#grade,#grain,#vig,#nerve,#loading,#cardFog,#tcFx,#pubFxC,#fxLayer,#sceneBg,canvas#fx{display:none!important}';document.head.appendChild(st);}
  if(has('dpr1')){const go=()=>{try{const R=window.TOPS_R;if(R){R.setPixelRatio(1);window.dispatchEvent(new Event('resize'));}}catch(e){}};go();setTimeout(go,500);}
+ if(has('keepvenue')&&typeof V!=='undefined'&&V.buildVenue){const bv=V.buildVenue;let built=null;V.buildVenue=function(t){if(built!==null&&t===built)return;built=t;return bv.apply(this,arguments);};}
+ if(has('keepfig')&&typeof V!=='undefined'&&V.teardownMatch){V.teardownMatch=function(){window.__teardowns=(window.__teardowns||0)+1;};}
+ if(has('nohub3d')){const go=()=>{const R=window.TOPS_R;if(!R){setTimeout(go,300);return;}const rr=R.render;R.render=function(){try{const h=document.getElementById('hub');if(h&&!h.hidden&&!(typeof S!=='undefined'&&S&&!S.done))return;}catch(e){}return rr.apply(this,arguments);};};go();}
+ if(has('mute')){const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='running')AU.ctx.suspend();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();}catch(e){}return r;};}
  if(has('fresh')){let played=0;const bm=beginMatch;beginMatch=function(){played++;return bm.apply(this,arguments);};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(played>=1&&!window.__hubSoft&&!sessionStorage.getItem('tops_q20_fresh')&&S&&S.done){sessionStorage.setItem('tops_q20_fresh','1');try{persist();}catch(e){}setTimeout(()=>location.reload(),400);}}catch(e){}return r;};}
 }
 </script>
