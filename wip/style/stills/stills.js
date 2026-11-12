@@ -26,7 +26,8 @@ const W = 1672, H = 941;
     const hide = o => { if (o.visible) { o.visible = false; hidden.push(o.name || o.type); } };
     // hide each rigged figure at its own root: climb from the skinned mesh to the highest ancestor that holds no room geometry
     const roomish = o => { let r = false; o.traverse(q => { if (q.isMesh && !q.isSkinnedMesh && /^bake_|venue|wall|floor|room/i.test(q.name)) r = true; }); return r; };
-    const tops = new Set(); sc.traverse(o => { if (!o.isSkinnedMesh) return; let r = o; while (r.parent && r.parent !== sc && !roomish(r.parent)) r = r.parent; tops.add(r); });
+    const meshN = o => { let n = 0; o.traverse(q => { if (q.isMesh) n++; }); return n; };   // a figure is ~45-65 meshes; a room group is hundreds
+    const tops = new Set(); sc.traverse(o => { if (!o.isSkinnedMesh) return; let r = o; while (r.parent && r.parent !== sc && !roomish(r.parent) && meshN(r.parent) <= 90) r = r.parent; tops.add(r); });
     tops.forEach(hide);
     window.__stillTops = [...tops].map(t => (t.name || t.type) + ':' + (() => { let n = 0; t.traverse(q => { if (q.isMesh) n++; }); return n; })());
     sc.traverse(o => { if (o.isSprite) hide(o); if (o.isMesh || o.isInstancedMesh) { const ms = [].concat(o.material || []); if (ms.some(m => m && m.map && m.map.image && /crowd/i.test(m.map.image.src || m.map.image.currentSrc || ''))) hide(o); } });
