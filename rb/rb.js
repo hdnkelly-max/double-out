@@ -304,7 +304,7 @@
   const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; const r = _st.apply(this, arguments); try { titleRb(); } catch (e) { console.warn('rb title', e); } return r; };
   /* ---------- Title: the Broadcast welcome (Hayden 06:18: "Broadcast for main screen, same thing we mocked up").
      Every control presses the game's own title button, so New career, the Run, lessons, sign-in and credits behave exactly as before.
-     Only change from the prototype: the walk-out hero is the player's own 3D render, lit red to sit in the arena. */
+     The walk-out hero is the prototype's own generated figure (Hayden 08:38 prefers it to our 3D models). */
   let tTry = 0;
   const TI = {
     snd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
@@ -316,7 +316,7 @@
     let el = $id('rbTitle'); if (!el) { el = document.createElement('div'); el.id = 'rbTitle'; document.body.appendChild(el); }
     const c = career(), r = (save.slots && save.slots.run && save.slots.run.career) || null;
     let lv = 0; try { lv = C3.V3().lv; } catch (e) {}
-    let hero = ''; try { if (save.look && V.heroShot) hero = V.heroShot(save.look, save.name || 'You', c ? c.tier : 0, save.flight) || ''; } catch (e) {}
+    const hero = IMG + 't_hero.webp';  // Hayden 08:38: the prototype's generated walk-out figure, not our 3D model
     const sn = c && c.season, wk = sn ? Math.min(sn.week, sn.len) : 0;
     const goSub = !c ? 'Start at the Kauri Arms' : sn && sn.ko ? `Next fixture · round ${wk} of ${sn.len}` : sn ? `Next fixture · week ${wk} of ${sn.len}` : 'Next fixture';
     const snd = $id('btnTSound'), cal = $id('btnTCaller'), on = b => !b || b.getAttribute('aria-pressed') !== 'false';
