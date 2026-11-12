@@ -55,7 +55,15 @@ let exp=0,tickN=0;setInterval(()=>{const t=performance.now();if(!M||M.done||docu
 // match ending or being left, and the hub (a 15 s timer that only acts when no match is running).
 // a real break: no pull, no busy turn, no dart in the air (QA 09:03 / 11:00 finding 2); otherwise wait for the next break or match end
 function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
-function legBreak(id,tries){try{if(!M||M.done||M.id!==id)return;if(!quiet()){/* the leg-end banner keeps the game busy for ~0.6-0.9 s: look again, up to 5 s, then wait for the next break */if((tries||0)<20)setTimeout(()=>legBreak(id,(tries||0)+1),250);return;}if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length)idle(()=>send([]));}catch(e){}}
+// CAR-5 (the CAR-2 rules, ChatGPT 8.8): during a match nothing is sent and the queue isn't touched except inside a break window: a leg has
+// ended, the game is quiet AND the who-throws-first card (S.bull) is up (quiet() alone is also true while the player aims). Rechecked where
+// the request starts (send) and where the queue is cleaned (done).
+let brkUntil=0,held=[],relPend=[];function between(){try{return typeof S!=='undefined'&&!!S&&!!S.bull;}catch(e){return false;}}
+function inPlay(){return !!(M&&!M.done);}
+function playOk(){return !inPlay()||(quiet()&&between());}/* the card up + quiet IS the break: the player can't be aiming (rechecked at send time, so an idle callback landing late is safe) */
+let heldT=0;function retryHeld(n){clearTimeout(heldT);if(!held.length&&!relPend.length)return;if(!inPlay()){send([]);return;}if(playOk()){send([]);return;}if((n||0)<240)heldT=setTimeout(()=>retryHeld((n||0)+1),250);}/* look for the next break for up to 60 s; the match end flushes anyway */
+function legBreak(id,tries){try{if(!M||M.done||M.id!==id)return;if(!quiet()||!between()){/* the leg-end banner keeps the game busy first; look again for up to 15 s, else the next break or the match end */if((tries||0)<60)setTimeout(()=>legBreak(id,(tries||0)+1),250);return;}
+ brkUntil=Date.now()+3000;if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length||held.length||relPend.length)idle(()=>send([]));}catch(e){}}
 if(typeof endLeg==='function'){const el=endLeg;endLeg=function(){const r=el.apply(this,arguments);try{if(M&&!M.done){const id=M.id;setTimeout(()=>legBreak(id,0),600);}/* after the leg's own scoring work */}catch(e){}return r;};}
 setInterval(()=>{try{if((M&&!M.done)||document.hidden)return;if(typeof NET!=='undefined'&&NET.user&&NET.sb){if(!KA)prepKA();if(qGet().length)idle(()=>send([]));}}catch(e){}},15000);
 const idle=f=>{try{if(window.requestIdleCallback)return requestIdleCallback(f,{timeout:3000});}catch(e){}setTimeout(f,1500);};
@@ -93,7 +101,8 @@ function qSet(a){const drop=Math.max(0,a.length-Q_MAX);try{if(drop)localStorage.
 function ckSet(row){try{if(row)localStorage.setItem(CK_KEY,JSON.stringify(row));else localStorage.removeItem(CK_KEY);}catch(e){}}
 function ckGet(){try{return JSON.parse(localStorage.getItem(CK_KEY)||'null');}catch(e){return null;}}
 function ckSave(row){try{const q=qGet();q.push(row);qSet(q);}catch(e){}}/* queue only; sent at the next flush point */
-function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
+function send(rows){if(!playOk()){held=held.concat(rows||[]);retryHeld(0);return;}/* during play: kept in memory for the next break or the match end */if(relPend.length){const ids=new Set(relPend.splice(0));try{qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
+ const all=qGet().concat(held.splice(0),rows||[]);if(!all.length)return;
  if(typeof NET==='undefined'||!NET.user||!NET.sb){qSet(all);return;}
  qSet(all);
  // QA 09:03 / 11:00 finding 1: plain INSERT only (the table grants INSERT, not SELECT, so ON CONFLICT (sample_id) is refused).
@@ -102,8 +111,8 @@ function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
  try{const ins=r=>NET.sb.from('tops_perf').insert(r);
   ins(all).then(({error,status})=>{if(!error){done(all);return;}if(!dup(error,status)){console.warn('tops_perf',error.message);return;}
    all.reduce((p,r)=>p.then(()=>ins([r]).then(({error,status})=>{if(!error||dup(error,status))done([r]);})),Promise.resolve()).catch(()=>{});}).catch(()=>{});}catch(e){}}
-function dup(e,st){return st===409||(e&&(e.code==='23505'||/duplicate key/i.test(e.message||'')));}
-function done(rows){try{const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
+function dup(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||''))&&/sample_id|tops_perf_pkey/.test((e.message||'')+' '+(e.details||'')));}/* CAR-5: only a unique violation on sample_id means "already stored"; any other 409 (e.g. a foreign-key 23503) keeps the row */
+function done(rows){try{if(!playOk()){relPend=relPend.concat(rows.map(r=>r.sample_id));return;}/* no storage write during play */const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
 // keepalive on page close: needs the URL, key and token prepared before (no async work while closing)
 let KA=null;function prepKA(){try{if(typeof NET==='undefined'||!NET.sb||!NET.user)return;const u=NET.sb.supabaseUrl||(NET.sb.rest&&NET.sb.rest.url&&NET.sb.rest.url.replace(/\/rest\/v1$/,''));const k=NET.sb.supabaseKey;NET.sb.auth.getSession().then(({data})=>{const t=data&&data.session&&data.session.access_token;if(u&&k&&t)KA={u,k,t};}).catch(()=>{});}catch(e){}}
 function keepalive(rows){try{if(!KA||!rows.length)return false;fetch(KA.u+'/rest/v1/tops_perf',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(rows)})/* plain insert; rows stay queued, so a duplicate (409) is cleared by the next send() */.catch(()=>{});return true;}catch(e){return false;}}
@@ -120,6 +129,6 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
 {const b0=build;build=function(){const r=b0.apply(this,arguments);try{window.TOPS_LOG_PERF&&TOPS_LOG_PERF(r);}catch(e){}return r;};}/* v14 flight recorder keeps a summary of each row */
-window.TOPS_perf={flush(){send([]);},kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
+window.TOPS_perf={flush(){send([]);},_car5:()=>({held:held.length,relPend:relPend.length,brkIn:brkUntil-Date.now(),playOk:playOk()}),kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>
