@@ -1004,7 +1004,7 @@ const V=(function(){try{return (()=>{
   if(u.flash){s.intensity=2.4*Math.max(0,1-t/1.2)*(.8+Math.random()*.4);continue;}if(!s.visible){s.visible=true;const e=Math.min(t,.6);s.position.addScaledVector(u.v,e);u.v.y-=5.4*e;}s.position.addScaledVector(u.v,dt);u.v.y-=5.4*dt;const k=t*1000/u.life;s.material.opacity=1-k;s.scale.setScalar(u.sc*(1-k*.6));s.material.color.setHex(k<.35?0xFFD27A:0xF6A33D);}}
  // GFX: crowd as rendered Mixamo cut-outs (blender/crowd.py atlas: 8 characters x sit/cheer/clap). Cheap enough for phones.
  let CROWD_TEX=null,CROWD_WAIT=false;
- function loadCrowdTex(){if(CROWD_TEX||CROWD_WAIT||window.GFX_LEGACY)return;CROWD_WAIT=true;new T.TextureLoader().load('assets/crowd.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=4;CROWD_TEX=tx;if(lastTier>=2)buildVenue(lastTier);},undefined,()=>{});}
+ function loadCrowdTex(){if(CROWD_TEX||CROWD_WAIT||window.GFX_LEGACY)return;CROWD_WAIT=true;new T.TextureLoader().load('assets/crowd.webp',tx=>{tx.encoding=T.sRGBEncoding;tx.anisotropy=4;KEEP.add(tx);CROWD_TEX=tx;if(lastTier>=2)buildVenue(lastTier);},undefined,()=>{});}
  function makeSpriteCrowd(spots){const n=Math.min(spots.length,lkPhone()?40:spots.length);const pos=new Float32Array(n*12),uv=new Float32Array(n*8),idx=[];const meta=[];
   for(let i=0;i<n;i++){const s=spots[i];const h=.95+((i*37)%11)/100;const w=1.05*h,ht=2.1*h;const dx=0-s[0],dz=1.6-s[2];const a=Math.atan2(dx,dz);const cx=Math.cos(a),sx=-Math.sin(a);const ch=(i*5+Math.floor(i/3))%8;meta.push({ch,base:s[1]+.34,h:ht,w,cx,sx,x:s[0],z:s[2],pose:0,ph:i*1.7});
    idx.push(i*4,i*4+1,i*4+2,i*4,i*4+2,i*4+3);}
