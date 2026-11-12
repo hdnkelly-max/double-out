@@ -35,4 +35,4 @@
 2026-11-12T18:20:56Z live version=3.32 tag=rel-3.32 tree=d59f237 commit=e83a73c5bd528157f8b6860870026d2fa566e8c5 risk=R1 run=43276491934 item=EXP-1d walk-on never shows an unposed figure: hold until the walk clip plays, 4 s cap then clean skip, hub prefetches the clips (exp-walkon4 re-merged on 3.28 as qa-walk6, Q&D PASS)
 2026-11-12T18:34:35Z live version=3.33 tag=rel-3.33 tree=bd8d62f commit=adff060cd50ce9da5c16d906cbe5ce41a1810ad6 risk=R1 run=43279356789 item=ECON-S3b S3 shop hooks hardening before any DPNZ+ item is sold
 2026-11-12T18:43:34Z live version=3.34 tag=rel-3.34 tree=9aae7ca commit=a4c0ff775f3073b3da4c0264de4bf0dd298acfdc risk=R3 run=43281557042 item=EXP-WIDE new hub column stays 520 px on wide screens
-2026-11-12T19:39:09Z prepared version=3.35 tag=rel-3.35 tree=a6a5573 commit=f74cae31de5ba466556e04f55b011c8c6d741e30 risk=R2 run=43292193589 item=ENG-9 counters() out of aiming (eng9-counters f74cae3, Delivery QA PASS 07:02)
+2026-11-12T19:39:09Z live version=3.35 tag=rel-3.35 tree=a6a5573 commit=f74cae31de5ba466556e04f55b011c8c6d741e30 risk=R2 run=43292193589 item=ENG-9 counters() out of aiming (eng9-counters f74cae3, Delivery QA PASS 07:02)
