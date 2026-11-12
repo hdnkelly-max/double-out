@@ -39,7 +39,12 @@ const _ct=cardTray;cardTray=function(){const r=_ct.apply(this,arguments);try{art
 function voice(){const vs=speechSynthesis.getVoices();return vs.find(v=>/en-GB/i.test(v.lang)&&/male|daniel|george|arthur/i.test(v.name)&&!/female/i.test(v.name))||vs.find(v=>/en-GB/i.test(v.lang)&&!/female/i.test(v.name))||vs.find(v=>/en-(AU|NZ)/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));}
 function speak(parts){if(!AU.caller||!AU.on||!('speechSynthesis'in window))return;try{speechSynthesis.cancel();const v=voice();parts.forEach(p=>{const u=new SpeechSynthesisUtterance(p.t);u.rate=p.r||.95;u.pitch=p.p||.8;u.volume=1;if(v)u.voice=v;speechSynthesis.speak(u);});}catch(e){}}
 const CLIP={};let clipsLoading=false;
-function clipLoad(){if(clipsLoading||!AU.ctx)return;clipsLoading=true;const names=['s180','gsm','bust','gameon'];for(let i=1;i<=13;i++)names.push('gl'+i);for(let n=0;n<180;n++)names.push('s'+n);for(let n=2;n<=170;n++)names.push('r'+n);
+// EXP-VOICE: only ask for scores that can happen. A visit can't total 163, 166, 169, 172, 173, 175, 176, 178 or 179, and 159, 162, 163, 165, 166, 168, 169 can't be checked out in three darts; there are no recordings for those, so asking for them was a 404 on every phone at every load.
+function voiceNames(){const one=[0,25,50];for(let i=1;i<=20;i++)one.push(i,2*i,3*i);const dbl=[50];for(let i=1;i<=20;i++)dbl.push(2*i);
+ const visit=new Set();one.forEach(a=>one.forEach(b=>one.forEach(c=>visit.add(a+b+c))));const out=new Set();dbl.forEach(d=>{out.add(d);one.forEach(a=>{out.add(a+d);one.forEach(b=>out.add(a+b+d));});});
+ const names=['s180','gsm','bust','gameon'];for(let i=1;i<=13;i++)names.push('gl'+i);for(let n=0;n<180;n++)if(visit.has(n))names.push('s'+n);for(let n=2;n<=170;n++)if(out.has(n))names.push('r'+n);return names;}
+window.TOPS_voiceNames=voiceNames;
+function clipLoad(){if(clipsLoading||!AU.ctx)return;clipsLoading=true;const names=voiceNames();
  let i=0;const next=()=>{if(i>=names.length)return;const n=names[i++];fetch('assets/voice/'+n+'.mp3').then(r=>r.ok?r.arrayBuffer():null).then(b=>b?AU.ctx.decodeAudioData(b):null).then(buf=>{if(buf)CLIP[n]=buf;}).catch(()=>{}).finally(next);};for(let k=0;k<4;k++)next();}
 let clipSrc=null;
 function clip(name,vol){if(!AU.caller||!AU.on||!AU.ctx)return false;clipLoad();const b=CLIP[name];if(!b)return false;try{if(clipSrc)clipSrc.stop();}catch(e){}try{speechSynthesis.cancel();}catch(e){}const s=AU.ctx.createBufferSource();s.buffer=b;const g=AU.ctx.createGain();g.gain.value=vol||1;s.connect(g);g.connect(AU.master||AU.ctx.destination);s.start();clipSrc=s;return true;}
