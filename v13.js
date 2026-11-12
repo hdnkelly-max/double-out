@@ -7,7 +7,7 @@
 // and the end (or quit / hidden-and-killed). Nothing on the network or in storage during a throw. Player id only (auth.uid()).
 const SCHEMA=1,NB=202;/* buckets 0..200 ms + overflow (201) */
 const VER=()=>window.TOPS_VER||'?',BUILD=()=>window.TOPS_BUILD||'';
-const Q_KEY='tops_perfq',Q_MAX=20,CK_KEY='tops_perfck',DROP_KEY='tops_perfdrop';
+const Q_KEY='tops_perfq',Q_MAX=20,CK_KEY='tops_perfck',DROP_KEY='tops_perfdrop',BAD_KEY='tops_perfbad';
 let M=null,ltObs=null,auCtx=null;
 const uid=()=>{try{if(crypto.randomUUID)return crypto.randomUUID();}catch(e){}const h=()=>Math.floor(Math.random()*65536).toString(16).padStart(4,'0');return `${h()}${h()}-${h()}-4${h().slice(1)}-a${h().slice(1)}-${h()}${h()}${h()}`;};
 const hist=()=>new Uint32Array(NB);
@@ -152,8 +152,15 @@ function send(rows){if(!playOk()){held=held.concat(rows||[]);retryHeld(0);return
  // A row already stored comes back as a unique violation (23505 / 409): count it as stored. One duplicate fails the whole batch,
  // so on a duplicate the rows are retried one at a time and each stored or duplicate row leaves the queue.
  try{const ins=r=>NET.sb.from('tops_perf').insert(r);
-  ins(all).then(({error,status})=>{if(!error){done(all);return;}if(!dup(error,status)){console.warn('tops_perf',error.message);return;}
-   all.reduce((p,r)=>p.then(()=>ins([r]).then(({error,status})=>{if(!error||dup(error,status))done([r]);})),Promise.resolve()).catch(()=>{});}).catch(()=>{});}catch(e){}}
+  // CAR-5b (Q&D P2 B): a row the table refuses for good (a non-duplicate 4xx, e.g. a foreign key after an account delete) used to fail the
+  // whole batch on every flush until the 20-row cap pushed it out. Now the batch is retried one row at a time, once: stored/duplicate rows
+  // leave the queue, a row refused for good is dropped and counted (BAD_KEY + flight recorder), and anything else (network, 5xx, 401/403
+  // session, 408/429) stays queued for the next flush.
+  ins(all).then(({error,status})=>{if(!error){done(all);return;}if(!dup(error,status)&&!badRowErr(error,status)){console.warn('tops_perf',error.message);return;}
+   all.reduce((p,r)=>p.then(()=>ins([r]).then(({error,status})=>{if(!error||dup(error,status)){done([r]);return;}if(badRowErr(error,status))badRow(r,error,status);})),Promise.resolve()).catch(()=>{});}).catch(()=>{});}catch(e){}}
+function badSt(st){st=+st||0;return st>=400&&st<500&&st!==401&&st!==403&&st!==408&&st!==429;}
+function badRowErr(e,st){return badSt(st)&&/^2[23]/.test(String(e&&e.code||''));}/* ChatGPT P2: only a Postgres data/integrity error (22xxx, 23xxx: FK, check, not-null, other unique) is about the row; a schema or API mismatch (e.g. PGRST204 missing column after a code-before-migration release) refuses every row, so those rows stay queued */
+function badRow(r,e,st){try{done([r]);localStorage.setItem(BAD_KEY,String((+localStorage.getItem(BAD_KEY)||0)+1));}catch(x){}try{window.TOPS_LOG&&TOPS_LOG.log('perf_bad_row',{status:+st||0,code:e&&e.code||null,phase:r&&r.phase||null,msg:String(e&&e.message||'').slice(0,120)});}catch(x){}}
 function dup(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||''))&&(/tops_perf_sample_id_key/.test(e.message||'')||/^Key \(sample_id\)=/.test(e.details||'')));}/* ChatGPT 8.8 P1: the exact constraint, or PostgREST's detail naming sample_id *//* CAR-5: only a unique violation on sample_id means "already stored"; any other 409 (e.g. a foreign-key 23503) keeps the row */
 function done(rows){try{if(!playOk()){relPend=relPend.concat(rows.map(r=>r.sample_id));return;}/* no storage write during play */const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
 // keepalive on page close: needs the URL, key and token prepared before (no async work while closing)
@@ -166,12 +173,14 @@ const _em=endMatch;endMatch=function(){let row=null;try{row=finish('complete');}
 {const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>{try{const row=finish('quit');if(row)idle(()=>send([row]));}catch(e){}},true);}
 // hidden is a pause, not an exit: close the segment, store a checkpoint locally (no network); visible resumes the same match
 document.addEventListener('visibilitychange',()=>{try{if(!M||M.done)return;if(document.hidden){M.hid++;try{const ck=build('end','interrupted');ck.sample_id='ck-'+M.id;ckSet(ck);}catch(e){}}else{M.skip=true;M.last=0;exp=0;}}catch(e){}});/* the recovery checkpoint is never uploaded while its match can still finish */
-addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears this match's checkpoint; with no match open, an older one is left for the next load */const q=qGet();if(row)q.push(row);qSet(q);keepalive(q);}catch(e){}});
+addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears this match's checkpoint; with no match open, an older one is left for the next load */
+ /* CAR-5b (Q&D P2 A): rows held in memory during play (e.g. the 30 s row) go too; rows already stored during play (relPend) don't */
+ const gone=new Set(relPend.splice(0));const q=qGet().concat(held.splice(0)).filter(r=>!gone.has(r.sample_id));if(row)q.push(row);qSet(q);keepalive(q);}catch(e){}});
 // flush anything queued once signed in (after load, off the hot path)
 {const ck=ckGet();if(ck){ckSet(null);ck.sample_id=uid();qSet(qGet().concat([ck]));}}
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
 {const b0=build;build=function(){const r=b0.apply(this,arguments);try{window.TOPS_LOG_PERF&&TOPS_LOG_PERF(r);}catch(e){}return r;};}/* v14 flight recorder keeps a summary of each row */
-window.TOPS_perf={flush(){send([]);},_eng9:()=>({due:!!(M&&M.cTry),cnt:!!(M&&M.cnt),at:M&&M.cnt?M.cnt.at:null,noPull:noPull(),why:noPull.why||null,vis:M?Math.round(M.vis):null}),_car5:()=>({held:held.length,relPend:relPend.length,brkIn:brkUntil-Date.now(),playOk:playOk()}),kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
+window.TOPS_perf={flush(){send([]);},_eng9:()=>({due:!!(M&&M.cTry),cnt:!!(M&&M.cnt),at:M&&M.cnt?M.cnt.at:null,noPull:noPull(),why:noPull.why||null,vis:M?Math.round(M.vis):null}),bad:()=>+(localStorage.getItem(BAD_KEY)||0),_hold:rows=>{held=held.concat(rows||[]);},/* tests: a row held in memory during play */_car5:()=>({held:held.length,relPend:relPend.length,brkIn:brkUntil-Date.now(),playOk:playOk()}),kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>
