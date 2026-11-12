@@ -12,8 +12,12 @@ if(MH)await p.route(/\/chars\/[a-z]+\.glb$/,r=>r.fulfill({body:fs.readFileSync(g
 await p.goto(process.env.URL||'http://localhost:8770/index.html');/* http, not file://: Playwright can only route http requests */
 await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
 const ev=(f,a)=>p.evaluate(f,a);const cdp=await ctx.newCDPSession(p);/* CDP capture: page.screenshot waits on blocked web fonts */const shot=async n=>{const r=await cdp.send('Page.captureScreenshot',{format:'jpeg',quality:85});fs.writeFileSync(`${out}/${tag}_${n}.jpg`,Buffer.from(r.data,'base64'));console.log('shot',n);};
-await ev(()=>{save.authSeen=true;save.name='Hayden';save.lessonDone=true;save.look=Object.assign({},save.look||{},{model:'brian'});$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;showHub();});
+await ev(M=>{save.authSeen=true;save.name='Hayden';save.lessonDone=true;save.look=Object.assign({},save.look||{},{model:M});$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;showHub();},process.env.MODEL||'brian');
 await p.waitForTimeout(9000);await shot('hub');
+// hub preview (Player hero) and portrait, as the game renders them for this look
+for(let i=0;i<40;i++){const u=await ev(M=>{try{const lk=Object.assign({},save.look,{model:M});const h=V.heroShot(lk,'Hayden',0,save.flight);const pt=V.portrait(lk,'Hayden',0,0);return h&&pt&&h.length>50000?[h,pt]:null;}catch(e){return null;}},process.env.MODEL||'brian');
+ if(u){fs.writeFileSync(`${out}/${tag}_hero.png`,Buffer.from(u[0].split(',')[1],'base64'));fs.writeFileSync(`${out}/${tag}_portrait.png`,Buffer.from(u[1].split(',')[1],'base64'));console.log('hero+portrait');break;}if(i===39)console.log('no hero:',await ev(()=>{try{const lk=save.look;return JSON.stringify({h:(V.heroShot(lk,'Hayden',0,save.flight)||'').length,p:(V.portrait(lk,'Hayden',0,0)||'').length,pend:!!window.__avPending});}catch(e){return e.message}}));await p.waitForTimeout(500);}
+if(process.env.HEROONLY){await b.close();return;}
 await ev(()=>{const n=nextOpponent();V.walkOn=()=>{};beginMatch({mode:'career',tier:0,p0:'Hayden',oppKey:n.oppKey,oppName:n.oppName,oppAvg:45,legs:1,start:501});});
 // bull: let the player throw at once; then play the player's visits instantly and photograph the opponent's
 let n=0,lastPh='',k=0,lastShot=0;const t0=Date.now();
