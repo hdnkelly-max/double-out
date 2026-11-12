@@ -13,7 +13,8 @@ pairs=[('Tonight','shot_tonight_390.png','v9_tonight_390.png',['Head-to-head: fa
  ('Season','','v9_season_390.png',['New: week ring + position, table with cut line, road to the Palace, next fixture']),
  ('Result · win','shot_result_390.png','v9_result_390.png',['Match average tug bar + chips','Rewards: level ring, cash big, XP','Next dart: whole dart + $ progress','Pack: art + Open, season movement chip']),
  ('Result · loss','shot_resultloss_390.png','v9_resultloss_390.png',['Match summary, work-on row routes to Practice']),
- ('Exhibition Tonight','shot_exhtonight_390.png','v9_exhtonight_390.png',['Stakes as chips, tries as a meter, entry on the button'])]
+ ('Exhibition Tonight','shot_exhtonight_390.png','v9_exhtonight_390.png',['Stakes as chips, attempts as a meter, entry on the button']),
+ ('Can\'t afford entry','','v9_broke_390.png',['No fake Walk on: short-by panel + money match as the primary'])]
 W,H=390,844;cw=2*W+30;cols=4;rows=(len(pairs)+cols-1)//cols;LH=140
 sheet=Image.new('RGB',(cols*(cw+40)+40,rows*(H+84+LH)+40),(10,11,12));d=ImageDraw.Draw(sheet)
 for i,(t,a,b,notes) in enumerate(pairs):
