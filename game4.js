@@ -3128,11 +3128,11 @@ window.TOPS_matchTeardown=matchTeardown;
  const cur=()=>{const s=[];(q+','+appQ()).split(',').forEach(k=>{if(k&&s.indexOf(k)<0)s.push(k);});return s.join(',');};
  window.TOPS_q20has=k=>cur().split(',').indexOf(k)>=0;
  const sync=()=>{const c=cur();if(c)window.TOPS_Q20=c;else{try{delete window.TOPS_Q20;}catch(e){window.TOPS_Q20=undefined;}}
-  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');
+  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');if(window.TOPS_AJS)lab.push('frame split');
   if(lab.length&&live){if(!t){t=document.createElement('div');t.id='q20tag';t.style.cssText='position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:95;pointer-events:none;font:700 11px/1 Manrope,sans-serif;letter-spacing:.06em;color:#0b0d0c;background:#C6F36B;border-radius:4px;padding:4px 6px;text-transform:uppercase';document.body.appendChild(t);}t.textContent='TEST · '+lab.join(' · ');}else if(t)t.remove();};
  sync();if(q){try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
  {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
- const menu=()=>{const pop=document.getElementById('hubPop');if(!pop)return;[['nowalk','Test: no walk-on'],['nofx','Test: no effects']].forEach(([k,n])=>{let b=document.getElementById('q20b_'+k);
+ const menu=()=>{const pop=document.getElementById('hubPop');if(!pop)return;[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)']].forEach(([k,n])=>{let b=document.getElementById('q20b_'+k);
    if(!b){b=document.createElement('button');b.type='button';b.id='q20b_'+k;b.onclick=e=>{e.stopPropagation();const s=appQ().split(',').filter(Boolean);const i=s.indexOf(k);if(i>=0)s.splice(i,1);else s.push(k);try{localStorage.setItem(APPK,s.join(','));}catch(er){}menu();sync();};pop.appendChild(b);}
    const on=appQ().split(',').indexOf(k)>=0;b.textContent=n+(on?': on':': off');b.setAttribute('aria-pressed',on?'true':'false');});};
  try{menu();}catch(e){}
