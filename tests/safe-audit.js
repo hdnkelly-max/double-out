@@ -7,9 +7,10 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), RB = process.argv[
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
   const p = await b.newPage({ viewport: { width: W, height: H } }); const pe = []; p.on('pageerror', e => pe.push(e.message));
-  const cdp = await p.context().newCDPSession(p); await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: TOP, bottom: BOT, left: 0, right: 0 } });
+  const SA = await require('./_safearea').safeArea(p, { top: TOP, bottom: BOT });  // Chrome's override, or the env() shim where the browser lacks it (release gate)
   await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
   await p.goto('file://' + dir + '/index.html?rebrand=' + RB); await p.waitForFunction(() => window.TC_API && typeof S !== 'undefined' && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(1500);
+  console.log('safe-area: ' + SA.mode + ' ' + JSON.stringify(await SA.verify(p)));
   const clean = () => p.evaluate(() => { try { delete TC_API.st().welPend; } catch (e) {} document.querySelectorAll('.tc-sheet,.tc-poster,.tcpk,.tc-back,.tc-scrim').forEach(e => e.remove()); });
   const audit = (name) => p.evaluate(([name, TOP, BOT, H]) => {
     const bad = [], seen = new Set();
