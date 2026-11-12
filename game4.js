@@ -305,8 +305,9 @@ function speechWarm(){if(speechWarm.done||!('speechSynthesis'in window))return;s
 function audioWarm(){if(audioWarm.done||!AU.ctx)return;audioWarm.done=true;setTimeout(()=>{try{[.5,.7,1,1.3,1.5,2,2.2,2.6].forEach(d=>swBuf(AU.ctx,d));[.05,.06,.08,.12,.5].forEach(d=>nbBuf(AU.ctx,d));}catch(e){}},300);}
 /* #20 (Overseer 07:59): what the audio graph is doing, logged once per match in dev.t20.cnt.au: [sources playing now, sources started since
    the last read, the context's state]. Counting only: a start() is passed straight through. */
-{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start')||P.start.__auc)return;const st=P.start;P.start=function(){if(this.__aucS)return st.apply(this,arguments);this.__aucS=1;try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}
-   const r=st.apply(this,arguments);
+{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start')||P.start.__auc)return;const st=P.start;P.start=function(){if(this.__aucS)return st.apply(this,arguments);
+   const r=st.apply(this,arguments);/* native first: if it throws, it throws as before and nothing is counted */
+   this.__aucS=1;try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}
    /* #20 'no game audio': a sound started while the muted match's context is suspended would wait in the queue and play, with every other one,
       the moment the hub resumes the context (ChatGPT P1). It is stopped at once and later stop() calls on it are ignored, so it never sounds. */
    try{if(window.TOPS_muteOn&&TOPS_muteOn()){this.__q20k=1;SP0.call(this,0);}}catch(e){}return r;};P.start.__auc=1;};
