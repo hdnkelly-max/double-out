@@ -970,6 +970,7 @@
     // EXP-1d (Q&D 22:46): never a T-pose. Until the walk clip plays (clipOn asks for anims.glb and returns null until the clip and a
     // mixer exist; a rebuilt figure starts without one) the figure stays hidden on an establishing shot. Held time doesn't count
     // against the timeline; after 4 s held in total the walk-on skips cleanly to its end.
+    if (WK.me && WK.me !== v.me) { WK.walking = false; WK.arrived = false; WK.me = v.me; }   // the figure was rebuilt mid-walk (models landing): its clip starts again before it's shown (ChatGPT P1)
     if (!WK.walking && !WK.holdSkip && (k < WA || WK.hold0)) {   // once holding, the timeline is paused: a slow frame mustn't carry k past the walk and show an unposed figure
       if (WK.vis0 === undefined) WK.vis0 = !!v.me.visible;
       const a = clipOn(v, v.me, 'walk', false);
@@ -1033,7 +1034,8 @@
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
     me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .8 && !WK.hero) { WK.hero = true; clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
+    if (k >= .8 && !WK.hero) { WK.hero = true; clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); }
+    if (!(me.userData && me.userData.mixer)) me.visible = false;   // EXP-1d: a figure with no animation is never shown (a rebuild after the walk, before its arrival clip lands)   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
     if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
