@@ -212,14 +212,19 @@
   // the generated light-grey shirt, recoloured to the unlocked colour through the mask made from the same image
   function shirtImg(hex, done) {
     if (shirtCache[hex]) return shirtCache[hex];
+    { const ks = Object.keys(shirtCache).filter(k => shirtCache[k]); if (ks.length >= 4) delete shirtCache[ks[0]]; }  // keep at most 4 colours (ChatGPT P2: bounded memory)
     if (shirtCache[hex] === undefined) { shirtCache[hex] = null; const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; try {
       const w = A.naturalWidth, h = A.naturalHeight, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
       const r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
       for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
-      g.putImageData(im, 0, 0); shirtCache[hex] = cv.toDataURL('image/jpeg', .86); if (done) done(shirtCache[hex]); } catch (e) { shirtCache[hex] = `${IMG}w_rw_shirt.jpg`; } };
-      A.onload = Mk.onload = go; A.onerror = Mk.onerror = () => { shirtCache[hex] = `${IMG}w_rw_shirt.jpg`; }; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`; }
+      g.putImageData(im, 0, 0); shirtCache[hex] = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; if (done) done(shirtCache[hex]); } catch (e) { shirtCache[hex] = `${IMG}w_rw_trophy.jpg`; } };
+      A.onload = Mk.onload = go; A.onerror = Mk.onerror = () => { shirtCache[hex] = `${IMG}w_rw_trophy.jpg`; }; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`; }
     return `${IMG}w_rw_shirt.jpg`;
   }
+  // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
+  // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
+  function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
+    return { rs, pick: rs.filter(x => x[1].k === 'shirt').pop() || rs.filter(x => x[1].big).pop() || rs[rs.length - 1] || null }; }
   function result(M) {
     const { c, v } = M, me = S.p[0], op = S.p[1] || {}, won = !!S.won, money0 = !!(S.local || S.after === 'money' || S.intro), avg = x => x && x.darts ? +(x.pts / x.darts * 3).toFixed(1) : 0;
     const a = avg(me), b = avg(op), cash = c.bank - pre0.bank, xp = Math.max(0, xpTotal(v) - pre0.xp), up = pre0 && v.lv > pre0.lv;
@@ -237,8 +242,7 @@
     const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
     // unlock cards: the level reward big (image for its kind), the next dart and achievements quieter
     let main = '';
-    if (up && C3.rewardAt) { const rs = []; for (let L = pre0.lv + 1; L <= v.lv; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
-      const pick = rs.filter(x => x[1].k === 'shirt').pop() || rs.filter(x => x[1].big).pop() || rs[rs.length - 1];  // a new shirt first: the game's own button below offers to wear it
+    if (up) { const { rs, pick } = pickUnlock(pre0.lv, v.lv);
       if (pick) { const [L, r] = pick, more = rs.length - 1; const img = r.k === 'shirt' ? shirtImg(r.v, u => { const e = $id('rbRUnl'); if (e) e.style.backgroundImage = `url(${u})`; }) : r.k === 'flight' ? `${IMG}w_rw_darts.jpg` : r.k === 'cash' ? `${IMG}w_rw_cash.jpg` : `${IMG}w_rw_trophy.jpg`;
         main = `<div class="rbw-uc${won ? ' rbw-lv' : ''}" id="rbRUnl" style="background-image:url(${img})"><div class="rbw-x"><small>Level ${L} unlocked</small><b>${esc(r.n.replace(/^Title: /, ''))}</b><span>${r.k === 'shirt' ? 'Wear it from your next match' : r.k === 'flight' ? 'Fit them in Shop · Setup & gear' : r.k === 'title' ? 'Your new title' : 'Added to your bank'}${more > 0 ? ` · +${more} more` : ''}</span></div></div>`; } }
     let want = '';
@@ -345,5 +349,5 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock };
 })();
