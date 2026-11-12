@@ -2,7 +2,8 @@
 // node tests/walk-music.js <dir>   (served over http so the mp3 tracks load; 390x844 iPhone UA; rebrand on; tier-1 career; real tap on Walk on)
 // The mp3s are served with a phone-like 600 ms delay (NET_MS). Cases: track rock (synth) / energy (mp3); audio context fresh (the Walk on tap
 // creates it) / suspended in the hub (what iOS does after an app switch, lock or call: 'suspended' or 'interrupted'); mp3 cached (played once in
-// the hub) / not; 'late': the mp3 takes 2 s and Walk on is tapped 0.3 s after the hub opens, so the clip lands after the walk-on has begun.
+// the hub) / not; 'late': the mp3 takes 2 s and Walk on is tapped 0.3 s after the hub opens, so the clip lands after the walk-on has begun;
+// 'too-late': the mp3 takes 4.5 s, past the walk-on: the music must not start at all (ChatGPT P1: no walk-on music halfway into the match).
 // Per case: t_walk = the walk-on starts (V.walking() first true); t_music = the first music source node start() call after the tap; t_heard =
 // when that source can actually sound = max(t_music, the moment the context is 'running'). PASS when t_heard - t_walk <= 200 ms in every case but
 // 'late' (music that starts earlier, with the intro card, counts as on time) and no gameplay tap was needed. 'late' passes when the music starts
@@ -12,9 +13,9 @@
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]||path.join(__dirname,'..'));
 const types={'.html':'text/html','.js':'text/javascript','.glb':'model/gltf-binary','.json':'application/json','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.mp3':'audio/mpeg','.css':'text/css'};
-let NET=+process.env.NET_MS||600,LATE=false;const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);if(/walk_.*\.mp3$/.test(u)){const d=LATE?2000:NET;setTimeout(()=>serve(q,r,u),d);return;}serve(q,r,u);});const serve=(q,r,u)=>{const f=path.join(dir,u==='/'?'index.html':u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(d);});};srv.listen(0);
+let NET=+process.env.NET_MS||600,LATE=false;const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);if(/walk_.*\.mp3$/.test(u)){const d=LATE||NET;setTimeout(()=>serve(q,r,u),d);return;}serve(q,r,u);});const serve=(q,r,u)=>{const f=path.join(dir,u==='/'?'index.html':u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(d);});};srv.listen(0);
 const port=srv.address().port;const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--autoplay-policy=user-gesture-required']});const res=[];
-for(const c of [{track:'rock',ctx:'fresh'},{track:'rock',ctx:'suspended'},{track:'energy',ctx:'fresh',cache:false},{track:'energy',ctx:'suspended',cache:false},{track:'energy',ctx:'suspended',cache:true},{track:'energy',ctx:'fresh',late:true}]){LATE=!!c.late;
+for(const c of [{track:'rock',ctx:'fresh'},{track:'rock',ctx:'suspended'},{track:'energy',ctx:'fresh',cache:false},{track:'energy',ctx:'suspended',cache:false},{track:'energy',ctx:'suspended',cache:true},{track:'energy',ctx:'fresh',late:2000},{track:'energy',ctx:'fresh',late:4500,expire:true}]){LATE=c.late||0;
  const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:1,userAgent:devices['iPhone 13'].userAgent});const p=await ctx.newPage();
  await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('tops_rebrand','1');const L=window.__L={src:[],st:[]};
@@ -39,6 +40,6 @@ for(const c of [{track:'rock',ctx:'fresh'},{track:'rock',ctx:'suspended'},{track
   const m=src.find(s=>s.walk)||src.find(s=>s.kind==='OscillatorNode'&&s.osc==='sawtooth'&&s.hz<150);let heard=null;if(m){heard=running(m.t)==='running'||m.state==='running'?m.t:firstRunAfter(m.t);}
   return {walk:__W,decoded:__L.dec||null,music:m?m.t:null,musicKind:m?m.kind:null,stateAtMusic:m?m.state:null,heard,ctxNow:AU.ctx&&AU.ctx.state,walkon:save.walkon,tier:career()&&career().tier};},n0);
  const d=(r.heard!=null&&r.walk!=null)?Math.round(r.heard-r.walk):null;const afterDecode=(r.heard!=null&&r.decoded!=null)?Math.round(r.heard-Math.max(r.decoded,r.walk||0)):null;
- res.push(Object.assign({case:c.track+'/'+c.ctx+(c.cache!=null?(c.cache?'/cached':'/uncached'):'')+(c.late?'/late':'')},r,{tapToWalk:r.walk?Math.round(r.walk-tTap):null,heardMinusWalk:d,heardMinusDecoded:afterDecode,ok:c.late?(afterDecode!=null&&afterDecode<=200&&d!=null&&d<=2800):(d!=null&&d<=200),pe}));await ctx.close();}
+ res.push(Object.assign({case:c.track+'/'+c.ctx+(c.cache!=null?(c.cache?'/cached':'/uncached'):'')+(c.expire?'/too-late':c.late?'/late':'')},r,{tapToWalk:r.walk?Math.round(r.walk-tTap):null,heardMinusWalk:d,heardMinusDecoded:afterDecode,ok:c.expire?(r.music==null):c.late?(afterDecode!=null&&afterDecode<=200&&d!=null&&d<=2800):(d!=null&&d<=200),pe}));await ctx.close();}
 await b.close();srv.close();
 const ok=res.every(x=>x.ok&&!x.pe.length);res.forEach(x=>console.log(JSON.stringify(x)));console.log(ok?'WALK-MUSIC PASS':'WALK-MUSIC FAIL');process.exit(ok?0:1);})();
