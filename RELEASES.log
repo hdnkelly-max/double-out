@@ -10,3 +10,4 @@
 2026-11-12T04:54:11Z live version=3.07 tag=0b2424f tree=3724829 commit=ddd9b9a risk=R1 run=manual item=REGULARS named regulars + Worlds knockout fix (rule-2 on 3.06)
 2026-11-12T04:55:29Z live version=3.08 tag=744fca6 tree=35620cc commit=088a850 risk=R1 run=manual item=ENG-5 invisible animations stopped (rule-2 on 3.07)
 2026-11-12T05:35:57Z live version=3.09 tag=rel-3.09 tree=158a374 commit=d6abf4fcfae80191c31d720c6af260a71443f6e7 risk=R0 run=43162359715 item=R0 #20b clip file mid-match rebuilds nothing until the hub (engine-fix20b d6abf4f, Q&D PASS 18:34)
+2026-11-12T06:03:34Z prepared version=3.10 tag=rel-3.10 tree=800a8a3 commit=32295e25624e770bab0813019d7780b29e788585 risk=R1 run=43165381741 item=CAR-5 tops_perf: duplicate = sample_id only, nothing sent or stored during play (Career build-perf6 32295e2, Q&D PASS 19:02)
