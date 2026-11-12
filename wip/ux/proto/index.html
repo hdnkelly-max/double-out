@@ -285,7 +285,7 @@ button.panel.r{width:100%;text-align:left;cursor:pointer;min-height:56px}
     <div class="line" id="rLine">You 51 · Him 44 · Checkout 38%</div>
     <div class="rw">
       <h3 id="rHead">Rewards</h3>
-      <div class="panel two"><div><span class="cash" id="rCash">+$55</span></div><div><div class="xp"><span id="rXp">+240 XP</span><span>Lv 14</span></div><div class="bar"><i style="width:78%"></i></div></div></div>
+      <div class="panel two"><div><span class="cash" id="rCash">+$55</span></div><div><div class="xp"><span id="rXp">+240 XP</span><span id="rLv">Lv 14</span></div><div class="bar"><i style="width:78%"></i></div></div></div>
       <div class="panel r" id="rWantRow"><span class="tp" id="rWantImg" style="background-image:url(img/g_d_razor.jpg)"></span><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
       <div class="panel r"><span class="sp">🂠 1 card pack</span><button class="ghost" type="button" id="rOpen">Open</button></div>
       <div class="panel r"><span class="mv" id="rMv">▲</span><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
@@ -299,7 +299,9 @@ button.panel.r{width:100%;text-align:left;cursor:pointer;min-height:56px}
 
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const XP={need:900,cur:560};const xpPct=v=>Math.round(v/XP.need*100)+'%';
+const XP={need:900,cur:560,lv:14,pre:320};
+function award(){const x=st.rw.xp;XP.pre=XP.cur;XP.preLv=XP.lv;XP.cur+=x;while(XP.cur>=XP.need){XP.cur-=XP.need;XP.lv++;}syncXP();}
+function syncXP(){$('#lvBar').style.width=xpPct(XP.cur);$('#lvTxt').textContent='Lv '+XP.lv;$('#lkXpBar').style.width=xpPct(XP.cur);$('#lkXpTo').textContent=(XP.need-XP.cur)+' XP to '+(XP.lv+1);const h=$('.lvp .xp span');if(h)h.textContent='Level '+XP.lv+' · The Fill-in';}const xpPct=v=>Math.round(v/XP.need*100)+'%';
 const st={pts:2,mode:'fixture',eq:'assassin',bank:640,owned:{assassin:1},sel:'supergrip',packs:3,first:false,broke:false};
 const DARTS=[
  {id:'assassin',n:'Harrows Club Brass 22g',line:'Brass starter set. Where everyone begins.',lv:1,price:0,img:'g_d_assassin.jpg',sc:0,co:0,w:22},
@@ -321,7 +323,7 @@ function show(tab){
   if(tab==='shop')centerThumb();
   if(tab==='result')animRes();
 }
-function animRes(){cancelAnimationFrame(animRes.id);const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const c=$('#rCash'),x=$('#rXp'),b=$('.res .two .bar i');const C=st.rw.cash,X=st.rw.xp,pre=xpPct(Math.max(0,XP.cur-X)),post=xpPct(XP.cur);c.textContent='+$'+C;x.textContent='+'+X+' XP';if(rm){b.style.width=post;return;}b.style.transition='none';b.style.width=pre;const t0=performance.now();const f=t=>{const k=Math.min(1,(t-t0)/700),e=1-Math.pow(1-k,3);c.textContent='+$'+Math.round(C*e);x.textContent='+'+Math.round(X*e)+' XP';if(k<1)animRes.id=requestAnimationFrame(f);};animRes.id=requestAnimationFrame(f);requestAnimationFrame(()=>{b.style.transition='width .7s ease-out';b.style.width=post;});}
+function animRes(){cancelAnimationFrame(animRes.id);const rm=matchMedia('(prefers-reduced-motion:reduce)').matches;const c=$('#rCash'),x=$('#rXp'),b=$('.res .two .bar i');const C=st.rw.cash,X=st.rw.xp,up=XP.preLv!=null&&XP.lv>XP.preLv,pre=up?'0%':xpPct(XP.pre),post=xpPct(XP.cur);$('#rLv').textContent='Lv '+XP.lv+(up?' · level up':'');c.textContent='+$'+C;x.textContent='+'+X+' XP';if(rm){b.style.width=post;return;}b.style.transition='none';b.style.width=pre;const t0=performance.now();const f=t=>{const k=Math.min(1,(t-t0)/700),e=1-Math.pow(1-k,3);c.textContent='+$'+Math.round(C*e);x.textContent='+'+Math.round(X*e)+' XP';if(k<1)animRes.id=requestAnimationFrame(f);};animRes.id=requestAnimationFrame(f);requestAnimationFrame(()=>{b.style.transition='width .7s ease-out';b.style.width=post;});}
 $$('#tabs button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 $$('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
 $('#lvBtn').onclick=()=>{show('locker');lkTab('load');};$('#lkToCards').onclick=()=>lkTab('cards');$('#lkShirt').onclick=()=>toast('Shirts: next round of the prototype.');
@@ -330,7 +332,7 @@ $('#menuBtn').onclick=()=>{if($('.menu'))return $('.menu').remove();const m=docu
 $$('.sub button').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-selected')==='true')return;if(b.dataset.lk){lkTab(b.dataset.lk);return;}toast(b.textContent.trim()+' comes in the next round of the prototype.');});
 function lkTab(k){$$('#lkSub button').forEach(x=>x.setAttribute('aria-selected',x.dataset.lk===k));$('#lkLoad').hidden=k!=='load';$('#lkCards').hidden=k!=='cards';}
 function renderLoadout(){const d=DARTS.find(x=>x.id===st.eq);$('#lkDartImg').style.backgroundImage='url(img/'+d.img+')';$('#lkDartN').textContent=d.n;}
-$('#moneyTile').onclick=()=>{st.mode='money';st.lost=false;renderResult();show('result');};
+$('#moneyTile').onclick=()=>{st.mode='money';st.lost=false;renderResult();award();show('result');};
 // Tonight states
 function renderTonight(){
   $('#tForm').textContent=st.first?'Your first match · Him 42 · Best of 3':'You 47 (last 10) · Him 42 · Best of 3';
@@ -342,7 +344,7 @@ function renderTonight(){
   $('#bank').textContent=money(st.bank);
   $('#moneyTile .s').textContent=st.broke?'Back room · $100 · play this first':'Back room · $100';
 }
-$('#walkOn').onclick=()=>{if(st.broke){toast('Short of the $40 entry. Take the money match first, or the club covers it this once.');return;}renderResult();show('result');};
+$('#walkOn').onclick=()=>{if(st.broke){toast('Short of the $40 entry. Take the money match first, or the club covers it this once.');return;}renderResult();award();show('result');};
 function renderResult(){const L=!!st.lost,E=st.mode==='exh',M=st.mode==='money';$('.res').classList.toggle('lost',L);
   $('#rImg').style.backgroundImage='url(img/'+(L?'g_result_loss.jpg':'g_result_win.jpg')+')';
   $('#rWho').textContent=L?'Lost':'Won';$('#rScore').textContent=M?'1–0':(L?'1–2':'2–1');$('#rVs').textContent=M?'Back-room money match':'vs '+(E?'Barney':'Big Mal');
@@ -389,10 +391,10 @@ function renderPacks(){$('#chipAll').textContent='All · '+(st.coll||37)+'/142';
 st.coll=37;st.set=7;
 $('#openPack').onclick=()=>{st.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='kw_fishchips';c[1]='Fish & Chips';st.coll++;st.set=Math.min(9,st.set+1);}renderGrid();renderPacks();toast('New card: Fish & Chips (Kiwi Pub Life '+st.set+'/9)');};
 // Result
-$('#rOpen').onclick=()=>{toast('Pack opened: The Chalk (duplicate, +10 XP)');$('#rOpen').disabled=true;$('#rOpen').textContent='Opened';};
+$('#rOpen').onclick=()=>{if(!st.packs)return;$('#openPack').click();$('#rOpen').disabled=true;$('#rOpen').textContent='Opened';};
 $('#rMsgs').onclick=()=>toast('Full stats: 3 tons, best visit 140, checkout 3 of 8.');
 $('#cont').onclick=()=>{const m=st.mode;st.bank+=st.rw?st.rw.cash:0;if(m==='money')st.broke=false;st.mode='fixture';st.lost=false;$('#bank').textContent=money(st.bank);renderTonight();renderExh();renderResult();renderShop();show('tonight');toast(m==='money'?'+$100 banked. You can pay the $40 entry now.':m==='exh'?'Exhibition done. Back to the league: vs Big Mal':'Next fixture: vs Shazza, Week 6 of 8');};
 renderTonight();renderShop();renderGrid();renderPacks();renderLoadout();renderResult();
-$('#lvBar').style.width=xpPct(XP.cur);$('#lkXpBar').style.width=xpPct(XP.cur);$('#lkXpTo').textContent=(XP.need-XP.cur)+' XP to 15';
+XP.pre=XP.cur-240;XP.preLv=14;syncXP();
 $$('#lkStats .sr').forEach(b=>b.onclick=()=>{if(!st.pts)return;const v=+b.dataset.v+1;b.dataset.v=v;b.querySelector('b').textContent=v;b.querySelector('i').style.width=Math.round(v/34*100)+'%';st.pts--;$('#lkPts').textContent=st.pts?st.pts+' point'+(st.pts>1?'s':'')+' to spend · tap a stat':'All points spent';$('#lkPts').style.color=st.pts?'':'var(--ink3)';});
 </script>
