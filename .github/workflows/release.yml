@@ -12,6 +12,8 @@ on:
       attest: { description: 'Type exactly: R2/R3 confirmed by Shipping', required: true }
       item:   { description: 'Item name for the release log', required: true }
       dry_run: { description: 'Gate + build only; nothing pushed or deployed', type: boolean, default: true }
+      version: { description: 'Optional exact version (X.YY), e.g. a jump the old 2.0x version gate reads as newer; must be higher than the current one. Empty = next hundredth', required: false, default: '' }
+      test_rollback: { description: 'TEST ONLY: deploy, then fail the live check on purpose to exercise the rollback', type: boolean, default: false }
 concurrency:
   group: tops-production-release
   queue: max
@@ -59,13 +61,19 @@ jobs:
       - name: Allocate version (integer hundredths) and bump
         id: ver
         if: steps.gate.outputs.mode == 'new'
-        env: { ITEM: '${{ inputs.item }}' }
+        env: { ITEM: '${{ inputs.item }}', WANT: '${{ inputs.version }}' }
         run: |
           cd src
           CUR=$(grep -o "TOPS_VER='[0-9.]*'" v051.js | head -1 | grep -o "[0-9.]*")
           LOGMAX=$(grep -o "version=[0-9.]*" ../site/RELEASES.log | cut -d= -f2 | sort -V | tail -1)
           HI=$(printf '%s\n%s\n' "$CUR" "${LOGMAX:-0}" | sort -V | tail -1)
           H=$(echo "$HI" | awk -F. '{printf "%d", $1*100+$2}'); N=$((H+1)); V=$(printf '%d.%02d' $((N/100)) $((N%100)))
+          if [ -n "$WANT" ]; then
+            echo "$WANT" | grep -qE '^[0-9]+\.[0-9]{2}$' || { echo "::error::REFUSED: version '$WANT' is not X.YY"; exit 1; }
+            WH=$(echo "$WANT" | awk -F. '{printf "%d", $1*100+$2}')
+            [ "$WH" -gt "$H" ] || { echo "::error::REFUSED: version $WANT is not higher than $HI"; exit 1; }
+            V=$WANT
+          fi
           sed -i "s/TOPS_VER='[0-9.]*'/TOPS_VER='$V'/" v051.js
           git commit -qam "v$V: $ITEM (release run ${{ github.run_id }})"
           echo "version=$V" >> $GITHUB_OUTPUT; echo "tag=rel-$V" >> $GITHUB_OUTPUT
@@ -140,6 +148,7 @@ jobs:
           npm i --no-save playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});const e=[];p.on('pageerror',x=>e.push(x.message));await p.goto('${U}?cb='+Date.now());await p.waitForTimeout(8000);const v=await p.evaluate(()=>window.TOPS_VER);await b.close();console.log('TOPS_VER',v,'errors',e.length);if(v!=='$V'||e.length){console.error(e.join('\n'));process.exit(1)}})()"
           echo "LIVE: $U shows $V, no page errors" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.test_rollback }}" = "true" ]; then echo "::error::TEST: live check passed; failing on purpose (test_rollback) to exercise the rollback"; exit 1; fi
       - uses: actions/checkout@v4
         with: { ref: src, path: srcrepo, fetch-depth: 0 }
       - name: Mark live on main and push the bump to src
@@ -150,19 +159,45 @@ jobs:
           cd ../srcrepo
           git fetch -q ../src.bundle && git push -q origin FETCH_HEAD:refs/heads/src || { echo "::error::SYNC: src push failed (live and main agree; push src by hand)"; exit 1; }
           echo "src -> $(git rev-parse --short FETCH_HEAD)" >> $GITHUB_STEP_SUMMARY
-      - name: Roll back to the last live release
-        if: failure() && steps.deploy.outcome == 'success'
+      - name: Prepare rollback to the last live release
+        id: rbprep
+        if: failure() && steps.live.outcome == 'failure'
         run: |
           cd site
-          PREV=$(grep " live " RELEASES.log | grep -v "version=$V " | tail -1 | grep -o "tag=[^ ]*" | cut -d= -f2)
-          [ -n "$PREV" ] || { echo "::error::ROLLBACK: no earlier live release in RELEASES.log; restore by hand"; exit 1; }
-          sed -i "s/ prepared version=$V / failed version=$V /" RELEASES.log
-          git commit -qam "v$V failed live check; rolling back to $PREV" && git push -q origin HEAD:main || true
+          L=$(grep " live " RELEASES.log | grep -v "version=$V " | tail -1)
+          PREV=$(echo "$L" | grep -o "tag=[^ ]*" | cut -d= -f2); PV=$(echo "$L" | grep -o "version=[^ ]*" | cut -d= -f2)
+          [ -n "$PREV" ] && [ -n "$PV" ] || { echo "::error::ROLLBACK: no earlier live release in RELEASES.log; restore by hand"; exit 1; }
           git worktree add -q ../rb "$PREV"
-          echo "ROLLBACK to $PREV" >> $GITHUB_STEP_SUMMARY
+          echo "prev=$PREV" >> $GITHUB_OUTPUT; echo "pv=$PV" >> $GITHUB_OUTPUT
+          echo "ROLLBACK to $PREV (v$PV)" >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-pages-artifact@v3
-        if: failure() && steps.deploy.outcome == 'success'
+        if: failure() && steps.rbprep.outcome == 'success'
         with: { path: rb, name: rollback }
-      - uses: actions/deploy-pages@v4
-        if: failure() && steps.deploy.outcome == 'success'
+      - id: rbdeploy
+        uses: actions/deploy-pages@v4
+        if: failure() && steps.rbprep.outcome == 'success'
         with: { artifact_name: rollback }
+      - name: Verify the rollback is live
+        id: rbverify
+        if: failure() && steps.rbdeploy.outcome == 'success'
+        env: { PV: '${{ steps.rbprep.outputs.pv }}', U: '${{ steps.rbdeploy.outputs.page_url }}' }
+        run: |
+          for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$PV" ] && { echo "ROLLBACK LIVE: $U shows $PV" >> $GITHUB_STEP_SUMMARY; exit 0; }; sleep 5; done
+          echo "::error::ROLLBACK: version.json never showed $PV (last: $g); restore by hand"; exit 1
+      - name: Restore main to the rolled-back release (exact match, fatal)
+        # since the Pages Source flip a hand push deploys main as-is (deploy.yml), so main must match what is live;
+        # only once the rollback is proven live (if the rollback deploy fails, main and live both still hold v$V)
+        if: failure() && steps.rbverify.outcome == 'success'
+        env: { PREV: '${{ steps.rbprep.outputs.prev }}' }
+        run: |
+          set -e
+          cd site
+          P="index.html version.json next assets img"
+          git rm -rq --ignore-unmatch -- $P
+          git checkout "$PREV" -- $P
+          git diff --cached --quiet "$PREV" -- $P || { echo "::error::ROLLBACK: main site files still differ from $PREV; restore main by hand before any hand push"; exit 1; }
+          sed -i "s/ prepared version=$V / failed version=$V /" RELEASES.log
+          git add RELEASES.log
+          git commit -qm "v$V failed live check; rolled back to $PREV (main site files restored)"
+          git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; main still holds v$V, restore it by hand before any hand push"; exit 1; }
+          echo "main restored to $PREV site files ($(git rev-parse --short HEAD))" >> $GITHUB_STEP_SUMMARY
