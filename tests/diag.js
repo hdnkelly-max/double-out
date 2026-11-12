@@ -43,11 +43,17 @@ const {chromium}=require('playwright');const path=require('path');
  await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'),15000);const hf=(await evs('health_fail'))[0];
  if(!hf||!hf.d.miss.some(m=>/board hidden/.test(m)))f.push('hidden board: no health_fail naming it: '+JSON.stringify(hf&&hf.d));
  const hd=(await evs('health_diff'));if(!hd.length||!JSON.stringify(hd[hd.length-1].d).includes('l_point'))f.push('match 2: no health_diff with the extra light: '+JSON.stringify(hd.map(x=>x.d)));
+ // R0 #20 counters in every match-2 diff: figures by key, mixers, DOM nodes, CSS animations, calls/tris
+ if(hd.length){const d=hd[hd.length-1].d;for(const k of ['by','mixers','dom','css','calls','tris'])if(!(k in d))f.push('health_diff lacks '+k+': '+JSON.stringify(d));}
+ // every slow frame of a match: a slow_sum event (JS vs render vs other, DOM nodes) logged before match_end, so it uploads with it
+ 
  // a board that's gone from the scene altogether -> 'board missing' (ChatGPT code review P0-1)
  await ev(()=>{__bd.visible=true;window.__bdp=__bd.parent;__bdp.remove(__bd);TOPS_LOG._health();});
  await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))),15000);
  if(!(await ev(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))))))f.push('a removed board does not log health_fail "board missing"');
  await ev(()=>{__bdp.add(__bd);S.won=true;endMatch();});
+ const ss=await evs('slow_sum');if(!ss.length)f.push('no slow_sum at match end (SwiftShader frames are slow, so there should be one)');else{const d=ss[0].d;if(!(d.n>0&&'js' in d&&'rnd' in d&&d.dom_max>0&&Array.isArray(d.f)))f.push('slow_sum incomplete: '+JSON.stringify(d).slice(0,300));}
+ if(!(await ev(()=>__ins.some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='slow_sum')))))f.push('slow_sum was not uploaded');
  // thumbnails within their documented cap (12,000 chars), every other event within 2,600
  const sizes=await ev(()=>TOPS_LOG.events().map(e=>[e.k,JSON.stringify(e.d||'').length]));const th2=sizes.filter(x=>x[0]==='thumb');if(th2.some(x=>x[1]>12200))f.push('thumbnail over its cap: '+JSON.stringify(th2));
  const other=sizes.filter(x=>x[0]!=='thumb'&&x[1]>2700);if(other.length)f.push('events over 2.6 KB: '+JSON.stringify(other.slice(0,3)));

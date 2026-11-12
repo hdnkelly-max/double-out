@@ -39,7 +39,7 @@ function devInfo(){try{const d=window.TOPS_perf&&TOPS_perf.dev?TOPS_perf.dev():{
 log('boot',{v:VER(),build:window.TOPS_BUILD||'',os:devInfo().os,osv:devInfo().os_major,br:devInfo().browser,brv:devInfo().browser_major,scr:devInfo().screen,dpr:devInfo().dpr,gpu:devInfo().gpu,sa:devInfo().standalone,page:PAGE});
 let lastScreen=null;if(typeof showScreen==='function'){const ss=showScreen;showScreen=function(id){if(id!==lastScreen){lastScreen=id;log('screen',String(id));}return ss.apply(this,arguments);};}
 let inMatch=false,matchN=0;
-function leftMatch(how,extra){if(!inMatch)return;inMatch=false;try{if(atBreak.length)idle(flushBreak);}catch(e){}/* anything held during the match goes now */const m=MID;log('match_end',Object.assign({how},extra||{}));
+function leftMatch(how,extra){if(!inMatch)return;try{slowFlush();}catch(e){}inMatch=false;try{if(atBreak.length)idle(flushBreak);}catch(e){}/* anything held during the match goes now */const m=MID;log('match_end',Object.assign({how},extra||{}));
  setTimeout(()=>{if(MID===m&&!inMatch){res('after');}},1500);/* only if no new match has started meanwhile */upload('match_end');}
 if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){try{if(pendBuild)pendBuild();}catch(e){}if(inMatch)leftMatch('replaced');MID=rid().slice(0,8);matchN++;
  log('match_try',{opp:o&&o.oppName,legs:o&&o.legs,n:matchN});/* logged before, so a start that throws still shows */
@@ -152,7 +152,10 @@ function shaderConsole(args){try{const txt=args.map(a=>a&&a.message?a.message:(t
  logBig('shader_fail',{log:pendFail.log,scr:lastScreen,n:fails});incident(true);return true;}catch(e){return false;}}
 // per frame (after the game's own frame): program-cache signature and the slow-frame run
 let lastF=0,slowRun=0,slowFired=false;
-function frameTick(nowT){try{const R=R_();const P=R&&R.info&&R.info.programs;if(P){let s=P.length*1000003;for(let i=0;i<P.length;i++)s+=P[i].id*(i+7);if(s!==progSig){progSig=s;progLen=P.length;onProgChange(P,nowT-lastF);}}
+let pgSeen=0;let SL=[],SLn=0,SLt={js:0,rnd:0,o:0,dom:0};
+function slow(it){try{SLn++;SLt.js+=it.js||0;SLt.rnd+=it.rnd||0;SLt.o+=it.other||0;if(it.dom>SLt.dom)SLt.dom=it.dom;if(SL.length<60)SL.push([it.s,it.f,Math.round(it.js||0),Math.round(it.rnd||0),it.other||0,it.dom||0,it.ph]);}catch(e){}}
+function slowFlush(){try{if(!SLn)return;logBig('slow_sum',{n:SLn,js:Math.round(SLt.js),rnd:Math.round(SLt.rnd),other:Math.round(SLt.o),dom_max:SLt.dom,cols:'s,f,js,rnd,other,dom,ph',f:SL});}catch(e){}SL=[];SLn=0;SLt={js:0,rnd:0,o:0,dom:0};}
+function frameTick(nowT){try{const PGx=window.TOPS_PG;if(PGx&&PGx.failed&&PGx.failed.length!==pgSeen){diagPend=true;thumbWant('shader_fail');}const R=R_();const P=R&&R.info&&R.info.programs;if(P){let s=P.length*1000003;for(let i=0;i<P.length;i++)s+=P[i].id*(i+7);if(s!==progSig){progSig=s;progLen=P.length;onProgChange(P,nowT-lastF);}}
  const d=lastF?nowT-lastF:0;lastF=nowT;if(inMatch&&d>50&&d<5000){slowRun+=d;if(slowRun>=2000&&!slowFired){slowFired=true;thumbWant('slow2s');log('slow_run',{ms:Math.round(slowRun),scr:lastScreen});}}else if(d<=50)slowRun=0;/* 2 s of back-to-back frames over 50 ms, once a match */
  if(thumbReq&&quiet())thumbShot();
  if((diagPend||healthDue())&&quiet()&&!thumbBusy)idleDiag();}catch(e){}}
@@ -167,7 +170,7 @@ function owners(){const R=R_(),sc=SC_();const map=new Map();if(!R||!sc||!R.prope
 function tagOf(o){let q=o,path=[];for(let i=0;q&&i<4;i++){const n=(q.userData&&(q.userData.ck||q.userData.tag))||q.name;if(n)path.push(n);q=q.parent;}return path.slice(0,2).join('<')||o.type;}
 function lightCounts(){const sc=SC_();const c={dir:0,point:0,spot:0,hemi:0,amb:0,rect:0,shadow:0};if(!sc)return c;sc.traverse(o=>{if(!o.isLight)return;let v=true,q=o;while(q){if(!q.visible){v=false;break;}q=q.parent;}if(!v)return;
  if(o.isDirectionalLight)c.dir++;else if(o.isPointLight)c.point++;else if(o.isSpotLight)c.spot++;else if(o.isHemisphereLight)c.hemi++;else if(o.isAmbientLight)c.amb++;else if(o.isRectAreaLight)c.rect++;if(o.castShadow)c.shadow++;});return c;}
-function defs(p){const pre=p&&p.diagnostics?(p.diagnostics.fragmentShader.prefix||''):'';const o={};for(const k of ['NUM_DIR_LIGHTS','NUM_POINT_LIGHTS','NUM_SPOT_LIGHTS','NUM_HEMI_LIGHTS','NUM_DIR_LIGHT_SHADOWS','NUM_SPOT_LIGHT_SHADOWS','NUM_POINT_LIGHT_SHADOWS']){const m=pre.match(new RegExp('#define '+k+' (\\d+)'));if(m)o[k.replace('NUM_','').toLowerCase()]=+m[1];}
+function defs(p){const pre=p&&p.diagnostics&&p.diagnostics.fragmentShader?(p.diagnostics.fragmentShader.prefix||''):'';const o={};for(const k of ['NUM_DIR_LIGHTS','NUM_POINT_LIGHTS','NUM_SPOT_LIGHTS','NUM_HEMI_LIGHTS','NUM_DIR_LIGHT_SHADOWS','NUM_SPOT_LIGHT_SHADOWS','NUM_POINT_LIGHT_SHADOWS']){const m=pre.match(new RegExp('#define '+k+' (\\d+)'));if(m)o[k.replace('NUM_','').toLowerCase()]=+m[1];}
  for(const k of ['USE_MAP','USE_ENVMAP','USE_SKINNING','USE_FOG','USE_SHADOWMAP','USE_BUMPMAP','USE_NORMALMAP','USE_EMISSIVEMAP','USE_INSTANCING','PHYSICAL'])if(pre.indexOf('#define '+k)>=0)(o.on=o.on||[]).push(k.replace('USE_',''));return o;}
 let idleBusy=false;function idleDiag(){if(idleBusy)return;idleBusy=true;const go=()=>{idleBusy=false;if(!quiet())return;try{runDiag();}catch(e){}};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:400});else setTimeout(go,0);}catch(e){setTimeout(go,0);}}
 function runDiag(){const R=R_();if(!R)return;let own=null;
@@ -175,7 +178,10 @@ function runDiag(){const R=R_();if(!R)return;let own=null;
   const news=progPend.splice(0);const bad=[];for(const p of news){const o={id:p.id,sh:p.name,key:hashStr(String(p.cacheKey||'')),by:own.get(p.id)||null};if(p.diagnostics&&p.diagnostics.runnable===false){o.fail=1;o.defs=defs(p);bad.push({p,o});}log('prog_new',o);}
   for(const p of (R.info.programs||[]))if(p.diagnostics&&p.diagnostics.runnable===false&&!bad.some(b=>b.p===p))bad.push({p,o:{id:p.id,sh:p.name,key:hashStr(String(p.cacheKey||'')),by:own.get(p.id)||null,defs:defs(p)}});
   for(const b of bad){const d=b.p.diagnostics;logBig('shader_fail_at',Object.assign({},b.o,{lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)}));}
-  if(pendFail||bad.length){pendFail=null;incident(true);}}
+  // #19's progRescue takes a failed program out of the cache inside the render call: it keeps what it rescued in TOPS_PG.failed
+  const PGx=window.TOPS_PG;let resc=0;if(PGx&&PGx.failed){const F=PGx.failed;const startAt=Math.max(0,F.length-Math.max(0,F.length-pgSeen));for(const r of F){if(r._car6)continue;r._car6=1;resc++;const d=r.diag||{};
+   logBig('shader_fail_at',{sh:r.name,key:hashStr(String(r.key||'')),by:r.by,rescued:1,defs:defs({diagnostics:d}),lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)});}pgSeen=F.length;}
+  if(pendFail||bad.length||resc){pendFail=null;incident(true);}}
  health(own);}
 // ---- match health: first quiet frame after the start, and again from 5 s in ----
 let hDue=[],h1=null,boardFace=null;
@@ -187,14 +193,17 @@ function objState(o){if(!o)return {ok:false,why:'missing'};const R=R_();let v=tr
 function health(own){if(!healthDue())return;const h=hDue.shift();const R=R_();if(!R)return;if(!boardFace||!boardFace.parent)boardFace=findBoard();
  const opp=(()=>{try{return V._qa.opp();}catch(e){return null;}})();const b=boardFace?objState(boardFace):{missing:1},o=opp?objState(opp):null;
  const progs=R.info.programs||[];const keys=progs.map(p=>hashStr(String(p.cacheKey||''))).sort();
- const snap={w:h.w,n:matchN,lights:lightCounts(),progs:progs.length,calls:R.info.render.calls,geo:R.info.memory.geometries,tex:R.info.memory.textures,board:b,opp:o,figs:visibleFigs()};
+ const fx=figInfo(),css=cssAnims();const snap={w:h.w,n:matchN,lights:lightCounts(),progs:progs.length,calls:R.info.render.calls,tris:R.info.render.triangles,geo:R.info.memory.geometries,tex:R.info.memory.textures,board:b,opp:o,figs:fx.n,by:fx.by,mixers:fx.mix,dom:document.getElementsByTagName('*').length,css:css.n,css_names:css.names};
  const miss=[];const late=h.w==='5s';const vsAI=(()=>{try{return !!(S&&S.p&&S.p[1]&&S.p[1].ai&&!S.practice);}catch(e){return false;}})();
  if(!boardFace){if(late)miss.push('board missing');}else if(b.vis===false)miss.push('board hidden');
  if(late&&vsAI&&!opp)miss.push('opponent missing');if(b.meshes&&(b.bad||(b.noProg&&late)))miss.push('board program '+(b.bad?'failed':'missing'));/* 'missing' only from 5 s in: the first frames may not have drawn it yet */if(b.noTex)miss.push('board texture');if(o&&o.bad)miss.push('opponent program failed');if(o&&o.noTex)miss.push('opponent texture');
  log('health',snap);if(miss.length){logBig('health_fail',{w:h.w,miss,board:b,opp:o,lights:snap.lights,progs:snap.progs});thumbWant('health_fail');incident(true);}
- if(h.w==='5s'){const k={keys,lights:snap.lights,figs:snap.figs,geo:snap.geo,tex:snap.tex,progs:snap.progs};if(!h1)h1=k;else{const d={};const add=k.keys.filter(x=>h1.keys.indexOf(x)<0),gone=h1.keys.filter(x=>k.keys.indexOf(x)<0);if(add.length)d.prog_new=add.slice(0,12);if(gone.length)d.prog_gone=gone.length;
+ if(h.w==='5s'){const k={keys,lights:snap.lights,figs:snap.figs,by:snap.by,mixers:snap.mixers,dom:snap.dom,css:snap.css,css_names:snap.css_names,calls:snap.calls,tris:snap.tris,geo:snap.geo,tex:snap.tex,progs:snap.progs};if(!h1)h1=k;else{const d={};const add=k.keys.filter(x=>h1.keys.indexOf(x)<0),gone=h1.keys.filter(x=>k.keys.indexOf(x)<0);if(add.length)d.prog_new=add.slice(0,12);if(gone.length)d.prog_gone=gone.length;
   for(const t in k.lights)if(k.lights[t]!==h1.lights[t])d['l_'+t]=h1.lights[t]+'>'+k.lights[t];if(k.figs!==h1.figs)d.figs=h1.figs+'>'+k.figs;d.geo=k.geo-h1.geo;d.tex=k.tex-h1.tex;d.progs=h1.progs+'>'+k.progs;
-  if(add.length||gone.length||Object.keys(d).some(x=>x[0]==='l')||d.figs)log('health_diff',d);}}}
+  /* R0 #20 counters: always logged for match 2+, so one row compares every match with match 1 */d.by=h1.by+'>'+k.by;d.mixers=h1.mixers+'>'+k.mixers;d.dom=h1.dom+'>'+k.dom;d.css=h1.css+'>'+k.css;if(k.css!==h1.css)d.css_names=k.css_names;d.calls=h1.calls+'>'+k.calls;d.tris=h1.tris+'>'+k.tris;
+  logBig('health_diff',d);}}}
+function figInfo(){const sc=SC_();const o={n:0,by:'',mix:0};if(!sc)return o;const ks=[];sc.traverse(f=>{if(!(f.userData&&f.userData.ck))return;let v=true,q=f;while(q){if(!q.visible){v=false;break;}q=q.parent;}if(!v)return;o.n++;ks.push(f.userData.ck);const a=f.userData.act;if(f.userData.mixer&&a&&a.isRunning&&a.isRunning())o.mix++;});o.by=ks.sort().join(',');return o;}
+function cssAnims(){try{if(!document.getAnimations)return {n:null,names:''};const r=document.getAnimations().filter(a=>a.playState==='running');return {n:r.length,names:r.slice(0,8).map(a=>(a.animationName||(a.effect&&a.effect.target&&a.effect.target.id)||'?')+'@'+((a.effect&&a.effect.target&&(a.effect.target.id||a.effect.target.className))||'').toString().slice(0,20)).join(' ')};}catch(e){return {n:null,names:''};}}
 function visibleFigs(){const sc=SC_();let n=0;if(!sc)return 0;sc.traverse(o=>{if(!(o.userData&&o.userData.ck))return;let v=true,q=o;while(q){if(!q.visible){v=false;break;}q=q.parent;}if(v)n++;});return n;}
 // ---- thumbnail: 160 px JPEG of our own canvas, right after a quiet render, max 2 a session, blank captures rejected ----
 let thumbReq=null,thumbN=0,thumbBusy=false;function thumbWant(why){if(thumbN<2&&!thumbReq)thumbReq=why;}
@@ -205,6 +214,6 @@ function thumbShot(){const why=thumbReq;thumbReq=null;try{const R=R_();const cv=
  if(c.toBlob)c.toBlob(bl=>{if(!bl){done(null);return;}const fr=new FileReader();fr.onload=()=>done(fr.result);fr.onerror=()=>done(null);fr.readAsDataURL(bl);},'image/jpeg',.5);else done(c.toDataURL('image/jpeg',.5));}catch(e){thumbBusy=false;}}
 if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf2=V.frame;V.frame=function(nowT){const r=vf2.apply(this,arguments);/* the game's frame always runs first, outside any try */try{frameTick(typeof nowT==='number'?nowT:performance.now());}catch(e){}return r;};}
 if(typeof beginMatch==='function'){const bm2=beginMatch;beginMatch=function(){const r=bm2.apply(this,arguments);try{slowRun=0;slowFired=false;const t=now();hDue=[{w:'start',at:t+1000},{w:'5s',at:t+5000}];}catch(e){}return r;};}
-window.TOPS_LOG={log,events,_car6:()=>({progLen,fails,thumbN,h1:!!h1,hDue:hDue.length,board:!!boardFace}),_health:()=>{hDue=[{w:'5s',at:0}];},_tick:t=>frameTick(t),res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_brk:()=>({atBreak:atBreak.length,held:held.size,brkIn:brkUntil-Date.now(),inMatch,quiet:quiet(),pend:!!pendBuild}),_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
+window.TOPS_LOG={log,events,slow:(it)=>slow(it),_car6:()=>({progLen,fails,thumbN,h1:!!h1,hDue:hDue.length,board:!!boardFace}),_health:()=>{hDue=[{w:'5s',at:0}];},_tick:t=>frameTick(t),res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_brk:()=>({atBreak:atBreak.length,held:held.size,brkIn:brkUntil-Date.now(),inMatch,quiet:quiet(),pend:!!pendBuild}),_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
 })();
 </script>
