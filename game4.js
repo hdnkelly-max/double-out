@@ -812,6 +812,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  // GFX: one-mesh characters (lewis) have the tee baked into the body atlas; recolour only the blue-grey tee texels
  function keyShirt(m,hex){const ms=Array.isArray(m)?m:[m];ms.forEach(mt=>{const tc=new T.Color(hex);mt.onBeforeCompile=sh=>{sh.uniforms.uTint={value:tc};sh.fragmentShader='uniform vec3 uTint;\n'+sh.fragmentShader.replace('#include <map_fragment>','#ifdef USE_MAP\n vec4 texelColor = texture2D( map, vUv );\n texelColor = mapTexelToLinear( texelColor );\n float mx=max(texelColor.r,max(texelColor.g,texelColor.b)),mn=min(texelColor.r,min(texelColor.g,texelColor.b));\n float lum=dot(texelColor.rgb,vec3(.3,.59,.11));\n float msk=smoothstep(.015,.05,texelColor.b-texelColor.r)*smoothstep(.12,.2,lum)*(1.-smoothstep(.35,.5,(mx-mn)/max(mx,.001)));\n vec3 tinted=uTint*clamp(lum*2.3,0.,1.4);\n diffuseColor *= vec4(mix(texelColor.rgb,tinted,msk),texelColor.a);\n#endif');};mt.customProgramCacheKey=()=>'keyShirt'+tc.getHexString();mt.needsUpdate=true;});}
  function tintShirt(m,hex){const ms=Array.isArray(m)?m:[m];ms.forEach(mt=>{const tc=new T.Color(hex);mt.userData.tint=tc;mt.onBeforeCompile=sh=>{sh.uniforms.uTint={value:tc};sh.fragmentShader='uniform vec3 uTint;\n'+sh.fragmentShader.replace('#include <map_fragment>','#ifdef USE_MAP\n vec4 texelColor = texture2D( map, vUv );\n texelColor = mapTexelToLinear( texelColor );\n float lum = dot( texelColor.rgb, vec3( .299, .587, .114 ) );\n texelColor.rgb = uTint * ( .45 + 1.25 * lum );\n diffuseColor *= texelColor;\n#endif');};mt.customProgramCacheKey=()=>'tint'+hex;mt.needsUpdate=true;});}
+ const NAMED_VAR={'big mal':{girth:1.17,beard:1,hairCol:'#2a2019'}};
+ // wider torso: scale the spine chain out sideways and forwards, and scale the neck and shoulders back so the head and arms keep their size
+ function namedBuild(B,g){try{const sp=['Spine','Spine1','Spine2'].map(n=>B[n]).filter(Boolean);if(!sp.length)return;const k=Math.pow(g,1/sp.length);sp.forEach(b=>b.scale.set(k,1,k));
+  const inv=1/g;['Neck','LeftShoulder','RightShoulder'].forEach(n=>{if(B[n])B[n].scale.set(inv,1,inv);});}catch(e){}}
  function makeRigged(look,name,tier){const ck=charKey(look,name);if(ck!=='remy'&&!RIGS[ck])loadChar(ck);const R=RIGS[ck]||RIGS.remy||{base:RIG.base};const isRemy=ck==='remy'||!RIGS[ck];
   const fig=THREE.SkeletonUtils.clone(R.base);fig.userData.rigged=true;const B={};fig.traverse(o=>{if(o.isBone)B[o.name.replace(/^[a-z]+_/,'')]=o;});
   if(!B.RightEye&&B.Head){fig.updateMatrixWorld(true);const hp=B.Head.getWorldPosition(new T.Vector3()),top=B.HeadTop_End?B.HeadTop_End.getWorldPosition(new T.Vector3()):hp.clone().add(new T.Vector3(0,.2,0));const hh=top.y-hp.y;
@@ -823,6 +827,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    else if(/Bottom/i.test(mn)){o.material.color.set(new T.Color(look.trousers||0x1b1e26).multiplyScalar(2.2));}
    else if(/Shoes/i.test(mn)){o.material.color.set(0xffffff);}
    if(window.GFX_LIN&&!/Hair/i.test(mn))o.material.envMapIntensity=/Body/i.test(mn)?.3:.6;}});
+  /* CAR-7: a few named opponents get a build/beard so the name fits the figure (no face changes; table grows with the PDC tier) */
+  const NV=!isRemy&&NAMED_VAR[String(name||'').toLowerCase()];if(NV){if(NV.beard)look=Object.assign({},look,{beard2:1,hairCol:NV.hairCol||look.hairCol});if(NV.girth)namedBuild(B,NV.girth);}
   if(!isRemy)faceKit(fig,B,look,ck);
   fig.scale.set(wide,1,wide*.98);
   // dart in the right hand (placed in world space each frame), spares in the left
