@@ -141,24 +141,40 @@
     };
     requestAnimationFrame(step);
   }
-  /* ---------- device tilt drives the foil on phones (iOS asks once, on the first pick tap) ---------- */
+  /* ---------- device tilt drives the foil on phones (iOS asks once, on the first pick tap) ----------
+     #20 (Director 22:10): the sensor listener lives only while a pack is open and writes its 4 custom properties on the pack
+     element, not on <body>: before, after the first pick it stayed for the whole page and restyled the whole document at ~60 Hz,
+     in matches too. ?q20=nogyro turns it off for a test. */
   const Gyro = {
-    on: false, asked: false,
-    ask() {
-      if (this.asked) return; this.asked = true;
+    asked: false, ok: false, el: null, h: null, n: 0,
+    off() { try { return !!(root.TOPS_q20has && root.TOPS_q20has('nogyro')); } catch (e) { return false; } },
+    ask(el) {
+      this.el = el;
+      if (this.asked) { if (this.ok) this.listen(); return; }
+      this.asked = true;
       const D = root.DeviceOrientationEvent; if (!D) return;
-      const go = () => { root.addEventListener('deviceorientation', e => this.move(e)); };
+      const go = () => { this.ok = true; this.listen(); };
       if (typeof D.requestPermission === 'function') D.requestPermission().then(s => { if (s === 'granted') go(); }).catch(() => {});
       else go();
     },
+    listen() { if (this.h || !this.el || !this.el.isConnected || this.off()) return; this.h = e => this.move(e); root.addEventListener('deviceorientation', this.h); },
+    stop(el) {
+      if (el && this.el && el !== this.el) return;
+      if (this.h) { root.removeEventListener('deviceorientation', this.h); this.h = null; }
+      if (this.el) { this.el.classList.remove('tc-gyro'); ['--fx', '--fy', '--gx', '--gy'].forEach(p => this.el.style.removeProperty(p)); }
+      this.el = null;
+    },
     move(e) {
-      if (e.gamma == null) return;
+      const el = this.el; if (!el || !el.isConnected) { this.stop(); return; }
+      if (e.gamma == null) return; this.n++;
       const x = Math.max(-1, Math.min(1, e.gamma / 25)), y = Math.max(-1, Math.min(1, ((e.beta || 45) - 45) / 25));
-      if (!this.on) { this.on = true; document.body.classList.add('tc-gyro'); }
-      const b = document.body.style;
+      if (!el.classList.contains('tc-gyro')) el.classList.add('tc-gyro');
+      const b = el.style;
       b.setProperty('--fx', `${50 + x * 40}%`); b.setProperty('--fy', `${50 + y * 40}%`); b.setProperty('--gx', `${50 + x * 70}%`); b.setProperty('--gy', `${40 + y * 70}%`);
     }
   };
+  /* recorder (dev.t20.cnt.gyro): [sensor listener attached, <body> carries tc-gyro (old builds), sensor events so far] */
+  root.TOPS_GYRO = () => [Gyro.h ? 1 : 0, document.body.classList.contains('tc-gyro') ? 1 : 0, Gyro.n];
 
   /* ---------- pack screen ---------- */
   // opts: { picks:[{id, reason}], resolve(pickId,pos)->Promise, onDone(), onLater(), backdrop?:url }
@@ -181,7 +197,7 @@
     btnSkip.onclick = () => { quick = !quick; btnSkip.setAttribute('aria-pressed', quick); };
     btnLater.onclick = () => { close(); opts.onLater && opts.onLater(picks.slice(i)); };
     btnNext.onclick = () => { i++; i < n ? deal() : summary(); };
-    function close() { ov.classList.add('is-out'); setTimeout(() => ov.remove(), 220); }
+    function close() { Gyro.stop(ov); ov.classList.add('is-out'); setTimeout(() => ov.remove(), 220); }
 
     async function deal() {
       btnNext.hidden = true; hint.hidden = false; btnLater.hidden = false; cnt.textContent = i + 1; why.textContent = picks[i].reason || '';
@@ -192,7 +208,7 @@
     }
     async function choose(cards, pos) {
       if (busy) return; busy = true;
-      Sfx.play('select'); buzz(8); Gyro.ask();
+      Sfx.play('select'); buzz(8); Gyro.ask(ov);
       hint.hidden = true; btnLater.hidden = true;
       cards.forEach((c, k) => { c.classList.add(k === pos ? 'is-hero' : 'is-behind'); if (k !== pos) c.style.setProperty('--side', k < pos || (pos === 0 && k === 1 ? false : k < pos) ? -1 : 1); });
       { const o = [0, 1, 2].filter(k => k !== pos); cards[o[0]].style.setProperty('--side', -1); cards[o[1]].style.setProperty('--side', 1); }

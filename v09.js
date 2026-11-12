@@ -96,6 +96,8 @@ function kitPts(){const k={sc:0,fi:0,ct:0,rh:0,co:0};try{const b=barrel();const 
  [SH[su.shaft],FL[su.flight],PT[su.point]].forEach(o=>{if(o)Object.keys(o).forEach(x=>k[x]+=o[x]);});
  if(gearCount('case'))k.ct+=2;k.co+=2*Math.min(5,gearCount('coach'));}catch(e){}
  Object.keys(k).forEach(x=>k[x]=Math.max(-3,Math.min(10,k[x])));return k;}
+/* #20 (hunt c): kitPts ran several times a frame (eff <- throwParams/perfectWin/currentSigma/feelPadTick/effNerves), ~5.6 KB of garbage per frame; it depends only on the kit, so cache it per kit (barrel, shaft, flight, point, case, coach). Callers only read the result. */
+{const _kp=kitPts;let kk=null,kv=null;kitPts=function(){let a,b,c,d,e,f;try{const su=save.setup||{};a=save.barrel;b=su.shaft;c=su.flight;d=su.point;e=gearCount('case');f=gearCount('coach');}catch(x){return _kp();}if(kk&&kk[0]===a&&kk[1]===b&&kk[2]===c&&kk[3]===d&&kk[4]===e&&kk[5]===f)return kv;kv=_kp();kk=[a,b,c,d,e,f];return kv;};}
 window.TOPS_kitPts=kitPts;
 function partPts(key,id){const SH={short:{ct:1,rh:-2},long:{ct:-1,rh:3},carbon:{ct:1},spin:{rh:2}},FL={slim:{sc:2,fi:2,rh:-3},kite:{sc:-1,fi:-1,rh:3},pear:{sc:1,fi:1,rh:-1}},PT={long:{sc:1,fi:1},black:{sc:1,fi:1},gold:{sc:1,fi:1}};return ({shaft:SH,flight:FL,point:PT}[key]||{})[id]||{};}
 function barrelPts(b){const acc=Math.round((5.6-b.base)/1.8*7);return {sc:acc,fi:acc,rh:Math.round((b.tol-1)/.15*6),ct:Math.round((1.25-b.sway)/.6*7)};}
