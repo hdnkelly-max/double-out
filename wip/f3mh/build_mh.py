@@ -193,7 +193,15 @@ def main():
         SYS + '/clothes/shoes02/shoes02.mhclo'])
     for pth in proxies:
         if not os.path.exists(pth): print('missing', pth); continue
-        parts.append(proxy_part(pth, body, deleted))
+        p = proxy_part(pth, body, deleted)
+        if '/eyes/' in pth:
+            # MakeHuman eyes = eyeball + cornea shell; the cornea's UVs sit in the texture's transparent corner.
+            # Split it into its own part so it renders as a glossy clear layer after the eyeball.
+            tri = p['idx'].reshape(-1, 3); cuv = p['uv'][tri].mean(1)
+            corn = (cuv[:, 0] > .8) & (cuv[:, 1] < .2)
+            c = dict(p); c['name'] = 'cornea'; c['idx'] = tri[corn].ravel(); c['mat'] = {'cornea': True}; c['z'] = p['z'] + 1
+            p['idx'] = tri[~corn].ravel(); parts.append(p); parts.append(c)
+        else: parts.append(p)
     # body: only the 'body' group (helpers are fitting geometry), minus faces fully under clothes
     keep = lambda fi: bgroups[fi] == 'body' and not all(v in deleted for v, _ in bfaces[fi])
     P, U, I, S = expand(body, buv, bfaces, keep)

@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script></head><body>
+<script type="module">
+// F3: mh_rig.json (MakeHuman mesh posed into the Mixamo bind pose + merged weights) -> skinned glTF with Mixamo bone names.
+// Mesh/material names follow the game's rigFrom rules: "Body" (skin roughness), "Hair*"/"Eyelash*" (alpha kept).
+import * as T from 'three';import {GLTFExporter} from './node_modules/three/examples/jsm/exporters/GLTFExporter.js';
+const Q=new URLSearchParams(location.search);const J=await (await fetch(Q.get('src')||'mh_rig.json')).json();
+const root=new T.Group();root.name='Scene';const arm=new T.Object3D();arm.name='Armature';root.add(arm);
+const bones={},list=[];const W={};
+for(const b of J.bones){const bo=new T.Bone();bo.name=b.name;const w=new T.Matrix4().compose(new T.Vector3(...b.wpos),new T.Quaternion(...b.wquat),new T.Vector3(1,1,1));W[b.name]=w;
+ const p=b.parent?W[b.parent]:new T.Matrix4();const l=new T.Matrix4().copy(p).invert().multiply(w);l.decompose(bo.position,bo.quaternion,bo.scale);
+ (b.parent?bones[b.parent]:arm).add(bo);bones[b.name]=bo;list.push(bo);}
+root.updateMatrixWorld(true);const skel=new T.Skeleton(list);
+const tl=new T.TextureLoader();const tex=async(p,srgb)=>{if(!p)return null;const t=await tl.loadAsync(p.replace('/home/claude/mhassets','mhassets'));if(srgb)t.encoding=T.sRGBEncoding;t.flipY=false;return t;};
+const NAME={'body':'Body','high-poly.mhclo':'Eyes','eyebrow001.mhclo':'Eyelash_Brows','eyelashes02.mhclo':'Eyelashes','teeth_base.mhclo':'Teeth','short02.mhclo':'Hair','male_casualsuit04.mhclo':'Outfit','shoes02.mhclo':'Shoes'};
+for(const p of J.parts){if(p.mat&&p.mat.cornea)continue;const g=new T.BufferGeometry();
+ g.setAttribute('position',new T.Float32BufferAttribute(p.pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(p.nrm,3));
+ const uv=p.uv.slice();for(let i=1;i<uv.length;i+=2)uv[i]=1-uv[i];g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+ g.setAttribute('skinIndex',new T.Uint16BufferAttribute(p.si,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(p.sw,4));g.setIndex(p.idx);
+ const nm=NAME[p.name]||p.name;const m=p.mat||{};const hair=/Hair|Eyelash/.test(nm);
+ const mat=new T.MeshStandardMaterial({name:nm,map:await tex(m.diffuseTexture,true),normalMap:await tex(m.normalmapTexture,false),roughness:nm==='Body'?.62:hair?.6:.86,metalness:0,
+  side:hair?T.DoubleSide:T.FrontSide,transparent:hair,alphaTest:hair?.4:0});
+ if(nm==='Teeth'&&m.diffuseColor)mat.color.setRGB(...m.diffuseColor);
+ const sm=new T.SkinnedMesh(g,mat);sm.name=nm;arm.add(sm);sm.bind(skel,sm.matrixWorld);}
+window.ROOT=root;window.OUTP=new Promise(res=>new GLTFExporter().parse(root,b=>res(b),{binary:true,embedImages:true,onlyVisible:false}));
+window.DONE=1;
+</script></body></html>

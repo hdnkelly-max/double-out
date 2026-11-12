@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#12161c}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script></head><body>
+<script type="module">
+// F3 compare: two rigged GLBs loaded and treated exactly like game4.js rigFrom/clipFor (bone prefix stripped, same material rules,
+// anims.glb clips retargeted by bone name), same pose and time, game tone mapping. ?L=out/mhtest.glb&R=assets/chars/brian.glb&clip=idle&t=0.6&v=front
+import * as T from 'three';import {GLTFLoader} from './node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from './node_modules/three/examples/jsm/libs/meshopt_decoder.module.js';import {RoomEnvironment} from './node_modules/three/examples/jsm/environments/RoomEnvironment.js';
+const Q=new URLSearchParams(location.search);const VIEW=Q.get('v')||'front';const W=+(Q.get('w')||700),H=+(Q.get('h')||900);
+const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(W,H);r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.05;document.body.appendChild(r.domElement);
+const sc=new T.Scene();sc.background=new T.Color(0x12161c);const pm=new T.PMREMGenerator(r);sc.environment=pm.fromScene(new RoomEnvironment(),.04).texture;
+sc.add(new T.AmbientLight(0xffffff,.3));sc.add(new T.HemisphereLight(0xdfe6ff,0x3a2a1a,.35));
+const key=new T.DirectionalLight(0xfff0dc,1.1);key.position.set(1.5,3,3);sc.add(key);const rim=new T.DirectionalLight(0xcfe3ff,.6);rim.position.set(-2,2,-2.5);sc.add(rim);
+const floor=new T.Mesh(new T.CircleGeometry(2.5,48),new T.MeshStandardMaterial({color:0x2a2e36,roughness:.9}));floor.rotation.x=-Math.PI/2;sc.add(floor);
+const gl=new GLTFLoader();gl.setMeshoptDecoder(MeshoptDecoder);const load=u=>new Promise((res,rej)=>gl.load(u,res,undefined,rej));
+function treat(sc,key){sc.traverse(o=>{if(o.isBone)o.name=o.name.replace(/^mixamorig\d*:?/,'');if(!o.isMesh)return;o.frustumCulled=false;
+ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!/Hair|Eyelash/i.test(m.name||'')&&!/Hair|Eyelash/i.test(o.name)){m.transparent=false;m.alphaTest=0;m.depthWrite=true;m.opacity=1;}
+  m.metalness=0;m.metalnessMap=null;m.roughnessMap=null;if(m.specularIntensity!==undefined)m.specularIntensity=.3;const skin=/body/i.test(m.name||'')&&/body/i.test(o.name);m.roughness=/hair/i.test(m.name||'')?.6:skin?.62:.86;if(m.specularMap)m.specularMap=null;
+  if(/Hair|Eyelash/i.test(m.name||'')){m.transparent=true;m.alphaTest=.4;m.side=T.DoubleSide;m.depthWrite=true;}
+  if(Q.get('a2c')&&/Hair|Eyelash/i.test(m.name||'')){m.transparent=false;m.alphaTest=.12;m.alphaToCoverage=true;}m.needsUpdate=true;});});}
+const [Lg,Rg,an]=await Promise.all([load(Q.get('L')||'out/mhtest.glb'),load(Q.get('R')||'assets/chars/brian.glb'),load('assets/anims.glb')]);
+const clipName=Q.get('clip')||'idle';const src=an.animations.find(a=>a.name===clipName)||an.animations[0];
+const tracks=src.tracks.filter(t=>/quaternion$/.test(t.name)).map(t=>{const c=t.clone();c.name=c.name.replace(/^mixamorig\d*:?/,'');return c;});
+const clip=new T.AnimationClip(clipName,src.duration,tracks);const piv=[];
+for(const [g,x] of [[Lg,-.42],[Rg,.42]]){treat(g.scene,'');const p=new T.Group();p.position.x=x;p.add(g.scene);sc.add(p);piv.push(p);
+ if(Q.get('clip')!=='rest'){const mx=new T.AnimationMixer(g.scene);mx.clipAction(clip).play();mx.update(+(Q.get('t')||0.6));}g.scene.updateMatrixWorld(true);}
+const yaw={front:0,q34:Math.PI/4,back:Math.PI,side:Math.PI/2,face:0,head_front:0,head_q34:Math.PI/4}[VIEW]||0;piv.forEach(p=>p.rotation.y=yaw);
+const cam=new T.PerspectiveCamera(26,W/H,.05,50);
+if(VIEW.startsWith('head')){cam.fov=16;cam.updateProjectionMatrix();cam.position.set(0,1.6,3.4);cam.lookAt(0,1.58,0);}
+else if(VIEW==='face'){cam.fov=10;cam.updateProjectionMatrix();const fx=+(Q.get('fx')||-.42);cam.position.set(fx,+(Q.get('fy')||1.62),1.6);cam.lookAt(fx,+(Q.get('fy')||1.62),0);}
+else{cam.position.set(0,1.0,5.6);cam.lookAt(0,.9,0);}
+const hb=n=>{let b=null;Lg.scene.traverse(o=>{if(o.isBone&&o.name===n)b=o;});return b?b.getWorldPosition(new T.Vector3()).toArray().map(v=>+v.toFixed(3)):null;};
+window.INFO={L:{head:hb('Head'),hand:hb('LeftHand')}};setTimeout(()=>{r.render(sc,cam);window.DONE=1;},1500);
+</script></body></html>
