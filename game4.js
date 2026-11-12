@@ -1839,7 +1839,7 @@ function showTitle(){if(isRun())switchSlot('career');const c=career();const r=(s
 function hubTab(t){if(isRun()&&(t==='kit'||t==='board'||t==='practice'))t='play';hubTab.cur=t;[...$('hubTabs').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));document.querySelectorAll('#hub .htab').forEach(sec=>sec.hidden=sec.dataset.t!==t);const pn=document.querySelector('#hub .panel');if(pn)pn.scrollTop=0;}
 function showHub(tab){const c=career(),t=TIERS[c.tier];if(!c.run&&seasonNeedsNew(c)){newSeason(c);}if(!c.next)c.next=nextOpponent();persist();const sn=(!c.run&&c.season)||null;if(sn&&!sn.midShown&&sn.week===Math.ceil(sn.len/2)+1&&!sn.done){sn.midShown=true;persist();showMsg(chapterMsg(c.tier,'mid'),()=>showHub(tab));return;}
  if(sn&&maybeSpareEvent(c,sn,()=>showHub(tab)))return;
- const run=!!c.run;const lt=TIERS[Math.max(0,c.tier-1)];V.setPlayerLook(save.look,save.flight,save.name,c.tier);$('hub').classList.toggle('run',run);
+ const run=!!c.run;const lt=TIERS[Math.max(0,c.tier-1)];(window.__hubSoft||V.setPlayerLook(save.look,save.flight,save.name,c.tier));$('hub').classList.toggle('run',run);
  // header
  $('hubName').textContent=save.name||'You';$('hubPt').innerHTML=portraitImg(save.look,save.name,c.tier,'md');hubBankUpdate();
  $('hubTabs').querySelector('[data-t=kit]').hidden=run;$('hubTabs').querySelector('[data-t=board]').hidden=run;$('hubTabs').querySelector('[data-t=practice]').hidden=run;$('hubTabs').querySelector('[data-t=play]').textContent=run?'The Run':'Career';
@@ -1877,7 +1877,7 @@ function showHub(tab){const c=career(),t=TIERS[c.tier];if(!c.run&&seasonNeedsNew
  $('hubRecord').innerHTML=`${run?'Run record':'Career record'} ${c.wins}–${c.losses} <span class="form">${(c.history||[]).slice(-5).map(r=>`<i class="${r}">${r}</i>`).join('')}</span>`;$('hubAvg').textContent=c.darts?(c.pts/c.darts*3).toFixed(1):'–';const ra=recentAvg(c);$('hubRecent').textContent=ra?ra.toFixed(1):'–';$('hubStreak').textContent=(c.streak||0);
  $('nextInfo').textContent='';$('btnSkills').textContent='Player';
  const ol=$('hubObj');ol.innerHTML=OBJ[c.tier].map(o=>`<li class="${objDone(o.id)?'done':''}"><span>${o.t}</span><small>${o.cash?money(o.cash):'perk'}</small></li>`).join('');
- syncHubAudio();V.buildVenue(c.tier);showScreen('hub');const tb=tab||(PR.pending?'practice':'play');hubTab(tb);drillBar();if(tb==='practice')renderPractice();if(tb==='player')showPlayer(true);if(tb==='kit')showShop(showShop.tab,true);renderBoard();}
+ syncHubAudio();(window.__hubSoft||V.buildVenue(c.tier));showScreen('hub');const tb=tab||(PR.pending?'practice':'play');hubTab(tb);drillBar();if(tb==='practice')renderPractice();if(tb==='player')showPlayer(true);if(tb==='kit')showShop(showShop.tab,true);renderBoard();}
 function syncHubAudio(){$('btnHubSound').textContent=AU.on?'Sound on':'Sound off';$('btnHubCaller').textContent=AU.caller?'Caller on':'Caller off';}
 function kitStats(){const b=barrel();const p=setupParts();const spread=b.base*(1+p.fl.base)*(1+p.pt.base);const win=b.tol*(1+p.fl.tol)*(1+p.shaft.tol);const sway=b.sway*(1+p.shaft.sway);return {spread,win,sway};}
 function showShop(tab,inTab){showShop.tab=tab||showShop.tab||'barrel';$('shopBank').textContent=money(career()?career().bank:0);const ks=kitStats();$('kitImg').src=V.dartShot(save.flight,Object.assign({barrel:barrel()},setupParts()));$('kitName').textContent=barrel().n;$('kitBars').innerHTML=[['Grouping',1-(ks.spread-3.4)/2.6,'tighter is better'],['Release window',(ks.win-.55)/.6,'wider forgives timing'],['Steadiness',1-(ks.sway-.55)/.9,'less sway']].map(([n,v,h])=>`<div class="kb"><span>${n}</span><div class="kb-bar"><i style="width:${Math.round(Math.max(.04,Math.min(1,v))*100)}%"></i></div><small>${h}</small></div>`).join('');[...$('kitTabs').children].forEach(bt=>bt.setAttribute('aria-pressed',bt.dataset.t===showShop.tab));['barrel','setup','gear'].forEach(k=>$('kit_'+k).hidden=showShop.tab!==k);if(!inTab&&!(hubTab.cur==='kit'&&!$('hub').hidden)){showScreen('hub');hubTab('kit');}$('shopSponsor').textContent=sponsor()?`Sponsored by ${sponsor().brand} · ${Math.round(sponsor().disc*100)}% off`:'No sponsor yet';const L=$('shopList');L.innerHTML='';BARRELS.forEach(b=>{const own=save.owned.includes(b.id),cur=save.barrel===b.id;const bank=career()?career().bank:0;
@@ -3084,7 +3084,7 @@ function calibOpen(){let el=$('calib');if(!el){el=document.createElement('div');
 function matchTeardown(why){try{V.teardownMatch({keepTemplates:why==='next'});}catch(e){}
  if(why!=='next'){try{if(window.TOPS_walk&&TOPS_walk.stopWalk)TOPS_walk.stopWalk();}catch(e){}} /* the walk-on music can start before beginMatch */try{flyStop();}catch(e){}try{if(window.TC_API&&TC_API.zone)TC_API.zone(0);}catch(e){}}
 window.TOPS_matchTeardown=matchTeardown;
-{const _sh=showHub;showHub=function(){matchTeardown('hub');return _sh.apply(this,arguments);};
+{const _sh=showHub;showHub=function(){if(!window.__hubSoft)matchTeardown('hub');return _sh.apply(this,arguments);};
  const _st=showTitle;showTitle=function(){matchTeardown('title');return _st.apply(this,arguments);};
  const _bm=beginMatch;beginMatch=function(){matchTeardown('next');return _bm.apply(this,arguments);};}
 </script>
