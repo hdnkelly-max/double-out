@@ -719,7 +719,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function keepAssets(root){try{root.traverse(o=>{if(o.geometry)KEEP.add(o.geometry);if(o.isSkinnedMesh&&o.skeleton)KEEP.add(o.skeleton);const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(!m)return;KEEP.add(m);TEX_KEYS.forEach(k=>{if(m[k])KEEP.add(m[k]);});});});}catch(e){}return root;}
  // GFX: character registry. Every Mixamo model shares the skeleton; bones get a per-model prefix so rest poses never collide.
  const CHARS=['brian','bryce','pete','lewis','david','leonard','megan','elizabeth'],CHAR_F={megan:1,elizabeth:1},RIGS={},RIG_WAIT={};
- window.TOPS_RIGS=()=>{let anim=null;try{anim=Object.keys(ANIM_CACHE).length;}catch(e){}return {n:Object.keys(RIGS).length,ids:Object.keys(RIGS),wait:Object.keys(RIG_WAIT).length,anim};};/* v14 flight recorder: which character templates are cached (read only) */
+ window.TOPS_RIGS=()=>{let anim=null,animKeys=[];try{animKeys=Object.keys(ANIM_CACHE);anim=animKeys.length;}catch(e){}return {n:Object.keys(RIGS).length,ids:Object.keys(RIGS),wait:Object.keys(RIG_WAIT).length,anim,animKeys};};/* #20: animKeys names the cached clips (char|clip), so the recorder can say which clip loaded between matches *//* v14 flight recorder: which character templates are cached (read only) */
  function rigFrom(gltf,key){if(!RIG.rest)RIG.rest={};const sc=gltf.scene;sc.traverse(o=>{if(o.isBone)o.name=key+'_'+o.name.replace(/^mixamorig\d*:?/,'');});sc.updateMatrixWorld(true);
   if(key==='remy'){const box=new T.Box3().setFromObject(sc);const h=box.max.y-box.min.y;const k=(h>1.45&&h<2.1)?1:1.78/h;sc.scale.setScalar(k);sc.position.y=-box.min.y*k;}sc.updateMatrixWorld(true); /* Mixamo cast: metric, feet at the origin (bbox is unreliable on quantised meshes) */
   const root=new T.Group();sc.rotation.y=Math.PI;root.add(sc);root.updateMatrixWorld(true);
@@ -3088,4 +3088,9 @@ window.TOPS_matchTeardown=matchTeardown;
 {const _sh=showHub;showHub=function(){if(!window.__hubSoft)matchTeardown('hub');return _sh.apply(this,arguments);};
  const _st=showTitle;showTitle=function(){matchTeardown('title');return _st.apply(this,arguments);};
  const _bm=beginMatch;beginMatch=function(){matchTeardown('next');return _bm.apply(this,arguments);};}
+// #20: every match starts with the last match's end-of-match leftovers cleared, so match 2's page is match 1's page. All of these are rebuilt
+// from scratch the next time they show: the pub/perk effect layer (empty after its effects end, a full-screen fixed layer), the toast host
+// once its toasts are gone, the reward card's content (career3 rebuilds it with innerHTML) and the result stats (endMatch rebuilds them).
+{const _bm20=beginMatch;beginMatch=function(){try{const fx=$('fxLayer');if(fx&&!fx.children.length)fx.remove();const at=$('achToasts');if(at&&!at.children.length)at.remove();
+ const rw=$('c3rw');if(rw&&rw.hidden)rw.innerHTML='';const rs=$('resStats');if(rs&&$('result')&&$('result').hidden)rs.innerHTML='';}catch(e){}return _bm20.apply(this,arguments);};}
 </script>
