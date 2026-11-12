@@ -53,6 +53,13 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       r.shop.buy = await p.evaluate(() => ({ bank: career().bank, owned: save.owned.includes('neutron'), eq: save.barrel, visible: !document.getElementById('rbApp').hidden, msg: (document.querySelector('#rbApp [role=status]') || {}).textContent || '' }));
       await p.click('#rbApp [data-bid="assassin"]'); await p.waitForTimeout(300); await p.click('#rbEquip'); await p.waitForTimeout(400);
       r.shop.back = await p.evaluate(() => ({ eq: save.barrel, bank: career().bank }));
+      // Cards: two owned cards and one pick waiting; Open runs the game's own pack opening over the new screen
+      await p.evaluate(() => { save.tcIntro = Date.now(); TC_API.grant('deano', 'test'); TC_API.grant('kauri', 'test'); TC_API.award('rbtest1', 'win', 'test'); });
+      await p.click('#rbTabs [data-t="locker"]'); await p.waitForTimeout(300); await p.click('#rbApp [data-lk="cards"]'); await p.waitForTimeout(500);
+      r.cards = await p.evaluate(() => ({ owned: document.querySelectorAll('#rbApp button.rb-cd').length, total: document.querySelectorAll('#rbApp .rb-cd').length, open: !!document.getElementById('rbOpen'), title: (document.querySelector('#rbApp .rb-t1') || {}).textContent }));
+      await p.screenshot({ path: path.join(dir, `tests/rb_cards_${W}.png`) });
+      await p.click('#rbOpen'); await p.waitForTimeout(1500);
+      r.cards.pack = await p.evaluate(() => { const els = [...document.querySelectorAll('body > *')].filter(e => e.id !== 'rbApp' && getComputedStyle(e).position === 'fixed' && +getComputedStyle(e).zIndex >= 50 && e.offsetWidth > 200 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden'); return els.map(e => (e.id || e.className).toString().slice(0, 30)); });
       r.hscroll = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     }
     r.errors = pe.slice(0, 3); out[mode] = r; await p.close();
@@ -64,6 +71,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   if (!out['1'].backOk) fails.push('New look button did not return');
   const L = out['1'].locker || {}; if (L.stats !== 5 || L.plus < 1 || L.kit !== 2 || !L.ring || !L.after || L.after.sc <= L.sc0 || L.after.bank !== L.bank0 - 1) fails.push('Locker: stats/spend/kit wrong');
   const SH = out['1'].shop || {}; if (!SH.visible || SH.thumbs !== SH.n || !/level 15/i.test(SH.razor || '') || !/sponsor/i.test(SH.littler || '') || !SH.buy || SH.buy.bank !== 595 || !SH.buy.owned || SH.buy.eq !== 'neutron' || !SH.buy.visible || !SH.back || SH.back.eq !== 'assassin' || SH.back.bank !== 595) fails.push('Shop: gates/buy/equip wrong');
+  const CD = out['1'].cards || {}; if (CD.owned !== 2 || CD.total < 20 || !CD.open || !/picks? waiting/.test(CD.title || '') || !(CD.pack || []).length) fails.push('Cards: grid/open wrong');
   const T = out['1'].stats || {}; if (T.tiles !== 4 || T.pts !== 4 || T.avg !== '48.0') fails.push('Stats: tiles/form wrong');
   if (!out['1'].season || out['1'].season.rows < 4 || !out['1'].season.me || out['1'].season.road !== 7) fails.push('Season: table/you/road missing');
   if (out['0'].errors.length || out['1'].errors.length) fails.push('page errors');
