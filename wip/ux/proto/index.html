@@ -69,7 +69,11 @@ button.panel{color:var(--ink);font:inherit}
 /* opponent portrait inside Tonight hero */
 .opp{position:absolute;right:0;bottom:0;height:88%;aspect-ratio:4/5;background-size:contain;background-repeat:no-repeat;background-position:right bottom;max-width:100%}
 /* shop */
-.prod{display:grid;place-items:start center;padding-top:30px;background:radial-gradient(ellipse at 50% 32%,#2c3237 0%,#121417 68%)}
+.prod{background:#0e1012}
+.prod .img{bottom:92px;background-position:50% 35%;background-size:auto 128%;background-color:#0f1011}
+.prod .shade{background:linear-gradient(180deg,rgba(14,16,18,0) 0,rgba(14,16,18,0) 150px,#14181b 172px)!important}
+.prod .txt .row{display:flex;align-items:center;gap:8px}
+.prod .h1{font-size:30px}
 .prod img{width:min(330px,88%);max-width:100%;transform:rotate(-9deg);filter:drop-shadow(0 16px 14px rgba(0,0,0,.65))}
 .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px;align-self:flex-start;background:rgba(20,23,26,.7)}
 .cmp{padding:10px 14px;display:flex;flex-direction:column;gap:6px}
@@ -106,11 +110,6 @@ button.panel{color:var(--ink);font:inherit}
 .card.out{display:grid;place-items:center;color:#4a5155;font-family:var(--display);font-weight:700;font-size:18px}
 .card .n{position:absolute;left:0;right:0;bottom:0;height:24px;line-height:24px;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(12,14,16,.86);border-top:1px solid rgba(255,255,255,.06)}
 /* result */
-.res .vs{position:absolute;inset:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:end}
-.res .p{height:88%;background-size:contain;background-repeat:no-repeat;background-position:bottom}
-.res .score{align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;width:116px;text-align:center;background:radial-gradient(ellipse at 50% 50%,rgba(8,10,12,.85) 0%,rgba(8,10,12,.55) 55%,rgba(8,10,12,0) 80%);position:relative;z-index:1}
-.res .score b{font-family:var(--display);font-weight:800;font-size:54px;line-height:.9;display:block;font-variant-numeric:tabular-nums}
-.res .score small{font-size:18px;font-weight:600;letter-spacing:2px;color:var(--ink);text-transform:uppercase}
 .rw{display:flex;flex-direction:column;gap:8px}
 .rw h3{margin:2px 0 0;font-size:11.5px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;font-weight:600}
 .two{display:grid;grid-template-columns:1fr 1.6fr;gap:0}
@@ -123,6 +122,22 @@ button.panel{color:var(--ink);font:inherit}
 .r .sp{flex:1}
 .ghost{height:44px;padding:0 14px;border-radius:8px;border:1px solid #6b7276;background:none;color:var(--ink);font-weight:600;cursor:pointer}
 .pin{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding-top:12px;margin-top:auto}
+/* generated photography inside panels (Hayden 17:09) */
+.photo{background-size:cover;background-repeat:no-repeat}
+.tp{display:block;background-size:cover;background-position:50% 50%;border-radius:4px}
+.tile .tp{width:100%;height:34px;margin-top:auto}
+.th .tp{position:absolute;inset:4px 4px 22px;border-radius:5px}
+.r .tp{width:60px;height:30px;flex:0 0 60px}
+.res .lock{position:absolute;right:14px;top:0;bottom:0;width:132px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;text-align:center}
+.res .lock small{font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.res .lock b{font-family:var(--display);font-weight:800;font-size:56px;line-height:.9;font-variant-numeric:tabular-nums}
+.res .lock span{font-size:13px;color:var(--ink2)}
+.res.lost .lock small{color:var(--ink2)}
+.poster{position:absolute;inset:0;z-index:30;background:rgba(6,7,8,.82);display:flex;align-items:center;justify-content:center;padding:24px}
+.poster .pc{width:100%;max-width:330px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.poster .pi{aspect-ratio:2/3;background-size:cover;background-position:50% 20%;position:relative}
+.poster .pt{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 14px;background:linear-gradient(transparent,rgba(8,9,10,.92));display:flex;flex-direction:column;gap:2px}
+.poster .pb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
 /* toast */
 .toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
 .toast.on{opacity:1;transform:none}
@@ -137,6 +152,8 @@ button.panel{color:var(--ink);font:inherit}
   <button type="button" data-state="first">First match</button>
   <button type="button" data-state="broke">Can't afford entry</button>
   <button type="button" data-state="normal">Normal</button>
+  <button type="button" data-state="lost">Lost match</button>
+  <button type="button" data-state="exh">Exhibition night</button>
 </div>
 
 <div class="phone" id="phone">
@@ -159,17 +176,16 @@ button.panel{color:var(--ink);font:inherit}
   <!-- TONIGHT -->
   <section class="scr" data-scr="tonight">
     <div class="hero" style="height:265px">
-      <div class="img" style="background-image:url(img/venue_club.jpg)"></div>
-      <div class="opp" style="background-image:url(img/mal_hero.png)"></div>
-      <div class="shade"></div>
-      <div class="txt"><span class="kick" id="tKick">Club singles · Week 5 of 8</span><span class="h1">vs Big Mal</span><span class="lead" id="tStake">Win: a place in the team</span></div>
+      <div class="img photo" id="tImg" style="background-image:url(img/g_tonight_club.jpg);background-position:70% 30%"></div>
+      <div class="shade" style="background:linear-gradient(180deg,rgba(10,12,14,0) 30%,rgba(10,12,14,.92) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,0) 55%)"></div>
+      <div class="txt"><span class="kick" id="tKick">Club singles · Week 5 of 8</span><span class="h1" id="tOpp">vs Big Mal</span><span class="lead" id="tStake">Win: a place in the team</span></div>
     </div>
     <div class="line" id="tForm">You 47 (last 10) · Him 42 · Best of 3</div>
     <button class="primary" type="button" id="walkOn"><b>Walk on</b><small id="tEntry">Entry $40</small></button>
     <button class="meta" type="button" data-go="season" id="tSeason">Week 5 of 8 · 3rd · 2 pts off 2nd ›</button>
     <div class="row2" id="tTiles">
       <button class="panel tile" type="button" id="moneyTile"><span class="t">Money match</span><span class="s">Back room · $100</span></button>
-      <button class="panel tile" type="button" data-go="shop"><span class="t">Next dart</span><span class="s">Razor Edge · Lv 15</span><img src="img/dart_razor_t.png" alt=""></button>
+      <button class="panel tile" type="button" data-go="shop"><span class="t">Next dart</span><span class="s">Razor Edge · Lv 15</span><span class="tp" style="background-image:url(img/g_d_razor.jpg)"></span></button>
     </div>
     <div class="meta" id="tGoal" style="margin-top:-4px;min-height:24px">Goal: average 61+ → $40</div>
   </section>
@@ -186,10 +202,10 @@ button.panel{color:var(--ink);font:inherit}
   <!-- SHOP -->
   <section class="scr" data-scr="shop" hidden>
     <div class="sub" role="tablist" style="margin:0"><button aria-selected="true">Darts</button><button aria-selected="false">Shafts &amp; flights</button><button aria-selected="false">Shirts</button></div>
-    <div class="hero prod" style="height:240px">
-      <img id="sImg" src="img/dart_razor_t.png" alt="Razor Edge dart">
+    <div class="hero prod" style="height:262px">
+      <div class="img photo" id="sImg" role="img" aria-label="Dart" style="background-position:50% 35%"></div>
       <div class="shade" style="background:linear-gradient(180deg,transparent 55%,rgba(10,12,14,.9))"></div>
-      <div class="txt"><span class="badge" id="sBadge">NEW · LV 15</span><span class="h1" id="sName">Razor Edge 24g</span><span class="lead" id="sLine">Sharp razor grip, 85% tungsten</span></div>
+      <div class="txt"><span class="row"><span class="badge" id="sBadge">NEW · LV 15</span><span class="kick" id="sBrand">Red Dragon</span></span><span class="h1" id="sName">Razor Edge 24g</span><span class="lead" id="sLine">Sharp razor grip, 85% tungsten</span></div>
     </div>
     <div class="panel cmp" id="sCmp"></div>
     <div id="sAct"></div>
@@ -204,8 +220,7 @@ button.panel{color:var(--ink);font:inherit}
   <section class="scr" data-scr="locker" hidden>
     <div class="sub" role="tablist" style="margin:0"><button aria-selected="false">Loadout</button><button aria-selected="true">Cards</button><button aria-selected="false">Stats</button><button aria-selected="false">Trophies</button></div>
     <div class="hero me" style="height:140px">
-      <div class="img" style="background-image:url(img/venue_regional.jpg);opacity:.45"></div>
-      <div class="fig" style="background-image:url(img/me_hero.png)"></div>
+      <div class="img photo" style="background-image:url(img/g_locker.jpg);background-position:80% 35%"></div>
       <div class="shade" style="background:linear-gradient(90deg,rgba(10,12,14,.85) 0%,rgba(10,12,14,.2) 70%)"></div>
       <div class="txt" style="right:45%"><span class="h1" style="font-size:30px">Hayden</span><span class="lead">The Fill-in · Lv 14</span></div>
     </div>
@@ -227,14 +242,15 @@ button.panel{color:var(--ink);font:inherit}
   <!-- RESULT (no tab rail) -->
   <section class="scr res" data-scr="result" hidden>
     <div class="hero" style="height:250px">
-      <div class="img" style="background-image:url(img/venue_club.jpg);opacity:.38"></div>
-      <div class="vs"><div class="p" style="background-image:url(img/me_hero.png)"></div><div class="score"><small id="rWho">Won</small><b id="rScore">2–1</b></div><div class="p" id="rThem" style="background-image:url(img/mal_hero.png);transform:scaleX(-1);filter:brightness(.5) saturate(.6)"></div></div>
+      <div class="img photo" id="rImg" style="background-image:url(img/g_result_win.jpg);background-position:20% 30%"></div>
+      <div class="shade" style="background:linear-gradient(270deg,rgba(10,12,14,.88) 0%,rgba(10,12,14,.35) 45%,rgba(10,12,14,0) 70%)"></div>
+      <div class="lock"><small id="rWho">Won</small><b id="rScore">2–1</b><span id="rVs">vs Big Mal</span></div>
     </div>
     <div class="line" id="rLine">You 51 · Him 44 · Checkout 38%</div>
     <div class="rw">
       <h3>Rewards</h3>
       <div class="panel two"><div><span class="cash" id="rCash">+$55</span></div><div><div class="xp"><span id="rXp">+240 XP</span><span>Lv 14</span></div><div class="bar"><i style="width:78%"></i></div></div></div>
-      <div class="panel r"><img src="img/dart_razor_t.png" alt=""><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
+      <div class="panel r"><span class="tp" style="background-image:url(img/g_d_razor.jpg)"></span><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
       <div class="panel r"><span class="sp">🂠 1 card pack</span><button class="ghost" type="button" id="rOpen">Open</button></div>
       <div class="panel r"><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
     </div>
@@ -249,12 +265,13 @@ button.panel{color:var(--ink);font:inherit}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const st={bank:640,owned:{assassin:1},sel:'supergrip',packs:3,first:false,broke:false};
 const DARTS=[
- {id:'assassin',n:'Club Brass 22g',line:'Your starter set. Brass, 22 g.',lv:1,price:0,img:'dart_assassin_t.png',sc:0,co:0,w:22},
- {id:'supergrip',n:'Supergrip Ultra 22g',line:'Knurled grip that holds in a sweaty hand',lv:8,price:95,img:'dart_supergrip_t.png',sc:2,co:3,w:22,isNew:1},
- {id:'razor',n:'Razor Edge 24g',line:'Sharp razor grip, 85% tungsten',lv:15,price:120,img:'dart_razor_t.png',sc:4,co:5,w:24},
- {id:'vapor8',n:'Vapor8 21g',line:'Slim, light, quick through the air',lv:18,price:150,img:'dart_vapor8_t.png',sc:5,co:3,w:21},
- {id:'zen',n:'Zen Jutsu 23g',line:'Ringed grip, settled flight',lv:25,price:170,img:'dart_zen_t.png',sc:7,co:7,w:23},
- {id:'asp',n:'Asp G2 24g',line:'Front-weighted, built for treble 20',lv:33,price:270,img:'dart_asp_t.png',sc:9,co:8,w:24}];
+ {id:'assassin',n:'Harrows Club Brass 22g',line:'Brass starter set. Where everyone begins.',lv:1,price:0,img:'g_d_assassin.jpg',sc:0,co:0,w:22},
+ {id:'supergrip',n:'Harrows Supergrip Ultra 22g',line:'Micro-grip tungsten. Holds in a sweaty hand.',lv:8,price:95,img:'g_d_supergrip.jpg',sc:2,co:3,w:22,isNew:1},
+ {id:'razor',n:'Red Dragon Razor Edge 24g',line:'Sharp razor grip, 85% tungsten.',lv:15,price:120,img:'g_d_razor.jpg',sc:4,co:5,w:24},
+ {id:'vapor8',n:'Target Vapor8 21g',line:'90% tungsten, slim. Loves the treble.',lv:18,price:150,img:'g_d_vapor8.jpg',sc:5,co:3,w:21},
+ {id:'zen',n:'Shot Zen Jutsu 23g',line:'Kiwi-made 90% tungsten. Balanced.',lv:25,price:170,img:'g_d_zen.jpg',sc:7,co:7,w:23},
+ {id:'asp',n:'Target Aspinall G2 24g',line:'Scalloped grip, front-weighted.',lv:33,price:270,img:'g_d_asp.jpg',sc:9,co:8,w:24},
+ {id:'littler',n:'Target Luke Littler Gen 1 23g',line:'The Nuke\u2019s own. Grip everywhere.',lv:36,price:300,img:'g_d_littler.jpg',sc:10,co:9,w:23}];
 const LV=14;
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
 function centerThumb(){requestAnimationFrame(()=>{const t=$('#sThumbs'),q=t&&t.querySelector('[aria-pressed="true"]');if(!q||!t.clientWidth)return;t.scrollTo({left:Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2),behavior:'instant'});});}
@@ -285,11 +302,23 @@ function renderTonight(){
   $('#moneyTile .s').textContent=st.broke?'Back room · $100 · play this first':'Back room · $100';
 }
 $('#walkOn').onclick=()=>{if(st.broke){toast('Short of the $40 entry. Take the money match first, or the club covers it this once.');return;}show('result');};
-$$('.legend button').forEach(b=>b.onclick=()=>{st.first=b.dataset.state==='first';st.broke=b.dataset.state==='broke';renderTonight();show('tonight');toast(b.textContent+' state');});
+function renderResult(){const L=!!st.lost,E=!!st.exh;$('.res').classList.toggle('lost',L);
+  $('#rImg').style.backgroundImage='url(img/'+(L?'g_result_loss.jpg':'g_result_win.jpg')+')';
+  $('#rWho').textContent=L?'Lost':'Won';$('#rScore').textContent=L?'1–2':'2–1';$('#rVs').textContent='vs '+(E?'Barney':'Big Mal');
+  $('#rLine').textContent=L?'You 41 · Him 44 · Checkout 22%':'You 51 · Him 44 · Checkout 38%';
+  $('#rCash').textContent=L?'+$5':'+$55';$('#rXp').textContent=L?'+100 XP':'+240 XP';
+  $('#rWant').textContent=L?'Best visit 100 · keep going':'Razor Edge: $45 to go';$('#rSeason').textContent=L?'Now 4th · 2 pts off 2nd':'Now 2nd · top two go up';}
+function renderExh(){const E=!!st.exh;$('#tImg').style.backgroundImage='url(img/'+(E?'g_exh_barney_tonight.jpg':'g_tonight_club.jpg')+')';
+  $('#tOpp').textContent=E?'vs Barney':'vs Big Mal';if(E){$('#tKick').textContent='Exhibition · one night only';$('#tStake').textContent='Win: $250 and his signed shirt';$('#tForm').textContent='You 47 (last 10) · Him 96 · Best of 3';$('#tEntry').textContent='Free entry';}}
+function poster(){const p=document.createElement('div');p.className='poster';p.innerHTML=`<div class="pc" role="dialog" aria-label="Exhibition invite"><div class="pi" style="background-image:url(img/g_exh_barney_poster.jpg)"><div class="pt"><span class="kick">Exhibition · Friday</span><span class="h1" style="font-size:34px">Barney is in town</span><span class="lead">Five-time world champion. Best of 3 at the Club.</span></div></div><div class="pb"><button class="primary" type="button" id="pGo"><b>Take him on</b></button><button class="link" type="button" id="pLater">Not tonight</button></div></div>`;$('#phone').appendChild(p);
+  $('#pGo').onclick=()=>{p.remove();show('tonight');};$('#pLater').onclick=()=>{p.remove();st.exh=false;renderTonight();renderExh();};}
+$$('.legend button').forEach(b=>b.onclick=()=>{const k=b.dataset.state;document.querySelectorAll('.poster').forEach(e=>e.remove());
+  st.first=k==='first';st.broke=k==='broke';st.lost=k==='lost';st.exh=k==='exh';renderTonight();renderExh();renderResult();
+  if(k==='lost'){show('result');}else{show('tonight');if(k==='exh')poster();}toast(b.textContent+' state');});
 // Shop
 function renderShop(){
   const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>LV,mine=DARTS.find(x=>x.id==='assassin');
-  $('#sImg').src='img/'+d.img;$('#sImg').alt=d.n+' dart';$('#sName').textContent=d.n;$('#sLine').textContent=d.line;
+  $('#sImg').style.backgroundImage='url(img/'+d.img+')';$('#sImg').setAttribute('aria-label',d.n+' dart');{const sp=d.n.match(/^(Harrows|Red Dragon|Target|Shot|Winmau|Unicorn) (.*)$/);$('#sBrand').textContent=sp?sp[1]:'';$('#sName').textContent=sp?sp[2]:d.n;}$('#sLine').textContent=d.line;
   $('#sBadge').textContent=owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · LV '+d.lv:'LV '+d.lv);
   const rows=owned&&d.id==='assassin'?[['Your current dart','','neutral']]:[['Scoring','+'+(d.sc-mine.sc),'up'],['Control','+'+(d.co-mine.co),'up']].concat(d.w===mine.w?[['Weight','Same, '+d.w+' g','neutral']]:[[d.w>mine.w?'Heavier':'Lighter',d.w+' g vs '+mine.w+' g','neutral']]);
   $('#sCmp').innerHTML='<h3>vs your Club Brass</h3>'+rows.map(r=>`<div><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join('');
@@ -299,7 +328,7 @@ function renderShop(){
   else if(st.bank<d.price)a=`<div class="lockline"><b>${money(d.price)} · you have ${money(st.bank)}</b><span>${money(d.price-st.bank)} to go</span><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   $('#sAct').innerHTML=a;
-  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><img src="img/${x.img}" alt=""><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
+  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><span class="tp" style="background-image:url(img/${x.img})"></span><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
   $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
   const buy=$('#sBuy');if(buy)buy.onclick=()=>{if(st.bank<d.price){renderShop();return;}st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
   const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
