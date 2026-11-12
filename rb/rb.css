@@ -302,6 +302,24 @@ html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
   & .rb-swb[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--red)}
   & .rb-swset{background:var(--card2);color:var(--ink);font-size:12px;font-weight:700}
   & .rb-acc{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;text-align:left}
+  /* round 2 #1 as approved: thin stat bars, one list card with thumb rows that open in place */
+  & .rb-sbars{display:flex;flex-direction:column;gap:6px}
+  & .rb-sbr{display:grid;grid-template-columns:96px 1fr 30px;align-items:center;gap:10px;font-size:13.5px;color:var(--ink2)}
+  & .rb-sbr b{text-align:right;color:var(--ink);font-weight:700}
+  & .rb-sbar{display:flex;height:6px;border-radius:3px;background:#2b3135;overflow:hidden}
+  & .rb-sbar i{display:block;height:100%}
+  & .rb-sbar i.rb-f{background:#d9dcda}
+  & .rb-sbar i.rb-gh{background:repeating-linear-gradient(135deg,#a0a6a3 0 2px,#3a4044 2px 4px)}
+  & .rb-stlist{padding:2px 14px;gap:0}
+  & .rb-strow{border-bottom:1px solid var(--line)}
+  & .rb-strow:last-child{border-bottom:0}
+  & .rb-strow .rb-acc{min-height:70px;padding:8px 0}
+  & .rb-sth{display:block;width:64px;height:48px;flex:0 0 64px;aspect-ratio:auto;padding-bottom:0}
+  & .rb-sth .rb-im{display:block}
+  & .rb-strow .rb-optx b{font-size:16px}
+  & .rb-strow .rb-acc .rb-optx small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  & .rb-stsub{display:flex;flex-direction:column;gap:8px;padding:10px 0 4px}
+
   & .rb-chev{color:var(--ink3);font-size:22px;transition:transform .15s}
   & .rb-optx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   & .rb-optx b{font-size:15px;font-weight:600}

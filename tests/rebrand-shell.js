@@ -21,9 +21,9 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       r.match = await p.evaluate(() => ({ S: !!(typeof S !== 'undefined' && S && !S.done), rbHidden: document.getElementById('rbApp').hidden }));
       // tabs: Shop falls back to the old screen, New look returns
       await p.evaluate(() => { S && (S.done = true); showHub('play'); }); await p.waitForTimeout(1500);
-      await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(400); await p.click('#rbApp [data-go="kit"]'); await p.waitForTimeout(800);
-      r.shopOld = await p.evaluate(() => ({ rbHidden: document.getElementById('rbApp').hidden, back: !document.getElementById('rbBack').hidden }));
-      await p.click('#rbBack'); await p.waitForTimeout(500); r.backOk = await p.evaluate(() => !document.getElementById('rbApp').hidden);
+      await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(400); await p.click('#rbApp [data-sub="setup"]'); await p.waitForTimeout(800);
+      r.shopSetup = await p.evaluate(() => ({ rbShown: !document.getElementById('rbApp').hidden, rows: document.querySelectorAll('#rbApp .rb-strow').length }));  // round 2: Setup & gear is inside the new Shop
+      await p.click('#rbApp [data-sub="darts"]'); await p.waitForTimeout(500); r.backOk = await p.evaluate(() => !document.getElementById('rbApp').hidden && !!document.getElementById('rbBuy') || !!document.querySelector('#rbApp .rb-th'));
       await p.evaluate(() => { const c = career(); c.next = null; if (!c.season) newSeason(c); persist(); TOPS_RB.render(); });
       await p.click('#rbTabs [data-t="season"]'); await p.waitForTimeout(500);
       r.season = await p.evaluate(() => ({ rows: document.querySelectorAll('#rbApp .rb-tr').length, me: !!document.querySelector('#rbApp .rb-tr.rb-me'), road: document.querySelectorAll('#rbApp .rb-road .rb-st').length }));
@@ -89,7 +89,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   if (out['0'].flag !== false || out['0'].app) fails.push('switch off but rebrand installed');
   if (!out['1'].shown || !out['1'].go) fails.push('switch on but the new Tonight did not show');
   if (out['1'].match && (!out['1'].match.S || !out['1'].match.rbHidden)) fails.push('Walk on did not start the real match / new screen stayed up');
-  if (out['1'].shopOld && (!out['1'].shopOld.rbHidden || !out['1'].shopOld.back)) fails.push('Shop tab did not fall back to the old screen with a way back');
+  if (!out['1'].shopSetup || !out['1'].shopSetup.rbShown || out['1'].shopSetup.rows !== 4) fails.push('Setup & gear did not open in the new Shop with its 4 rows');
   if (!out['1'].backOk) fails.push('New look button did not return');
   const L = out['1'].locker || {}; if (L.stats !== 5 || L.plus < 1 || L.kit !== 2 || !L.ring || !L.after || L.after.sc <= L.sc0 || L.after.bank !== L.bank0 - 1) fails.push('Locker: stats/spend/kit wrong');
   const SH = out['1'].shop || {}; if (!SH.visible || SH.thumbs !== SH.n || !/level 15/i.test(SH.razor || '') || !/sponsor/i.test(SH.littler || '') || !SH.buy || SH.buy.bank !== 595 || !SH.buy.owned || SH.buy.eq !== 'neutron' || !SH.buy.visible || !SH.back || SH.back.eq !== 'assassin' || SH.back.bank !== 595) fails.push('Shop: gates/buy/equip wrong');
