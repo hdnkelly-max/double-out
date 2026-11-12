@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,800;1,900&family=Inter:wght@500;600;700;800&display=swap">
+<style>
+:root{--bg:#121517;--card:#1a1e21;--line:#343a3e;--ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--gold:#e7b65a;--blue:#4a8fe0;--good:#7fd19a;--d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;--b:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--b);width:390px}
+.hd{height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line)}
+.wm{font:italic 800 22px var(--d);padding-right:12px;border-right:1px solid #4a5156}.nm{font-weight:600;font-size:15px}.lv{display:flex;flex-direction:column;gap:3px}.lv small{font-size:12px;color:var(--ink2)}.lv i{display:block;width:56px;height:3px;background:#3a4044;border-radius:2px}.lv i b{display:block;width:62%;height:100%;background:var(--blue);border-radius:2px}
+.bank{margin-left:auto;font-weight:700;font-size:17px}.mn{width:24px;height:2px;background:#fff;box-shadow:0 6px #fff,0 -6px #fff;margin:0 6px 0 14px}
+.wrap{padding:14px 16px 24px;display:flex;flex-direction:column;gap:10px}
+.hero{position:relative;height:300px;border-radius:14px;overflow:hidden;background:#000 url(loss_club.jpg) 72% 50%/cover}
+.hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,9,11,.92) 0,rgba(8,9,11,.55) 48%,rgba(8,9,11,0) 75%),linear-gradient(0deg,rgba(8,9,11,.9) 0,rgba(8,9,11,0) 45%)}
+.lt{position:absolute;left:18px;right:18px;bottom:18px;display:flex;flex-direction:column;gap:2px}
+.kick{font:700 12px var(--b);letter-spacing:.16em;text-transform:uppercase;color:#f0a3a7}
+.won{font:italic 900 74px/.82 var(--d);letter-spacing:.01em;text-transform:uppercase;text-shadow:0 0 28px rgba(215,35,45,.55),0 2px 0 rgba(0,0,0,.4)}
+.score{display:flex;align-items:center;gap:12px;margin-top:6px}
+.score b{font:800 46px/.9 var(--d);font-variant-numeric:tabular-nums;padding:2px 12px 0;background:var(--red);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.score span{font:600 15px/1.25 var(--b);color:var(--ink2)}.score span em{display:block;font-style:normal;color:var(--ink);font-weight:700;font-size:17px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.t{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;position:relative}
+.t small{font:700 11px var(--b);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.t b{font:800 32px/.95 var(--d);font-variant-numeric:tabular-nums}
+.t.best{border-color:#6b5a2c;background:linear-gradient(180deg,#2a2416,#1a1e21 70%)}.t.best i{display:inline-block;vertical-align:1px;margin-left:2px;font:800 10px var(--b);letter-spacing:.1em;color:#1a1408;background:var(--gold);padding:2px 6px;border-radius:9px;font-style:normal}
+.rw{background:linear-gradient(90deg,rgba(18,21,23,.55),rgba(18,21,23,.92) 55%),url(rw_cash.jpg) 0% 60%/cover;border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:1fr 1.25fr;gap:14px;align-items:center}
+.cash small,.xp small{font:700 11px var(--b);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.cash b{display:block;font:800 46px/.95 var(--d);background:linear-gradient(180deg,#ffe6a8,#e7b65a 55%,#b9852f);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px rgba(231,182,90,.35))}
+.xp{border-left:1px solid var(--line);padding-left:14px;display:flex;flex-direction:column;gap:6px}
+.xp b{font:800 28px/1 var(--d);color:var(--good)}
+.bar{display:flex;align-items:center;gap:8px}.bar span{font:800 13px var(--d);letter-spacing:.04em;padding:2px 6px;border-radius:6px;background:#2b3135}.bar span.nx{background:none;color:var(--ink3)}
+.bar i{flex:1;height:8px;border-radius:4px;background:#2b3135;overflow:hidden;position:relative}.bar i:before{content:"";position:absolute;inset:0 31% 0 0;background:var(--blue)}.bar i:after{content:"";position:absolute;top:0;bottom:0;left:52%;right:31%;background:var(--good);opacity:.85}
+.uc{position:relative;height:132px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000 center/cover}
+.uc:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,9,11,.94) 0,rgba(8,9,11,.7) 45%,rgba(8,9,11,.1) 80%)}
+.uc .x{position:absolute;left:16px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:4px;max-width:62%}
+.uc .x small{font:700 11px var(--b);letter-spacing:.14em;text-transform:uppercase}.uc .x b{font:italic 800 30px/.92 var(--d);text-transform:uppercase}.uc .x span{font:500 13px var(--b);color:var(--ink2)}
+.uc.ach small{color:var(--gold)}.uc.lvl{border-color:#6a2226}.uc.lvl small{color:#f0a3a7}.uc.store small{color:var(--gold)}
+.row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 14px;min-height:52px;font:600 15px var(--b)}.row em{font-style:normal;color:var(--good);font-weight:700}
+.go{margin-top:6px;height:64px;display:flex;align-items:center;justify-content:center;font:italic 900 34px var(--d);text-transform:uppercase;letter-spacing:.03em;color:#fff;background:linear-gradient(180deg,#ff3a40,#d7232d 45%,#8e0710);clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);filter:drop-shadow(0 0 18px rgba(227,16,27,.45))}
+</style></head><body>
+<div class="hd"><span class="wm">TOPS</span><span class="nm">Hayden</span><span class="lv"><small>Lv 15</small><i><b></b></i></span><span class="bank">$695</span><span class="mn"></span></div>
+<div class="wrap">
+ <div class="hero"><div class="lt"><span class="kick" style="color:var(--ink3)">Club singles · week 5 of 8</span><span class="won" style="text-shadow:none;color:#d6dadc">Lost</span><div class="score"><b style="background:#3a4044">1–2</b><span>vs<em>Big Mal</em></span></div></div></div>
+ <div class="tiles"><div class="t best"><small>Average <i>BEST</i></small><b>51.0</b></div><div class="t"><small>Checkout</small><b>38%</b></div><div class="t"><small>High out</small><b>121</b></div></div>
+ <div class="rw"><div class="cash"><small>Prize</small><b>+$55</b></div><div class="xp"><small>Career XP</small><b>+240 XP</b><div class="bar"><span>Lv 14</span><i></i><span class="nx">15</span></div></div></div>
+ <div class="uc lvl" style="background-image:url(rw_shirt.jpg)"><div class="x"><small>Level 15 unlocked</small><b>Racing green shirt</b><span>Wear it from your next match</span></div></div>
+ <div class="uc store" style="background-image:url(rw_darts.jpg)"><div class="x"><small>Store unlock</small><b>Razor Edge 24g</b><span>Now in the Shop · $120</span></div></div>
+ <div class="uc ach" style="background-image:url(rw_trophy.jpg);height:96px"><div class="x"><small>2 achievements</small><b style="font-size:24px">Ton-plus finish</b><span>+ First 180 at the Club</span></div></div>
+ <div class="row"><span>Season · now 2nd</span><em>Top two go up</em></div>
+ <div class="go">Continue</div>
+</div></body></html>
