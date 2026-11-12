@@ -552,6 +552,8 @@ setInterval(rulesBtn,700);
 body.card-fog #cardFog{opacity:1;animation:vapeDrift 3.2s ease-in-out infinite alternate}
 @keyframes vapeDrift{0%{background-position:44% 52%;transform:scale(1)}50%{background-position:56% 46%;transform:scale(1.06)}100%{background-position:48% 56%;transform:scale(.98)}}
 @media (prefers-reduced-motion:reduce){body.card-fog #cardFog{animation:none}}
+/* ENG-5: off = not painted (its 10px backdrop blur sat at opacity 0 all match); on = visible at once; off = hidden after the .4s fade, so the fade looks the same */
+#cardFog{visibility:hidden;transition:opacity .4s,visibility 0s .4s}body.card-fog #cardFog{visibility:visible;transition:opacity .4s,visibility 0s}
 </style>
 <style>.opt .n img.supimg{width:100%;height:auto;max-height:64px;object-fit:contain;transform:scale(1.25);filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))}.opt .n img.gearimg{width:100%;height:auto;max-height:72px;object-fit:contain}</style>
 <script>
