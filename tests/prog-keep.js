@@ -1,7 +1,7 @@
 // R0 #19: shader programs are linked once per session, and a failed link never leaves a surface undrawn.
 // node tests/prog-keep.js [dir] -> PASS / FAIL. iPhone UA, real rendering (links happen as on a phone). Path: hub 10 s -> fixture at aim ->
 // match end -> hub 10 s -> next fixture at aim. Then, in match 2, every visible bump-mapped standard material (the board face uses a bump map)
-// gets a define that makes its next link FAIL (gl LINK_STATUS forced false for shaders carrying it), as Hayden's iPhone did at 263 s.
+// gets a define carrying an #error line, so its next link really FAILS (and LINK_STATUS is forced false too), as Hayden's iPhone did at 263 s.
 // Checks: 1 re-links of programs linked before: 'after match 1' <= 2 and 'match 2' <= 2 (3.00: dozens, from teardown/showHub/figure rebuilds)
 //         2 after the forced failure, every visible mesh in the main scene draws with a program that linked (a fallback, never nothing),
 //           and the failure is logged ('TOPS #19 shader link failed')
@@ -39,7 +39,7 @@ await finish();await toHub();await phase('after match 1, in hub 10 s',10000);
 ok=false;for(let i=0;i<40&&!ok;i++){ok=await click('#c3Go');if(!ok){await click('#tcPLater');await p.waitForTimeout(300);}}
 const a2=await toAim();await phase('match 2 at aim, 8 s ('+a2+')',8000);
 // forced link failure on the bump-mapped standard materials (the board face) while match 2 is on
-const forced=await ev(()=>{const R=V._qa.renderer;let n=0;const sc=[];R.__lastScenes=sc;const seen=new Set();const walk=o=>{if(!o.visible)return;const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(m&&m.isMeshStandardMaterial&&m.bumpMap&&!seen.has(m)){seen.add(m);m.defines=Object.assign({},m.defines,{TOPS_FORCE_FAIL:1});m.needsUpdate=true;n++;}});o.children.forEach(walk);};
+const forced=await ev(()=>{const R=V._qa.renderer;let n=0;const sc=[];R.__lastScenes=sc;const seen=new Set();const walk=o=>{if(!o.visible)return;const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{if(m&&m.isMeshStandardMaterial&&m.bumpMap&&!seen.has(m)){seen.add(m);m.defines=Object.assign({},m.defines,{TOPS_FORCE_FAIL:'1\n#error TOPS forced link failure'});/* a real compile failure, so the GPU draws nothing with it, as on Hayden's phone */m.needsUpdate=true;n++;}});o.children.forEach(walk);};
  V._qa.gfx&&0;let root=null;try{root=V._qa.opp()&&V._qa.opp().parent;while(root&&root.parent)root=root.parent;}catch(e){}if(root)walk(root);return {n,root:!!root};});
 await p.waitForTimeout(6000);
 /* visible proof: the board area after the forced failure (CDP shot; page.screenshot waits on blocked web fonts) */
