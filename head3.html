@@ -21,10 +21,11 @@ P.addEventListener=function(ty,fn,o){try{const g=tg(this);if(g&&fn&&!(o&&o.once)
 P.removeEventListener=function(ty,fn,o){try{const m=K.get(this);const s=m&&m.get(fn);if(s){s.delete(ty+'|'+cap(o));if(!s.size)m.delete(fn);}}catch(e){}return R.apply(this,arguments);};
 const HOT={touchstart:1,touchmove:1,pointermove:1,pointerdown:1,wheel:1};
 /* #20 (22:40): frame split, only when the 'split' test switch is on at launch (?q20=split, or the hub Menu toggle, applied from the next launch).
-   Times every timer callback and event handler (our JS outside rAF) into TOPS_AJS.ms; the recorder subtracts it from the time between frames. */
+   Times every timer callback and event handler (our JS outside rAF) into TOPS_AJS.ms; the recorder subtracts it from the time between frames.
+   Blind spots: onX property handlers, promise/fetch callbacks, MessageChannel; three.min.js loads before this but registers no listeners or timers at load. */
 let SPLIT=false;try{const sw=(new URLSearchParams(location.search).get('q20')||sessionStorage.getItem('tops_q20')||'')+','+(localStorage.getItem('tops_q20_app')||'');SPLIT=sw.split(',').indexOf('split')>=0;}catch(e){}
 if(SPLIT){const AJ=window.TOPS_AJS={ms:0,n:0};let depth=0;const now=()=>performance.now();
- const timed=f=>function(){if(depth){return f.apply(this,arguments);}depth=1;const a=now();try{return f.apply(this,arguments);}finally{depth=0;AJ.ms+=now()-a;AJ.n++;}};
+ const timed=f=>function(){if(depth||window.__TOPS_INF){return f.apply(this,arguments);}/* not inside the game frame: that time is already in the recorder's frame time (ChatGPT P1: no double count) */depth=1;const a=now();try{return f.apply(this,arguments);}finally{depth=0;AJ.ms+=now()-a;AJ.n++;}};
  const st=window.setTimeout,si=window.setInterval;
  window.setTimeout=function(f){if(typeof f==='function'){const a=Array.prototype.slice.call(arguments);a[0]=timed(f);return st.apply(this,a);}return st.apply(this,arguments);};
  window.setInterval=function(f){if(typeof f==='function'){const a=Array.prototype.slice.call(arguments);a[0]=timed(f);return si.apply(this,a);}return si.apply(this,arguments);};
