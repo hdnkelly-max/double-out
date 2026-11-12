@@ -221,3 +221,9 @@ html.rb-on #result{--acc:#d7232d;--panel:#1a1e21;--line:#343a3e;--chalk:#f3f4f2;
 html.rb-on #result .big{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important;box-shadow:none!important}
 html.rb-on #result .ghost{border-color:#6b7276!important;color:#f3f4f2!important;background:transparent!important}
 html.rb-on #result .res-score,html.rb-on #result .res-stats,html.rb-on #result .res-earn>div{background:#1a1e21!important;border:1px solid #343a3e!important;border-radius:12px!important}
+/* batch 1 r3 (ChatGPT design 7.8): stronger active-player read, quieter inactive side; 360 secondary text a touch larger (same boxes) */
+html.rb-on body.lk-phone.lk-match .pl.on .nm::after{height:4px;width:56px;border-radius:2px}
+html.rb-on body.lk-phone.lk-match .pl:not(.on) .nm{color:#a0a6a3}
+html.rb-on body.lk-phone.lk-match .pl:not(.on) .sc{color:#8d9497}
+@media (max-width:370px){html.rb-on body.lk-phone.lk-match .visit .tot{font-size:12px!important;color:#c3c8c5!important}html.rb-on body.lk-phone.lk-match .pl .av small,html.rb-on body.lk-phone.lk-match .pl .nm small{color:#a0a6a3!important}}
+html.rb-on body.lk-phone.lk-match .pl.on{background:linear-gradient(180deg,rgba(215,35,45,.22),rgba(215,35,45,.04) 70%)!important;box-shadow:inset 0 3px 0 #d7232d}
