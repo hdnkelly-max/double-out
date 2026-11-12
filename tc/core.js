@@ -252,6 +252,7 @@
     const _bm = beginMatch;
     window.beginMatch = beginMatch = function (opts) {
       walkAbort();   // #17: a walk-on left from the last match ends here
+      document.querySelectorAll('.tc-sheet.tc-welcome').forEach(e => e.remove());   // EXP-6: never over a match; it stays pending (welPend) for the next hub
       const r = _bm.apply(this, arguments);
       try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) { const s0 = S; setTimeout(() => { try { if (S === s0 && S && !S.done) walkOnStart(opts); } catch (e) {} }, d); } else walkOnStart(opts);   /* #17: the delayed walk-on only starts if the same match is still running */ } catch (e) { console.warn('tc begin', e); }
       return r;
@@ -366,7 +367,12 @@
     const t = st(); t.stats[stat] = Math.max(t.stats[stat] || 0, n);
     D.TIERS.filter(x => x.stat === stat).forEach(T => { const have = t.tiers[T.id] || 0; for (let lv = have; lv < 3; lv++) { if (t.stats[stat] >= T.lv[lv]) { t.tiers[T.id] = lv + 1; award('tier:' + T.id + ':' + lv, 'tier', `Welcome · ${T.n} ${D.TIER_NAMES[lv].toLowerCase()}`); } else break; } });
   }
+  // EXP-6: the welcome must never sit over a match. It waits (kept in the tc save) until the hub, and a match start closes it.
+  function matchOn() { return typeof S !== 'undefined' && !!S && !S.done; }
+  function welcomeDone() { const t = st(); if (t && t.welPend) { delete t.welPend; keep(); } }
   function welcome(info) {
+    { const t = st(); if (t) { t.welPend = info; keep(); } }
+    if (matchOn() || document.querySelector('.tc-sheet.tc-welcome')) return;   // a match is on (or it's already open): show it at the next hub
     const peek = CARD.littler;
     const el = sheet('tc-welcome', `<div class="tc-wel"><div class="tc-wel-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><div class="tc-wel-peek"></div></div>
       <div class="tcpk__kicker">New in TOPS</div><h2 class="tc-h">Cards are here</h2>
@@ -376,14 +382,15 @@
       <button type="button" class="tcpk__btn tcpk__btn--go" id="tcWelGo">Open ${info.picks} picks</button><button type="button" class="tcpk__later" id="tcWelLater">Later</button></div>`);
     const pk = TCC.card(peek); pk.classList.add('is-flipped'); el.querySelector('.tc-wel-peek').appendChild(pk);
     save.tcIntro = save.tcIntro || Date.now(); keep(); // #13: the welcome carries the explainer, so no second sheet before the first pick
-    el.querySelector('#tcWelGo').onclick = () => { el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
-    el.querySelector('#tcWelLater').onclick = () => { el.remove(); hubTiles(); };
+    el.querySelector('#tcWelGo').onclick = () => { welcomeDone(); el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
+    el.querySelector('#tcWelLater').onclick = () => { welcomeDone(); el.remove(); hubTiles(); };
+    el.querySelector('.tc-x').addEventListener('click', welcomeDone);
   }
   // tab switches re-run the hub renderers; keep our rows in place
   if (typeof hubTab === 'function') { const _ht = hubTab; window.hubTab = hubTab = function () { const r = _ht.apply(this, arguments); try { hubTiles(); } catch (e) {} return r; }; }
   if (typeof showHub === 'function') {
     const _sh = showHub;
-    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); { const t0 = st(); if (bf && t0) { t0.welPend = bf; keep(); } if (t0 && t0.welPend) setTimeout(() => { try { const t = st(); if (t && t.welPend && !matchOn() && !document.querySelector('.tc-sheet.tc-welcome')) welcome(t.welPend); } catch (e) { console.warn('tc welcome', e); } }, 700); }   /* EXP-6: read the pending welcome when the timer fires, so a dismissed one never comes back from an older timer */ } catch (e) { console.warn('tc hub', e); } return r; };
   }
   if (typeof showTitle === 'function') {   // #17: quitting to the title ends a walk-on too
     const _st = showTitle;
