@@ -621,16 +621,30 @@ const _ca=cardAnnounce;cardAnnounce=function(m,mine){const skip=!mine&&m&&m.from
 <script>
 // v0.96: real crowd bed (Lee's recordings). Looping crossfade across four takes. Hushes while you aim, near-silent on big moments, swells on the cool stuff
 (function(){
-const CB={sets:{crowd:[],pub:[]},bufs:[],loading:false,gain:null,src:null,next:0,idx:0,boost:0,boostUntil:0,last:{}};
-function get(set,name){return fetch('assets/voice/'+name+'.mp3').then(r=>r.ok?r.arrayBuffer():null).then(b=>b?AU.ctx.decodeAudioData(b):null).then(buf=>{if(buf)CB.sets[set].push(buf);}).catch(()=>{});}
-function load(){if(CB.loading||!AU.ctx)return;CB.loading=true;[1,2,3,4].forEach(i=>get('crowd','crowd_'+i));[1,2,3,4,5].forEach(i=>get('pub','pub_'+i));
- fetch('assets/voice/lee_180.mp3').then(r=>r.ok?r.arrayBuffer():null).then(b=>b?AU.ctx.decodeAudioData(b):null).then(buf=>{if(buf)window.__lee180=buf;}).catch(()=>{});}
+const CB={sets:{crowd:[],pub:[]},got:{},gen:{},bufs:[],loading:false,gain:null,src:null,next:0,idx:0,boost:0,boostUntil:0,last:{}};
+/* ENG-AMB (Lee 07:27): the beds load in the hub (decoded with the game's context, or an offline one before it exists: an AudioBuffer plays in
+   any context), the venue's own set first, and a venue never borrows the other set while its own is loading. Before: they loaded only when the
+   walk-on made the audio context, the smaller stadium files decoded first, and the walk-on at the Pub/Club played a stadium take to its end. */
+function dec(b){if(AU.ctx)return AU.ctx.decodeAudioData(b);const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!O)return Promise.reject(0);return new O(2,1,48000).decodeAudioData(b);}
+function get(set,name,gen){return fetch('assets/voice/'+name+'.mp3').then(r=>r.ok?r.arrayBuffer():null).then(b=>b?dec(b.slice(0)).catch(()=>AU.ctx?AU.ctx.decodeAudioData(b):null):null).then(buf=>{if(buf&&CB.gen[set]===gen)CB.sets[set].push(buf);}).catch(()=>{});}
+/* only the set the venue needs is decoded and held (ChatGPT P1: the nine takes are ~80 MB of PCM on a phone; live held all nine all session) */
+function loadSet(k){if(!k||CB.got[k])return;if(!AU.ctx&&!(window.OfflineAudioContext||window.webkitOfflineAudioContext))return;CB.got[k]=1;const ns=k==='pub'?[1,2,3,4,5]:[1,2,3,4];const gen=CB.gen[k]=(CB.gen[k]||0)+1;
+ ns.forEach(i=>get(k,k+'_'+i,gen));
+ if(!CB.c180){CB.c180=1;fetch('assets/voice/lee_180.mp3').then(r=>r.ok?r.arrayBuffer():null).then(b=>b?dec(b):null).then(buf=>{if(buf)window.__lee180=buf;}).catch(()=>{});}}
+function dropSet(k){/* the other venue's takes: let go of them (a take still fading holds its own buffer until it stops) */CB.sets[k]=[];CB.got[k]=0;CB.gen[k]=(CB.gen[k]||0)+1;}
+function useSet(w){if(w!==CB.want){const old=CB.want;CB.want=w;if(old)dropSet(old);}loadSet(w);}
+function load(){useSet(wantSet());}
+function homeSet(){try{const c=career();const t=c&&TIERS[c.tier];return (t&&(t.crowd||0)<.35)?'pub':'crowd';}catch(e){return 'pub';}}
 // Lee's pub recordings for the Pub and Club, the big crowd for Regional and up (online follows the venue the host picked)
 function venue(){return (S&&((S.tier&&S.tier.crowd)||0)<.35)?'pub':'crowd';}
-function pick(){const want=venue();const b=CB.sets[want].length?CB.sets[want]:CB.sets[want==='pub'?'crowd':'pub'];if(CB.bufs!==b){CB.bufs=b;CB.idx=Math.floor(Math.random()*Math.max(1,b.length));}return b;}
-function ensure(){if(!AU.ctx||!AU.master)return false;load();if(!CB.gain){CB.gain=AU.ctx.createGain();CB.gain.gain.value=0;CB.gain.connect(AU.master);}return pick().length>0;}
+function wantSet(){return (typeof S!=='undefined'&&S&&!S.done)?venue():homeSet();}
+function pick(){const want=wantSet();const b=CB.sets[want];/* never the other venue's set */if(CB.bufs!==b){CB.bufs=b;CB.idx=Math.floor(Math.random()*Math.max(1,b.length));}
+ /* a take from the other set still playing (online venue change, or a stale take): fade it out now and start this venue's at once */if(CB.cur&&CB.cur.set!==want){const c=AU.ctx,o=CB.cur,t=c.currentTime;CB.cur=null;try{const G=o.g.gain;if(G.cancelAndHoldAtTime)G.cancelAndHoldAtTime(t);else{const v=G.value;G.cancelScheduledValues(t);G.setValueAtTime(v,t);}G.linearRampToValueAtTime(0,t+.3);o.s.stop(t+.35);}catch(e){}CB.next=0;}
+ useSet(want);
+ return b;}
+function ensure(){if(!AU.ctx||!AU.master)return false;if(!CB.gain){CB.gain=AU.ctx.createGain();CB.gain.gain.value=0;CB.gain.connect(AU.master);}return pick().length>0;}
 function playNext(){const c=AU.ctx;const buf=CB.bufs[CB.idx%CB.bufs.length];CB.idx=(CB.idx+1+Math.floor(Math.random()*2))%Math.max(1,CB.bufs.length);
- const s=c.createBufferSource(),g=c.createGain();s.buffer=buf;s.connect(g);g.connect(CB.gain);const t=c.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+1.2);const dur=buf.duration;g.gain.setValueAtTime(1,t+dur-1.4);g.gain.linearRampToValueAtTime(0,t+dur-.1);s.start(t);s.stop(t+dur);CB.next=t+dur-1.4;}
+ const s=c.createBufferSource(),g=c.createGain();s.buffer=buf;s.connect(g);g.connect(CB.gain);const t=c.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+1.2);const dur=buf.duration;g.gain.setValueAtTime(1,t+dur-1.4);g.gain.linearRampToValueAtTime(0,t+dur-.1);s.start(t);s.stop(t+dur);CB.next=t+dur-1.4;CB.cur={s,g,set:venue()};s.onended=()=>{if(CB.cur&&CB.cur.s===s)CB.cur=null;};}
 function inMatch(){return !!(S&&!S.done&&!S.practice&&S.tier);}
 function target(){if(!inMatch())return 0;const isPub=venue()==='pub';const base=isPub?.42:.16+.34*Math.min(1,S.tier.crowd||.2);let k=1;const me=S.p[S.cur];
  // hush while someone is lining up, near silence for the big ones
@@ -650,6 +664,11 @@ setInterval(()=>{try{if(!AU.on||!AU.ctx){if(CB.gain)CB.gain.gain.setTargetAtTime
 // Lee's 180 call replaces the synthetic one
 try{const _cv=callVisit;callVisit=function(total,ctx){if(total===180&&!ctx&&window.__lee180&&AU.on&&AU.ctx){try{const s=AU.ctx.createBufferSource(),g=AU.ctx.createGain();s.buffer=window.__lee180;g.gain.value=1;s.connect(g);g.connect(AU.master);s.start();return;}catch(e){}}return _cv.apply(this,arguments);};}catch(e){}
 // the synthetic crowd hum steps back now there's a real crowd
-const _cs=crowdSet;crowdSet=function(level){return _cs.call(this,CB.bufs.length?level*.35:level);};
+const _cs=crowdSet;crowdSet=function(level){CB.lvl=level;CB.f=CB.sets[venue()].length?.35:1;return _cs.call(this,level*CB.f);};
+/* the hum was set once at match start: if the venue's takes landed after that it stayed at full level all match. Re-applied when they land. */
+setInterval(()=>{try{if(CB.lvl==null||!S||S.done)return;const f=CB.sets[venue()].length?.35:1;if(f!==CB.f){CB.f=f;_cs.call(null,CB.lvl*f);}}catch(e){}},500);
+/* load the beds in the hub (after it has drawn), not at the walk-on */
+{const _sh=showHub;showHub=function(){const r=_sh.apply(this,arguments);setTimeout(()=>{try{load();}catch(e){}},1200);return r;};}
+window.TOPS_bed=()=>({want:wantSet(),crowd:CB.sets.crowd.length,pub:CB.sets.pub.length,mb:+(['crowd','pub'].reduce((a,k)=>a+CB.sets[k].reduce((x,b)=>x+b.length*b.numberOfChannels*4,0),0)/1048576).toFixed(1),cur:CB.cur?CB.cur.set:null});
 })();
 </script>
