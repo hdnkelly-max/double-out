@@ -6717,4 +6717,8 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(show,1500);})
 @media (min-width:700px) and (max-height:900px){.c3x-pl.rwhero{display:none}}
 /* rule 22 (ChatGPT 04:31): the menu rows get a 48px tap target (labels, next-unlock and Respec sizes are changed where they're defined) */
 #hubPop button{min-height:48px}
+/* #35 (Overseer 02:28, Delivery QA): match header and scoreboard labels at the 11 px floor on phones (were 9-10 px); sizes only, no box changes */
+body.lk-phone.lk-match .pl .av small,body.lk-phone.lk-match .pl .lg::before{font-size:11px!important;letter-spacing:.04em!important}
+body.lk-phone.lk-match .event i{font-size:11px!important;letter-spacing:.06em!important}
+body.lk-phone.lk-match #sbMid small{font-size:11px!important;letter-spacing:.1em!important}
 </style>
