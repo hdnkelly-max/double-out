@@ -73,6 +73,26 @@ const {chromium}=require('playwright');const path=require('path');
  // ring cap, dropped count, size cap, fetch failures without query strings
  const cap=await p.evaluate(async()=>{for(let i=0;i<400;i++)TOPS_LOG.log('x','y'.repeat(150));try{await fetch('http://127.0.0.1:9/nowhere?token=secret');}catch(e){}const r=TOPS_LOG.row('error');return {n:TOPS_LOG.events().length,dropped:TOPS_LOG.dropped,bytes:r.bytes,q:JSON.stringify(TOPS_LOG.events()).includes('token=secret'),nf:TOPS_LOG.events().some(e=>e.k==='net_fail')};});
  if(cap.n!==300)f.push('ring not capped at 300: '+cap.n);if(cap.dropped<100)f.push('dropped count missing: '+cap.dropped);if(cap.bytes>48*1024)f.push('row over 48 KiB: '+cap.bytes);if(cap.q)f.push('a query string was logged');if(!cap.nf)f.push('fetch failure not logged');
+ // ChatGPT r4 P0-1/P0-2/P0-3 and P1-4: the send-time guard, rapid match transition and a foreign-key 409
+ const r4=await p.evaluate(async()=>{const out={};const sent=[];let mode='ok';
+  NET.sb.from=t=>({insert:(r)=>{sent.push({id:r.upload_id,reason:r.reason,t:Date.now()});if(mode==='fk')return Promise.resolve({error:{code:'23503',message:'insert or update on table violates foreign key constraint'},status:409});return Promise.resolve({error:null,status:201});}});
+  localStorage.setItem('tops_logq','[]');
+  // rapid transition: match A ends, B starts at once -> A's row is built before B and nothing is sent while B is in play
+  beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:9});await new Promise(r=>setTimeout(r,600));const midA=TOPS_LOG.events().filter(e=>e.k==='match_start').pop();
+  S.won=true;endMatch();beginMatch({mode:'career',tier:1,p0:'P',oppName:'B',oppAvg:60,legs:9});const q1=TOPS_LOG.queue().filter(r=>r.reason==='match_end');
+  out.builtBeforeB=q1.length===1&&!q1[0].events.some(e=>e.k==='match_start'&&e.d&&e.d.opp==='B');
+  await new Promise(r=>setTimeout(r,3500));out.sentDuringB=sent.length;if(S.bull)S.bull=null;S.cur=0;/* B's opening who-throws-first card answered, as a player's tap */
+  // quiet window closes: a leg ends while the player is already pulling -> nothing; pull ends but no break -> nothing; next real leg end -> sent
+  S.busy=false;S.pulling=true;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,6500));out.sentWhilePulling=sent.length;/* the window has 15 s; the pull is held through the start of it */
+  S.pulling=false;await new Promise(r=>setTimeout(r,1000));out.sentAfterPullNoBreak=sent.length;
+  S.busy=false;if(S.bull)S.bull=null;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,6000));out.sentAtBreak=sent.length;out.sentReason=sent.map(x=>x.reason).join(',');
+  // foreign-key 409: not counted as stored; the row stays queued
+  S.won=true;endMatch();mode='fk';await new Promise(r=>setTimeout(r,4000));
+  out.fkQueued=TOPS_LOG.queue().length;out.fkTried=sent.length;mode='ok';return out;});
+ if(!r4.builtBeforeB)f.push('match-end row not built before the next match: '+JSON.stringify(r4));
+ if(r4.sentDuringB||r4.sentWhilePulling||r4.sentAfterPullNoBreak)f.push('sent during play: '+JSON.stringify(r4));
+ if(r4.sentAtBreak<1)f.push('held rows not sent at the next real leg break: '+JSON.stringify(r4));
+ if(r4.fkQueued<1)f.push('a foreign-key 409 was treated as stored: '+JSON.stringify(r4));
  // ChatGPT r3 P0-1: storage writes fail while reads still work (quota): a new incident must live in memory, be read back and upload
  const memc=await p.evaluate(async()=>{const old=[{upload_id:'disk-old',reason:'error',rev:1,events:[]}];localStorage.setItem('tops_logq',JSON.stringify(old));
   const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k==='tops_logq')throw new DOMException('full','QuotaExceededError');return set.call(this,k,v);};

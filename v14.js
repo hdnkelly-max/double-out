@@ -41,7 +41,7 @@ let lastScreen=null;if(typeof showScreen==='function'){const ss=showScreen;showS
 let inMatch=false,matchN=0;
 function leftMatch(how,extra){if(!inMatch)return;inMatch=false;try{if(atBreak.length)idle(flushBreak);}catch(e){}/* anything held during the match goes now */const m=MID;log('match_end',Object.assign({how},extra||{}));
  setTimeout(()=>{if(MID===m&&!inMatch){res('after');}},1500);/* only if no new match has started meanwhile */upload('match_end');}
-if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){if(inMatch)leftMatch('replaced');MID=rid().slice(0,8);matchN++;
+if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){try{if(pendBuild)pendBuild();}catch(e){}if(inMatch)leftMatch('replaced');MID=rid().slice(0,8);matchN++;
  log('match_try',{opp:o&&o.oppName,legs:o&&o.legs,n:matchN});/* logged before, so a start that throws still shows */
  let r;try{r=bm.apply(this,arguments);}catch(err){log('error',errInfo('beginMatch failed: '+(err&&err.message),null,null,err));incident(true);throw err;}
  try{const c=typeof career==='function'?career():null;inMatch=true;visit=null;
@@ -77,7 +77,7 @@ function row(reason){let ev=events();const head0={made:Date.now(),upload_id:rid(
 const OWN='tops_logq_owner';
 let mem=null,memOnly=false;/* ChatGPT r3 P0-1: once a write fails, the in-memory queue is the truth (the disk copy is stale) until a full write succeeds */
 function qGet(){if(memOnly&&mem)return mem.slice();try{const v=localStorage.getItem(QK);return v?JSON.parse(v):(mem||[]);}catch(e){return mem||[];}}
-let failN=0,lastFail=null,keepFail=0,incOverflow=0,lastOk=0;const submitted=new Set();
+let failN=0,lastFail=null,keepFail=0,incOverflow=0,ckOverflow=0,lastOk=0;const submitted=new Set();
 function qSet(q){mem=q.slice();try{localStorage.setItem(QK,JSON.stringify(q));memOnly=false;return true;}catch(e){keepFail++;memOnly=true;/* the full queue lives in memory for this page; disk keeps what fits (incidents first) for the next load */try{localStorage.setItem(QK,JSON.stringify(q.filter(r=>r.reason==='error')));}catch(x){}return 'memory';}}/* truthy 'memory' = kept for this page only; true = on disk; false = not kept (overflow) */
 let revN=0;
 // a row's payload is immutable once it has been sent: refreshing it then makes a NEW row (new id); an unsent row may be refreshed in place.
@@ -85,26 +85,29 @@ let revN=0;
 function keep(r){r.rev=++revN;const q=qGet();const same=q.findIndex(x=>x.upload_id===r.upload_id);
  if(same>=0){if(submitted.has(r.upload_id)||inflight.has(r.upload_id)){r.upload_id=rid();}else{q.splice(same,1,r);return qSet(q);}}
  if(r.reason==='error'){if(q.filter(x=>x.reason==='error').length>=INC_MAX){incOverflow++;return false;}q.push(r);}
- else{const k=q.findIndex(x=>x.reason!=='error');if(k>=0&&!inflight.has(q[k].upload_id))q.splice(k,1,r);else q.push(r);}return qSet(q);}
+ else{const k=q.findIndex(x=>x.reason!=='error'&&!inflight.has(x.upload_id));if(k>=0)q.splice(k,1,r);else if(q.filter(x=>x.reason!=='error').length<2)q.push(r);else{ckOverflow++;return false;}}/* ChatGPT r4 P1-5: at most 2 checkpoints (one may be in flight) */return qSet(q);}
 function release(id,rev){qSet(qGet().filter(r=>!(r.upload_id===id&&r.rev===rev)));/* only the exact version that was sent */}
 function diag(){let oldest=null;try{const q=qGet();for(const r of q)if(r.made&&(oldest==null||r.made<oldest))oldest=r.made;}catch(e){}
- return {persist:memOnly?'memory':'disk',fail_n:failN,last_fail:lastFail,keep_fail:keepFail,inc_overflow:incOverflow,last_ok_age_s:lastOk?Math.round((Date.now()-lastOk)/1000):null,oldest_pending_age_s:oldest?Math.round((Date.now()-oldest)/1000):null};}
+ return {persist:memOnly?'memory':'disk'/* storage state when this row was built */,ck_overflow:ckOverflow,fail_n:failN,last_fail:lastFail,keep_fail:keepFail,inc_overflow:incOverflow,last_ok_age_s:lastOk?Math.round((Date.now()-lastOk)/1000):null,oldest_pending_age_s:oldest?Math.round((Date.now()-oldest)/1000):null};}
 let KA=null;const signedIn=()=>typeof NET!=='undefined'&&NET.user&&NET.sb;
 function prepKA(){try{if(!signedIn()){KA=null;return;}const u=NET.sb.supabaseUrl,k=NET.sb.supabaseKey,who=NET.user.id;NET.sb.auth.getSession().then(({data})=>{const s=data&&data.session;KA=(u&&k&&s&&s.access_token&&(!s.user||s.user.id===who))?{u,k,t:s.access_token,who}:null;}).catch(()=>{KA=null;});}catch(e){KA=null;}}
 const inflight=new Set();
 const wire=r=>{const o=Object.assign({},r);delete o.rev;delete o.made;return o;};/* local bookkeeping fields aren't sent */
-function insert(r){if(!signedIn()||inflight.has(r.upload_id))return;inflight.add(r.upload_id);submitted.add(r.upload_id);const rev=r.rev;
+// ChatGPT r4 P0-1/2: the final check is where the request starts, not where it was scheduled: during a match only inside a quiet leg break
+let brkUntil=0;const held=new Set();function between(){try{return typeof S!=='undefined'&&!!S&&!!S.bull;}catch(e){return false;}}/* the who-throws-first card: shown from a leg's end until the player taps; quiet() alone is also true while aiming */
+function sendOk(){return !inMatch||(Date.now()<brkUntil&&quiet()&&between());}
+function insert(r){if(!signedIn()||inflight.has(r.upload_id))return;if(!sendOk()){if(!held.has(r.upload_id)){held.add(r.upload_id);atBreak.push(()=>{held.delete(r.upload_id);insert(r);});}return;}inflight.add(r.upload_id);submitted.add(r.upload_id);const rev=r.rev;
  try{NET.sb.from('tops_log').insert(wire(r)).then(({error,status})=>{inflight.delete(r.upload_id);if(!error||dupErr(error,status)){lastOk=Date.now();release(r.upload_id,rev);/* plain INSERT (the table grants INSERT only, Q&D 09:03); a duplicate upload_id means it's already stored */}else{failN++;lastFail=String(error.code||error.message||'?').slice(0,40);}}).catch(()=>{inflight.delete(r.upload_id);failN++;});}catch(e){inflight.delete(r.upload_id);}}
-function beacon(r){if(!KA||!signedIn()||KA.who!==NET.user.id)return;/* never with another account's token */submitted.add(r.upload_id);const rev=r.rev;try{fetch(KA.u+'/rest/v1/tops_log',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(wire(r))}).then(x=>{if(x.ok||x.status===409){lastOk=Date.now();release(r.upload_id,rev);}}).catch(()=>{});}catch(e){}}
+function beacon(r){if(!KA||!signedIn()||KA.who!==NET.user.id)return;/* never with another account's token */submitted.add(r.upload_id);const rev=r.rev;try{fetch(KA.u+'/rest/v1/tops_log',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(wire(r))}).then(x=>{if(x.ok){/* a keepalive 409 isn't proof it's stored: the row stays queued and the next insert() decides by its error code */lastOk=Date.now();release(r.upload_id,rev);}}).catch(()=>{});}catch(e){}}
 const idle=f=>{let done=false;const go=()=>{if(done)return;done=true;f();};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:2000});}catch(e){}setTimeout(go,2500);/* never starve */};
 // wait for the player's pull to finish, but at most 20 s
-function dupErr(e,st){return st===409||(e&&(e.code==='23505'||/duplicate key/i.test(e.message||'')));}
+function dupErr(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||'')));}/* ChatGPT r4 P0-3: a 409 can also be a foreign-key error (23503); only a unique violation means it's stored */
 // uploads never go during play (Q&D 08:23 / 11:00): outside a match at once (idle); during a match only at a real break (a leg end at a
 // quiet moment: no pull, not busy, no dart in the air) or at the match end. Evidence is already on disk, so waiting costs nothing.
 let atBreak=[];function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
 function whenNotPulling(f){try{if(!inMatch){idle(f);return;}atBreak.push(f);}catch(e){}}
 function flushBreak(){try{const fs=atBreak;atBreak=[];fs.forEach(f=>{try{f();}catch(e){}});}catch(e){}}
-function legBreak(m,tries){try{if(MID!==m||!inMatch)return;if(!quiet()){if((tries||0)<20)setTimeout(()=>legBreak(m,(tries||0)+1),250);return;}if(atBreak.length)idle(flushBreak);}catch(e){}}
+function legBreak(m,tries){try{if(MID!==m||!inMatch)return;if(!quiet()||!between()){if((tries||0)<60)setTimeout(()=>legBreak(m,(tries||0)+1),250);return;}/* look again for up to 15 s (the leg-end banner keeps the game busy first); else the next break or the match end */brkUntil=Date.now()+3000;/* the break window; insert() rechecks quiet() at send time */if(atBreak.length)flushBreak();}catch(e){}}
 if(typeof endLeg==='function'){const el0=endLeg;endLeg=function(){const r=el0.apply(this,arguments);try{if(inMatch&&atBreak.length){const m=MID;setTimeout(()=>legBreak(m,0),600);}}catch(e){}return r;};}
 // errors: a serious one (exception, rejection, GL loss) is kept at once; console.error and later errors only mark the log dirty, and one
 // coalesced snapshot is kept + sent per 60 s (10 a session), carrying everything since
@@ -116,18 +119,19 @@ function incident(serious){try{if(serious&&Date.now()-lastKeep>10000){lastKeep=D
  const wait=errUps?Math.max(0,60000-(Date.now()-lastErrUp)):0;errTimer=setTimeout(()=>idle(go),wait);
  if(!errUps){/* during the cooldown more errors just set dirty; one follow-up carries them */}}catch(e){}}
 setInterval(()=>{if(dirty&&!errTimer&&errUps<10){dirty=false;incident(false);}},15000);
-function upload(reason){try{whenNotPulling(()=>{const r=row(reason);keep(r);prepKA();insert(r);});}catch(e){}}/* match end: built and kept off the end-of-match path */
+// ChatGPT r4 P1-4: the match-end row is built off the end-of-match path (idle), but always before the next match starts (beginMatch runs it first)
+let pendBuild=null;function upload(reason){try{const b=()=>{if(pendBuild!==b)return;pendBuild=null;const r=row(reason);keep(r);prepKA();whenNotPulling(()=>insert(r));};pendBuild=b;idle(b);}catch(e){}}/* match end: built and kept off the end-of-match path */
 // hidden is the reliable exit on iOS (pagehide may never come): keep + send now with keepalive; pagehide repeats it (same upload_id)
 let hideRow=null;function onHide(why){try{log('vis',why);if(!hideRow){hideRow=row('pagehide');keep(hideRow);}beacon(hideRow);/* pagehide after hidden re-sends the identical row (same id, no duplicate) */}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide('hidden');else{hideRow=null;log('vis','visible');if(!inMatch)retry();}});
 addEventListener('pagehide',()=>onHide('pagehide'));
 // anything left in the queue (a failed upload, a killed page, a guest) goes up at the next signed-in foreground moment; a guest's queue is
 // only sent for the account that signs in on this page load (not attributed to a later, different account on a shared phone)
-function retry(){if(!signedIn())return;let own=null;try{own=localStorage.getItem(OWN);}catch(e){}
+function retry(){if(!signedIn()||inMatch)return;/* never during a match (incl. the 6 s startup retry) */let own=null;try{own=localStorage.getItem(OWN);}catch(e){}
  if(own&&own!==NET.user.id){qSet([]);try{localStorage.setItem(OWN,NET.user.id);}catch(e){}return;}/* a different account on this phone: the old queue isn't sent as theirs */
  if(!own){try{localStorage.setItem(OWN,NET.user.id);}catch(e){}}prepKA();for(const r of qGet())insert(r);}
 setInterval(()=>{if(!document.hidden&&!inMatch){prepKA();retry();if(atBreak.length)idle(flushBreak);}},15000);/* never during a match *//* also keeps the keepalive token fresh and clears it after sign-out */
 setTimeout(retry,6000);
-window.TOPS_LOG={log,events,res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
+window.TOPS_LOG={log,events,res,row,retry,incident,upload,queue:qGet,_keep:keep,get dropped(){return dropped;},get failures(){return {n:failN,last:lastFail};},_brk:()=>({atBreak:atBreak.length,held:held.size,brkIn:brkUntil-Date.now(),inMatch,quiet:quiet(),pend:!!pendBuild}),_err:()=>({errUps,timer:!!errTimer,dirty,lastErrUp,inflight:inflight.size,q:qGet().map(r=>r.reason)}),sid:SID,page:PAGE};
 })();
 </script>
