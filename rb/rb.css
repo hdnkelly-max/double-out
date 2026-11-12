@@ -216,3 +216,8 @@ html.rb-on body.lk-match .hr .settle.breathing{background:rgba(127,209,154,.14)}
 html.rb-on body.lk-match .intro{background:rgba(26,30,33,.97)!important;border-color:#343a3e!important}
 html.rb-on body.lk-match .lk-menu{border-radius:12px!important;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 html.rb-on body.lk-match .lk-menu .ghost{border-radius:8px!important;min-height:44px!important}
+/* batch 1 · post-match stats screen (#result): graphite panels, white type, red primary (colours/type only) */
+html.rb-on #result{--acc:#d7232d;--panel:#1a1e21;--line:#343a3e;--chalk:#f3f4f2;--fg:#f3f4f2;--muted:#a0a6a3}
+html.rb-on #result .big{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important;box-shadow:none!important}
+html.rb-on #result .ghost{border-color:#6b7276!important;color:#f3f4f2!important;background:transparent!important}
+html.rb-on #result .res-score,html.rb-on #result .res-stats,html.rb-on #result .res-earn>div{background:#1a1e21!important;border:1px solid #343a3e!important;border-radius:12px!important}
