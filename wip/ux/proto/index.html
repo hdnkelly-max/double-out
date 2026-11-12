@@ -77,7 +77,7 @@ button.panel{color:var(--ink);font:inherit}
 .cmp div{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
 .up{color:var(--good);font-weight:700}.neutral{color:var(--ink3)}
 .strip{display:flex;align-items:center;gap:6px}
-.strip .arr{width:32px;height:78px;flex:0 0 32px}
+.strip{gap:2px}.strip .arr{width:44px;height:78px;flex:0 0 44px;margin:0 -6px}
 .thumbs{display:flex;gap:8px;flex:1;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .thumbs::-webkit-scrollbar{display:none}
 .th{flex:0 0 calc((100% - 24px)/4);height:78px;scroll-snap-align:start;border:1px solid var(--line);border-radius:8px;background:var(--panel);display:grid;place-items:center;position:relative;cursor:pointer;padding:0;min-width:0}
@@ -95,7 +95,7 @@ button.panel{color:var(--ink);font:inherit}
 .packs{padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px}
 .packs .t{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.4px;flex:1}
 .packs .primary{width:112px;flex:0 0 112px;height:48px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
 .chips::-webkit-scrollbar{display:none}
 .chips button{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
 .chips button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:#596066}
@@ -121,7 +121,7 @@ button.panel{color:var(--ink);font:inherit}
 .r{min-height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;font-size:14px}
 .r img{height:22px}
 .r .sp{flex:1}
-.ghost{height:34px;padding:0 14px;border-radius:8px;border:1px solid #6b7276;background:none;color:var(--ink);font-weight:600;cursor:pointer}
+.ghost{height:44px;padding:0 14px;border-radius:8px;border:1px solid #6b7276;background:none;color:var(--ink);font-weight:600;cursor:pointer}
 .pin{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding-top:12px;margin-top:auto}
 /* toast */
 .toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
@@ -132,7 +132,7 @@ button.panel{color:var(--ink);font:inherit}
 @media (max-width:430px){.legend{display:none}}
 </style>
 
-<p class="note"><b>TOPS · career screens, round 2.</b> Clickable at real phone size (390 × 844). Every picture is rendered by the game itself: venue stills from our 3D rooms, players from our rigs, darts from the dart renderer. Tap the tabs, Walk on, Buy, Open and Continue.</p>
+<p class="note"><b>TOPS · career screens, round 4.</b> Clickable at real phone size (390 × 844). Every picture is rendered by the game itself: venue stills from our 3D rooms, players from our rigs, darts from the dart renderer. Tap the tabs, Walk on, Buy, Open and Continue.</p>
 <div class="legend" aria-label="Prototype states">
   <button type="button" data-state="first">First match</button>
   <button type="button" data-state="broke">Can't afford entry</button>
@@ -238,7 +238,7 @@ button.panel{color:var(--ink);font:inherit}
       <div class="panel r"><span class="sp">🂠 1 card pack</span><button class="ghost" type="button" id="rOpen">Open</button></div>
       <div class="panel r"><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
     </div>
-    <button class="meta" type="button" id="rMsgs">✉ 2 new · See all stats ›</button>
+    <button class="meta" type="button" id="rMsgs" style="color:var(--ink2)">✉ 2 new · See all stats ›</button>
     <div class="pin"><button class="primary" type="button" id="cont"><b>Continue</b></button></div>
   </section>
 
@@ -296,11 +296,12 @@ function renderShop(){
   let a='';
   if(owned)a=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
   else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${LV}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
+  else if(st.bank<d.price)a=`<div class="lockline"><b>${money(d.price)} · you have ${money(st.bank)}</b><span>${money(d.price-st.bank)} to go</span><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   $('#sAct').innerHTML=a;
   $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><img src="img/${x.img}" alt=""><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
   $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
-  const buy=$('#sBuy');if(buy)buy.onclick=()=>{st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
+  const buy=$('#sBuy');if(buy)buy.onclick=()=>{if(st.bank<d.price){renderShop();return;}st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
   const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
   const eq=$('#sEquip');if(eq)eq.onclick=()=>toast(d.n+' equipped.');
   $$('[data-go2]').forEach(b=>b.onclick=()=>show(b.dataset.go2));
