@@ -242,3 +242,16 @@ html.rb-on #roomChip{color:#f3f4f2!important;border-color:#343a3e!important}
 
 #rbApp{.rb-th small .rb-lkc{display:inline-flex;width:12px;height:12px;margin-right:4px;opacity:.8}.rb-th small .rb-lkc svg{width:12px;height:12px}.rb-th.rb-lk .rb-slot{opacity:.6}}
 html.rb-on #rbMenuSheet{}
+/* Delivery QA R2 (01:08) findings 1, 2, 4: text floor 11 px, taps 44 px, head-to-head label room at 360 */
+#rbApp{
+  & .rb-ring small{font-size:11px;letter-spacing:.8px;bottom:7px}
+  & .rb-road .rb-st span{font-size:11px;letter-spacing:-.2px}
+  & .rb-pos{gap:4px}& .rb-pos i{flex:0 0 18px;width:18px;height:18px;border-radius:50%;font-size:11px}& .rb-pos .rb-cut{height:18px}& #rbSeason .rb-tx small{white-space:nowrap}
+  & .rb-me{min-height:44px}
+  & .rb-seg{height:46px;flex:0 0 46px}
+  & .rb-fchips button{height:44px;border-radius:22px}
+  & .rb-vs2 .rb-nums{gap:8px}& .rb-vs2 .rb-nums span{flex:1 1 auto;min-width:0;text-align:center;line-height:1.25}
+}
+html.rb-on .st2o .g small{font-size:11px}
+html.rb-on .tc-chips button,html.rb-on .tcpk__skip{min-height:44px}
+html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
