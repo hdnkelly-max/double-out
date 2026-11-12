@@ -53,6 +53,13 @@ const _lf=landFrom;landFrom=function(lock,tp,dt){const l=_lf.apply(this,argument
  Q.push({ver:window.TOPS_BUILD||'',mode:S.online?'online':(S.practice?'practice':(isRun&&isRun()?'run':ui.mode)),tier:ui.tier|0,opp:(S.p[1]&&S.p[1].name)||null,leg:(function(){try{return legsPlayed();}catch(e){return null;}})(),dart:S.dart,score_before:S.p[0].score,
   aim_x:+S.aim.x.toFixed(1),aim_y:+S.aim.y.toFixed(1),lock_x:+lock.x.toFixed(1),lock_y:+lock.y.toFixed(1),land_x:+l.x.toFixed(1),land_y:+l.y.toFixed(1),dt_ms:+dt.toFixed(1),perfect:Math.abs(dt)<=tp.P,ring_mm:+ringR(dt,tp).toFixed(1),s0:+tp.s0.toFixed(2),sway_mm:+tp.A.toFixed(1),window_ms:+tp.P.toFixed(1),
   hr:Math.round(S.hr||0),nerves:+(effNerves()||0).toFixed(2),barrel:S.barrel&&S.barrel.id,sway_shape:sh&&sh.id,cards:(S.fx||[]).map(f=>f.id).filter(Boolean),hit:h.label,pts:h.v|0});
+ /* CAR-5c: the release record. Frame gaps (ms): gp = longest in the 500 ms before the press (the lock is taken at the press), gr = in the
+    500 ms before the release, gpl = during the pull. sx,sy = reticle offset from the aim as shown on screen at the press; gx,gy = the game's
+    own sway then (lag=1 when they differ, i.e. the lock used the shown frame after a stall); rx,ry = sway at the release. All board mm. */
+ try{const R=S.relInfo;S.relInfo=null;if(R&&window.TOPS_GAP){const tr=performance.now(),f1=v=>Math.round(v*10)/10;
+  const rel={gp:R.gp,gr:TOPS_GAP(tr-500,tr),gpl:TOPS_GAP(R.tp,tr),pm:Math.round(tr-R.tp),lag:R.lag,sx:f1(R.sx),sy:f1(R.sy),gx:f1(R.gx),gy:f1(R.gy),rx:f1(S.sway?S.sway.x:0),ry:f1(S.sway?S.sway.y:0)};
+  const row=Q[Q.length-1];if(window.TOPS_DARTS_REL)row.rel=rel;/* the tops_darts column needs sql/tops_darts_rel.sql first (Hayden's OK); until then the flight recorder carries it */
+  if(window.TOPS_LOG)TOPS_LOG.log('match_dart',{lg:row.leg,d:row.dart,sb:row.score_before,pf:row.perfect?1:0,gp:rel.gp,gr:rel.gr,gpl:rel.gpl,pm:rel.pm,lag:rel.lag,a:[row.aim_x,row.aim_y],k:[row.lock_x,row.lock_y],l:[row.land_x,row.land_y],s:[rel.sx,rel.sy],g:[rel.gx,rel.gy],r:[rel.rx,rel.ry]});/* x,y pairs: the recorder keeps at most 20 keys per event */}}catch(e){}
  clearTimeout(t);if(Q.length>=3)flush();else t=setTimeout(flush,8000);}}catch(e){}return l;};
 addEventListener('pagehide',flush);})();
 </script>
