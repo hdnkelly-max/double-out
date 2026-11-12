@@ -1,4 +1,4 @@
-# TOPS career UX brief (EXP-UX phase 1) · Experience · **v2.1** (Overseer review 14:55, Hayden's calls 14:53, ChatGPT round 1 applied), 12 Nov
+# TOPS career UX brief (EXP-UX phase 1) · Experience · **v2.2** (Overseer review 14:55, Hayden's calls 14:53, ChatGPT rounds 1–2 applied; ChatGPT 8.7 APPROVE for phase 1), 12 Nov
 
 **What this is:** our own thinking before any more visuals (Hayden 14:24: tier 2 went too flat, the Store doesn't sell, "Player" makes no sense for cards). No images in this phase. Built from three read-only audits of the live 2.09 code and screens (player journey, information per screen, naming), plus the live captures in `exp-home` `wip/style/live/`. Phase 2 (ChatGPT visuals and prototypes with imagery) starts only after Hayden agrees this.
 
@@ -77,7 +77,7 @@
   - A reason to want it: a line of character, who throws this style (generic: "Front-weighted, built for treble 20 grinders"), and a "NEW" or "Just unlocked" badge.
   - The next dart is teased **outside** the Shop: on Tonight ("Razor Edge · Lv 15 · 1 level to go") and on the result after a win ("$45 to go").
   - **Try before you buy** (Hayden 14:53): one free practice session per unlocked dart you don't own; no XP and no money from it.
-- **States:** *every dart in reach owned* (common at the start of a tier): the hero shows **the next locked dart** with "Unlocks at level 25 · $170" and the level bar; the button reads "Equip your Zen Jutsu" only if the owned best isn't equipped, otherwise no primary (the screen's job is the tease). *Every dart locked* (new career, level 1–3): the hero is your Club Brass (owned, equipped) and the strip shows Neutron "Lv 4 · $45" as the first thing to work for. *Everything owned* (late career): the hero becomes the loadout (dart + shafts & flights + shirt) with "Collection complete" and the sponsor set, no Buy.
+- **States:** three separate cases: *Locked hero* (every dart in reach already owned, common at the start of a tier): the hero shows **the next locked dart** with "Unlocks at level 25 · $170" and the level bar, **no buy or equip button**. *Owned but not equipped:* the hero is that owned dart with **Equip**. *Everything owned:* the loadout-led "Collection complete" state below. *Every dart locked* (new career, level 1–3): the hero is your Club Brass (owned, equipped) and the strip shows Neutron "Lv 4 · $45" as the first thing to work for. *Everything owned* (late career): the hero becomes the loadout (dart + shafts & flights + shirt) with "Collection complete" and the sponsor set, no Buy.
 - **Economy: when the next-want dart appears** (from the boards: F2 unlock levels, Asp/GA moved to 33/34; prices in `game4.js` BARRELS; Career to check later):
   | Level | Dart (price) | Where a typical player is (Career's F2 notes) |
   |---|---|---|
@@ -119,7 +119,7 @@ Each is the exact sequence, the button and where it returns. Promotion and seaso
 | Flow | Sequence | Primary button → returns to |
 |---|---|---|
 | **1. Ordinary fixture** | Tonight → Walk on → short walk-on (≤6 s, skippable) → match → **Result** (one screen) | **Continue → Tonight** with the next fixture up; badges (✉, Locker dot) show what waits. Nothing else opens on its own. |
-| **2. Milestone / promotion** | … match → **Result** (the win and rewards; "PROMOTED · Regional next" replaces the season line) → Continue → **Promotion screen** (new venue still, new tier name, the first sponsor offer if any: Accept / Not now) → **Tonight at the new tier** | Promotion screen's **Continue → Tonight**. Further sponsor offers and start-of-tier messages go to ✉. Level-ups and unlocks stay on the Result (no extra screen). |
+| **2. Milestone / promotion** | … match → **Result** (the win and rewards; "PROMOTED · Regional next" replaces the season line) → Continue → **Promotion screen** (new venue still, new tier name, the first sponsor offer if any: Accept / Not now) → **Tonight at the new tier** | Promotion screen: **one primary, Continue → Tonight**. A sponsor offer is a secondary card on it (Accept / Not now); Continue is active either way, and an unanswered offer waits in ✉ (also if the app closes before a choice). Further sponsor offers and start-of-tier messages go to ✉. Level-ups and unlocks stay on the Result (no extra screen). |
 | **3. Can't afford entry** | Tonight shows the blocker on the Walk on button before the tap ("Entry $40 · you have $25"); the secondary becomes the way out: **money match** or **pub comp**; if neither is open, **"Entry covered this time"** (the existing hardship entry) and Walk on works | Never a dead end: there is always one playable match from Tonight. |
 | **4. Season end (no promotion)** | last fixture → **Result** ("Season over · 4th") → Continue → **Season summary** (final table, what you earned, next season's stake: "Top two go up") → **Tonight, week 1** | Summary's **Start next season → Tonight**. A knockout exit uses the same summary with its own line ("Out in round 3"). Winning the Palace (end of career) is the title-card moment, out of scope here. |
 
@@ -139,7 +139,7 @@ Each is the exact sequence, the button and where it returns. Promotion and seaso
 - **Regional (Zen Jutsu $170):** both gates bind about equally for an average player; a losing player can't afford it from fixtures alone.
 - **DPNZ onward (Asp $270, GA $240, Power 9Five $420):** one or two wins pay for a dart; the **level** gate binds, so the tile says "Lv 33 · 2 levels to go".
 - **Broke player:** flow 3 (money match, pub comp, entry covered) means nobody is trapped; the Shop warns before a purchase that would leave less than the next entry ("You'll have $10 · next entry $20").
-- **For Career (not blocking this brief):** confirm with the sim or telemetry the bank a typical player actually has at levels 15, 25 and 33 including sponsor and goal money; if Razor is trivial or out of reach in practice, the price or level moves, not the UI.
+- **Build gate for Career (ChatGPT r2 P1-3, not a phase 1 blocker):** before build, run the full economy sim (sponsor, goals, prize money, running costs, spending) and track matches between unlocking a wanted dart and affording it. Meanwhile: confirm with the sim or telemetry the bank a typical player actually has at levels 15, 25 and 33 including sponsor and goal money; if Razor is trivial or out of reach in practice, the price or level moves, not the UI.
 
 ## (f) Navigation and naming
 | Today | Proposed | Why |
@@ -224,7 +224,8 @@ CUT from the hub: career average (Locker), W–L record, the full table, venue n
 │ │  vs yours: Scoring +4 Control +5 │ │  comparison to what you throw now
 │ └──────────────────────────────────┘ │
 │ ┌──────────────────────────────────┐ │
-│ │      BUY · $120   (or LOCKED Lv15)│ │  the ONE next action
+│ │      BUY · $120                  │ │  the ONE next action (locked dart: no button,
+│ │                                  │ │  a lock line + "Play to reach it →" link)
 │ └──────────────────────────────────┘ │
 │  ◀ ○ ○ ● ○ ○ ○ ▶   swipe the range   │  carousel dots (one dart at a time)
 │  ┌────┐┌────┐┌────┐┌────┐            │  small thumbnails row (owned ✓, locked 🔒)
@@ -280,7 +281,7 @@ BIG REWARD / PROMOTION
 │ [      CONTINUE → promotion    ] │  goes to the promotion screen (flow 2)
 └──────────────────────────────────┘
 ```
-Priority when space runs out (keep top to bottom): result → head-to-head → cash + XP → level-up/unlock → packs → season line → next-want → messages and stats links.
+**Open pack** on the Result opens the reveal as an overlay and returns to the same Result; it can be skipped, and Continue never forces it (unopened packs wait in the Locker). Priority when space runs out (keep top to bottom): result → head-to-head → cash + XP → level-up/unlock → packs → season line → next-want → messages and stats links.
 
 ## Decisions
 **Decided (Overseer 14:55):** all YES. Items 1–4 and 6–9 are presentation. Item 5 (one Goals system) and the single XP name also change how progression is counted, so **Career owns and validates those mechanics before build**.
