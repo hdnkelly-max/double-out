@@ -31,7 +31,8 @@
   }
   /* ---------- shell ---------- */
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
-  const OLD = { season: 'play', shop: 'kit', locker: 'player', practice: 'practice' };   // until each new screen lands, the tab opens the old one
+  const OLD = { shop: 'kit', locker: 'player', practice: 'practice' };
+  const BUILT = { tonight: 1, season: 1 };   // until each new screen lands, the tab opens the old one
   let tab = 'tonight';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
@@ -51,8 +52,8 @@
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
-    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (k === 'tonight') { tab = k; render(); } else toOld(k); });
-    let html = ''; try { html = tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
+    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
+    let html = ''; try { html = tab === 'season' ? season(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M);
   }
   /* ---------- Tonight (live data) ---------- */
@@ -76,6 +77,19 @@
       <button class="rb-card" type="button" id="rbNext" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-wide"><div class="rb-im" style="background-image:url(${IMG}dw_razor.jpg)"></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px"><span class="rb-t1" style="font-size:19px">Next unlock</span><span class="rb-sub" style="font-size:12.5px">Level ${M.v.lv + 1}</span><div class="rb-mlab"><span>Lv ${M.v.lv}</span><span>${M.v.xp} / ${M.need} XP</span></div>${meter(10, Math.round(M.pct * 10))}</div></button></div>`;
     return hero + h2h + cta + season + side;
   }
+  /* ---------- Season (live data) ---------- */
+  function season(M) {
+    const { c, t, sn, rows, yi } = M;
+    if (!sn) return `<div class="rb-card"><span class="rb-t2">No season running</span><span class="rb-sub">Your first league fixture starts it.</span></div>`;
+    const wk = Math.min(sn.week, sn.len), left = Math.max(0, sn.len - wk + (sn.done ? 0 : 1) - 1);
+    let head;
+    if (sn.ko) head = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(wk / sn.len, wk, 64, 'ROUND')}</div><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span class="rb-t1">${esc(t.n)}</span><span class="rb-sub">Round ${wk} of ${sn.len} · lose and you're out</span></div></div>`;
+    else { const gap = yi <= 1 ? 0 : rows[1].pts - rows[yi].pts; head = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(wk / sn.len, wk, 64, 'WEEK')}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="rb-t1">${yi >= 0 ? ord(yi + 1) + ' · ' : ''}${esc(t.n)}</span><span class="rb-sub">${yi <= 1 ? 'In the promotion places' : gap + ' pt' + (gap === 1 ? '' : 's') + ' off 2nd'} · ${left} week${left === 1 ? '' : 's'} left</span><div class="rb-chips">${chip(IC.up + ' Top two go up', 'g')}</div></div></div>`; }
+    const tbl = rows ? `<div class="rb-card">${sh('Table')}<div class="rb-sub" style="display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3)"><span>#</span><span>Player</span><span style="text-align:right">P</span><span style="text-align:right">Pts</span></div><div class="rb-tbl">${rows.map((r, i) => `${i === 2 ? '<div class="rb-cutl"><span>Top two go up</span></div>' : ''}<div class="rb-tr ${r.you ? 'rb-me' : ''}"><span class="rb-p">${i + 1}</span><span>${esc(r.you ? (save.name || 'You') : r.name)}</span><span class="rb-r rb-p">${r.p || 0}</span><span class="rb-r">${r.pts || 0}</span></div>`).join('')}</div></div>` : '';
+    const road = TIERS.map((x, i) => `${i ? '<span class="rb-ln"></span>' : ''}<div class="rb-st ${i < c.tier ? 'rb-done' : i === c.tier ? 'rb-now' : ''}"><i></i><span>${esc(x.n.replace(/ singles| league/i, ''))}</span></div>`).join('');
+    const next = sn.fixtures && sn.fixtures[sn.week] ? `<div class="rb-card" style="flex-direction:row;align-items:center;gap:12px"><span class="rb-face" style="background:#2b3135"></span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">After tonight · week ${sn.week + 1}</small><span class="rb-t2">vs ${esc(sn.fixtures[sn.week])}</span></div></div>` : '';
+    return head + tbl + `<div class="rb-card">${sh('Road to the Palace')}<div class="rb-road">${road}</div></div>` + next;
+  }
   function wire(M) {
     const go = $id('rbGo'); if (go) go.onclick = () => {
       const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
@@ -85,7 +99,7 @@
     const mm = () => { try { moneyMatch(); } catch (e) { console.warn('rb money', e); } };
     const m1 = $id('rbMoney'); if (m1) m1.onclick = mm;
     const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
-    const s = $id('rbSeason'); if (s) s.onclick = () => toOld('season');
+    const s = $id('rbSeason'); if (s) s.onclick = () => { tab = 'season'; render(); };
     const nx = $id('rbNext'); if (nx) nx.onclick = () => toOld('locker');
   }
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */

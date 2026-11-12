@@ -24,6 +24,9 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(800);
       r.shopOld = await p.evaluate(() => ({ rbHidden: document.getElementById('rbApp').hidden, back: !document.getElementById('rbBack').hidden }));
       await p.click('#rbBack'); await p.waitForTimeout(500); r.backOk = await p.evaluate(() => !document.getElementById('rbApp').hidden);
+      await p.click('#rbTabs [data-t="season"]'); await p.waitForTimeout(500);
+      r.season = await p.evaluate(() => ({ rows: document.querySelectorAll('#rbApp .rb-tr').length, me: !!document.querySelector('#rbApp .rb-tr.rb-me'), road: document.querySelectorAll('#rbApp .rb-road .rb-st').length }));
+      await p.screenshot({ path: require('path').join(dir, `tests/rb_season_${W}.png`) });
       r.hscroll = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     }
     r.errors = pe.slice(0, 3); out[mode] = r; await p.close();
@@ -33,6 +36,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   if (out['1'].match && (!out['1'].match.S || !out['1'].match.rbHidden)) fails.push('Walk on did not start the real match / new screen stayed up');
   if (out['1'].shopOld && (!out['1'].shopOld.rbHidden || !out['1'].shopOld.back)) fails.push('Shop tab did not fall back to the old screen with a way back');
   if (!out['1'].backOk) fails.push('New look button did not return');
+  if (!out['1'].season || out['1'].season.rows < 4 || !out['1'].season.me || out['1'].season.road !== 7) fails.push('Season: table/you/road missing');
   if (out['0'].errors.length || out['1'].errors.length) fails.push('page errors');
   console.log(JSON.stringify(out)); console.log(fails.length ? 'rebrand-shell FAIL: ' + fails.join('; ') : 'rebrand-shell PASS'); await b.close(); process.exit(fails.length ? 1 : 0);
 })();
