@@ -255,3 +255,5 @@ html.rb-on #rbMenuSheet{}
 html.rb-on .st2o .g small{font-size:11px}
 html.rb-on .tc-chips button,html.rb-on .tcpk__skip{min-height:44px}
 html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
+/* Q&D R1-1 / Director 05 #8: the old Match result stays hidden (and untappable) in the moment before the new Result covers it */
+html.rb-on.rb-preres #result{visibility:hidden!important}

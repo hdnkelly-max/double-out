@@ -1,5 +1,6 @@
 // Q&D / Delivery QA (23:08): "Shop tab shows Tonight again on a new career". Cause: the game's portrait refresh
 // (tops-avatars, every 2.5 s while character models load) re-runs showHub softly (__hubSoft) and the rebrand reopened Tonight.
+// #39: an open ☰ sheet stays open across soft refreshes and still closes on a tab tap.
 // Checks: a soft refresh keeps the tab (Shop with its scroll, Season, Locker · Stats); an old screen opened from the new look (Setup & gear) stays.
 // usage: node tests/rb-softhub.js [dir] [width] [height]
 const { chromium } = require('playwright'); const path = require('path');
@@ -18,6 +19,8 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   await tap('#rbTabs [data-t="shop"]'); await p.evaluate(() => { document.querySelector('#rbMain .rb-scr').scrollTop = 1e5; }); const y0 = (await st()).y; await soft(); await p.waitForTimeout(600); out.shop = await st(); out.shop.y0 = y0; if (out.shop.tab !== 'shop' || !out.shop.app) fail.push('shop'); if (Math.abs(out.shop.y - y0) > 2) fail.push('shop scroll ' + y0 + '→' + out.shop.y);
   await tap('#rbTabs [data-t="season"]'); await soft(); await p.waitForTimeout(600); out.season = await st(); if (out.season.tab !== 'season') fail.push('season');
   await tap('#rbTabs [data-t="locker"]'); await tap('#rbApp [data-lk="stats"]'); await soft(); await p.waitForTimeout(600); out.locker = await st(); if (out.locker.tab !== 'locker' || out.locker.lk !== 'stats') fail.push('locker');
+  await tap('#rbMenu'); const sh0 = await p.evaluate(() => !!document.getElementById('rbMenuSheet')); await soft(); await p.waitForTimeout(600); await soft(); await p.waitForTimeout(600); const sh1 = await p.evaluate(() => !!document.getElementById('rbMenuSheet'));
+  await tap('#rbTabs [data-t="season"]'); const sh2 = await p.evaluate(() => !!document.getElementById('rbMenuSheet')); out.sheet = { opened: sh0, afterSoft: sh1, afterTab: sh2 }; if (!sh0 || !sh1) fail.push('☰ sheet closed by a soft refresh'); if (sh2) fail.push('☰ sheet stayed open after a tab tap');
   await p.evaluate(() => { const b = [...document.querySelectorAll('#rbTabs [data-t="shop"]')][0]; b.click(); });
   await p.waitForTimeout(600); const old = await p.evaluate(() => { const b = [...document.querySelectorAll('#rbApp .rb-seg button')].find(x => /Setup/.test(x.textContent)); if (b) b.click(); return !!b; });
   await p.waitForTimeout(800); await soft(); await p.waitForTimeout(600); out.oldKit = { found: old, ...(await st()), cur: await p.evaluate(() => hubTab.cur) }; if (!old || out.oldKit.app) fail.push('old kit reopened by refresh');
