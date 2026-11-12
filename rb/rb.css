@@ -235,3 +235,7 @@ html.rb-on .tcpk__btn--go{background:#d7232d!important;color:#fff!important;bord
 
 /* pull-pad corner brackets: colour only (Overseer 22:08 approved; same 18x2 px geometry as the game's rule) */
 html.rb-on body.lk-phone.lk-match .pa.ready .pa-pad,html.rb-on body.lk-phone.lk-match .pa.pulling .pa-pad{background:linear-gradient(#f3f4f2,#f3f4f2) 0 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/2px 18px!important;background-repeat:no-repeat!important}
+/* the After Hours accent tokens (lime) → the rebrand red; primary buttons that sat on lime get white text */
+html.rb-on{--ah-act:#d7232d;--acc:#d7232d;--acc2:#e5484f}
+html.rb-on #btnGoogle,html.rb-on #btnNewCareer:not(.alt),html.rb-on #btnContinue,html.rb-on #btnCreate,html.rb-on .big:not(.ghost):not(.alt){color:#fff!important}
+html.rb-on #roomChip{color:#f3f4f2!important;border-color:#343a3e!important}
