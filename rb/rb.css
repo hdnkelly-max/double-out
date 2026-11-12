@@ -317,8 +317,8 @@ html.rb-on body #c3rwXp{color:#7fd19a!important}
   & .rb-sbr b{text-align:right;color:var(--ink);font-weight:700}
   & .rb-sbar{display:flex;height:6px;border-radius:3px;background:#2b3135;overflow:hidden}
   & .rb-sbar i{display:block;height:100%}
-  & .rb-sbar i.rb-f{background:#d9dcda}
-  & .rb-sbar i.rb-gh{background:repeating-linear-gradient(135deg,#a0a6a3 0 2px,#3a4044 2px 4px)}
+  & .rb-sbar i.rb-f{background:#4a8fe0}
+  & .rb-sbar i.rb-gh{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}
   & .rb-stlist{padding:2px 14px;gap:0}
   & .rb-strow{border-bottom:1px solid var(--line)}
   & .rb-strow:last-child{border-bottom:0}
