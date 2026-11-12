@@ -5,8 +5,8 @@
 //  B a steady press                          -> gp < 100, lag = 0
 //  every event: lg, d, sb, pf, gp, gr, gpl, pm, lag and x,y pairs a (aim), k (lock), l (land), s (shown at press), g (game sway at press), r (sway at release)
 //  C a 300 ms stall during the pull           -> gpl >= 250 and gr >= 250, gp < 100
-//  D the tops_darts rows keep their columns (no 'rel' field unless TOPS_DARTS_REL is set, which waits for sql/tops_darts_rel.sql);
-//    with the flag on, the row carries the same record
+//  D with TOPS_DARTS_REL = false (CAR-5d turns it on by default) the rows keep their old columns and every dart is logged;
+//    with the flag on, the row carries the same record (CAR-5d's own checks: tests/dart-rel-col.js)
 // usage: node tests/dart-rel.js [dir]
 const {chromium,devices}=require('playwright');(async()=>{const dir=process.argv[2]||require('path').resolve(__dirname,'..');
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
@@ -16,7 +16,7 @@ await p.goto('file://'+dir+'/index.html');
 await p.waitForFunction(()=>typeof S!=='undefined'&&typeof beginMatch==='function'&&typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:300000});
 await p.evaluate(()=>{V._qa.renderer.render=function(){};save.authSeen=true;save.name='Lee';save.lessonDone=true;$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());V.walkOn=()=>{};showHub();
  window.__rows=[];NET.user={id:'u1'};NET.sb={from:t=>({insert:rows=>{if(t==='tops_darts')__rows.push(...rows);return Promise.resolve({error:null,status:201});},upsert:()=>Promise.resolve({error:null}),select:()=>({eq:()=>Promise.resolve({data:[],error:null})})}),auth:{getSession:()=>Promise.resolve({data:{session:null}})}};
- beginMatch({mode:'career',tier:0,p0:'Lee',oppKey:'Carl Maddox',oppName:'Carl Maddox',oppAvg:40,legs:3,start:501});});
+ window.TOPS_DARTS_REL=false;beginMatch({mode:'career',tier:0,p0:'Lee',oppKey:'Carl Maddox',oppName:'Carl Maddox',oppAvg:40,legs:3,start:501});});
 const toAim=async()=>{for(let i=0;i<600;i++){const st=await p.evaluate(()=>{try{if(S.done)return 'done';if(S.bull){if(S.cur===0&&!S.busy&&S.bull.me==null){S.busy=true;land(gauss()*30,gauss()*30);}return 'bull';}if(S.cur===0&&!S.busy&&!S.p[0].ai&&!S.pulling)return 'aim';return 'wait';}catch(e){return 'ERR '+e.message;}});if(st==='aim'||st==='done'||st.startsWith('ERR'))return st;await p.waitForTimeout(100);}return 'timeout';};
 const ev=()=>p.evaluate(()=>{const e=TOPS_LOG.events().filter(x=>x&&x.k==='match_dart');return e.length?e[e.length-1].d:null;});
 const throwOne=async(mode)=>{const s=await toAim();if(s!=='aim')return {err:'state '+s};await p.waitForTimeout(400);

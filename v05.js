@@ -48,7 +48,16 @@ setInterval(()=>{if(S&&S.crownUntil&&performance.now()<S.crownUntil&&S.hr>80)S.h
 <script>
 /* ===== v0.5: dart log (every human dart, signed-in players, Supabase tops_darts, own rows only) ===== */
 (function(){const Q=[];let t=null;
-function flush(){if(!Q.length||!window.NET||!NET.user||!NET.sb)return;const rows=Q.splice(0,Q.length);NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(error)console.warn('dartlog',error.message);});}
+/* CAR-5d: the release record goes on tops_darts.rel (Hayden approved the column 06:05; the migration is applied before this ships).
+   Insurance if it ever isn't there: an insert refused for an unknown 'rel' column is sent again without it, once, and rel stays off for
+   the session, so darts are never lost to it. */
+let relOff=false;const LOGGED=new WeakSet();
+function mdLog(row,rel){try{if(!window.TOPS_LOG)return;TOPS_LOG.log('match_dart',{lg:row.leg,d:row.dart,sb:row.score_before,pf:row.perfect?1:0,gp:rel.gp,gr:rel.gr,gpl:rel.gpl,pm:rel.pm,ra:rel.ra,lag:rel.lag,a:[row.aim_x,row.aim_y],k:[row.lock_x,row.lock_y],l:[row.land_x,row.land_y],s:[rel.sx,rel.sy],g:[rel.gx,rel.gy],r:[rel.rx,rel.ry]});LOGGED.add(row);}catch(e){}}/* x,y pairs: the recorder keeps at most 20 keys per event */const relMissing=e=>!!e&&(e.code==='PGRST204'||e.code==='42703')&&/\brel\b/.test(String(e.message||''));
+window.TOPS_DARTS_REL=window.TOPS_DARTS_REL!==false;
+function flush(){if(!Q.length||!window.NET||!NET.user||!NET.sb)return;const rows=Q.splice(0,Q.length);NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(!error)return;
+ if(relMissing(error)&&rows.some(r=>r.rel)){relOff=true;try{window.TOPS_LOG&&TOPS_LOG.log('dart_rel_off',{code:error.code||null,n:rows.length});}catch(x){}
+  rows.forEach(r=>{if(r.rel&&!LOGGED.has(r))mdLog(r,r.rel);delete r.rel;});/* darts that skipped the recorder because the row would carry them */NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(error)console.warn('dartlog',error.message);});return;}
+ console.warn('dartlog',error.message);});}
 const _lf=landFrom;landFrom=function(lock,tp,dt){const l=_lf.apply(this,arguments);try{if(S&&!S.done&&S.cur===0&&!S.p[0].ai&&window.NET&&NET.user){const h=scoreAt(l.x,l.y);const sh=window.TOPS_SW?TOPS_SW.curSway():null;
  Q.push({ver:window.TOPS_BUILD||'',mode:S.online?'online':(S.practice?'practice':(isRun&&isRun()?'run':ui.mode)),tier:ui.tier|0,opp:(S.p[1]&&S.p[1].name)||null,leg:(function(){try{return legsPlayed();}catch(e){return null;}})(),dart:S.dart,score_before:S.p[0].score,
   aim_x:+S.aim.x.toFixed(1),aim_y:+S.aim.y.toFixed(1),lock_x:+lock.x.toFixed(1),lock_y:+lock.y.toFixed(1),land_x:+l.x.toFixed(1),land_y:+l.y.toFixed(1),dt_ms:+dt.toFixed(1),perfect:Math.abs(dt)<=tp.P,ring_mm:+ringR(dt,tp).toFixed(1),s0:+tp.s0.toFixed(2),sway_mm:+tp.A.toFixed(1),window_ms:+tp.P.toFixed(1),
@@ -58,8 +67,12 @@ const _lf=landFrom;landFrom=function(lock,tp,dt){const l=_lf.apply(this,argument
     own sway then (lag=1 when they differ, i.e. the lock used the shown frame after a stall); rx,ry = sway at the release. All board mm. */
  try{const R=S.relInfo;S.relInfo=null;if(R&&window.TOPS_GAP){const tr=performance.now(),f1=v=>Math.round(v*10)/10;
   const rel={gp:R.gp,gr:TOPS_GAP(tr-500,tr),gpl:TOPS_GAP(R.tp,tr),pm:Math.round(tr-R.tp),ra:window.TOPS_FAGE?TOPS_FAGE(tr):null,lag:R.lag,sx:f1(R.sx),sy:f1(R.sy),gx:f1(R.gx),gy:f1(R.gy),rx:f1(S.sway?S.sway.x:0),ry:f1(S.sway?S.sway.y:0)};
-  const row=Q[Q.length-1];if(window.TOPS_DARTS_REL)row.rel=rel;/* the tops_darts column needs sql/tops_darts_rel.sql first (Hayden's OK); until then the flight recorder carries it */
-  if(window.TOPS_LOG)TOPS_LOG.log('match_dart',{lg:row.leg,d:row.dart,sb:row.score_before,pf:row.perfect?1:0,gp:rel.gp,gr:rel.gr,gpl:rel.gpl,pm:rel.pm,ra:rel.ra,lag:rel.lag,a:[row.aim_x,row.aim_y],k:[row.lock_x,row.lock_y],l:[row.land_x,row.land_y],s:[rel.sx,rel.sy],g:[rel.gx,rel.gy],r:[rel.rx,rel.ry]});/* x,y pairs: the recorder keeps at most 20 keys per event */}}catch(e){}
+  const row=Q[Q.length-1];const onRow=window.TOPS_DARTS_REL&&!relOff;if(onRow)row.rel=rel;
+  /* CAR-5d (Q&D P2 on CAR-5c): with the record on tops_darts, the flight recorder only keeps the darts worth reading next to a slow frame
+     (a gap of 100 ms+ before the press, in the pull or before the release, or the lock taken from a late frame), at most 30 per match,
+     so a few matches can't push older events out of its 300-event ring. Without the column every dart is logged, as in CAR-5c. */
+  const worth=!onRow||rel.gp>=100||rel.gpl>=100||rel.gr>=100||rel.lag;if(worth&&onRow){S.mdN=(S.mdN||0)+1;}
+  if(worth&&(!onRow||S.mdN<=30))mdLog(row,rel);}}catch(e){}
  clearTimeout(t);if(Q.length>=3)flush();else t=setTimeout(flush,8000);}}catch(e){}return l;};
 addEventListener('pagehide',flush);})();
 </script>
