@@ -30,7 +30,7 @@ const sample=async(p,tag,ms)=>{await p.evaluate(()=>{const A=__H;A.main=0;A.rt=0
  const hub=await sample(p,'rebrand hub');
  await p.locator('#rbMenu').tap();await p.waitForTimeout(300);const sheet=await sample(p,'rebrand Menu sheet open');await p.locator('#rbMenu').tap().catch(()=>{});await p.waitForTimeout(300);
  // portrait on demand while the hub is up
- const hs=await p.evaluate(()=>{try{const A=__H;const n=A.rt;const hsf=V.headshot||V._qa.headshot;const u=hsf&&hsf(save.look||{},'HS'+Date.now(),0);return {called:!!hsf,rt:A.rt-n,ok:!!u&&A.rt-n>0};}catch(e){return {err:e.message};}});out.push({tag:'headshot in the hub',hs});
+ const hs=await p.evaluate(()=>{try{const A=__H;const n=A.rt;const hsf=V.portrait||V.headshot;const u=hsf&&hsf(save.look||{},'HS'+Date.now(),0);return {called:!!hsf,rt:A.rt-n,ok:!!u&&A.rt-n>0};}catch(e){return {err:e.message};}});out.push({tag:'headshot in the hub',hs});
  await p.evaluate(()=>{try{showScreen('creator');}catch(e){}});await p.waitForTimeout(600);const cr=await sample(p,'creator (3D preview)',3000);await p.evaluate(()=>{try{showHub();}catch(e){}});await p.waitForTimeout(800);
  // Walk on: the match draws again at once
  await p.evaluate(()=>{__H.wantLive=true;__H.firstLive=null;__H.liveAt=null;const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);if(__H.liveAt==null)__H.liveAt=performance.now();return r;};});
