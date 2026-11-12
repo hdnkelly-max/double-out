@@ -47,7 +47,7 @@
     document.body.appendChild(el);
     const back = document.createElement('button'); back.id = 'rbBack'; back.type = 'button'; back.hidden = true; back.textContent = 'New look ›'; back.onclick = () => open('tonight'); document.body.appendChild(back);
     el.querySelector('#rbMe').onclick = () => { tab = 'locker'; lk = 'load'; render(); };
-    el.querySelector('#rbMenu').onclick = () => { const m = $id('rbMenuSheet'); if (m) { m.remove(); return; } const d = document.createElement('div'); d.id = 'rbMenuSheet'; d.className = 'rb-menu'; d.innerHTML = `<button type="button" data-m="look">Edit look</button><button type="button" data-m="title">Main menu</button>`; el.appendChild(d);
+    el.querySelector('#rbMenu').onclick = () => { const m = $id('rbMenuSheet'); if (m) { m.remove(); return; } const d = document.createElement('div'); d.id = 'rbMenuSheet'; d.className = 'rb-msheet'; d.innerHTML = `<button type="button" data-m="look">Edit look</button><button type="button" data-m="title">Main menu</button>`; el.appendChild(d);
       d.onclick = e => { const k = e.target.dataset && e.target.dataset.m; if (!k) return; d.remove(); if (k === 'title') { close(); try { showTitle(); } catch (x) {} } else if (k === 'look') { close(); const b = $id('btnLook'); if (b) b.click(); } }; };
     return el;
   }
