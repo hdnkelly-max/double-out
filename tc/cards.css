@@ -172,7 +172,7 @@
 @keyframes tc-drift{0%{--fx:15%;--fy:25%;--gx:10%;--gy:15%}25%{--fx:85%;--fy:20%;--gx:90%;--gy:20%}50%{--fx:80%;--fy:85%;--gx:85%;--gy:85%}75%{--fx:20%;--fy:75%;--gx:15%;--gy:80%}100%{--fx:15%;--fy:25%;--gx:10%;--gy:15%}}
 .tc[data-r="epic"].is-flipped,.tc[data-r="legendary"].is-flipped{animation:tc-drift 6s ease-in-out infinite}
 .tc.is-mini[data-r="epic"].is-flipped,.tc.is-mini[data-r="legendary"].is-flipped{animation-duration:9s}
-body.tc-gyro .tc[data-r]{animation:none}
+.tcpk.tc-gyro .tc[data-r]{animation:none}
 /* EPIC: stronger rainbow refractor over the whole art */
 .tc[data-r="epic"] .tc__holo{opacity:.95;
   background:
