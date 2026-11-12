@@ -7,7 +7,7 @@ const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
- const r=await p.evaluate(()=>{const out={};save.authSeen=true;save.name='Tester';$('login').hidden=true;const X=window.TOPS_LUX;['badge','set:doubles','set:scoring','set:pro','walkon','edition'].forEach(X.provide);/* S3: every effect delivered, so everything is sellable here (econ-s3.js checks the 'soon' guard) */
+ const r=await p.evaluate(()=>{const out={};save.authSeen=true;save.name='Tester';$('login').hidden=true;const X=window.TOPS_LUX;['badge:clinic','badge:camp','badge:pro','set:doubles','set:scoring','set:pro','walkon','edition'].forEach(X.provide);/* S3: every effect delivered, so everything is sellable here (econ-s3.js checks the 'soon' guard) */
   const tp=()=>{beginMatch({mode:'career',tier:3,p0:'Tester',oppName:'X',oppAvg:70,legs:3,start:501});S.aim=targetPoint('T20');S.adren=0;S.calm=99;const en=effNerves;effNerves=()=>0;let t;try{t=throwParams();}finally{effNerves=en;}S.done=true;return JSON.stringify({A:t.A,P:t.P,s0:t.s0,w:t.w,tr:t.tr});};
   newCareer();let c=career();c.tier=2;c.stage=null;c.bank=50000;out.reg={open:X.open(),buy:X.buy('coach_doubles').err,bank:c.bank};
   c.tier=3;out.dpnz={open:X.open(),items:X.items().map(x=>[x.id,x.price])};
