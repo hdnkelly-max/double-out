@@ -5,7 +5,7 @@ const { chromium } = require('playwright'); const path = require('path');
 const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-  const p = await b.newPage({ viewport: { width: 390, height: 844 } }); const pe = []; p.on('pageerror', e => pe.push(e.message));
+  const p = await b.newPage({ viewport: { width: 390, height: 844 } }); const pe = []; p.on('pageerror', e => pe.push(e.message)); p.on('console', m => { if (/^rb /.test(m.text())) console.log('PAGE', m.text().slice(0, 400)); }); await p.addInitScript(() => { window.TOPS_RB_DEBUG = 1; });
   await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
   await p.goto('file://' + dir + '/index.html?rebrand=1'); await p.waitForFunction(() => window.TC_API && typeof S !== 'undefined' && window.C3 && V._qa && V._qa.rigReady && V._qa.rigReady(), null, { timeout: 180000 }); await p.waitForTimeout(1500);
   await p.evaluate(() => { save.authSeen = true; save.name = 'Hayden'; save.matches = 30; save.lessonDone = true; save.totThrows = 500; $('login').hidden = true; newCareer(); const c = career(); c.tier = 1; c.bank = 640; c.wins = 3; c.losses = 2; c.pts = 2400; c.darts = 150; c.stage = 'season'; c.next = null; newSeason(c); save.tcWelSeen = 1; save.tcIntro = Date.now(); persist(); showHub('play'); });

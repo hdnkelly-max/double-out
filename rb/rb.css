@@ -239,3 +239,6 @@ html.rb-on body.lk-phone.lk-match .pa.ready .pa-pad,html.rb-on body.lk-phone.lk-
 html.rb-on{--ah-act:#d7232d;--acc:#d7232d;--acc2:#e5484f}
 html.rb-on #btnGoogle,html.rb-on #btnNewCareer:not(.alt),html.rb-on #btnContinue,html.rb-on #btnCreate,html.rb-on .big:not(.ghost):not(.alt){color:#fff!important}
 html.rb-on #roomChip{color:#f3f4f2!important;border-color:#343a3e!important}
+
+#rbApp{.rb-th small .rb-lkc{display:inline-flex;width:12px;height:12px;margin-right:4px;opacity:.8}.rb-th small .rb-lkc svg{width:12px;height:12px}.rb-th.rb-lk .rb-slot{opacity:.6}}
+html.rb-on #rbMenuSheet{}
