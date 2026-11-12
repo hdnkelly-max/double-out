@@ -1,0 +1,21 @@
+// v9 screenshots: node shots9.js [W] [H] -> v9_<name>_<W>.png
+const { chromium } = require('playwright'); const path = require('path');
+const W = +(process.argv[2] || 390), H = +(process.argv[3] || 844);
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 }); const pe=[]; p.on('pageerror',e=>pe.push(e.message));
+  await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  await p.goto('file://' + path.join(__dirname, 'v9.html')); await p.waitForTimeout(700);
+  const shot = async (n, fn) => { await p.evaluate(fn); await p.waitForTimeout(1100); await p.screenshot({ path: path.join(__dirname, `v9_${n}_${W}.png`) }); };
+  await shot('tonight', () => TOPS9.setState('normal'));
+  await shot('season', () => TOPS9.go('season'));
+  await shot('shop', () => { TOPS9.S.sel='supergrip'; TOPS9.go('shop'); });
+  await shot('shoplocked', () => { TOPS9.S.sel='razor'; TOPS9.go('shop'); });
+  await shot('locker', () => { TOPS9.S.lk='load'; TOPS9.go('locker'); });
+  await shot('cards', () => { TOPS9.S.lk='cards'; TOPS9.go('locker'); });
+  await shot('stats', () => { TOPS9.S.lk='stats'; TOPS9.go('locker'); });
+  await shot('trophies', () => { TOPS9.S.lk='troph'; TOPS9.go('locker'); });
+  await shot('result', () => { TOPS9.setState('normal'); TOPS9.award(); TOPS9.go('result'); });
+  await shot('resultloss', () => TOPS9.setState('lost'));
+  await shot('exhposter', () => TOPS9.setState('exh'));
+  await shot('exhtonight', () => { document.querySelectorAll('.ov').forEach(e=>e.remove()); });
+  await shot('broke', () => TOPS9.setState('broke'));
+  const ov = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth); console.log('hscroll', ov, pe.slice(0,3)); await b.close(); })();

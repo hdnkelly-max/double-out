@@ -1,0 +1,347 @@
+<title>TOPS Career Screens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* TOPS v9 · one component system: card, chip, meter, ring, row, image slot. Single dark look by design.
+   Image rules: every slot has a fixed aspect; darts always whole (horizontal strip, 4:1, contain on the shot's own black);
+   people/rooms use cover with a set focal point; kit tiles are 1:1 product shots. */
+:root{
+  --desk:#0a0c0d;--bg:#121517;--card:#1a1e21;--card2:#22272b;--line:#343a3e;--line2:#4a5156;
+  --ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--red2:#b81c25;--good:#7fd19a;--good2:#3d7a52;--warn:#e7b65a;--bad:#e59b9b;--dartbg:#0e0e0e;
+  --d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;--b:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--desk);color:var(--ink);font-family:var(--b);font-size:14px;margin:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px;display:flex;flex-direction:column;align-items:center;gap:12px}
+button{font:inherit;color:inherit}
+.note{max-width:390px;width:100%;color:var(--ink3);font-size:12px;line-height:1.5}
+.phone{position:relative;width:390px;max-width:100%;height:844px;background:var(--bg);border:1px solid #262b2f;border-radius:28px;overflow:hidden;display:flex;flex-direction:column}
+@media (max-width:430px){body{padding:0}.phone{width:100%;height:100%;border:0;border-radius:0}}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* top bar 56 */
+.hd{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:10px;padding:0 6px 0 14px;border-bottom:1px solid var(--line)}
+.wm{font-family:var(--d);font-weight:800;font-style:italic;font-size:22px;letter-spacing:.5px}
+.me{display:flex;align-items:center;gap:8px;min-width:0;flex:1;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.me .nm{font-weight:600;font-size:15px;white-space:nowrap}
+.bank{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.ib{position:relative;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;cursor:pointer;padding:0}
+.ib svg{width:22px;height:22px}
+.ib .b{position:absolute;top:7px;right:5px;min-width:16px;height:16px;border-radius:8px;background:#5b6266;color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+/* tabs 46 */
+.tabs{height:46px;flex:0 0 46px;display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;color:var(--ink3);font-family:var(--d);font-weight:700;font-size:13px;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;position:relative;padding:0;min-width:0}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;background:var(--red);border-radius:2px}
+.tabs .dot,.seg .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink);margin-left:4px;vertical-align:3px}
+/* screen */
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;padding:12px 16px 24px}
+.scr>*{flex-shrink:0}
+/* COMPONENTS */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+button.card{text-align:left;cursor:pointer;width:100%}
+button.card:active,.row:active{background:var(--card2)}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sh h3{margin:0;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink3)}
+.sh a,.sh .lk{font-size:13px;color:var(--ink2);text-decoration:none;background:none;border:0;cursor:pointer;padding:6px 0;min-height:32px}
+.big{font-family:var(--d);font-weight:800;line-height:.95;letter-spacing:.3px;text-transform:uppercase}
+.t1{font-family:var(--d);font-weight:800;font-size:22px;line-height:1;text-transform:uppercase;letter-spacing:.3px}
+.t2{font-size:15px;font-weight:600}
+.sub{font-size:13px;color:var(--ink2)}
+.num{font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:var(--card2);border:1px solid var(--line);font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--ink)}
+.chip.g{color:var(--good);border-color:#2e5a3d;background:#16261c}
+.chip.w{color:var(--warn);border-color:#5b4a26;background:#2a2316}
+.chip.l{color:var(--ink2)}
+.chip svg{width:13px;height:13px}
+/* meter: segmented bar; .f fill, .gh ghost (kit effect / reward to come), .tg target tick */
+.meter{position:relative;height:10px;display:flex;gap:2px}
+.meter i{flex:1;border-radius:2px;background:#2b3135}
+.meter i.f{background:var(--good)}
+.meter i.gh{background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px)}
+.meter i.cur{background:#7d868b}
+.mtk{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:1px}
+.mlab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+/* continuous bar */
+.bar{position:relative;height:8px;border-radius:4px;background:#2b3135;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--good)}
+.bar i.prev{background:#4a5156}
+/* ring */
+.ring{position:relative;width:64px;height:64px;flex:0 0 64px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--d);font-weight:800;font-size:24px;line-height:1}
+.ring small{position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:9px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase}
+/* row: [slot] title/sub [right] chevron */
+.row{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;text-align:left;cursor:pointer}
+.row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .tx small{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.chev{color:var(--ink3);font-size:22px;line-height:1;flex:0 0 auto}
+/* image slots (fixed aspect) */
+.slot{position:relative;overflow:hidden;background:#0d0f10;flex:0 0 auto}
+.slot>.im{position:absolute;inset:0;background-size:cover;background-position:50% 50%;background-repeat:no-repeat}
+.slot.dart{aspect-ratio:4/1;background:var(--dartbg)}.slot.dart>.im{background-size:contain}
+.slot.sq{aspect-ratio:1/1}
+.slot.wide{aspect-ratio:16/9}
+.slot.r8{border-radius:8px}
+.face{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background-size:cover;background-position:50% 40%;border:1px solid var(--line2)}
+/* hero */
+.hero{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0e1012;flex:0 0 auto}
+.hero .im{position:absolute;inset:0;background-size:cover;background-repeat:no-repeat}
+.hero .sh2{position:absolute;inset:0}
+.hero .tx{position:absolute;left:14px;right:14px;bottom:12px;display:flex;flex-direction:column;gap:6px}
+.kick{font-size:12px;font-weight:600;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink2)}
+.primary{height:56px;flex:0 0 56px;width:100%;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.primary:hover{background:var(--red2)}.primary b{font-family:var(--d);font-weight:800;font-size:22px;letter-spacing:1px;text-transform:uppercase;line-height:1}.primary small{font-size:12px;opacity:.92}
+.primary[disabled]{background:#3a3f43;color:#9aa1a5;cursor:default}
+.ghost{height:44px;padding:0 16px;border-radius:10px;border:1px solid #6b7276;background:none;font-weight:600;cursor:pointer}
+.link{background:none;border:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-size:14px;cursor:pointer;min-height:44px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;height:40px;flex:0 0 40px}
+.seg button{flex:1;background:none;border:0;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer;min-width:0}
+.seg button[aria-selected="true"]{background:var(--card2);color:var(--ink)}
+/* two-sided compare (head-to-head) */
+.h2h{display:grid;grid-template-columns:40px 1fr 40px;gap:10px;align-items:center}
+.vs2{display:flex;flex-direction:column;gap:5px}
+.vs2 .nums{display:flex;justify-content:space-between;align-items:baseline}
+.vs2 .nums b{font-family:var(--d);font-size:24px;font-weight:800;line-height:1}
+.vs2 .nums span{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px}
+.tug{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}.tug i{display:block;height:100%}.tug .a{background:var(--good)}.tug .b{background:#6b7276}
+/* compare rows (current vs this dart) */
+.cmp{display:grid;grid-template-columns:78px 1fr 46px;gap:10px;align-items:center;font-size:13.5px}
+.cmp .bars{display:flex;flex-direction:column;gap:3px}
+.cmp .d{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.d.up{color:var(--good)}.d.dn{color:var(--bad)}.d.eq{color:var(--ink3)}
+/* lock panel */
+.lock{display:flex;gap:12px;align-items:center}
+.lock .ic{width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:var(--card2);border:1px solid var(--line2);display:grid;place-items:center}
+.lock .ic svg{width:20px;height:20px}
+/* position dots */
+.pos{display:flex;gap:4px;align-items:center;align-self:flex-start}.pos i{flex:0 0 14px;width:14px;height:14px;border-radius:50%;background:#2b3135;display:grid;place-items:center;font-size:9px;font-style:normal;font-weight:700;color:var(--ink3)}
+.pos i.up{background:#24412e}.pos i.me{background:var(--ink);color:#111}.pos .cut{width:2px;height:16px;background:var(--good);border-radius:1px}
+/* table */
+.tbl{display:flex;flex-direction:column}
+.tbl .tr{display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;align-items:center;min-height:38px;font-size:14px;border-top:1px solid #262b2f}
+.tbl .tr:first-child{border-top:0}
+.tbl .tr.me{background:var(--card2);margin:0 -8px;padding:0 8px;border-radius:8px;font-weight:700}
+.tbl .tr .p{color:var(--ink3);font-variant-numeric:tabular-nums}.tbl .tr .r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .cutl{height:0;border-top:1px dashed var(--good2);margin:2px 0;position:relative}
+.tbl .cutl span{position:absolute;right:0;top:-9px;font-size:11px;color:var(--good);background:var(--card);padding-left:6px}
+/* road */
+.road{display:flex;align-items:center;gap:0}
+.road .st{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0}
+.road .st i{width:14px;height:14px;border-radius:50%;background:#2b3135;border:2px solid #2b3135}
+.road .st.done i{background:var(--good);border-color:var(--good)}.road .st.now i{background:var(--bg);border-color:var(--ink);width:18px;height:18px}
+.road .st span{font-size:10.5px;color:var(--ink3);text-align:center;line-height:1.15}.road .st.now span{color:var(--ink);font-weight:700}
+.road .ln{flex:0 0 8px;height:2px;background:#2b3135;margin-bottom:16px}
+/* stat bars (locker) */
+.stt{display:grid;grid-template-columns:86px 1fr 26px 30px;gap:8px;align-items:center;font-size:14px}
+.stt b{text-align:right;font-variant-numeric:tabular-nums}
+.plus{width:30px;height:30px;border-radius:8px;border:1px solid #2e5a3d;background:#16261c;color:var(--good);font-weight:800;cursor:pointer;padding:0}
+.plus[disabled]{visibility:hidden}
+/* thumbs */
+.thumbs{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:2px}.thumbs::-webkit-scrollbar{display:none}
+.th{flex:0 0 132px;scroll-snap-align:start;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 6px 8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left}
+.th[aria-pressed="true"]{border:2px solid #fff;padding:5px 5px 7px}
+.th small{font-size:12px;font-weight:600;display:flex;gap:4px;align-items:center}
+.th.lk .slot{opacity:.45}
+/* stat tiles */
+.tile4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.tl b{font-family:var(--d);font-size:32px;font-weight:800;line-height:1}
+.tl small{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.tl span{font-size:12.5px}
+/* cards grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cd{aspect-ratio:2/3;border-radius:8px;overflow:hidden;border:1px solid var(--line);position:relative;background:#101214}
+.cd .im{position:absolute;inset:0;background-size:cover;background-position:50% 50%}
+.cd .n{position:absolute;left:0;right:0;bottom:0;height:24px;line-height:24px;padding:0 8px;font-size:11px;font-weight:600;background:rgba(12,14,16,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd.out{display:grid;place-items:center;color:#5b6266;font-family:var(--d);font-weight:700;font-size:18px;background:repeating-linear-gradient(135deg,#14171a 0 8px,#171b1e 8px 16px)}
+.fchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}.fchips::-webkit-scrollbar{display:none}
+.fchips button{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
+.fchips button[aria-pressed="true"]{background:var(--card2);color:var(--ink);border-color:var(--line2)}
+/* result lockup */
+.lockup{position:absolute;right:12px;top:0;bottom:0;width:140px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;text-align:center}
+.lockup small{font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.lockup b{font-family:var(--d);font-weight:800;font-size:58px;line-height:.9}
+.lockup span{font-size:13px;color:var(--ink2)}
+.pin{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding-top:12px;margin-top:auto}
+.empty{grid-column:1/-1;color:var(--ink2);font-size:13px;text-align:center;padding:10px}
+/* overlays */
+.ov{position:absolute;inset:0;z-index:30;background:rgba(6,7,8,.84);display:flex;align-items:center;justify-content:center;padding:22px}
+.pc{width:100%;max-width:330px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
+.pc .pi{aspect-ratio:2/3;max-height:470px;width:100%;background-size:cover;background-position:50% 20%;position:relative}
+.pc .pt{position:absolute;left:0;right:0;bottom:0;padding:44px 16px 14px;background:linear-gradient(transparent,rgba(8,9,10,.94));display:flex;flex-direction:column;gap:6px}
+.pc .pb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.menu{position:absolute;inset:56px 0 0;z-index:40;background:rgba(6,7,8,.6);display:flex;justify-content:flex-end;align-items:flex-start}
+.menu .mc{width:250px;margin:8px 10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.menu button{min-height:44px;text-align:left;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:14px;cursor:pointer}
+.toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:50}
+.toast.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.legend{max-width:390px;width:100%;display:flex;flex-wrap:wrap;gap:6px}
+.legend button{height:32px;padding:0 12px;border-radius:16px;border:1px solid #2a2f33;background:#15181b;color:var(--ink2);font-size:12px;cursor:pointer}
+@media (max-width:430px){.note,.legend{display:none!important}}
+</style>
+
+<p class="note"><b>TOPS · career screens, round 4 (v9).</b> Clickable at phone size. Every section rebuilt from one component set (card, chip, meter, ring, row, image slot). Prototype states: the ≡ menu (or the buttons below on desktop).</p>
+<div class="legend" aria-label="Prototype states"></div>
+<div class="phone" id="phone">
+  <header class="hd">
+    <span class="wm">TOPS</span>
+    <button class="me" type="button" id="meBtn" aria-label="Your level, open Locker"><span class="face" style="width:30px;height:30px;flex-basis:30px;background-image:url(img/g_face_me.jpg)"></span><span class="nm">Hayden</span><span class="ring" id="hdRing" style="width:30px;height:30px;flex-basis:30px"></span></button>
+    <span class="bank num" id="bank">$640</span>
+    <button class="ib" type="button" id="msgBtn" aria-label="3 new messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="b" id="msgN">3</span></button>
+    <button class="ib" type="button" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <main id="main" style="flex:1;display:flex;flex-direction:column;min-height:0"></main>
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const money=n=>'$'+n.toLocaleString();
+const IC={lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  cash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l6 8H6z"/></svg>',dn:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 18l-6-8h12z"/></svg>',
+  dart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l7-7M10 14l4-4M14 10l3-1 4-4-3-1-1-3-4 4-1 3"/></svg>'};
+/* ---------- state (one model) ---------- */
+const DARTS=[
+ {id:'assassin',b:'Harrows',n:'Club Brass 22g',line:'Brass starter set. Where everyone begins.',lv:1,price:0,sc:0,co:0,w:22},
+ {id:'supergrip',b:'Harrows',n:'Supergrip Ultra 22g',line:'Ringed tungsten, holds in a sweaty hand.',lv:8,price:95,sc:2,co:3,w:22,isNew:1},
+ {id:'razor',b:'Red Dragon',n:'Razor Edge 24g',line:'Razor-cut grip, 85% tungsten.',lv:15,price:120,sc:4,co:5,w:24},
+ {id:'vapor8',b:'Target',n:'Vapor8 21g',line:'Slim, light, loves the treble.',lv:18,price:150,sc:5,co:3,w:21},
+ {id:'zen',b:'Shot',n:'Zen Jutsu 23g',line:'Front-loaded tungsten, ringed grip.',lv:25,price:170,sc:7,co:7,w:23},
+ {id:'asp',b:'Target',n:'Aspinall G2 24g',line:'Tapered barrel, aggressive ring grip.',lv:33,price:270,sc:9,co:8,w:24},
+ {id:'littler',b:'Target',n:'Littler Gen 1 23g',line:'Sponsor set. Comes with a sponsor deal, never sold.',lv:0,price:0,sc:10,co:9,w:23,sponsor:1}];
+const STATS=[['sc','Scoring',20],['fi','Finishing',18],['co','Control',19],['cp','Composure',16]];
+const CAP=25;
+const CARDS=[['chalk','The Chalk','House rules'],['db_top','Double Top','Moments'],['bar','The Bar','Venues'],['db_bull','Bullseye','Moments'],['case','The Case','Kit'],['barrel','The Barrel','Kit'],['flights','Flights','Kit'],[null,'#041','Venues'],[null,'#042','Regulars']];
+const TABLE=[['Shazza Pere',12],['Gaz Tapsell',10],['Hayden',8,1],['Big Mal',8],['Deano',6],['Mere Nohepa',4],['Pete the Plumber',2],['Kev Mercer',0]];
+const TIERS=['Pub','Club','Regional','DPNZ','Trans-Tasman','Pro Tour','Worlds'];
+const S={tab:'tonight',lk:'load',mode:'fixture',lost:false,first:false,broke:false,bank:640,eq:'assassin',owned:{assassin:1},sel:'supergrip',
+  xp:{lv:14,cur:560,need:900,pre:320,preLv:14},pts:2,st:{sc:20,fi:18,co:19,cp:16},packs:3,coll:37,set:7,cardF:'All',msgs:3,rw:null,form:47};
+const kit=()=>{const d=DARTS.find(x=>x.id===S.eq);return {sc:Math.round(d.sc/4),co:Math.round(d.co/4)};};   // the equipped dart's effect on stats (ghost segments)
+/* ---------- component helpers ---------- */
+const chip=(t,c='')=>`<span class="chip ${c}">${t}</span>`;
+const meter=(n,fill,o={})=>{let h='';for(let i=0;i<n;i++){const c=i<(o.cur||0)?'cur':i<fill?'f':i<fill+(o.ghost||0)?'gh':'';h+=`<i class="${c}"></i>`;}return `<div class="meter" aria-hidden="true">${h}${o.tick!=null?`<span class="mtk" style="left:calc(${o.tick*100}% - 1px)"></span>`:''}</div>`;};
+const ring=(pct,lv,sz=64,lab='LEVEL')=>{const r=sz/2-4,c=2*Math.PI*r;return `<svg viewBox="0 0 ${sz} ${sz}"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="#2b3135" stroke-width="${sz>40?6:3}"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="#7fd19a" stroke-width="${sz>40?6:3}" stroke-linecap="round" stroke-dasharray="${c*pct} ${c}"/></svg><b style="${sz<40?'font-size:13px':''}">${lv}</b>${sz>40?`<small>${lab}</small>`:''}`;};
+const dslot=(id,cls='')=>`<div class="slot dart r8 ${cls}"><div class="im" style="background-image:url(img/g_ds_${id}.jpg)"></div></div>`;
+const row=(o)=>`<button class="row" type="button" ${o.go?`data-go="${o.go}"`:''} ${o.id?`id="${o.id}"`:''}>${o.left||''}<span class="tx">${o.k?`<small>${o.k}</small>`:''}<span class="t2">${o.t}</span>${o.s?`<span class="sub">${o.s}</span>`:''}</span>${o.right||''}<span class="chev" aria-hidden="true">›</span></button>`;
+const sh=(t,lk,go)=>`<div class="sh"><h3>${t}</h3>${lk?`<button class="lk" type="button" data-go="${go}">${lk} ›</button>`:''}</div>`;
+const pct=()=>S.xp.cur/S.xp.need;
+/* ---------- screens ---------- */
+function tonight(){const E=S.mode==='exh',nd=DARTS.find(x=>x.id==='razor');
+ const hero=E?`<div class="hero" style="height:250px"><div class="im" style="background:radial-gradient(ellipse at 75% 40%,#2a3a30 0%,#121815 55%,#0b0d0c 100%)"></div><div class="slot r8" style="position:absolute;right:14px;top:14px;bottom:14px;aspect-ratio:2/3;border:1px solid #6b5a3a;box-shadow:0 10px 30px rgba(0,0,0,.6)"><div class="im" style="background-image:url(img/g_exh_barney_poster.jpg);background-position:50% 20%"></div></div><div class="tx" style="right:45%"><span class="kick">Exhibition · one night</span><span class="big" style="font-size:40px">vs<br>Barney</span>${chip('5× world champion')}</div></div>`
+ :`<div class="hero" style="height:262px"><div class="im" style="background-image:url(img/g_tonight_club.jpg);background-position:72% 28%"></div><div class="sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 36%,rgba(10,12,14,.7) 64%,rgba(10,12,14,.96) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0,rgba(10,12,14,0) 48%)"></div><div class="tx"><span class="kick">${S.first?'Club singles · Week 1 of 8':'Club singles · Week 5 of 8'}</span><span class="big" style="font-size:40px">vs Big Mal</span><div class="chips">${chip(S.first?'Your first night at the Club':'Win: a place in the team','l')}</div></div></div>`;
+ const opp=E?{f:'url(img/g_exh_barney_poster.jpg)',fp:'50% 16%',fs:'240%',a:96}:{f:'url(img/g_face_mal.jpg)',fp:'50% 40%',fs:'cover',a:42};
+ const me=S.form,tot=me+opp.a;
+ const h2h=`<div class="card" style="gap:8px"><div class="h2h"><span class="face" style="background-image:url(img/g_face_me.jpg)"></span><div class="vs2"><div class="nums"><b class="num">${me}</b><span>${S.first?'Your first match':'Average · last 10'}</span><b class="num">${opp.a}</b></div><div class="tug"><i class="a" style="width:${me/tot*100}%"></i><i class="b" style="width:${opp.a/tot*100}%"></i></div></div><span class="face" style="background-image:${opp.f};background-position:${opp.fp};background-size:${opp.fs}"></span></div><div class="sub" style="text-align:center">${S.first?'Your first match':'You '+me+' (last 10)'} · Him ${opp.a} · Best of 3</div></div>`;
+ const cta=`<button class="primary" type="button" id="walkOn"><b>Walk on</b><small>${E?'Free entry · 2 of 3 tries left':S.broke?'Entry $40 · you have $25':'Entry $40'}</small></button>`;
+ if(E)return hero+h2h+cta+`<div class="card">${sh('Tonight’s stakes')}<div class="chips">${chip(IC.cash+' $250 prize','g')}${chip('Signed shirt','g')}${chip('Barney foil card · epic','w')}</div><div class="mlab"><span>Tries used</span><span>1 of 3 · ends in 3 weeks</span></div>${meter(3,1)}</div>`;
+ const season=S.first?'':`<button class="row" type="button" data-go="season"><span class="tx"><small>Season · week 5 of 8</small><span class="t2">3rd · 2 pts off 2nd</span></span><span class="pos" aria-hidden="true"><i class="up">1</i><i class="up">2</i><span class="cut"></span><i class="me">3</i><i>4</i><i>5</i></span><span class="chev">›</span></button>`;
+ const side=S.first?'':`<div class="g2">
+   <button class="card" type="button" id="moneyTile" style="padding:0;gap:0;overflow:hidden"><div class="slot wide"><div class="im" style="background-image:url(img/g_backroom.jpg);background-position:70% 50%"></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px"><span class="t1" style="font-size:19px">Money match</span><span class="sub" style="font-size:12.5px">Back room · best of 1</span><div class="chips">${chip(IC.cash+' $100','g')}</div></div></button>
+   <button class="card" type="button" data-go="shop" data-sel="razor" style="padding:0;gap:0;overflow:hidden"><div class="slot" style="aspect-ratio:16/9;background:var(--dartbg);display:grid;place-items:center"><div class="slot dart" style="width:100%"><div class="im" style="background-image:url(img/g_ds_razor.jpg)"></div></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px"><span class="t1" style="font-size:19px">Next dart</span><span class="sub" style="font-size:12.5px">Razor Edge · Lv ${nd.lv}</span><div class="mlab"><span>Lv ${S.xp.lv}</span><span>Lv ${nd.lv}</span></div>${meter(10,Math.round(pct()*10))}</div></button></div>`;
+ const goal=S.first?'':`<div class="card">${sh('Tonight’s goal')}<div style="display:flex;align-items:center;gap:10px"><span class="t2" style="flex:1">Average 61+ this match</span>${chip('+$40','g')}</div><div style="position:relative">${meter(20,Math.round(me/80*20),{tick:61/80})}</div><div class="mlab"><span>Your form ${me}</span><span>Target 61</span></div></div>`;
+ return hero+h2h+cta+season+side+goal;}
+function season(){const t=TABLE.map((r,i)=>`${i===2?'<div class="cutl"><span>Top two go up</span></div>':''}<div class="tr ${r[2]?'me':''}"><span class="p">${i+1}</span><span>${r[0]}</span><span class="r p">${i<3?5:4}</span><span class="r">${r[1]}</span></div>`).join('').replace('<div class="cutl">','<div class="cutl" style="order:0">');
+ const road=TIERS.map((n,i)=>`${i?'<span class="ln"></span>':''}<div class="st ${i<1?'done':i===1?'now':''}"><i></i><span>${n}</span></div>`).join('');
+ return `<div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="ring">${ring(5/8,'5','WEEK')}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="t1">3rd · Club singles</span><span class="sub">2 pts off 2nd · 3 weeks left</span><div class="chips">${chip(IC.up+' Top two go up','g')}</div></div></div>
+ <div class="card">${sh('Table','Full table','season')}<div class="sub" style="display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3)"><span>#</span><span>Player</span><span style="text-align:right">P</span><span style="text-align:right">Pts</span></div><div class="tbl">${t}</div></div>
+ <div class="card">${sh('Road to the Palace')}<div class="road">${road}</div><span class="sub">Win the Club to step up to Regional.</span></div>
+ ${row({k:'Next fixture · week 6',t:'vs Shazza Pere',s:'1st · averages 49',left:'<span class="face" style="background:#2b3135"></span>',go:'tonight'})}`;}
+function shop(){const d=DARTS.find(x=>x.id===S.sel),mine=DARTS.find(x=>x.id===S.eq),owned=!!S.owned[d.id],isEq=d.id===S.eq,locked=!d.sponsor&&d.lv>S.xp.lv;
+ const badge=isEq?chip('Equipped'):d.sponsor?chip('Sponsor set','w'):owned?chip('Owned'):locked?chip(IC.lock+' Level '+d.lv,'l'):d.isNew?chip('New','g'):'';
+ const hero=`<div class="card" style="padding:0;gap:0;overflow:hidden"><div class="slot" style="aspect-ratio:16/9;background:var(--dartbg)"><div class="im" style="background-image:url(img/g_d_${d.id}.jpg);background-size:contain;background-position:50% 50%"></div></div><div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px"><div class="chips">${badge}<span class="kick" style="align-self:center">${d.b}</span></div><span class="big" style="font-size:30px">${d.n}</span><span class="sub">${d.line}</span></div></div>`;
+ const bars=(lab,a,b)=>{const dv=b-a,mx=12;return `<div class="cmp"><span>${lab}</span><div class="bars"><div class="bar" title="yours"><i class="prev" style="width:${a/mx*100}%"></i></div><div class="bar"><i style="width:${b/mx*100}%"></i></div></div><span class="d ${dv>0?'up':dv<0?'dn':'eq'}">${dv>0?'+':dv<0?'−':'±'}${Math.abs(dv)}</span></div>`;};
+ const cmp=isEq?`<div class="card">${sh('Equipped now')}<span class="sub">This is the dart you throw. Pick another to compare.</span></div>`:`<div class="card">${sh('vs your '+mine.n)}<div class="mlab"><span><span style="display:inline-block;width:10px;height:6px;border-radius:2px;background:#4a5156;margin-right:5px"></span>Yours</span><span><span style="display:inline-block;width:10px;height:6px;border-radius:2px;background:var(--good);margin-right:5px"></span>This dart</span></div>${bars('Scoring',mine.sc,d.sc)}${bars('Control',mine.co,d.co)}<div class="chips">${chip((d.w===mine.w?'Same weight · ':'')+mine.w+' g → '+d.w+' g','l')}</div></div>`;
+ let act;
+ if(isEq)act='';
+ else if(d.sponsor)act=`<div class="card"><div class="lock"><span class="ic">${IC.lock}</span><div style="flex:1"><span class="t2">Comes with a sponsor deal</span><div class="sub">Sponsors call when you reach DPNZ.</div></div></div></div>`;
+ else if(owned)act=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
+ else if(locked)act=`<div class="card"><div class="lock"><span class="ic">${IC.lock}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="t2">Unlocks at level ${d.lv}</span><div class="chips">${chip('Level '+d.lv)}${chip(money(d.price))}</div></div></div><div class="mlab"><span>You · Lv ${S.xp.lv}</span><span>${d.lv-S.xp.lv} level${d.lv-S.xp.lv>1?'s':''} to go</span></div>${meter(d.lv-S.xp.lv>1?10:10,Math.max(1,Math.round((1-(d.lv-S.xp.lv-1+1-pct())/Math.max(1,d.lv-S.xp.lv))*10)))}<button class="link" type="button" data-go="tonight" style="align-self:flex-start;min-height:36px">Play to level up ›</button></div>`;
+ else if(S.bank<d.price)act=`<div class="card"><div class="lock"><span class="ic">${IC.cash}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="t2">${money(d.price-S.bank)} to go</span><div class="chips">${chip('Price '+money(d.price))}${chip('You have '+money(S.bank),'l')}</div></div></div><div class="bar"><i style="width:${S.bank/d.price*100}%"></i></div><button class="link" type="button" id="sTry" style="align-self:flex-start;min-height:36px">Try it free in practice ›</button></div>`;
+ else act=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b><small>${money(S.bank)} → ${money(S.bank-d.price)}</small></button><button class="link" type="button" id="sTry" style="align-self:center">Try it free in practice</button>`;
+ const th=DARTS.map(x=>{const lk=!x.sponsor&&x.lv>S.xp.lv&&!S.owned[x.id];return `<button class="th ${lk||x.sponsor?'lk':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===S.sel}" aria-label="${x.b} ${x.n}">${dslot(x.id)}<small>${x.id===S.eq?'● Equipped':S.owned[x.id]?'✓ Owned':x.sponsor?'Sponsor':lk?IC.lock+' Lv '+x.lv:money(x.price)}</small></button>`;}).join('');
+ return `<div class="seg" role="tablist"><button aria-selected="true">Darts</button><button aria-selected="false" data-soon>Shafts &amp; flights</button><button aria-selected="false" data-soon>Shirts</button></div>`+hero+cmp+act+`<div class="card" style="padding:12px 0 12px 12px">${sh('All darts')}<div class="thumbs" id="thumbs">${th}</div></div>`;}
+function locker(){const k=kit(),seg=`<div class="seg" role="tablist">${[['load','Loadout'],['cards','Cards'],['stats','Stats'],['troph','Trophies']].map(([a,b])=>`<button aria-selected="${S.lk===a}" data-lk="${a}">${b}${a==='cards'&&S.packs?'<i class="dot"></i>':''}</button>`).join('')}</div>`;
+ if(S.lk==='cards'){const L=CARDS.filter(c=>S.cardF==='All'||c[2]===S.cardF);
+  return seg+`<div class="card" style="flex-direction:row;gap:12px;align-items:stretch"><div class="slot sq r8" style="width:96px"><div class="im" style="background-image:url(img/g_pack.jpg)"></div></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0"><span class="t1">${S.packs?S.packs+' pack'+(S.packs>1?'s':'')+' waiting':'No packs right now'}</span><span class="sub">${S.packs?'3 cards in each':'Win matches to earn packs'}</span><div class="mlab"><span>Kiwi Pub Life</span><span>${S.set}/9</span></div>${meter(9,S.set)}</div></div>${S.packs?'<button class="primary" type="button" id="openPack"><b>Open a pack</b></button>':''}
+  <div class="fchips" role="group" aria-label="Filter cards">${['All · '+S.coll+'/142','Regulars','Venues','Moments','Disasters','Kit','House rules'].map(f=>`<button type="button" aria-pressed="${f.split(' ·')[0]===S.cardF}">${f}</button>`).join('')}</div>
+  <div class="grid">${L.length?L.map(c=>c[0]?`<div class="cd"><div class="im" style="background-image:url(img/card_${c[0]}.jpg)"></div><span class="n">${c[1]}</span></div>`:`<div class="cd out" aria-label="Not collected yet">${c[1]}</div>`).join(''):`<p class="empty">No ${S.cardF.toLowerCase()} cards yet. Every pack has a chance at one.</p>`}</div>`;}
+ if(S.lk==='stats'){const pts=[41,44,39,47,52,45,49,51,46,50],mx=70,w=320,h=80,xs=i=>i*(w/(pts.length-1)),ys=v=>h-(v-30)/(mx-30)*h;
+  return seg+`<div class="tile4"><div class="tl"><small>Average</small><b class="num">47.2</b><span class="d up">${IC.up.replace('<svg','<svg width="10" height="10"')} +3.1 this month</span></div><div class="tl"><small>Checkout</small><b class="num">31%</b><span class="sub">97 of 313 at a double</span></div><div class="tl"><small>180s</small><b class="num">4</b><span class="sub">Best visit 180</span></div><div class="tl"><small>Best leg</small><b class="num">15</b><span class="sub">darts · vs Deano</span></div></div>
+  <div class="card">${sh('Form · last 10 matches')}<svg viewBox="0 0 ${w} ${h+8}" style="width:100%;height:auto" role="img" aria-label="Average over the last 10 matches, 39 to 52"><line x1="0" x2="${w}" y1="${ys(61)}" y2="${ys(61)}" stroke="#7fd19a" stroke-dasharray="4 4" opacity=".7"/><polyline fill="none" stroke="#f3f4f2" stroke-width="2.5" stroke-linejoin="round" points="${pts.map((v,i)=>xs(i)+','+ys(v)).join(' ')}"/>${pts.map((v,i)=>`<circle cx="${xs(i)}" cy="${ys(v)}" r="${i===pts.length-1?4.5:2.5}" fill="${i===pts.length-1?'#7fd19a':'#f3f4f2'}"/>`).join('')}</svg><div class="mlab"><span>10 matches ago</span><span style="color:var(--good)">- - 61 = goal</span><span>Last match</span></div></div>
+  ${row({k:'Records',t:'Highest checkout 112',s:'Big Mal, week 3'})}`;}
+ if(S.lk==='troph')return seg+`<div class="hero" style="height:200px"><div class="im" style="background-image:url(img/g_trophies.jpg);background-position:50% 50%"></div><div class="sh2" style="background:linear-gradient(180deg,transparent 50%,rgba(10,12,14,.9))"></div><div class="tx"><span class="t1">2 of 14 trophies</span></div></div>
+  ${row({k:'Won · 2025',t:'Pub League champion',s:'The Kauri Arms',left:'<span class="lock"><span class="ic" style="color:var(--warn)">🏆</span></span>'})}
+  ${row({k:'Won · 2026',t:'Fill-in of the season',s:'Club singles',left:'<span class="lock"><span class="ic" style="color:var(--warn)">🏅</span></span>'})}
+  ${row({k:'To win',t:'Club singles champion',s:'Finish top two this season',left:`<span class="lock"><span class="ic">${IC.lock}</span></span>`,go:'season'})}`;
+ const d=DARTS.find(x=>x.id===S.eq),nx=DARTS.find(x=>!x.sponsor&&x.lv>S.xp.lv);
+ return seg+`<div class="hero" style="height:150px"><div class="im" style="background-image:url(img/g_locker.jpg);background-position:78% 32%"></div><div class="sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.88) 0,rgba(10,12,14,.15) 70%)"></div><div class="tx" style="right:45%"><span class="big" style="font-size:32px">Hayden</span><span class="sub">The Fill-in · Club</span></div></div>
+ <div class="card" style="flex-direction:row;align-items:center;gap:14px"><div class="ring">${ring(pct(),S.xp.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="t2">${S.xp.need-S.xp.cur} XP to level ${S.xp.lv+1}</span>${nx?`<div style="display:flex;align-items:center;gap:8px"><div class="slot dart r8" style="width:84px;flex:0 0 84px"><div class="im" style="background-image:url(img/g_ds_${nx.id}.jpg)"></div></div><span class="sub" style="font-size:12.5px">${nx.lv===S.xp.lv+1?'Next level':'Lv '+nx.lv}: ${nx.n.replace(/ \d+g$/,'')} unlocks</span></div>`:''}</div></div>
+ <div class="card">${sh('Your game',S.pts?'':'')}${S.pts?`<div class="chips">${chip(S.pts+' point'+(S.pts>1?'s':'')+' to spend · tap +','g')}</div>`:''}
+  ${STATS.map(([id,n])=>{const v=S.st[id],g=id==='sc'?k.sc:id==='co'?k.co:0;return `<div class="stt"><span>${n}</span>${meter(CAP,v,{ghost:g})}<b>${v+g}</b><button class="plus" type="button" data-st="${id}" aria-label="Add a point to ${n}" ${S.pts&&v<CAP?'':'disabled'}>+</button></div>`;}).join('')}
+  <div class="mlab"><span><span style="display:inline-block;width:10px;height:6px;border-radius:2px;background:var(--good);margin-right:5px"></span>You</span><span><span style="display:inline-block;width:10px;height:6px;border-radius:2px;background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px);margin-right:5px"></span>From your darts</span><span>Cap ${CAP} at the Club</span></div></div>
+ <div class="sh" style="margin-top:2px"><h3>Kit</h3></div>
+ <div class="g2"><button class="card" type="button" data-go="shop" data-sel="${S.eq}" style="padding:0;gap:0;overflow:hidden"><div class="slot sq" style="background:var(--dartbg);display:grid;place-items:center;padding:0 8px"><div class="slot dart" style="width:100%"><div class="im" style="background-image:url(img/g_ds_${d.id}.jpg)"></div></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="kick" style="font-size:11px">Darts</small><span class="t2" style="font-size:14px">${d.n}</span></div></button>
+  <button class="card" type="button" id="kitShirt" style="padding:0;gap:0;overflow:hidden"><div class="slot sq"><div class="im" style="background-image:url(img/g_shirt.jpg)"></div></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="kick" style="font-size:11px">Shirt</small><span class="t2" style="font-size:14px">Charcoal, red stripe</span></div></button></div>
+ ${S.packs?row({k:'Cards',t:S.packs+' pack'+(S.packs>1?'s':'')+' waiting',left:'<div class="slot sq r8" style="width:44px"><div class="im" style="background-image:url(img/g_pack.jpg)"></div></div>',id:'toCards'}):''}`;}
+function result(){const L=S.lost,E=S.mode==='exh',M=S.mode==='money',r=S.rw||{cash:55,xp:240};
+ const up=S.xp.lv>S.xp.preLv;
+ const head=`<div class="hero" style="height:250px"><div class="im" style="background-image:url(img/${L?'g_result_loss.jpg':'g_result_win.jpg'});background-position:22% 30%"></div><div class="sh2" style="background:linear-gradient(270deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.35) 45%,rgba(10,12,14,0) 70%)"></div><div class="lockup"><small style="color:${L?'var(--ink2)':'var(--ink)'}">${L?'Lost':'Won'}</small><b class="num">${M?'1–0':L?'1–2':'2–1'}</b><span>${M?'Back-room money match':'vs '+(E?'Barney':'Big Mal')}</span></div></div>`;
+ const me=M?55:L?41:51,op=M?48:44;
+ const h2h=`<div class="card" style="gap:8px"><div class="h2h"><span class="face" style="background-image:url(img/g_face_me.jpg)"></span><div class="vs2"><div class="nums"><b class="num">${me}</b><span>Match average</span><b class="num">${op}</b></div><div class="tug"><i class="a" style="width:${me/(me+op)*100}%"></i><i class="b" style="width:${op/(me+op)*100}%"></i></div></div><span class="face" style="background-image:${E?'url(img/g_exh_barney_poster.jpg);background-size:240%;background-position:50% 16%':M?'none;background-color:#2b3135':'url(img/g_face_mal.jpg)'}"></span></div><div class="chips" style="justify-content:center">${chip('Checkout '+(L?'22%':'38%'),'l')}${chip(L?'Best visit 100':'Two tons','l')}</div></div>`;
+ const rewards=`<div class="card">${sh(L?'Match summary':'Rewards')}<div style="display:flex;align-items:center;gap:14px"><div class="ring" id="rRing">${ring(pct(),S.xp.lv)}</div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline"><span class="big num" id="rCash" style="font-size:32px;color:var(--good)">+$${r.cash}</span><span class="t2 num" id="rXp">+${r.xp} XP</span></div><span class="sub">${up?'<b style="color:var(--good)">Level up · '+S.xp.lv+'</b> · ':''}${S.xp.need-S.xp.cur} XP to level ${S.xp.lv+1}</span></div></div></div>`;
+ const want=L?row({k:'Work on',t:'Practise doubles',s:'Round the Clock · free · small XP',left:`<span class="lock"><span class="ic">${IC.dart}</span></span>`,go:'practice'}):M?row({k:'Entry',t:'Entry money sorted',s:'Walk on is open',left:`<span class="lock"><span class="ic" style="color:var(--good)">${IC.cash}</span></span>`,go:'tonight'}):
+  `<button class="row" type="button" data-go="shop" data-sel="razor" style="flex-direction:column;align-items:stretch;gap:8px"><span style="display:flex;align-items:center;gap:12px"><div class="slot dart r8" style="width:110px;flex:0 0 110px"><div class="im" style="background-image:url(img/g_ds_razor.jpg)"></div></div><span class="tx"><small>Next dart</small><span class="t2">Razor Edge · $45 to go</span></span><span class="chev">›</span></span><div class="bar"><i style="width:${(120-45)/120*100}%"></i></div></button>`;
+ const pack=S.packs?`<div class="row" style="cursor:default"><div class="slot sq r8" style="width:48px"><div class="im" style="background-image:url(img/g_pack.jpg)"></div></div><span class="tx"><small>Earned</small><span class="t2">1 card pack</span></span><button class="ghost" type="button" id="rOpen">${S.rOpened?'Opened':'Open'}</button></div>`:'';
+ const tbl=M||E?row({k:'Season',t:'Table unchanged',s:M?'Money matches don’t count':'Exhibitions don’t count',go:'season'}):`<button class="row" type="button" data-go="season"><span class="tx"><small>Season</small><span class="t2">${L?'Now 4th · 2 pts off 2nd':'Now 2nd · top two go up'}</span></span><span class="chip ${L?'':'g'}" style="${L?'color:var(--bad)':''}">${L?IC.dn+' 1':IC.up+' 1'}</span><span class="chev">›</span></button>`;
+ return head+h2h+rewards+want+pack+tbl+`<button class="link" type="button" id="rMsgs" style="align-self:center;color:var(--ink2)">✉ 2 new · Full match stats ›</button><div class="pin"><button class="primary" type="button" id="cont"><b>Continue</b></button></div>`;}
+function practice(){return `<div class="hero" style="height:180px"><div class="im" style="background-image:url(img/g_locker.jpg);background-position:30% 40%;filter:brightness(.7)"></div><div class="tx"><span class="kick">Practice · free</span><span class="big" style="font-size:34px">Round the Clock</span><div class="chips">${chip('Doubles 14%','l')}${chip('+20 XP · capped','g')}</div></div></div><button class="primary" type="button" id="prGo"><b>Start practice</b></button><div class="card"><span class="sub">The Practice tab gets its own round. This stub answers the links that point here.</span></div>`;}
+/* ---------- shell ---------- */
+const TABS=[['tonight','Tonight'],['season','Season'],['shop','Shop'],['locker','Locker'],['practice','Practice']];
+function hdr(){$('#hdRing').innerHTML=ring(pct(),S.xp.lv,30);$('#bank').textContent=money(S.bank);$('#msgN').hidden=!S.msgs;$('#msgN').textContent=S.msgs;}
+function render(){const res=S.tab==='result';$('#tabs').hidden=res;
+ $('#tabs').innerHTML=TABS.map(([k,n])=>`<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${n}${k==='locker'&&(S.pts||S.packs)?'<i class="dot" aria-label="something waiting"></i>':''}</button>`).join('');
+ const f={tonight,season,shop,locker,result,practice}[S.tab];$('#main').innerHTML=`<section class="scr" data-scr="${S.tab}">${f()}</section>`;hdr();wire();}
+function go(t,keep){S.tab=t;render();if(!keep){const s=$('.scr');if(s)s.scrollTop=0;}if(t==='shop')center();if(t==='result')anim();}
+function center(){requestAnimationFrame(()=>{const t=$('#thumbs'),q=t&&t.querySelector('[aria-pressed="true"]');if(q)t.scrollLeft=Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2);});}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000);}
+function award(){S.rw=S.mode==='money'?{cash:100,xp:40}:S.lost?{cash:5,xp:100}:S.mode==='exh'?{cash:250,xp:300}:{cash:55,xp:240};S.xp.pre=S.xp.cur;S.xp.preLv=S.xp.lv;S.xp.cur+=S.rw.xp;while(S.xp.cur>=S.xp.need){S.xp.cur-=S.xp.need;S.xp.lv++;S.pts++;}S.rOpened=false;}
+function anim(){cancelAnimationFrame(anim.id);if(matchMedia('(prefers-reduced-motion:reduce)').matches||!S.rw)return;const c=$('#rCash'),x=$('#rXp');const C=S.rw.cash,X=S.rw.xp,t0=performance.now();const f=t=>{const k=Math.min(1,(t-t0)/700),e=1-Math.pow(1-k,3);c.textContent='+$'+Math.round(C*e);x.textContent='+'+Math.round(X*e)+' XP';if(k<1)anim.id=requestAnimationFrame(f);};anim.id=requestAnimationFrame(f);}
+function openPack(){if(!S.packs)return;S.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='kw_fishchips';c[1]='Fish & Chips';c[2]='House rules';S.coll++;S.set=Math.min(9,S.set+1);}toast('New card: Fish & Chips · Kiwi Pub Life '+S.set+'/9');}
+function wire(){
+ $$('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+ $$('[data-go]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(b.dataset.sel)S.sel=b.dataset.sel;go(b.dataset.go);});
+ $$('[data-lk]').forEach(b=>b.onclick=()=>{S.lk=b.dataset.lk;render();});
+ $$('[data-soon]').forEach(b=>b.onclick=()=>toast(b.textContent+' gets its own round.'));
+ const w=$('#walkOn');if(w)w.onclick=()=>{if(S.broke)return toast('Short of the $40 entry. Play the money match first.');award();go('result');};
+ const m=$('#moneyTile');if(m)m.onclick=()=>{S.mode='money';S.lost=false;award();go('result');};
+ const c=$('#cont');if(c)c.onclick=()=>{const md=S.mode;S.bank+=S.rw?S.rw.cash:0;if(md==='money')S.broke=false;S.mode='fixture';S.lost=false;go('tonight');toast(md==='money'?'+$100 banked. You can pay the $40 entry now.':md==='exh'?'Exhibition done. Back to the league.':'Next fixture: vs Shazza, week 6');};
+ const ro=$('#rOpen');if(ro)ro.onclick=()=>{if(S.rOpened)return;openPack();S.rOpened=true;render();};
+ $$('.th').forEach(b=>b.onclick=()=>{S.sel=b.dataset.id;render();center();});
+ const by=$('#sBuy');if(by)by.onclick=()=>{const d=DARTS.find(x=>x.id===S.sel);if(S.bank<d.price)return render();S.bank-=d.price;S.owned[d.id]=1;S.eq=d.id;render();toast(d.n+' bought and equipped.');};
+ const eq=$('#sEquip');if(eq)eq.onclick=()=>{S.eq=S.sel;render();};
+ const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with this dart. No XP or money from it.');
+ const op=$('#openPack');if(op)op.onclick=()=>{openPack();render();};
+ $$('.fchips button').forEach(b=>b.onclick=()=>{S.cardF=b.textContent.split(' ·')[0];render();});
+ $$('.plus').forEach(b=>b.onclick=()=>{if(!S.pts)return;S.st[b.dataset.st]++;S.pts--;render();toast(S.pts?S.pts+' point left':'All points spent');});
+ const tc=$('#toCards');if(tc)tc.onclick=()=>{S.lk='cards';render();};
+ const ks=$('#kitShirt');if(ks)ks.onclick=()=>toast('Shirts get their own Shop round.');
+ const pg=$('#prGo');if(pg)pg.onclick=()=>toast('Practice starts here (next round).');
+ const rm=$('#rMsgs');if(rm)rm.onclick=()=>toast('Full stats: 3 tons, best visit 140, checkout 3 of 8.');}
+$('#meBtn').onclick=()=>{S.lk='load';go('locker');};
+$('#msgBtn').onclick=()=>{S.msgs=0;hdr();toast('Big Mal: see you on the oche. Club secretary: subs due Friday.');};
+const STATES=[['normal','Normal'],['first','First match'],['broke','Can’t afford entry'],['lost','Lost match'],['exh','Exhibition night']];
+function setState(k){$$('.ov').forEach(e=>e.remove());S.xp={lv:14,cur:560,need:900,pre:320,preLv:14};S.pts=2;S.packs=3;S.rw=null;S.first=k==='first';S.broke=k==='broke';S.bank=S.broke?25:640;S.lost=k==='lost';S.mode=k==='exh'?'exh':'fixture';
+ if(k==='lost'){award();go('result');}else{go('tonight');if(k==='exh')poster();}}
+function poster(){const p=document.createElement('div');p.className='ov';p.innerHTML=`<div class="pc" role="dialog" aria-label="Exhibition invite"><div class="pi" style="background-image:url(img/g_exh_barney_poster.jpg)"><div class="pt"><span class="kick">Exhibition · Friday · the Club</span><span class="big" style="font-size:34px">Barney is in town</span><div class="chips">${chip('Best of 3')}${chip('$250 prize','g')}${chip('3 tries','l')}</div></div></div><div class="pb"><button class="primary" type="button" id="pGo"><b>Take him on</b></button><button class="link" type="button" id="pLater">Not tonight</button></div></div>`;$('#phone').appendChild(p);
+ $('#pGo').onclick=()=>p.remove();$('#pLater').onclick=()=>{p.remove();S.mode='fixture';render();};}
+$('.legend').innerHTML=STATES.map(([k,n])=>`<button type="button" data-s="${k}">${n}</button>`).join('');$$('.legend button').forEach(b=>b.onclick=()=>setState(b.dataset.s));
+$('#menuBtn').onclick=()=>{if($('.menu'))return $('.menu').remove();const m=document.createElement('div');m.className='menu';m.innerHTML='<div class="mc" role="dialog" aria-label="Menu"><span class="kick">Prototype states</span>'+STATES.map(([k,n])=>`<button type="button" data-s="${k}">${n}</button>`).join('')+'<span class="kick" style="margin-top:8px">Game</span><button type="button">Settings · How to throw · Credits</button></div>';$('#phone').appendChild(m);m.onclick=e=>{const t=e.target.closest('button');if(e.target===m)return m.remove();if(!t)return;m.remove();if(t.dataset.s)setState(t.dataset.s);else toast('Not part of this prototype.');};};
+window.TOPS9={S,go,setState,render,award};
+render();
+</script>
