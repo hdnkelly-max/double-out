@@ -26,7 +26,8 @@ function norm(a,pin){const seen=new Set(),out=[];a.forEach(x=>{if(!x||!x.at||!x.
 // CAR-S2 (Q&D P2): the cloud copy carries ONE backup (the newest one that isn't the career in play); this device keeps all three. A heavily
 // played career is ~24 KB, so three in the save made every cloud push ~4x bigger. The lost-career case (a new career synced over the
 // old one) is covered by that one: it is always the newest.
-const cur0=()=>String(save.careerFrom||'');
+// which backup the career in play came from: stamped on the career object itself, so a new career, a cloud copy or a failed save can't leave a stale mark
+const cur0=()=>String((save.career&&save.career.bakId)||'');
 function cloudPick(a){return a.filter(x=>idOf(x)!==cur0()).slice(0,1);}
 function shown(){return list().filter(x=>idOf(x)!==cur0());}/* the career in play is never offered back */
 // the save's copy and this device's copy, merged (a cloud copy loaded from another device may lack one this device made)
@@ -43,7 +44,7 @@ function failSheet(){try{V.preview(false);}catch(e){}try{showTitle();}catch(e){}
 // message and the first match, which must not run on the old career), and newCareer() itself checks again for any other caller.
 let pre=false;
 {const _sc=showCreator;showCreator=function(editing){const r=_sc.apply(this,arguments);try{if(!editing){const b=$('btnCreate'),og=b.onclick;b.onclick=function(e){if(backup('new')==='fail'){failSheet();return;}pre=true;try{return og.call(this,e);}finally{pre=false;}};}}catch(e){}return r;};}
-const _nc=newCareer;newCareer=function(){if(pre)pre=false;else if(backup('new')==='fail'){failSheet();return;}delete save.careerFrom;return _nc.apply(this,arguments);};
+const _nc=newCareer;newCareer=function(){if(pre)pre=false;else if(backup('new')==='fail'){failSheet();return;}return _nc.apply(this,arguments);};
 // every save goes out with this device's backups in it, so loading an older cloud copy (sign-in, another device) can't drop them from the cloud
 {const _p=persist;persist=function(){try{if(LC.length||Array.isArray(save.careerBak)){const want=cloudPick(list()),have=Array.isArray(save.careerBak)?save.careerBak:[];if(want.map(idOf).join()!==have.map(idOf).join())save.careerBak=want;}}catch(e){}return _p.apply(this,arguments);};}
 // what bringing back 'id' stores: the played career in play (a fresh copy, replacing the entry it came from), then the rest; the one
@@ -57,7 +58,7 @@ function restore(id){if((save.slot||'career')!=='career')switchSlot('career');le
  // career is stored first; only then is the save changed.
  if(!store(P.next,idOf(b))){L('career_restore_fail',b.sum);return 'fail';}
  KEYS.forEach(k=>{if(b.d[k]!==undefined)save[k]=cp(b.d[k]);else if(k!=='career')delete save[k];});
- save.careerFrom=idOf(b);try{_SK=null;}catch(e){}/* the skill cache switchSlot() clears */
+ if(save.career)save.career.bakId=idOf(b);try{_SK=null;}catch(e){}/* the skill cache switchSlot() clears */
  L('career_restore',Object.assign({from:b.at,swapped:P.cur?1:0,dropped:P.dropped.length},b.sum));persist();return 'ok';}
 // ----- the sheet -----
 function sheet(o){const old=document.getElementById('carSheet');if(old)old.remove();const d=document.createElement('div');d.id='carSheet';
@@ -94,7 +95,7 @@ function showRestore(){const a=shown();if(!a.length){rb.hidden=true;return;}cons
   const go=()=>{const r=restore(id);if(r==='ok'){try{flash('Career back','',line(sumOf(save.career)));}catch(e){}showTitle();}else if(r==='fail')sheet({title:'Nothing changed',body:'<p>We couldn’t save your current career on this phone first (it may be out of space), so we didn’t swap them.</p>',acts:[{t:'OK',k:'pri'}]});};
   d.remove();
   // the list holds three: say which one makes room before anything changes
-  if(P&&P.dropped.length){const m=P.dropped[0].sum||sumOf(P.dropped[0].d.career);sheet({title:'Make room?',body:`<p>We keep three backups. Bringing this one back adds your current career to the list, so the oldest one goes:</p><b class="cs-cur">${tn(m)} · ${m.w}–${m.l} · Level ${m.lv} · saved ${when(P.dropped[0].at)}</b>`,acts:[{t:'Bring it back',k:'pri',go},{t:'Cancel'}]});}
+  if(P&&P.dropped.length){const m=P.dropped[0].sum||sumOf(P.dropped[0].d.career);sheet({title:'Make room?',body:`<p>This phone keeps three backups. Bringing this one back adds your current career to the list, so the oldest one goes:</p><b class="cs-cur">${tn(m)} · ${m.w}–${m.l} · Level ${m.lv} · saved ${when(P.dropped[0].at)}</b>`,acts:[{t:'Bring it back',k:'pri',go},{t:'Cancel'}]});}
   else go();});}
 rb.onclick=()=>{try{audioInit();}catch(e){}showRestore();};
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{rb.hidden=!shown().length||!!window.__noGL;}catch(e){}return r;};
