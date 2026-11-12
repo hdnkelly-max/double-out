@@ -350,6 +350,8 @@
   }
   tTry = { n: 0, t: 0 };
   const titleUp = () => { const t = $id('title'); return !!(t && !t.hidden && t.classList.contains('show') !== false && $id('rbTitle') && !$id('rbTitle').hidden); };
+  // the title layer lives exactly as long as the game's own #title is showing: any path that hides #title without showScreen (sign-in's showLogin) takes it down too
+  try { const tt = $id('title'); if (tt) new MutationObserver(() => { if (tt.hidden && $id('rbTitle') && !$id('rbTitle').hidden) titleOff(); }).observe(tt, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] }); } catch (e) {}
   const titleOff = () => { const t = $id('rbTitle'); if (t) t.hidden = true; document.documentElement.classList.remove('rb-title'); clearTimeout(tTry.t); };
   const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
