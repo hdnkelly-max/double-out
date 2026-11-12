@@ -71,7 +71,7 @@ setInterval(watchAudio,2000);document.addEventListener('pointerdown',watchAudio,
 const QK='tops_logq',INC_MAX=3;
 const enc=s=>{try{return new TextEncoder().encode(s).length;}catch(e){return s.length*3;}};
 // the body is measured exactly as sent; trimming continues until it fits (oldest events first)
-function row(reason){let ev=events();const head0={made:Date.now(),upload_id:rid(),session_id:SID,page_id:PAGE,schema_ver:SCHEMA,ver:VER(),reason,dropped,suppressed:Object.keys(supp).length?Object.assign({},supp):null,seq_first:null,seq_last:null,trimmed_events:0,bytes:0,events:ev};
+function row(reason){let ev=JSON.parse(JSON.stringify(events()));/* ChatGPT r5 P0: a detached copy: the coalescer later updates ring events (n, t2) in place, and a built row must never change */const head0={made:Date.now(),upload_id:rid(),session_id:SID,page_id:PAGE,schema_ver:SCHEMA,ver:VER(),reason,dropped,suppressed:Object.keys(supp).length?Object.assign({},supp):null,seq_first:null,seq_last:null,trimmed_events:0,bytes:0,events:ev};
  const fit=()=>{head0.seq_first=ev.length?ev[0].q:null;head0.seq_last=ev.length?ev[ev.length-1].q:null;head0.events=ev;head0.diag=diag();let n=0;for(let i=0;i<4;i++){head0.bytes=n;const w=Object.assign({},head0);delete w.made;delete w.rev;const m=enc(JSON.stringify(w));if(m===n)break;n=m;}head0.bytes=n;return n;};/* measured on the body actually sent (local fields stripped), its own digits included (ChatGPT r3 P1-2) */
  let n=fit();const total=ev.length;while(n>BODY_MAX&&ev.length){ev=ev.slice(Math.max(1,Math.ceil(ev.length/8)));head0.trimmed_events=total-ev.length;n=fit();}return head0;}
 const OWN='tops_logq_owner';
@@ -86,7 +86,7 @@ function keep(r){r.rev=++revN;const q=qGet();const same=q.findIndex(x=>x.upload_
  if(same>=0){if(submitted.has(r.upload_id)||inflight.has(r.upload_id)){r.upload_id=rid();}else{q.splice(same,1,r);return qSet(q);}}
  if(r.reason==='error'){if(q.filter(x=>x.reason==='error').length>=INC_MAX){incOverflow++;return false;}q.push(r);}
  else{const k=q.findIndex(x=>x.reason!=='error'&&!inflight.has(x.upload_id));if(k>=0)q.splice(k,1,r);else if(q.filter(x=>x.reason!=='error').length<2)q.push(r);else{ckOverflow++;return false;}}/* ChatGPT r4 P1-5: at most 2 checkpoints (one may be in flight) */return qSet(q);}
-function release(id,rev){qSet(qGet().filter(r=>!(r.upload_id===id&&r.rev===rev)));/* only the exact version that was sent */}
+function release(id,rev){if(inMatch&&!sendOk()){atBreak.push(()=>release(id,rev));return;}/* ChatGPT r5 P1: no storage write during play */qSet(qGet().filter(r=>!(r.upload_id===id&&r.rev===rev)));/* only the exact version that was sent */}
 function diag(){let oldest=null;try{const q=qGet();for(const r of q)if(r.made&&(oldest==null||r.made<oldest))oldest=r.made;}catch(e){}
  return {persist:memOnly?'memory':'disk'/* storage state when this row was built */,ck_overflow:ckOverflow,fail_n:failN,last_fail:lastFail,keep_fail:keepFail,inc_overflow:incOverflow,last_ok_age_s:lastOk?Math.round((Date.now()-lastOk)/1000):null,oldest_pending_age_s:oldest?Math.round((Date.now()-oldest)/1000):null};}
 let KA=null;const signedIn=()=>typeof NET!=='undefined'&&NET.user&&NET.sb;
@@ -101,7 +101,7 @@ function insert(r){if(!signedIn()||inflight.has(r.upload_id))return;if(!sendOk()
 function beacon(r){if(!KA||!signedIn()||KA.who!==NET.user.id)return;/* never with another account's token */submitted.add(r.upload_id);const rev=r.rev;try{fetch(KA.u+'/rest/v1/tops_log',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(wire(r))}).then(x=>{if(x.ok){/* a keepalive 409 isn't proof it's stored: the row stays queued and the next insert() decides by its error code */lastOk=Date.now();release(r.upload_id,rev);}}).catch(()=>{});}catch(e){}}
 const idle=f=>{let done=false;const go=()=>{if(done)return;done=true;f();};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:2000});}catch(e){}setTimeout(go,2500);/* never starve */};
 // wait for the player's pull to finish, but at most 20 s
-function dupErr(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||'')));}/* ChatGPT r4 P0-3: a 409 can also be a foreign-key error (23503); only a unique violation means it's stored */
+function dupErr(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||''))&&/upload_id/.test((e.message||'')+' '+(e.details||'')));}/* ChatGPT r5 P1: only the upload_id unique constraint (tops_log_upload_id_key) *//* ChatGPT r4 P0-3: a 409 can also be a foreign-key error (23503); only a unique violation means it's stored */
 // uploads never go during play (Q&D 08:23 / 11:00): outside a match at once (idle); during a match only at a real break (a leg end at a
 // quiet moment: no pull, not busy, no dart in the air) or at the match end. Evidence is already on disk, so waiting costs nothing.
 let atBreak=[];function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
@@ -120,7 +120,7 @@ function incident(serious){try{if(serious&&Date.now()-lastKeep>10000){lastKeep=D
  if(!errUps){/* during the cooldown more errors just set dirty; one follow-up carries them */}}catch(e){}}
 setInterval(()=>{if(dirty&&!errTimer&&errUps<10){dirty=false;incident(false);}},15000);
 // ChatGPT r4 P1-4: the match-end row is built off the end-of-match path (idle), but always before the next match starts (beginMatch runs it first)
-let pendBuild=null;function upload(reason){try{const b=()=>{if(pendBuild!==b)return;pendBuild=null;const r=row(reason);keep(r);prepKA();whenNotPulling(()=>insert(r));};pendBuild=b;idle(b);}catch(e){}}/* match end: built and kept off the end-of-match path */
+let pendBuild=null;function upload(reason){try{if(pendBuild)pendBuild();/* ChatGPT r5 P2: an earlier pending row is built first, never replaced */const b=()=>{if(pendBuild!==b)return;pendBuild=null;const r=row(reason);keep(r);prepKA();whenNotPulling(()=>insert(r));};pendBuild=b;idle(b);}catch(e){}}/* match end: built and kept off the end-of-match path */
 // hidden is the reliable exit on iOS (pagehide may never come): keep + send now with keepalive; pagehide repeats it (same upload_id)
 let hideRow=null;function onHide(why){try{log('vis',why);if(!hideRow){hideRow=row('pagehide');keep(hideRow);}beacon(hideRow);/* pagehide after hidden re-sends the identical row (same id, no duplicate) */}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide('hidden');else{hideRow=null;log('vis','visible');if(!inMatch)retry();}});

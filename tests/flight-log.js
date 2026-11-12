@@ -93,6 +93,18 @@ const {chromium}=require('playwright');const path=require('path');
  if(r4.sentDuringB||r4.sentWhilePulling||r4.sentAfterPullNoBreak)f.push('sent during play: '+JSON.stringify(r4));
  if(r4.sentAtBreak<1)f.push('held rows not sent at the next real leg break: '+JSON.stringify(r4));
  if(r4.fkQueued<1)f.push('a foreign-key 409 was treated as stored: '+JSON.stringify(r4));
+ // ChatGPT r5 P0: a built row never changes, even when the coalescer updates the ring event it came from
+ const imm=await p.evaluate(()=>{TOPS_LOG.log('net_fail',{u:'/imm/test.mp3',err:'Failed to fetch',ms:3});const r=TOPS_LOG.row('error');const before=JSON.stringify(r);
+  TOPS_LOG.log('net_fail',{u:'/imm/test.mp3',err:'Failed to fetch',ms:4});TOPS_LOG.log('net_fail',{u:'/imm/test.mp3',err:'Failed to fetch',ms:5});
+  const ring=TOPS_LOG.events().filter(e=>e.k==='net_fail'&&e.d&&e.d.u==='/imm/test.mp3').pop();return {same:JSON.stringify(r)===before,ringN:ring&&ring.n};});
+ if(!imm.same)f.push('a built row changed after the ring event was coalesced: '+JSON.stringify(imm));
+ if(!(imm.ringN>=2))f.push('coalescing did not happen (test not exercised): '+JSON.stringify(imm));
+ // ChatGPT r5 P1: only a unique violation on upload_id counts as stored
+ const dupk=await p.evaluate(async()=>{const of=NET.sb.from;localStorage.setItem('tops_logq','[]');const out={};
+  for(const [name,err] of [['upload_id',{code:'23505',message:'duplicate key value violates unique constraint "tops_log_upload_id_key"'}],['other',{code:'23505',message:'duplicate key value violates unique constraint "tops_log_other_key"'}]]){
+   NET.sb.from=t=>({insert:(r)=>Promise.resolve({error:err,status:409})});const r=TOPS_LOG.row('error');TOPS_LOG._keep(r);TOPS_LOG.retry();await new Promise(z=>setTimeout(z,500));
+   out[name]=TOPS_LOG.queue().some(x=>x.upload_id===r.upload_id);}NET.sb.from=of;return out;});
+ if(dupk.upload_id!==false||dupk.other!==true)f.push('unique-violation handling (want upload_id: released, other: kept): '+JSON.stringify(dupk));
  // ChatGPT r3 P0-1: storage writes fail while reads still work (quota): a new incident must live in memory, be read back and upload
  const memc=await p.evaluate(async()=>{const old=[{upload_id:'disk-old',reason:'error',rev:1,events:[]}];localStorage.setItem('tops_logq',JSON.stringify(old));
   const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k==='tops_logq')throw new DOMException('full','QuotaExceededError');return set.call(this,k,v);};
