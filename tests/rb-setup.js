@@ -15,7 +15,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   const out = {}, fail = [];
   await tap('#rbTabs [data-t="shop"]'); await tap('#rbApp [data-sub="setup"]'); out.open = await state(); await snap('top');
   if (!out.open.rb || out.open.sub !== 'setup' || out.open.tab !== 'shop') fail.push('Setup & gear did not open in the new look');
-  const fl = await p.evaluate(() => [...document.querySelectorAll('#rbApp [data-fl]')].map(x => x.dataset.fl)); await tap(`#rbApp [data-fl="${fl[2]}"]`); out.flight = await state(); if (out.flight.flight !== fl[2] || !out.flight.custom) fail.push('flight colour not set');
+  await tap('#rbApp [data-acc="flight"]'); await snap('flights'); const fl = await p.evaluate(() => [...document.querySelectorAll('#rbApp [data-fl]')].map(x => x.dataset.fl)); await tap(`#rbApp [data-fl="${fl[2]}"]`); out.flight = await state(); if (out.flight.flight !== fl[2] || !out.flight.custom) fail.push('flight colour not set');
   await tap('#rbApp [data-fl="set"]'); out.flightSet = await state(); if (out.flightSet.custom) fail.push('"Set" flights not restored');
   await tap('#rbApp [data-acc="shaft"]'); await snap('shafts');
   const b0 = (await state()).bank; const pid = await p.evaluate(() => { const it = SHAFTS.find(x => x.price > 0 && price(x.price) <= career().bank); return it && it.id; });

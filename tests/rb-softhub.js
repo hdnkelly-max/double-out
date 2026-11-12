@@ -20,7 +20,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   await tap('#rbTabs [data-t="locker"]'); await tap('#rbApp [data-lk="stats"]'); await soft(); await p.waitForTimeout(600); out.locker = await st(); if (out.locker.tab !== 'locker' || out.locker.lk !== 'stats') fail.push('locker');
   await p.evaluate(() => { const b = [...document.querySelectorAll('#rbTabs [data-t="shop"]')][0]; b.click(); });
   await p.waitForTimeout(600); const old = await p.evaluate(() => { const b = [...document.querySelectorAll('#rbApp .rb-seg button')].find(x => /Setup/.test(x.textContent)); if (b) b.click(); return !!b; });
-  await p.waitForTimeout(800); await soft(); await p.waitForTimeout(600); out.oldKit = { found: old, ...(await st()), cur: await p.evaluate(() => hubTab.cur) }; if (!old || out.oldKit.app) fail.push('old kit reopened by refresh');
+  await p.waitForTimeout(800); await soft(); await p.waitForTimeout(600); out.setup = { found: old, ...(await st()), sub: await p.evaluate(() => (document.querySelector('#rbApp [data-sub][aria-selected="true"]') || {}).dataset?.sub) }; if (!old || !out.setup.app || out.setup.tab !== 'shop' || out.setup.sub !== 'setup') fail.push('Setup & gear lost on refresh');  // round 2: Setup & gear lives in the new Shop now
   await p.evaluate(() => showHub('play')); await p.waitForTimeout(800); out.hubAgain = await st(); if (out.hubAgain.tab !== 'tonight' || !out.hubAgain.app) fail.push('real showHub → Tonight');
   if (pe.length) fail.push('page errors ' + pe.join('; ').slice(0, 200));
   console.log(JSON.stringify(out)); console.log(fail.length ? 'rb-softhub FAIL: ' + fail.join(', ') : 'rb-softhub PASS'); await b.close();
