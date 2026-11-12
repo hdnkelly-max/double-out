@@ -6183,6 +6183,8 @@ body.card-fog #cardFog{opacity:1}body.card-nomarker .pa-win,body.card-nomarker .
 /* hub shell */
 #hub.hubx.c3{background:linear-gradient(180deg,rgba(16,25,26,.72),rgba(16,25,26,.86) 40%,rgba(16,25,26,.96))}
 #hub.c3 .hx-head{background:#10191A!important;border-bottom:1px solid var(--ah-line)!important;min-height:56px}
+/* HUB-MENU hotfix 12 Nov: in the home-screen app the hub header sat under the iOS status bar, so Menu couldn't be tapped. Push the header's content below the inset (0 in a browser tab: unchanged). */
+#hub .hx-head{padding-top:max(6px,calc(env(safe-area-inset-top,0px) + 4px))!important}#btnHubMenu{min-height:44px;min-width:44px}
 #hub.c3 .hx-id{border-left:0!important;margin-left:0!important;padding-left:0!important}
 #hub.c3 .hx-id b{font:800 20px var(--display)!important;letter-spacing:.04em!important;color:var(--ah-text)!important}
 #hub.c3 .hx-id .pt{border-radius:50%!important;width:36px!important;height:36px!important}
