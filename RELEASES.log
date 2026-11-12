@@ -36,4 +36,4 @@
 2026-11-12T18:34:35Z live version=3.33 tag=rel-3.33 tree=bd8d62f commit=adff060cd50ce9da5c16d906cbe5ce41a1810ad6 risk=R1 run=43279356789 item=ECON-S3b S3 shop hooks hardening before any DPNZ+ item is sold
 2026-11-12T18:43:34Z live version=3.34 tag=rel-3.34 tree=9aae7ca commit=a4c0ff775f3073b3da4c0264de4bf0dd298acfdc risk=R3 run=43281557042 item=EXP-WIDE new hub column stays 520 px on wide screens
 2026-11-12T19:39:09Z live version=3.35 tag=rel-3.35 tree=a6a5573 commit=f74cae31de5ba466556e04f55b011c8c6d741e30 risk=R2 run=43292193589 item=ENG-9 counters() out of aiming (eng9-counters f74cae3, Delivery QA PASS 07:02)
-2026-11-12T20:43:59Z prepared version=3.36 tag=rel-3.36 tree=f7db151 commit=ac21b84193a331698d56e60e86d5e38d81ee47fa risk=R1 run=43303047752 item=ENG-20AB #20 A/B build: ENG-13 no 3D behind opaque hub + working Test: no game audio row + per-match audio source count
+2026-11-12T20:43:59Z live version=3.36 tag=rel-3.36 tree=f7db151 commit=ac21b84193a331698d56e60e86d5e38d81ee47fa risk=R1 run=43303047752 item=ENG-20AB #20 A/B build: ENG-13 no 3D behind opaque hub + working Test: no game audio row + per-match audio source count
