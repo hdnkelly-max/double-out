@@ -164,6 +164,7 @@
     const r = _ca.apply(this, arguments);
     try {
       if (!S || !S.pub || S.done || !m) return r;
+      if (window.TOPS_q20has && TOPS_q20has('nofx')) return r; /* #20 test switch: no pub card effects */
       const c = (typeof CARD !== 'undefined' && CARD[m.id]) || {}, fi = pubIdx(m.from), ti = pubIdx(m.to);
       const mm = Object.assign({}, m, { fl: c.fl, fromName: fi >= 0 ? S.p[fi].name : '' });
       if (m.res === 'blocked' && m.by === 'bouncer') { door(); return r; }
