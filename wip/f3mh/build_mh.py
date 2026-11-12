@@ -84,6 +84,12 @@ def macro_targets(cfg):
                     for wk, wv in ww.items():
                         w = pw * gv * av * mv * wv
                         if w > 1e-6: out.append((md + f'proportions/{gk}-{ak}-{mk}-{wk}-{pk}.target', w))
+    # detail modifiers: {"eyes/{s}-eye-height2-incr": 0.5, "nose/nose-scale-horiz-decr": 0.3}; {s} = both l and r
+    for k, w in cfg.get('mods', {}).items():
+        for side in (['l', 'r'] if '{s}' in k else ['']):
+            out.append((MH + '/targets/' + k.replace('{s}', side) + '.target', w))
+    miss = [p for p, w in out if not os.path.exists(p)]
+    if miss: print('missing targets:', miss[:5])
     return [(pth, w) for pth, w in out if os.path.exists(pth)]
 
 def read_mhclo(path):

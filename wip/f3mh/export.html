@@ -10,13 +10,13 @@ for(const b of J.bones){const bo=new T.Bone();bo.name=b.name;const w=new T.Matri
  const p=b.parent?W[b.parent]:new T.Matrix4();const l=new T.Matrix4().copy(p).invert().multiply(w);l.decompose(bo.position,bo.quaternion,bo.scale);
  (b.parent?bones[b.parent]:arm).add(bo);bones[b.name]=bo;list.push(bo);}
 root.updateMatrixWorld(true);const skel=new T.Skeleton(list);
-const tl=new T.TextureLoader();const tex=async(p,srgb)=>{if(!p)return null;const t=await tl.loadAsync(p.replace('/home/claude/mhassets','mhassets'));if(srgb)t.encoding=T.sRGBEncoding;t.flipY=false;return t;};
+const tl=new T.TextureLoader();const tex=async(p,srgb)=>{if(!p)return null;const t=await tl.loadAsync(p.replace('/home/claude/mhassets','mhassets').replace('/home/claude/mhbuild/tex','tex'));if(srgb)t.encoding=T.sRGBEncoding;t.flipY=false;return t;};
 const NAME={'body':'Body','high-poly.mhclo':'Eyes','eyebrow001.mhclo':'Eyelash_Brows','eyelashes02.mhclo':'Eyelashes','teeth_base.mhclo':'Teeth','short02.mhclo':'Hair','male_casualsuit04.mhclo':'Outfit','shoes02.mhclo':'Shoes'};
 for(const p of J.parts){if(p.mat&&p.mat.cornea)continue;const g=new T.BufferGeometry();
  g.setAttribute('position',new T.Float32BufferAttribute(p.pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(p.nrm,3));
  const uv=p.uv.slice();for(let i=1;i<uv.length;i+=2)uv[i]=1-uv[i];g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
  g.setAttribute('skinIndex',new T.Uint16BufferAttribute(p.si,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(p.sw,4));g.setIndex(p.idx);
- const nm=NAME[p.name]||p.name;const m=p.mat||{};const hair=/Hair|Eyelash/.test(nm);
+ const nm=NAME[p.name]||(/^(short|long|bob|afro|braid|ponytail)/.test(p.name)?'Hair':/^eyebrow/.test(p.name)?'Eyelash_Brows':/^eyelash/.test(p.name)?'Eyelashes':/^shoes/.test(p.name)?'Shoes':/suit|outfit|shirt|jeans|pants/.test(p.name)?'Outfit':p.name);const m=p.mat||{};const hair=/Hair|Eyelash/.test(nm);
  const mat=new T.MeshStandardMaterial({name:nm,map:await tex(m.diffuseTexture,true),normalMap:await tex(m.normalmapTexture,false),roughness:nm==='Body'?.62:hair?.6:.86,metalness:0,
   side:hair?T.DoubleSide:T.FrontSide,transparent:hair,alphaTest:hair?.4:0});
  if(nm==='Teeth'&&m.diffuseColor)mat.color.setRGB(...m.diffuseColor);

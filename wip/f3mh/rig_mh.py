@@ -151,6 +151,37 @@ def main():
     si, sw = top4(W[S])
     skin = B.read_mhmat(B.SYS + '/skins/' + cfg.get('skin', 'young_caucasian_male') + '/' + cfg.get('skin', 'young_caucasian_male') + '.mhmat')
     parts.insert(0, {'name': 'body', 'pos': P, 'uv': U, 'idx': I, 'nrm': N, 'si': si, 'sw': sw, 'mat': skin, 'z': 0})
+    # the game renders hair/brows/lashes with alphaTest .4 (rigFrom); MakeHuman hair cards fade out well below that, so the strands
+    # fall apart. Pre-bake: alpha gain (a' = min(1, a*gain)) and RGB bled into transparent texels so the cut edge has no halo.
+    from PIL import Image, ImageFilter
+    import os
+    os.makedirs('/home/claude/mhbuild/tex', exist_ok=True)
+    for p in parts:
+        m = p.get('mat') or {}; t = m.get('diffuseTexture')
+        if not t or not any(k in p['name'] for k in ('hair', 'short', 'eyebrow', 'eyelash', 'long', 'bob', 'afro', 'braid', 'ponytail')): continue
+        im = np.asarray(Image.open(t).convert('RGBA')).astype(np.float32)
+        gain = cfg.get('alpha_gain', {}).get(p['name'], 2.2 if 'eyelash' not in p['name'] else 1.6)
+        a = np.clip(im[..., 3] * gain, 0, 255)
+        rgb = Image.fromarray(im[..., :3].astype(np.uint8)); mask = Image.fromarray((im[..., 3] > 40).astype(np.uint8) * 255)
+        bleed = rgb.copy()
+        for _ in range(6): bleed = bleed.filter(ImageFilter.MaxFilter(3)) if False else Image.composite(bleed, bleed.filter(ImageFilter.BoxBlur(4)), mask)
+        o4 = np.dstack([np.asarray(bleed), a.astype(np.uint8)])
+        q = '/home/claude/mhbuild/tex/' + os.path.basename(t).replace('.png', '_a.png'); Image.fromarray(o4, 'RGBA').save(q); m['diffuseTexture'] = q
+    # skin: MakeHuman skins have no normal map and read flat/pale under ACES. Bake a light grade (contrast, warmth) and a fine
+    # procedural pore/micro normal map (linear) at the texture's own size.
+    body = parts[0]; t = body['mat'].get('diffuseTexture')
+    if t and cfg.get('skin_pass', True):
+        im = np.asarray(Image.open(t).convert('RGB')).astype(np.float32) / 255
+        g = cfg.get('skin_grade', {'contrast': 1.12, 'warm': [1.03, 0.99, 0.95], 'gamma': 1.05})
+        im = np.clip((im - 0.5) * g['contrast'] + 0.5, 0, 1) ** g['gamma'] * np.array(g['warm'])
+        q = '/home/claude/mhbuild/tex/' + os.path.basename(t).replace('.png', '_g.png'); Image.fromarray((np.clip(im, 0, 1) * 255).astype(np.uint8)).save(q)
+        body['mat']['diffuseTexture'] = q
+        H0, W0 = im.shape[:2]; rng = np.random.default_rng(7)
+        h = Image.fromarray((rng.random((H0, W0)) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.1))
+        h = np.asarray(h).astype(np.float32) / 255
+        k = cfg.get('pore_strength', 3.0); dx = (np.roll(h, -1, 1) - np.roll(h, 1, 1)) * k; dy = (np.roll(h, -1, 0) - np.roll(h, 1, 0)) * k
+        n = np.dstack([-dx, -dy, np.ones_like(h)]); n /= np.linalg.norm(n, axis=2, keepdims=True)
+        qn = '/home/claude/mhbuild/tex/skin_pores_n.png'; Image.fromarray(((n * 0.5 + 0.5) * 255).astype(np.uint8)).save(qn); body['mat']['normalmapTexture'] = qn
     # decimetres -> metres, feet on the floor
     sc = 0.1; y0 = min(p['pos'][:, 1].min() for p in parts if len(p['idx']))
     for p in parts: p['pos'] = (p['pos'] - [0, y0, 0]) * sc
