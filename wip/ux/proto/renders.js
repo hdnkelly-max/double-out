@@ -11,16 +11,20 @@ const dir = process.argv[2], out = path.join(__dirname, 'img');
   await p.waitForFunction(() => typeof V !== 'undefined' && V.portrait && typeof newCareer === 'function', null, { timeout: 180000 });
   await p.evaluate(() => { save.authSeen = true; const l = $('login'); if (l) l.hidden = true; newCareer(); save.name = 'Hayden'; career().tier = 1; });
   await p.waitForFunction(() => typeof RIG !== 'undefined' ? !!RIG.ready : true, null, { timeout: 120000 }).catch(() => {});
-  await p.waitForTimeout(12000);   // character models + anims
+  await p.evaluate(() => { const mal = Object.assign(lookFor('Big Mal'), { model: 'david', beard: 1, build: 2 }); window.__mal = mal;
+    // first calls (tier 3) make the game load each character model; the real renders below use tier 1, a new cache key
+    try { V.portrait(save.look, 'Hayden', 3, 0); V.portrait(mal, 'Big Mal', 3, 0); V.heroShot(save.look, 'Hayden', 3); V.heroShot(mal, 'Big Mal', 3); } catch (e) {} });
+  await p.waitForTimeout(25000);
+  await p.waitForTimeout(8000);   // anims
   const res = await p.evaluate(() => {
     const o = {}; const tryit = (k, f) => { try { o[k] = f(); } catch (e) { o[k] = 'ERR ' + e.message; } };
-    const mal = (typeof lookFor === 'function') ? lookFor('Big Mal') : null;
+    const mal = window.__mal;
     tryit('me_portrait', () => V.portrait(save.look, 'Hayden', 1, 0));
     tryit('mal_portrait', () => V.portrait(mal, 'Big Mal', 1, 0));
     tryit('me_hero', () => V.heroShot(save.look, 'Hayden', 1));
     tryit('mal_hero', () => V.heroShot(mal, 'Big Mal', 1));
     const bar = id => (typeof BARRELS !== 'undefined' ? BARRELS.find(x => x.id === id) : null);
-    ['razor', 'assassin', 'zen', 'vapor8', 'asp'].forEach(id => tryit('dart_' + id, () => V.dartShot(save.flight, { barrel: bar(id) })));
+    ['razor', 'assassin', 'zen', 'vapor8', 'asp'].forEach(id => tryit('dart_' + id, () => V.dartShot(save.flight, Object.assign(setupParts(), { barrel: bar(id) }))));
     return o;
   });
   const sizes = {};
