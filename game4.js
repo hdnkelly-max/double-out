@@ -303,7 +303,21 @@ const AU={ctx:null,on:true,caller:true,crowdGain:null,master:null};try{const a=J
 function persistAudio(){try{localStorage.setItem('doubleout_audio',JSON.stringify({on:AU.on,caller:AU.caller}));}catch(e){}}
 function speechWarm(){if(speechWarm.done||!('speechSynthesis'in window))return;speechWarm.done=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(e){}}
 function audioWarm(){if(audioWarm.done||!AU.ctx)return;audioWarm.done=true;setTimeout(()=>{try{[.5,.7,1,1.3,1.5,2,2.2,2.6].forEach(d=>swBuf(AU.ctx,d));[.05,.06,.08,.12,.5].forEach(d=>nbBuf(AU.ctx,d));}catch(e){}},300);}
-function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
+/* #20 (Overseer 07:59): what the audio graph is doing, logged once per match in dev.t20.cnt.au: [sources playing now, sources started since
+   the last read, the context's state]. Counting only: a start() is passed straight through. */
+{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start')||P.start.__auc)return;const st=P.start;P.start=function(){if(this.__aucS)return st.apply(this,arguments);
+   const r=st.apply(this,arguments);/* native first: if it throws, it throws as before and nothing is counted */
+   this.__aucS=1;try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}
+   /* #20 'no game audio': a sound started while the muted match's context is suspended would wait in the queue and play, with every other one,
+      the moment the hub resumes the context (ChatGPT P1). It is stopped at once and later stop() calls on it are ignored, so it never sounds. */
+   try{if(window.TOPS_muteOn&&TOPS_muteOn()){this.__q20k=1;SP0.call(this,0);}}catch(e){}return r;};P.start.__auc=1;};
+ const SSN=window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype,SP0=SSN&&SSN.stop;
+ if(SSN&&SP0){SSN.stop=function(){if(this.__q20k)return;return SP0.apply(this,arguments);};}
+ try{wrap(window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype);wrap(window.AudioBufferSourceNode&&AudioBufferSourceNode.prototype);wrap(window.OscillatorNode&&OscillatorNode.prototype);}catch(e){}
+ window.TOPS_AU=()=>{const r=[AUC.live,AUC.started,AU.ctx?AU.ctx.state:'none'];AUC.started=0;return r;};}
+function audioWake(){/* ENG-11: iOS leaves the context 'suspended' (made outside a tap) or 'interrupted' (app switch, lock, call); only a resume() inside a tap brings it back. In a 'no game audio' match the context's resume() is held off (#20 A/B), so this does nothing there */try{if(AU.ctx&&AU.ctx.state!=='running'&&AU.ctx.state!=='closed'){const p=AU.ctx.resume();if(p&&p.catch)p.catch(()=>{});}}catch(e){}}
+['touchend','pointerup','click','keydown'].forEach(t=>document.addEventListener(t,audioWake,{capture:true,passive:true}));/* the events that count as a tap for audio unlock: the tap that starts the walk-on wakes the context before the walk-on music is queued */
+function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx){audioWake();return;}try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
  const len=c.sampleRate*3,buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);let last=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*8;}
  const src=c.createBufferSource();src.buffer=buf;src.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=520;bp.Q.value=.6;
  const bp2=c.createBiquadFilter();bp2.type='lowpass';bp2.frequency.value=1400;AU.crowdGain=c.createGain();AU.crowdGain.gain.value=0;src.connect(bp);bp.connect(bp2);bp2.connect(AU.crowdGain);AU.crowdGain.connect(AU.master);src.start();
@@ -1607,7 +1621,7 @@ function currentSigma(){if(S&&S.mp)return mpSigma();const b=S.barrel;const nv=sp
 // ===== INPUT =====
 function setAim(x,y){const d=Math.hypot(x,y);if(d>180){x*=180/d;y*=180/d;}S.aim={x,y};}
 let dragging=false;const cvEl=$('scene');
-cvEl.addEventListener('pointerdown',e=>{audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!S||S.done||S.busy||S.p[S.cur].ai||S.view===1)return;
+cvEl.addEventListener('pointerdown',e=>{audioInit();if(!S||S.done||S.busy||S.p[S.cur].ai||S.view===1)return;
  const p=V.pointToBoardMM(e.clientX,e.clientY);const onBoard=p&&Math.hypot(p.x,p.y)<260&&(V.isSplit()||e.clientY<V.boardBottomY());
  /* FEEL: board drag only aims; board pane outside the board does nothing; desktop player pane still pulls */
  if(onBoard){cvEl.setPointerCapture(e.pointerId);dragging=true;setAim(p.x,p.y);return;}
@@ -1622,9 +1636,15 @@ addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();release(e,'
    A frame drawn at rAF time t(i) reaches the screen at about the next rAF, t(i+1); so at a press between t(n) and t(n+1) the screen shows frame n-1.
    Applied only after a slow frame (ChatGPT 20:40): at a steady frame rate the lock is unchanged; when the phone stalls (330 ms frames seen in Hayden's 3.11 match 2) it is the
    difference between what he saw and where the dart went. Same rule for everyone; it only removes display lag from the throw. */
+/* CAR-5c (Overseer 05:29): frame times for the per-dart release record: a 128-slot ring of frame timestamps (one store per frame) and the
+   longest gap between frames inside a window, including the open gap from the last frame to the window's end (a stall still in progress) */
+const FT=new Float64Array(128);let FTn=0;function ftPush(now){FT[FTn&127]=now;FTn++;}
+function gapMax(t0,t1){/* a gap counts in full when it ends inside the window (a freeze that started just before still shows its real length; ChatGPT P1) */let m=0,prev=null;const n=Math.min(FTn,128);for(let i=FTn-n;i<FTn;i++){const t=FT[i&127];if(t>t1)break;if(prev!=null&&t>t0)m=Math.max(m,t-prev);prev=t;}if(prev!=null&&t1>prev)m=Math.max(m,t1-prev);return Math.round(m);}
+function frameAge(t){const n=Math.min(FTn,128);for(let i=FTn-1;i>=FTn-n;i--){const f=FT[i&127];if(f<=t)return Math.round(t-f);}return null;}window.TOPS_FAGE=frameAge;/* ms since the last frame drawn before t */
+window.TOPS_GAP=gapMax;
 const SHOWN=[];function shownPush(now){if(!S||S.done||S.pulling||!S.sway)return;SHOWN.push({t:now,x:S.sway.x,y:S.sway.y});if(SHOWN.length>6)SHOWN.shift();}
 function shownSway(){/* ChatGPT P1: only after a slow frame (>50 ms between the last two frames, or since the last one); at a steady frame rate the lock is exactly as before */const n=SHOWN.length;if(n>=2){const a=SHOWN[n-1],b=SHOWN[n-2];if(a.t-b.t>50||performance.now()-a.t>50)return b;}return S.sway;}
-function startPull(src){if(S&&S.noPullUntil&&performance.now()<S.noPullUntil)return;if(!S||S.busy||S.done||S.p[S.cur].ai||S.pulling||S.view===1||S.breathe||V.walking())return;S.pullSrc=src||'key';S.pulling=true;S.over=false;S.pullStart=performance.now();S.pull=0;S.relAdd=(S.fx&&S.online&&S.fx.some(f=>f.tap))?70:0;S.pullMul=(S.fx&&S.online&&S.fx.some(f=>f.bar))?1/1.35:window.TH_LEGACY?Math.max(.75,Math.min(1.3,1+gauss()*jitter())):1;S.lastNerves=effNerves();S.pullMs=0;if(!window.TH_LEGACY){const tp=throwParams();S.lockTp=tp;S.pullMs=tp.D/SWEET;const sw=shownSway();try{const L=window.TOPS_LOCKLAG;if(L){const d=Math.hypot(sw.x-S.sway.x,sw.y-S.sway.y);L.n++;L.sum+=d;if(d>5)L.o5++;if(d>L.max)L.max=d;}}catch(e){}S.lock={x:S.aim.x+sw.x+gauss()*tp.tr*.6,y:S.aim.y+sw.y+gauss()*tp.tr*.6,t:performance.now()};SHOWN.length=0;S.lockOn=scoreAt(S.lock.x,S.lock.y).label===scoreAt(S.aim.x,S.aim.y).label;try{sfxLock();}catch(e){}}noiseBurst({dur:.12,freq:600,q:.5,gain:.05});
+function startPull(src){if(S&&S.noPullUntil&&performance.now()<S.noPullUntil)return;if(!S||S.busy||S.done||S.p[S.cur].ai||S.pulling||S.view===1||S.breathe||V.walking())return;S.pullSrc=src||'key';S.pulling=true;S.over=false;S.pullStart=performance.now();S.pull=0;S.relAdd=(S.fx&&S.online&&S.fx.some(f=>f.tap))?70:0;S.pullMul=(S.fx&&S.online&&S.fx.some(f=>f.bar))?1/1.35:window.TH_LEGACY?Math.max(.75,Math.min(1.3,1+gauss()*jitter())):1;S.lastNerves=effNerves();S.pullMs=0;if(!window.TH_LEGACY){const tp=throwParams();S.lockTp=tp;S.pullMs=tp.D/SWEET;const sw=shownSway();try{const tn=performance.now();S.relInfo={tp:tn,gp:gapMax(tn-500,tn),sx:sw.x,sy:sw.y,gx:S.sway.x,gy:S.sway.y,lag:sw!==S.sway?1:0};}catch(e){S.relInfo=null;}/* CAR-5c: what the screen showed when he pressed */try{const L=window.TOPS_LOCKLAG;if(L){const d=Math.hypot(sw.x-S.sway.x,sw.y-S.sway.y);L.n++;L.sum+=d;if(d>5)L.o5++;if(d>L.max)L.max=d;}}catch(e){}S.lock={x:S.aim.x+sw.x+gauss()*tp.tr*.6,y:S.aim.y+sw.y+gauss()*tp.tr*.6,t:performance.now()};SHOWN.length=0;S.lockOn=scoreAt(S.lock.x,S.lock.y).label===scoreAt(S.aim.x,S.aim.y).label;try{sfxLock();}catch(e){}}noiseBurst({dur:.12,freq:600,q:.5,gain:.05});
  if(ui.mode==='career'&&!S.practice){const opp=S.p[1];const pc=opp.rival?.18:(ui.tier===0?.08:0);if(Math.random()<pc){setTimeout(()=>{if(S&&S.pulling){banter('*cough*',opp.name);S.adren+=.6*(1+SK().press);}},250);}}}
 function release(ev,src){if(!S||!S.pulling)return;if(src&&src!=='auto'&&S.pullSrc&&S.pullSrc!==src)return;S.pull=pullAt(feelStamp(ev)-(save.inputOffsetMs!=null?save.inputOffsetMs:((window.matchMedia&&matchMedia('(pointer:coarse)').matches)?35:0)));S.over=S.pull>=1.0;S.relMs=relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0);/* FEEL: timestamp-based, never frame-derived */S.pulling=false;const perf=isPerfect();S.perfect=perf;{const me=S.p[S.cur];me.throws=(me.throws||0)+1;if(perf){me.perfects=(me.perfects||0)+1;if(!S.practice&&ui.mode==='career'&&career())career().perfects=(career().perfects||0)+1;}}const sig=currentSigma();{const d=S.relMs/1000;S.lastTiming=S.over?'Held':perf?'Perfect':Math.abs(d)<(window.TH_LEGACY?.03:Math.max(.03,perfectWin()*2))?'Flush':d<0?(d<-.12?'Early':'A touch early'):(d>.12?'Late':'A touch late');S.lastArrow=window.TH_LEGACY||perf?'':(S.over||d>0?' ↓':' ↑')+' '+Math.round(Math.abs(d*1000))+'ms';if(S.drill)S.drill.timings.push(S.over?.5:d);{const me=S.p[S.cur];if(d<-.03)me.early=(me.early||0)+1;else if(d>.03||S.over)me.late=(me.late||0)+1;}}S.pull=0;S.over=false;S.throwsMade++;save.totThrows=(save.totThrows||0)+1;if(S.throwsMade>=4)$('hint').style.opacity=0;feelAfterRelease(perf);
  const ax=S.aim.x+S.sway.x,ay=S.aim.y+S.sway.y;let lx=ax+gauss()*sig*.86,ly=ay+gauss()*sig;
@@ -2173,7 +2193,7 @@ function feelPaneHold(e){if(feelPhone()||!V.isSplit())return false;return e.clie
 // --- pull pad ---
 const PA=$('pullArea'),PAD=$('pullPad'),PAL=$('paLabel'),PAV=$('paVerdict'),PAM=$('paMark'),PAWIN=$('paWin');let paState='',paVerdT=0,paWinKey='';
 function padCanPull(){return !!(S&&!S.done&&!S.busy&&!S.p[S.cur].ai&&!S.mateTurn&&S.view!==1&&!S.breathe&&!V.walking());}
-if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();if(!padCanPull())return;try{PAD.setPointerCapture(e.pointerId);}catch(x){}S.padPtr=e.pointerId;startPull('pad');});
+if(PAD){PAD.addEventListener('pointerdown',e=>{e.preventDefault();audioInit();if(!padCanPull())return;try{PAD.setPointerCapture(e.pointerId);}catch(x){}S.padPtr=e.pointerId;startPull('pad');});
  PAD.addEventListener('pointerup',e=>{if(S&&S.pulling&&S.pullSrc==='pad')release(e,'pad');});
  PAD.addEventListener('pointercancel',()=>{if(S&&S.pullSrc==='pad')cancelPull();});
  PAD.addEventListener('lostpointercapture',()=>{if(S&&S.pulling&&S.pullSrc==='pad')cancelPull();});
@@ -2342,6 +2362,17 @@ zoomSync();
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
 let lastBeat=0;
+/* ENG-13 (#20, Overseer 07:12): with no match live, the 3D scene was drawn every frame (60/s on an iPhone) behind the rebrand hub, which is
+   opaque and covers the whole screen: GPU and main-thread work nobody sees, sharing the phone with the menu sounds. Now no 3D frame is drawn
+   while a full-screen opaque menu covers the scene. Checked at most every 400 ms (two style reads), never during a match: a live match always
+   draws. Portraits and hero renders are separate calls and unaffected. Test switch 'hub3d' (URL q20) keeps the old drawing for an A/B. */
+function menuCovers(now){if(now-(menuCovers.t||0)<400)return !!menuCovers.on;menuCovers.t=now;let on=false;
+ try{if(!(window.TOPS_q20has&&TOPS_q20has('hub3d'))){const W=innerWidth,H=innerHeight;const els=[document.getElementById('rbApp')].concat(SCREENS.map(id=>document.getElementById(id)));
+  for(const e of els){if(!e||e.hidden)continue;const r=e.getBoundingClientRect();if(r.left>1||r.top>1||r.right<W-1||r.bottom<H-1)continue;const c=getComputedStyle(e);if(c.display==='none'||c.visibility==='hidden'||+c.opacity<.99)continue;
+   const m=/rgba?\(([^)]*)\)/.exec(c.backgroundColor);const a=m?(m[1].split(',').length>3?+m[1].split(',')[3]:1):0;if(a>=.99){/* and it sits above the 3D canvas */const st=document.elementsFromPoint(W/2,H/2);const ci=st.indexOf(document.getElementById('scene'));const ei=st.findIndex(x=>x===e||e.contains(x));if(ei>=0&&(ci<0||ei<ci)){on=true;break;}}}}}catch(e){on=false;}
+ if(on!==!!menuCovers.on){try{document.body.classList.toggle('tops-covered',on);}catch(e){}}menuCovers.on=on;return on;}
+{const st=document.createElement('style');st.textContent='body.tops-covered #grain{display:none}';/* the film grain sits under the opaque menu (z 2 vs 50) but kept animating and blending a 4x-screen layer */document.head.appendChild(st);}
+window.TOPS_menuCovers=()=>({on:!!menuCovers.on,skipped:menuCovers.skipped|0});
 function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();
   if(window.TH_LEGACY){const amp=2.0*S.barrel.sway*swayMult()*(1+nv*.4)*(0.7+armMult()*.3);S.sway={x:amp*(Math.sin(t*1.7)+.5*Math.sin(t*4.3+1)),y:amp*(Math.sin(t*2.1+2)+.5*Math.sin(t*3.7))};}
   else{if(!tick._p||now-tick._pt>250){tick._p=throwParams();tick._pt=now;}const tp=tick._p;S.tp=tp;
@@ -2349,8 +2380,8 @@ function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();
   if(S.pulling){S.pull=pullAt(performance.now());if(S.pull>=1.0)S.over=true;if(S.pull>=1.3)release(null,'auto');}S.inWin=S.pulling&&isPerfect();feelBreathe(now);
   const thr=targetHR();S.hr+=(thr-S.hr)*.02;const period=60000/S.hr;if(now-lastBeat>period){lastBeat=now;if(nv>1.2)sfxHeart();ecgBeat=now;if(!window.TH_LEGACY&&tick._p&&!(S.pulling&&S.lock))driftBeat(now,tick._p);}
   /* #16: this runs every frame. Assigning textContent/hidden counts as a page change even when the value is the same, so it forced a style recalc of the whole page every frame, which costs more as the page grows (~1,240 nodes in match 1, ~1,730 from match 2). Write only when the value changes; the page ends up the same every frame. */setTx($('bpm'),String(Math.round(S.hr)));$('hr').classList.toggle('hot',S.hr>105);{const pc=nervePct();const me=S.p[S.cur];const mine=!me.ai&&!S.mateTurn&&!S.practice;setTx($('hrNote'),mine&&nv>.3?`${nerveCause()} · spread +${pc}%`:(mine?'Settled':''));const bs=$('btnSettle'),hid=!(S.breathe||(mine&&nv>.9&&!S.settled&&!S.pulling&&!S.busy));if(bs&&bs.hidden!==hid)bs.hidden=hid;}ecgDraw(now,S.hr,nv);{const o=Math.round((S.view===1?0:Math.min(.7,Math.max(0,nv-.8)*.22))*100)/100;const ne=$('nerve');if(ne&&ne._o!==o){ne._o=o;ne.style.opacity=o;}}/* #20: write only on change, like setTx */sfxPubAmbience();
-  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);V.frame(now,S);shownPush(now);}
- else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);V.frame(now,S);}
+  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);if(menuCovers.on){/* a match is live: everything shows again */menuCovers.on=false;menuCovers.t=0;try{document.body.classList.remove('tops-covered');}catch(e){}}V.frame(now,S);shownPush(now);ftPush(now);}
+ else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);if(!menuCovers(now))V.frame(now,S);else menuCovers.skipped=(menuCovers.skipped|0)+1;}
  fxTick();requestAnimationFrame(tick);}
 requestAnimationFrame(tick);
 if('speechSynthesis'in window){try{speechSynthesis.getVoices();}catch(e){}}
@@ -3165,7 +3196,8 @@ window.TOPS_matchTeardown=matchTeardown;
 //  keepvenue  no venue rebuild when the hub comes back on the same tier (match 2 draws match 1's venue objects and textures)
 //  keepfig    the teardown between matches frees nothing (opponent figure, character templates, hair tints stay as they were)
 //  nohub3d    no 3D drawing while the hub is up and no match is live (the GPU rests between matches)
-//  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames)
+//  hub3d      ENG-13 off: the 3D scene is drawn behind an opaque full-screen menu again (as before 3.32), for an A/B
+//  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames); also a hub Menu row
 // Each perf row carries the switch in dev.t20.q20.
 {let q='';try{const u=new URLSearchParams(location.search).get('q20');if(u!=null){q=u;sessionStorage.setItem('tops_q20',u);}else q=sessionStorage.getItem('tops_q20')||'';}catch(e){}
  q=String(q).toLowerCase().replace(/[^a-z0-9,]/g,'');const has=k=>q.split(',').indexOf(k)>=0;
@@ -3175,13 +3207,13 @@ window.TOPS_matchTeardown=matchTeardown;
  const cur=()=>{const s=[];(q+','+appQ()).split(',').forEach(k=>{if(k&&s.indexOf(k)<0)s.push(k);});return s.join(',');};
  window.TOPS_q20has=k=>cur().split(',').indexOf(k)>=0;
  const sync=()=>{const c=cur();if(c)window.TOPS_Q20=c;else{try{delete window.TOPS_Q20;}catch(e){window.TOPS_Q20=undefined;}}
-  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');if(window.TOPS_AJS)lab.push('frame split');if(TOPS_q20has('nogyro'))lab.push('no tilt');
+  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');if(TOPS_q20has('mute'))lab.push('no audio');if(window.TOPS_AJS)lab.push('frame split');if(TOPS_q20has('nogyro'))lab.push('no tilt');
   if(lab.length&&live){if(!t){t=document.createElement('div');t.id='q20tag';t.style.cssText='position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:95;pointer-events:none;font:700 11px/1 Manrope,sans-serif;letter-spacing:.06em;color:#0b0d0c;background:#C6F36B;border-radius:4px;padding:4px 6px;text-transform:uppercase';document.body.appendChild(t);}t.textContent='TEST · '+lab.join(' · ');}else if(t)t.remove();};
  sync();if(q){try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
  {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
  /* ENG-10 (Overseer 06:27): the same three toggles in whichever hub menu is showing: the old #hubPop (rebrand off) and the rebrand's sheet
     (#rbMenuSheet, made on each tap of its Menu button). Same localStorage key, nothing cleared automatically (the switches are #20 data). */
- const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)']];
+ const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)'],['mute','Test: no game audio (next match)']];
  const rows=(host,rb)=>{if(!host)return;if(rb&&!host.querySelector('.q20-sep')){const sp=document.createElement('div');sp.className='q20-sep';sp.setAttribute('aria-hidden','true');sp.style.cssText='height:1px;margin:2px 4px;background:var(--line,#343a3e)';host.appendChild(sp);}
   Q20B.forEach(([k,n])=>{let b=host.querySelector('[data-q20="'+k+'"]');
    if(!b){b=document.createElement('button');b.type='button';b.setAttribute('data-q20',k);if(!rb)b.id='q20b_'+k;if(rb)b.style.cssText='min-height:44px;font-size:13px;font-weight:600;color:var(--ink3,#a0a6a3);justify-content:flex-start;text-align:left';
@@ -3196,7 +3228,16 @@ window.TOPS_matchTeardown=matchTeardown;
  if(has('keepvenue')&&typeof V!=='undefined'&&V.buildVenue){const bv=V.buildVenue;let built=null;V.buildVenue=function(t){if(built!==null&&t===built)return;built=t;return bv.apply(this,arguments);};}
  if(has('keepfig')&&typeof V!=='undefined'&&V.teardownMatch){V.teardownMatch=function(){window.__teardowns=(window.__teardowns||0)+1;};}
  if(has('nohub3d')){const go=()=>{const R=window.TOPS_R;if(!R){setTimeout(go,300);return;}const rr=R.render;R.render=function(){try{const h=document.getElementById('hub');if(h&&!h.hidden&&!(typeof S!=='undefined'&&S&&!S.done))return;}catch(e){}return rr.apply(this,arguments);};};go();}
- if(has('mute')){const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='running')AU.ctx.suspend();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();}catch(e){}return r;};}
+ /* #20 A/B (Overseer 07:58): 'mute' = the game's AudioContext is suspended for the whole match, so the audio thread does no work at all (crowd,
+    caller, effects, walk-on song). Also a hub Menu row now (the home-screen app can't take a URL). Read at each match start. Before, a tap on the
+    pull pad resumed the context in the match (the pad's own unlock), so the URL switch only muted until the first throw: resume() is held off
+    while a muted match is live. */
+ {const muteOn=()=>!!(window.TOPS_q20has&&TOPS_q20has('mute')&&typeof S!=='undefined'&&S&&!S.done);window.TOPS_muteOn=muteOn;
+  /* the instance's resume() is held off only while a muted match is live, and put back as soon as the switch is off */
+  const hold=()=>{try{const c=AU&&AU.ctx;if(!c||c.__q20r)return;const r=c.resume.bind(c);c.__q20r=r;c.resume=function(){if(muteOn())return Promise.resolve();return r();};}catch(e){}};
+  const unhold=()=>{try{const c=AU&&AU.ctx;if(c&&c.__q20r){c.resume=c.__q20r;delete c.__q20r;}}catch(e){}};
+  const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{if(muteOn()){hold();if(AU.ctx&&AU.ctx.state!=='closed'){const p=AU.ctx.suspend();if(p&&p.catch)p.catch(()=>{});}}else unhold();}catch(e){}return r;};
+  const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{const c=AU&&AU.ctx;const r0=c&&c.__q20r;if(!TOPS_q20has('mute'))unhold();if(r0&&c.state!=='running'&&c.state!=='closed')r0().catch(()=>{});}catch(e){}return r;};}
  if(has('fresh')){let played=0;const bm=beginMatch;beginMatch=function(){played++;return bm.apply(this,arguments);};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(played>=1&&!window.__hubSoft&&!sessionStorage.getItem('tops_q20_fresh')&&S&&S.done){sessionStorage.setItem('tops_q20_fresh','1');try{persist();}catch(e){}setTimeout(()=>location.reload(),400);}}catch(e){}return r;};}
 }
 </script>
