@@ -149,11 +149,17 @@ function trait(){const s=st();if(!on()||!s.trait||lvNow()<15)return null;const t
 window.TOPS_trait=trait;
 function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)/2);return {need,me,op,dec:op&&me.legs===need-1&&op.legs===need-1,md:me.legs===need-1&&me.score<=170,trail:op&&op.legs>me.legs};}
 // ---------- engine ----------
+// V4-R (Hayden 19:15, data-fitted 12 Nov): perfect window (ms) by Rhythm level, linear between points. Fitted with sim-player.js on the
+// four mates with enough career data so Pub-level timing averages inside the Pub band and a maxed career reaches the high 90s.
+// Was 20 + 14*L (20 ms at L 0 to 34 ms at L 1).
+const WIN_PTS=[[0,10],[.265,12],[.5,16.5],[.75,21],[1,26]];
+function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
+window.TOPS_WIN=winMs;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
- const Lr=Lof('rh');tp.P*=(20+14*Lr)/(q0.P*tolMult()*.85);
+ const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
