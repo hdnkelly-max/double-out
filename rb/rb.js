@@ -80,15 +80,16 @@
   /* ---------- Season (live data) ---------- */
   function season(M) {
     const { c, t, sn, rows, yi } = M;
-    if (!sn) return `<div class="rb-card"><span class="rb-t2">No season running</span><span class="rb-sub">Your first league fixture starts it.</span></div>`;
+    const road = TIERS.map((x, i) => `${i ? '<span class="rb-ln"></span>' : ''}<div class="rb-st ${i < c.tier ? 'rb-done' : i === c.tier ? 'rb-now' : ''}"><i></i><span>${esc(x.n.replace(/ singles| league/i, ''))}</span></div>`).join('');
+    const roadCard = `<div class="rb-card">${sh('Road to the Palace')}<div class="rb-road">${road}</div></div>`;
+    if (!sn) return `<div class="rb-card"><span class="rb-t2">No season running yet</span><span class="rb-sub">Win your fill-in night and the league season starts.</span></div>` + roadCard;
     const wk = Math.min(sn.week, sn.len), left = Math.max(0, sn.len - wk + (sn.done ? 0 : 1) - 1);
     let head;
     if (sn.ko) head = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(wk / sn.len, wk, 64, 'ROUND')}</div><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span class="rb-t1">${esc(t.n)}</span><span class="rb-sub">Round ${wk} of ${sn.len} · lose and you're out</span></div></div>`;
     else { const gap = yi <= 1 ? 0 : rows[1].pts - rows[yi].pts; head = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(wk / sn.len, wk, 64, 'WEEK')}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="rb-t1">${yi >= 0 ? ord(yi + 1) + ' · ' : ''}${esc(t.n)}</span><span class="rb-sub">${yi <= 1 ? 'In the promotion places' : gap + ' pt' + (gap === 1 ? '' : 's') + ' off 2nd'} · ${left} week${left === 1 ? '' : 's'} left</span><div class="rb-chips">${chip(IC.up + ' Top two go up', 'g')}</div></div></div>`; }
     const tbl = rows ? `<div class="rb-card">${sh('Table')}<div class="rb-sub" style="display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3)"><span>#</span><span>Player</span><span style="text-align:right">P</span><span style="text-align:right">Pts</span></div><div class="rb-tbl">${rows.map((r, i) => `${i === 2 ? '<div class="rb-cutl"><span>Top two go up</span></div>' : ''}<div class="rb-tr ${r.you ? 'rb-me' : ''}"><span class="rb-p">${i + 1}</span><span>${esc(r.you ? (save.name || 'You') : r.name)}</span><span class="rb-r rb-p">${r.p || 0}</span><span class="rb-r">${r.pts || 0}</span></div>`).join('')}</div></div>` : '';
-    const road = TIERS.map((x, i) => `${i ? '<span class="rb-ln"></span>' : ''}<div class="rb-st ${i < c.tier ? 'rb-done' : i === c.tier ? 'rb-now' : ''}"><i></i><span>${esc(x.n.replace(/ singles| league/i, ''))}</span></div>`).join('');
     const next = sn.fixtures && sn.fixtures[sn.week] ? `<div class="rb-card" style="flex-direction:row;align-items:center;gap:12px"><span class="rb-face" style="background:#2b3135"></span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">After tonight · week ${sn.week + 1}</small><span class="rb-t2">vs ${esc(sn.fixtures[sn.week])}</span></div></div>` : '';
-    return head + tbl + `<div class="rb-card">${sh('Road to the Palace')}<div class="rb-road">${road}</div></div>` + next;
+    return head + tbl + roadCard + next;
   }
   function wire(M) {
     const go = $id('rbGo'); if (go) go.onclick = () => {

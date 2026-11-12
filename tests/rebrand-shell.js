@@ -12,7 +12,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
     await p.evaluate(() => { save.authSeen = true; save.name = 'Hayden'; save.matches = 30; $('login').hidden = true; newCareer(); const c = career(); c.tier = 1; c.bank = 640; persist(); showHub('play'); });
     await p.waitForTimeout(3500);
     await p.evaluate(() => { try { const t = TC_API.st(); delete t.welPend; } catch (e) {} document.querySelectorAll('.tc-sheet').forEach(e => e.remove()); });
-    const r = await p.evaluate(() => ({ flag: window.TOPS_REBRAND, app: !!document.getElementById('rbApp'), shown: !!(document.getElementById('rbApp') && !document.getElementById('rbApp').hidden), opp: (document.querySelector('#rbApp .big') || {}).textContent || '', go: !!document.getElementById('rbGo'), bank: (document.getElementById('rbBank') || {}).textContent || '' }));
+    const r = await p.evaluate(() => ({ flag: window.TOPS_REBRAND, app: !!document.getElementById('rbApp'), shown: !!(document.getElementById('rbApp') && !document.getElementById('rbApp').hidden), opp: (document.querySelector('#rbApp .rb-big') || {}).textContent || '', go: !!document.getElementById('rbGo'), bank: (document.getElementById('rbBank') || {}).textContent || '' }));
     await p.screenshot({ path: path.join(dir, `tests/rb_tonight_${mode}_${W}.png`) });
     if (mode === '1') {
       // Walk on through the real path
@@ -24,6 +24,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(800);
       r.shopOld = await p.evaluate(() => ({ rbHidden: document.getElementById('rbApp').hidden, back: !document.getElementById('rbBack').hidden }));
       await p.click('#rbBack'); await p.waitForTimeout(500); r.backOk = await p.evaluate(() => !document.getElementById('rbApp').hidden);
+      await p.evaluate(() => { const c = career(); c.next = null; if (!c.season) newSeason(c); persist(); TOPS_RB.render(); });
       await p.click('#rbTabs [data-t="season"]'); await p.waitForTimeout(500);
       r.season = await p.evaluate(() => ({ rows: document.querySelectorAll('#rbApp .rb-tr').length, me: !!document.querySelector('#rbApp .rb-tr.rb-me'), road: document.querySelectorAll('#rbApp .rb-road .rb-st').length }));
       await p.screenshot({ path: require('path').join(dir, `tests/rb_season_${W}.png`) });
