@@ -5,4 +5,4 @@
 2026-11-12T03:05:21Z live version=3.02 tag=8db63d2 tree=ac5f516 commit=95dcde6 risk=R0 run=manual item=R0-19 shader programs kept for the session
 2026-11-12T03:21:26Z failed version=3.03 tag=rel-3.03 tree=20ac033 commit=b339e1d89ae57e01c6388378548476f806706522 risk=R3 run=43147548619 item=ENG-4 double-tap Continue (ROLLBACK TEST)
 2026-11-12T03:24:20Z live version=3.04 tag=rel-3.04 tree=20ac033 commit=b339e1d89ae57e01c6388378548476f806706522 risk=R3 run=43147891453 item=ENG-4 double-tap Continue no longer throws
-2026-11-12T03:26:27Z prepared version=3.05 tag=rel-3.05 tree=79afe23 commit=e321cc12c8a89014c6b944ebb196ab9a450cd7e4 risk=R3 run=43148139197 item=EXP-VOICE caller preloads only possible scores (QA tree 607f763 on 3.02; rule-2 recheck on 3.04)
+2026-11-12T03:26:27Z live version=3.05 tag=rel-3.05 tree=79afe23 commit=e321cc12c8a89014c6b944ebb196ab9a450cd7e4 risk=R3 run=43148139197 item=EXP-VOICE caller preloads only possible scores (QA tree 607f763 on 3.02; rule-2 recheck on 3.04)
