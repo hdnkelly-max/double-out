@@ -6,6 +6,7 @@
   const ON = (() => { try { const q = new URLSearchParams(location.search); if (q.has('rebrand')) localStorage.setItem('tops_rebrand', q.get('rebrand') === '1' ? '1' : '0'); return localStorage.getItem('tops_rebrand') === '1'; } catch (e) { return false; } })();
   window.TOPS_REBRAND = ON;
   if (!ON) return;
+  try { document.documentElement.classList.add('rb-on'); } catch (e) {}
   const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
   const IMG = 'assets/rb/';   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
   const IC = {
@@ -201,8 +202,11 @@
     return head + h2h + rw + want + tbl + act;
   }
   let resMO = null, bodyMO = null;
+  // any game layer showing at or above our level (sheets 55-61, pack opening, messages) other than the reward overlay itself
+  function blocker() { for (const n of document.body.children) { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) continue; const cs = getComputedStyle(n); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100) return true; } return false; }
   function showResult() {
-    if (!pre0 || !S || !S.p || !$id('c3rw')) return;   // nothing recorded for this match: the game's own overlay stays as it is
+    if (resMO) resMO.disconnect(); if (bodyMO) bodyMO.disconnect(); resMO = bodyMO = null;
+    if (!pre0 || !S || !S.p || !$id('c3rw') || blocker()) return;   // nothing recorded for this match, or a game sheet is up: the game's own overlay stays as it is
     const M = model(); if (!M) return;
     let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); return; }
     const el = ensure(); resOn = true; el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
@@ -216,7 +220,7 @@
     const ov = $id('c3rw');
     // one observer each, always disconnected in endResult: the overlay closing by any other route, or anything new opening on top of the page, hands control back to the game
     resMO = new MutationObserver(() => { if (ov.hidden || !document.body.contains(ov)) endResult(); }); resMO.observe(ov, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
-    bodyMO = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n !== el && n.id !== 'rbBack' && getComputedStyle(n).position === 'fixed') { endResult(); return; } }); bodyMO.observe(document.body, { childList: true });
+    bodyMO = new MutationObserver(() => { if (blocker()) endResult(); }); bodyMO.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });   // a sheet appended or an existing one shown
   }
   function endResult() { if (resMO) { resMO.disconnect(); resMO = null; } if (bodyMO) { bodyMO.disconnect(); bodyMO = null; } const was = resOn; resOn = false; pre0 = was ? null : pre0; const el = $id('rbApp'); if (el && was) { el.classList.remove('rb-resmode'); el.hidden = true; } }
 
@@ -229,14 +233,17 @@
         : `<button class="rb-row" type="button" data-drill="${d.id}"><span class="rb-tx"><small>${esc(d.kick)}${d.darts ? ' · ' + d.darts + ' darts' : ''}</small><span class="rb-t2">${esc(d.n)}</span><span class="rb-sub">${esc(d.line)}</span>${best ? `<span class="rb-chips">${chip('Best ' + esc(best), 'l')}${chip((sv.runs || 0) + ' run' + (sv.runs === 1 ? '' : 's'), 'l')}</span>` : ''}</span><span class="rb-chev">›</span></button>`; }).join('');
     return hero + rows;
   }
+  // Walk on mirrors the game's two-tap state; kept at module level so a re-render can't lose it
+  let armT = 0, goBusy = 0;
+  function armSync() { const g = $id('c3Go'), go = $id('rbGo'); const armed = !!(g && g.dataset.arm); if (go) { go.querySelector('b').textContent = armed ? 'Tap again' : 'Walk on'; if (armed) go.querySelector('small').textContent = g.textContent; } return armed && !!go; }
   function wire(M) {
-    const go = $id('rbGo'); if (go) { let busy = 0;
-      const sync = () => { const g = $id('c3Go'); if (!g || !document.body.contains(go)) return false; const armed = !!g.dataset.arm; go.querySelector('b').textContent = armed ? 'Tap again' : 'Walk on'; if (armed) go.querySelector('small').textContent = g.textContent; return armed; };
+    const go = $id('rbGo'); if (go) {
+      armSync();   // a re-render shows the game's current armed state
       go.onclick = () => {
-        if (busy) return; busy = 1; setTimeout(() => { busy = 0; }, 450);   // no double fire from a fast double tap
+        if (goBusy) return; goBusy = 1; setTimeout(() => { goBusy = 0; }, 450);   // no double fire from a fast double tap
         const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
         g.click();   // the game's own Walk on: it may ask for a second tap on a big entry
-        if (sync()) { clearInterval(go._t); go._t = setInterval(() => { if (!sync()) { clearInterval(go._t); try { if (!$id('rbApp').hidden) render(); } catch (e) {} } }, 400); }   // mirror the game's armed state until it clears
+        if (armSync()) { clearInterval(armT); armT = setInterval(() => { if (!armSync()) clearInterval(armT); }, 400); }
       }; }
     const mm = () => { try { moneyMatch(); } catch (e) { console.warn('rb money', e); } };
     const m1 = $id('rbMoney'); if (m1) m1.onclick = mm;
@@ -263,7 +270,7 @@
     try { const c = career(); if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
     return r;
   };
-  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
+  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } clearInterval(armT); endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
   const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
   const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
   window.TOPS_RB = { open, close, render, model, showResult };
