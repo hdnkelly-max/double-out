@@ -24,7 +24,11 @@ const W = 1672, H = 941;
     // hide every person: anything with a skinned mesh (our rigs), sprites (crowd cut-outs) and meshes textured with the crowd atlas
     const hidden = [];
     const hide = o => { if (o.visible) { o.visible = false; hidden.push(o.name || o.type); } };
-    sc.children.forEach(top => { let skin = false; top.traverse(o => { if (o.isSkinnedMesh) skin = true; }); if (skin) hide(top); });
+    // hide each rigged figure at its own root: climb from the skinned mesh to the highest ancestor that holds no room geometry
+    const roomish = o => { let r = false; o.traverse(q => { if (q.isMesh && !q.isSkinnedMesh && /^bake_|venue|wall|floor|room/i.test(q.name)) r = true; }); return r; };
+    const tops = new Set(); sc.traverse(o => { if (!o.isSkinnedMesh) return; let r = o; while (r.parent && r.parent !== sc && !roomish(r.parent)) r = r.parent; tops.add(r); });
+    tops.forEach(hide);
+    window.__stillTops = [...tops].map(t => (t.name || t.type) + ':' + (() => { let n = 0; t.traverse(q => { if (q.isMesh) n++; }); return n; })());
     sc.traverse(o => { if (o.isSprite) hide(o); if (o.isMesh || o.isInstancedMesh) { const ms = [].concat(o.material || []); if (ms.some(m => m && m.map && m.map.image && /crowd/i.test(m.map.image.src || m.map.image.currentSrc || ''))) hide(o); } });
     sc.traverse(o => { if (o.isMesh && /dart|flight|shaft/i.test(o.name)) hide(o); });
     // stop the game drawing over our frames
@@ -43,9 +47,10 @@ const W = 1672, H = 941;
     const res = {};
     for (const [k, s] of Object.entries(shots)) { cam.position.set(...s.pos); cam.fov = s.fov; cam.updateProjectionMatrix(); cam.lookAt(new T.Vector3(...s.look)); R.render(sc, cam); res[k] = R.domElement.toDataURL('image/png'); }
     R.setPixelRatio(pr); R.setSize(size.x, size.y, false); window.__stillPause = false; V.frame = f0;
-    return { res, hidden: hidden.length, hiddenNames: hidden.slice(0, 12) };
+    const kids = sc.children.map(c => { let m = 0, b = 0; c.traverse(q => { if (q.isMesh) { m++; if (/^bake_/.test(q.name)) b++; } }); return (c.name || c.type) + ':' + m + '/' + b + (c.visible ? '' : '(hidden)'); });
+    return { res, hidden: hidden.length, hiddenNames: hidden.slice(0, 12), tops: window.__stillTops, kids };
   }, { W, H });
   for (const [k, d] of Object.entries(views.res)) fs.writeFileSync(`${out}/t${tier}_${k}${tag}.png`, Buffer.from(d.split(',')[1], 'base64'));
-  console.log(JSON.stringify({ tier, hidden: views.hidden, names: views.hiddenNames, errors: errs.slice(0, 3) }));
+  console.log(JSON.stringify({ tier, hidden: views.hidden, names: views.hiddenNames, tops: views.tops, kids: views.kids, errors: errs.slice(0, 3) }));
   await b.close();
 })();
