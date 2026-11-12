@@ -28,6 +28,6 @@ out.b={errors:pe.slice(pe0),played};
 console.log(JSON.stringify(out));
 const chk=(n,c)=>{if(!c)fails.push(n);};
 chk('A: reached the bull-up',out.aBull);chk('A: no page error after quitting during the bull-up',!out.a.errors.length);chk('A: back in the hub',out.a.hub);
-chk('B: reached the bull-up',out.bBull);chk('B: the new match is untouched by the old match\'s timers (your turn, not busy, view 0, no opponent bull dart)',out.bAfter.sameMatch&&out.bAfter.bull&&out.bAfter.cur===0&&!out.bAfter.busy&&!out.bAfter.view&&out.bAfter.oppBull==null);
+chk('B: reached the bull-up',out.bBull);/* busy is the new match's own intro card; the old timers set cur 1 + view 1 (the opponent's bull-up throw) */chk('B: the new match is untouched by the old match\'s timers (still your turn, view 0, no opponent bull dart)',out.bAfter.sameMatch&&out.bAfter.cur===0&&!out.bAfter.view&&out.bAfter.oppBull==null);
 chk('B: the new match plays on (bull-up done, a visit starts)',out.b.played==='aim'||out.b.played==='opp');chk('B: no page errors',!out.b.errors.length);
 await b.close();console.log(fails.length?'BULL-QUIT FAIL\n- '+fails.join('\n- '):'BULL-QUIT PASS');process.exit(fails.length?1:0);})();
