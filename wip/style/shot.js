@@ -1,0 +1,5 @@
+const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out=process.argv[2];
+for(const [w,h,s] of [[390,844,'back'],[360,640,'back'],[390,844,'first'],[390,844,'run']]){const p=await b.newPage({viewport:{width:w,height:h},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+await p.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());await p.goto('file://'+__dirname+'/proto/index.html#'+s);await p.waitForTimeout(800);
+const cdp=await p.context().newCDPSession(p);const {data}=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,width:w,height:h,scale:2}});require('fs').writeFileSync(`${out}/proto_${s}_${w}x${h}.png`,Buffer.from(data,'base64'));
+const m=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,small:[...document.querySelectorAll('button')].filter(b=>!b.closest('[hidden]')&&b.offsetParent&&b.closest('.proto')==null&&(b.getBoundingClientRect().height<40)).map(b=>b.textContent.trim().slice(0,20))}));console.log(w,h,s,JSON.stringify(m));await p.close();}await b.close();})();

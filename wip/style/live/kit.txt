@@ -1,0 +1,110 @@
+[hub]
+Play
+Career
+Store
+Player
+Practice
+HAYDEN
+$640
+MENU
+Kit room · No sponsor yet
+HARROWS CLUB BRASS 22G
+Scoring
+20
+Finishing
+20
+Control
+20
+Rhythm
+20
+Composure
+20
+You
+Kit
+Kit penalty
+Barrels
+Setup
+Gear
+LEVEL
+14
+NEXT BARREL · LEVEL 15
+RED DRAGON RAZOR EDGE 24G
+22g
+HARROWS CLUB BRASS 22G
+Brass starter set. Where everyone begins.
+Equipped
+23g
+WINMAU NEUTRON 23G
+Brass, ringed grip. Honest and cheap.
+Scoring ▲2 · Finishing ▲2 · Control ▲2 · Rhythm ▲1
+BUY
+$45
+22g
+UNICORN CORE XL 22G
+Entry tungsten. First real step up.
+Scoring ▲2 · Finishing ▲2 · Control ▲3 · Rhythm ▲2
+BUY
+$70
+22g
+HARROWS SUPERGRIP ULTRA 22G
+Micro-grip tungsten. Stacks well.
+Scoring ▲3 · Finishing ▲3 · Control ▲4 · Rhythm ▲2
+BUY
+$95
+24g
+RED DRAGON RAZOR EDGE 24G
+Sharp razor grip, 85% tungsten.
+Scoring ▲4 · Finishing ▲4 · Control ▲5 · Rhythm ▲3
+Unlocks at level 15, then $120
+LV 15
+21g
+TARGET VAPOR8 21G
+90% tungsten, slim. Loves the treble.
+Scoring ▲5 · Finishing ▲5 · Control ▲4 · Rhythm ▲3
+Unlocks at level 18, then $150
+LV 18
+23g
+SHOT ZEN JUTSU 23G
+Kiwi-made 90% tungsten. Balanced.
+Scoring ▲5 · Finishing ▲5 · Control ▲5 · Rhythm ▲4
+Unlocks at level 25, then $170
+LV 25
+24g
+TARGET NATHAN ASPINALL G2 24G
+Scalloped grip, front-weighted.
+Scoring ▲6 · Finishing ▲6 · Control ▲5 · Rhythm ▲5
+Unlocks at level 33, then $270
+LV 33
+23g
+UNICORN GARY ANDERSON PHASE 5 23G
+Straight barrel, smooth. Purist’s dart.
+Scoring ▲6 · Finishing ▲6 · Control ▲6 · Rhythm ▲4
+Unlocks at level 34, then $240
+LV 34
+26g
+TARGET PHIL TAYLOR POWER 9FIVE GEN 8 26G
+Sixteen world titles of heritage. 95% tungsten.
+Scoring ▲7 · Finishing ▲7 · Control ▲7 · Rhythm ▲6
+Unlocks at level 40, then $420
+LV 40
+23g
+RED DRAGON GERWYN PRICE AVALANCHE 23G
+The Iceman’s set. 90% tungsten, ice-blue coat.
+Scoring ▲5 · Finishing ▲5 · Control ▲6 · Rhythm ▲4
+Comes with a Red Dragon deal. Not sold in the Store.
+SPONSOR ONLY
+RED DRAGON
+23g
+WINMAU MVG EXACT 23G
+Michael van Gerwen signature. Onyx coating.
+Scoring ▲6 · Finishing ▲6 · Control ▲5 · Rhythm ▲4
+Comes with a Winmau deal. Not sold in the Store.
+SPONSOR ONLY
+WINMAU
+23g
+TARGET LUKE LITTLER GEN 1 23G
+The Nuke’s own. Grip everywhere.
+Scoring ▲7 · Finishing ▲7 · Control ▲5 · Rhythm ▲5
+Comes with a Target deal. Not sold in the Store.
+SPONSOR ONLY
+TARGET
