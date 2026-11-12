@@ -6,7 +6,7 @@
 // scenes the game asks to draw are still recorded, so "reachable" = in a scene the game rendered recently, or kept (V._qa.kept).
 // An ORPHAN = drawn at least once (visible in a scene the game rendered, so three.js uploaded it), never disposed, no longer reachable,
 // not kept: GPU memory nothing will ever free. (Objects never drawn are never uploaded; once unreferenced they're plain garbage.)
-// Checks: D darts: orphans per dart thrown across 6 real visits (player land(), AI's own fly()+land()) ~ 0
+// Checks: D darts: orphans per dart thrown across 6 real visits (player: the game's own startPull/release flight; AI: its own fly()+land()) ~ 0
 //         T teardown: 4 start/quit cycles against different characters: orphans born in a finished match don't accumulate;
 //           character templates loaded <= player + last + current opponent + remy
 //         L listeners and loops: live listeners flat over the cycles; rAF callbacks per frame flat after 5 background/foreground switches
@@ -50,12 +50,14 @@ await p.evaluate(()=>{const L=__L;const R=V._qa.renderer;R.render=function(sc){i
  window.__darts=0;const ld=land;land=function(){__darts++;return ld.apply(this,arguments);};
  save.authSeen=true;save.name='Lee';save.lessonDone=true;$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());V.walkOn=()=>{};});
 const step=()=>p.evaluate(()=>{try{if(!S||S.done)return 'done';if(S.bull){if(S.cur===0&&!S.busy&&S.bull.me==null){S.busy=true;land(gauss()*30,gauss()*30);}return 'bull';}
- if(S.cur===0&&!S.busy&&S.visit.length<3&&!S.p[0].ai){const first=S.visit.length===0;const tp=targetPoint(aimFor(S.p[0].score,4-S.dart));S.busy=true;land(tp.x+gauss()*14,tp.y+gauss()*14);return first?'visit':'aim';}return 'wait';}catch(e){return 'ERR '+e.message;}});
+ if(S.cur===0&&!S.busy&&!S.pulling&&!S.flyingOwn&&S.visit.length<3&&!S.p[0].ai){const first=S.visit.length===0;S.aim=Object.assign({},targetPoint(aimFor(S.p[0].score,4-S.dart)));startPull('auto');return first?'visit':'pull';}return 'wait';}catch(e){return 'ERR '+e.message;}});
+/* the player's darts go through the real pull and release, so their flight (fly) and landing (stickDart) are both covered */
+const rel=()=>p.evaluate(()=>{try{if(S&&S.pulling)release({timeStamp:performance.now()},'auto');}catch(e){}});
 const snap=()=>p.evaluate(()=>{const o=__L.orphans();return {n:o.n,by:o.by,det:o.det,darts:__darts,lis:__L.liveLis(),rigs:V._qa.gfx().rigs.slice()};});
 const fails=[];const out={};
 // ---- D: darts
 await p.evaluate(()=>beginMatch({mode:'career',tier:1,p0:'Lee',oppKey:'deano',oppName:'Deano Marsh',oppAvg:60,legs:9,start:501}));
-const vis=[];for(let i=0;i<3000&&vis.length<7;i++){const s=await step();if(s==='visit'){vis.push(await snap());}if(s==='done'||String(s).startsWith('ERR')){out.dEnd=s;break;}await p.waitForTimeout(15);}
+const vis=[];for(let i=0;i<3000&&vis.length<7;i++){const s=await step();if(s==='visit'){vis.push(await snap());}if(s==='visit'||s==='pull'){await p.waitForTimeout(420);await rel();}if(s==='done'||String(s).startsWith('ERR')){out.dEnd=s;break;}await p.waitForTimeout(15);}
 log('darts',vis.length,'visits');
 if(vis.length<5)fails.push('D: only '+vis.length+' visits played');else{const a=vis[1],z=vis[vis.length-1];const dd=Math.max(1,z.darts-a.darts);const grow={};
  Object.keys(z.by).forEach(k=>{const g=z.by[k]-(a.by[k]||0);if(g>0)grow[k]=g;});const gd={};Object.keys(z.det||{}).forEach(k=>{const g=z.det[k]-((a.det||{})[k]||0);if(g>0)gd[k]=g;});out.D={darts:dd,orphans:[a.n,z.n],perDart:+((z.n-a.n)/dd).toFixed(2),grew:grow,grewDetail:Object.entries(gd).sort((x,y)=>y[1]-x[1]).slice(0,6)};
