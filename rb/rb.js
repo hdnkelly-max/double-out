@@ -102,6 +102,7 @@
     const seg = `<div class="rb-seg" role="tablist">${[['load', 'Loadout'], ['stats', 'Stats'], ['cards', 'Cards'], ['troph', 'Trophies']].map(([a, b]) => `<button type="button" role="tab" aria-selected="${lk === a}" data-lk="${a}">${b}</button>`).join('')}</div>`;
     if (lk === 'stats') return seg + stats(M);
     if (lk === 'cards') return seg + cards(M);
+    if (lk === 'troph') return seg + trophies(M);
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
     const hero = `<div class="rb-hero" style="height:150px"><div class="rb-im" style="background-image:url(${IMG}locker.jpg);background-position:78% 32%"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.2) 70%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
@@ -238,6 +239,16 @@
   // Walk on mirrors the game's two-tap state; kept at module level so a re-render can't lose it
   let armT = 0, goBusy = 0;
   function armSync() { const g = $id('c3Go'), go = $id('rbGo'); const armed = !!(g && g.dataset.arm); if (go) { go.querySelector('b').textContent = armed ? 'Tap again' : 'Walk on'; if (armed) go.querySelector('small').textContent = g.textContent; } return armed && !!go; }
+
+  /* ---------- Trophies (live data from TC_API; the cabinet button opens the game's own 3D cabinet) ---------- */
+  function trophies(M) {
+    const T = window.TC_API; if (!T || !T.st()) return '';
+    const t = T.st(), L = T.D.TROPHIES, won = L.filter(x => t.troph.some(y => y.id === x.id)).length, c = M.c;
+    const hero = `<div class="rb-hero" style="height:190px"><div class="rb-im" style="background-image:url(${IMG}trophies.jpg);background-position:50% 50%"></div><div class="rb-sh2" style="background:linear-gradient(180deg,transparent 45%,rgba(10,12,14,.92))"></div><div class="rb-tx"><span class="rb-t1">${won} of ${L.length} titles</span><span class="rb-sub">Win a league or a knockout and the trophy goes in the case</span></div></div>`;
+    const rows = L.map((x, i) => { const g = t.troph.find(y => y.id === x.id), n = g ? g.wins.length : 0, last = g && g.wins[g.wins.length - 1];
+      return `<div class="rb-row" style="cursor:default${g ? '' : ';opacity:.6'}"><div class="rb-slot rb-sq rb-r8" style="width:52px;background:#0d0f10"><div class="rb-im" style="background-image:url(assets/cards/${x.img}.webp);background-size:contain;${g ? '' : 'filter:grayscale(1) brightness(.5)'}"></div></div><span class="rb-tx"><small>${g ? 'Won' + (n > 1 ? ' ×' + n : '') : i === c.tier ? 'To win · this season' : i < c.tier ? 'Not won' : 'Locked'}</small><span class="rb-t2">${esc(x.n)}</span>${last && last.opp ? `<span class="rb-sub">Final v ${esc(last.opp)}${last.score ? ' · ' + esc(last.score) : ''}</span>` : ''}</span></div>`; }).join('');
+    return hero + `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Open the trophy cabinet</button>` + rows;
+  }
   function wire(M) {
     const go = $id('rbGo'); if (go) {
       armSync();   // a re-render shows the game's current armed state
@@ -252,7 +263,7 @@
     const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
     const s = $id('rbSeason'); if (s) s.onclick = () => { tab = 'season'; render(); };
     const nx = $id('rbNext'); if (nx) nx.onclick = () => { tab = 'locker'; lk = 'load'; render(); };
-    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; if (k === 'troph') { toOld('locker'); return; } lk = k; render(); });
+    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
     const bu = $id('rbBuy'); if (bu) bu.onclick = () => { const r = gameShop(sel, 'buy'); shopMsg = r.ok ? 'Bought and equipped.' : 'The shop said no. Nothing was charged.'; render(); };
@@ -264,6 +275,7 @@
     qa('#rbApp [data-card]').forEach(b => b.onclick = () => { try { T.binder(); } catch (e) {} });
     const lo = $id('rbLoad'); if (lo && T) lo.onclick = () => { close(); const bk = $id('rbBack'); if (bk) bk.hidden = false; try { T.loadout(); } catch (e) { console.warn('rb loadout', e); } };
     qa('#rbApp [data-drill]').forEach(b => b.onclick = () => { try { startDrill(b.dataset.drill); } catch (e) { console.warn('rb drill', e); } });
+    const cb = $id('rbCab'); if (cb && window.TC_API) cb.onclick = () => { try { TC_API.cabinet(); } catch (e) { console.warn('rb cabinet', e); } };
     qa('#rbApp [data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go; if (BUILT[k]) { tab = k; render(); } else toOld(k); });
   }
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */

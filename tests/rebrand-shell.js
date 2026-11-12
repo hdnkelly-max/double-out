@@ -39,6 +39,9 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.click('#rbApp [data-lk="stats"]'); await p.waitForTimeout(400);
       r.stats = await p.evaluate(() => ({ tiles: document.querySelectorAll('#rbApp .rb-tl').length, pts: document.querySelectorAll('#rbMain svg[role=img] circle').length, avg: (document.querySelector('#rbApp .rb-tl b') || {}).textContent }));
       await p.screenshot({ path: path.join(dir, `tests/rb_stats_${W}.png`) });
+      await p.evaluate(() => TC_API.addTrophy(0)); await p.click('#rbApp [data-lk="troph"]'); await p.waitForTimeout(500);
+      r.troph = await p.evaluate(() => ({ rows: document.querySelectorAll('#rbApp .rb-row').length, won: [...document.querySelectorAll('#rbApp .rb-row small')].filter(e => /^Won/.test(e.textContent)).length, title: (document.querySelector('#rbApp .rb-t1') || {}).textContent }));
+      await p.screenshot({ path: path.join(dir, `tests/rb_trophies_${W}.png`) });
       // Shop: level 9, buy Neutron through the game's own shop row, then equip the Club Brass back; Littler is a sponsor set; Razor locked
       await p.evaluate(() => { C3.V3().lv = 9; career().bank = 640; persist(); });
       await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(500);
@@ -93,6 +96,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   const CD = out['1'].cards || {}; if (CD.owned !== 2 || CD.total < 20 || !CD.open || !/picks? waiting/.test(CD.title || '') || !(CD.pack || []).length) fails.push('Cards: grid/open wrong');
   const RS = out['1'].result || {}; if (!RS.on || RS.z !== '95' || RS.cash !== '+$55' || RS.lock !== '2–1' || !RS.lvup || RS.tabs !== 'none' || !RS.after || !RS.after.ovHidden || RS.after.resmode) fails.push('Result: screen/continue wrong');
   const PR = out['1'].practice || {}; if (PR.drills !== 3 || !PR.started || !PR.started.drill || !PR.started.hidden) fails.push('Practice: drills/start wrong');
+  const TR = out['1'].troph || {}; if (TR.rows !== 7 || TR.won !== 1 || !/1 of 7/.test(TR.title || '')) fails.push('Trophies: rows/won wrong');
   const T = out['1'].stats || {}; if (T.tiles !== 4 || T.pts !== 4 || T.avg !== '48.0') fails.push('Stats: tiles/form wrong');
   if (!out['1'].season || out['1'].season.rows < 4 || !out['1'].season.me || out['1'].season.road !== 7) fails.push('Season: table/you/road missing');
   if (out['0'].errors.length || out['1'].errors.length) fails.push('page errors');
