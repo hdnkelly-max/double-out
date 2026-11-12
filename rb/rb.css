@@ -1,0 +1,257 @@
+/* TOPS rebrand (EXP-REBRAND): the v9 component system, scoped to #rbApp so nothing outside it changes.
+   Only active when the rebrand switch is on (?rebrand=1). Native CSS nesting (iOS 17.2+, Chrome 120+). */
+#rbApp{position:fixed;inset:0;z-index:50;background:var(--bg);color:var(--ink);font-family:var(--b);font-size:14px;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-font-smoothing:antialiased}
+#rbApp[hidden]{display:none!important}
+#rbApp{
+/* the game's global classes (.rb-big, .rb-card, .rb-chip, .rb-ghost, .rb-bank…) must not reach in: everything inside starts from the browser's defaults */
+& *:not(svg,svg *){all:revert;box-sizing:border-box}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+svg{display:block}
+
+/* TOPS v9 · one component system: card, chip, meter, ring, row, image slot. Single dark look by design.
+   Image rules: every slot has a fixed aspect; darts always whole (horizontal strip, 4:1, contain on the shot's own black);
+   people/rooms use cover with a set focal point; kit tiles are 1:1 product shots. */
+&{
+  --desk:#0a0c0d;--bg:#121517;--card:#1a1e21;--card2:#22272b;--line:#343a3e;--line2:#4a5156;
+  --ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--red2:#b81c25;--good:#7fd19a;--good2:#3d7a52;--warn:#e7b65a;--bad:#e59b9b;--dartbg:#0e0e0e;
+  --d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;--b:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:dark}
+
+
+
+
+button{font:inherit;color:inherit}
+
+
+
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* top bar 56 */
+.rb-hd{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:10px;padding:0 6px 0 14px;border-bottom:1px solid var(--line)}
+.rb-wm{font-family:var(--d);font-weight:800;font-style:italic;font-size:22px;letter-spacing:.5px}
+.rb-me{display:flex;align-items:center;gap:8px;min-width:0;flex:1;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.rb-me .rb-nm{font-weight:600;font-size:15px;white-space:nowrap}
+.rb-bank{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.rb-ib{position:relative;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;cursor:pointer;padding:0}
+.rb-ib svg{width:22px;height:22px}
+.rb-ib .rb-b{position:absolute;top:7px;right:5px;min-width:16px;height:16px;border-radius:8px;background:#5b6266;color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+/* tabs 46 */
+.rb-tabs{height:46px;flex:0 0 46px;display:flex;border-bottom:1px solid var(--line)}
+.rb-tabs button{flex:1;background:none;border:0;color:var(--ink3);font-family:var(--d);font-weight:700;font-size:13px;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;position:relative;padding:0;min-width:0}
+.rb-tabs button[aria-selected="true"]{color:var(--ink)}
+.rb-tabs button[aria-selected="true"]::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;background:var(--red);border-radius:2px}
+.rb-tabs .rb-dot,.rb-seg .rb-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink);margin-left:4px;vertical-align:3px}
+/* screen */
+.rb-scr{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;padding:12px 16px 24px}
+.rb-scr>*{flex-shrink:0}
+/* COMPONENTS */
+.rb-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+button.rb-card{text-align:left;cursor:pointer;width:100%}
+button.rb-card:active,.rb-row:active{background:var(--card2)}
+.rb-sh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rb-sh h3{margin:0;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink3)}
+.rb-sh a,.rb-sh .rb-lk{font-size:13px;color:var(--ink2);text-decoration:none;background:none;border:0;cursor:pointer;padding:6px 0;min-height:32px}
+.rb-big{font-family:var(--d);font-weight:800;line-height:.95;letter-spacing:.3px;text-transform:uppercase}
+.rb-t1{font-family:var(--d);font-weight:800;font-size:22px;line-height:1;text-transform:uppercase;letter-spacing:.3px}
+.rb-t2{font-size:15px;font-weight:600}
+.rb-sub{font-size:13px;color:var(--ink2)}
+.rb-num{font-variant-numeric:tabular-nums}
+.rb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.rb-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:var(--card2);border:1px solid var(--line);font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--ink)}
+.rb-chip.rb-g{color:var(--good);border-color:#2e5a3d;background:#16261c}
+.rb-chip.rb-w{color:var(--warn);border-color:#5b4a26;background:#2a2316}
+.rb-chip.rb-l{color:var(--ink2)}
+.rb-chip svg{width:13px;height:13px}
+/* meter: segmented bar; .rb-f fill, .rb-gh ghost (kit effect / reward to come), .rb-tg target tick */
+.rb-meter{position:relative;height:10px;display:flex;gap:2px}
+.rb-meter i{flex:1;border-radius:2px;background:#2b3135}
+.rb-meter i.rb-f{background:var(--good)}
+.rb-meter i.rb-gh{background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px)}
+.rb-meter i.rb-cur{background:#7d868b}
+.rb-mtk{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:1px}
+.rb-mlab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+/* continuous bar */
+.rb-bar{position:relative;height:8px;border-radius:4px;background:#2b3135;overflow:hidden}
+.rb-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--good)}
+.rb-bar i.rb-prev{background:#4a5156}
+/* ring */
+.rb-ring{position:relative;width:64px;height:64px;flex:0 0 64px}
+.rb-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rb-ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--d);font-weight:800;font-size:24px;line-height:1}
+.rb-ring small{position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:9px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase}
+/* row: [slot] title/sub [right] chevron */
+.rb-row{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;text-align:left;cursor:pointer}
+.rb-row .rb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rb-row .rb-tx small{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.rb-chev{color:var(--ink3);font-size:22px;line-height:1;flex:0 0 auto}
+/* image slots (fixed aspect) */
+.rb-slot{position:relative;overflow:hidden;background:#0d0f10;flex:0 0 auto}
+.rb-slot>.rb-im{position:absolute;inset:0;background-size:cover;background-position:50% 50%;background-repeat:no-repeat}
+.rb-slot.rb-dart{aspect-ratio:4/1;background:var(--dartbg)}.rb-slot.rb-dart>.rb-im{background-size:contain}
+.rb-slot.rb-sq{aspect-ratio:1/1}
+.rb-slot.rb-wide{aspect-ratio:16/9}
+.rb-slot.rb-r8{border-radius:8px}
+.rb-face{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background-size:cover;background-position:50% 40%;border:1px solid var(--line2)}
+/* hero */
+.rb-hero{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0e1012;flex:0 0 auto}
+.rb-hero .rb-im{position:absolute;inset:0;background-size:cover;background-repeat:no-repeat}
+.rb-hero .rb-sh2{position:absolute;inset:0}
+.rb-hero .rb-tx{position:absolute;left:14px;right:14px;bottom:12px;display:flex;flex-direction:column;gap:6px}
+.rb-kick{font-size:12px;font-weight:600;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink2)}
+.rb-primary{height:56px;flex:0 0 56px;width:100%;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.rb-primary:hover{background:var(--red2)}.rb-primary b{font-family:var(--d);font-weight:800;font-size:22px;letter-spacing:1px;text-transform:uppercase;line-height:1}.rb-primary small{font-size:12px;opacity:.92}
+.rb-primary[disabled]{background:#3a3f43;color:#9aa1a5;cursor:default}
+.rb-ghost{height:44px;padding:0 16px;border-radius:10px;border:1px solid #6b7276;background:none;font-weight:600;cursor:pointer}
+.rb-link{background:none;border:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-size:14px;cursor:pointer;min-height:44px}
+.rb-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rb-seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;height:40px;flex:0 0 40px}
+.rb-seg button{flex:1;background:none;border:0;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer;min-width:0}
+.rb-seg button[aria-selected="true"]{background:var(--card2);color:var(--ink)}
+/* two-sided compare (head-to-head) */
+.rb-h2h{display:grid;grid-template-columns:40px 1fr 40px;gap:10px;align-items:center}
+.rb-vs2{display:flex;flex-direction:column;gap:5px}
+.rb-vs2 .rb-nums{display:flex;justify-content:space-between;align-items:baseline}
+.rb-vs2 .rb-nums b{font-family:var(--d);font-size:24px;font-weight:800;line-height:1}
+.rb-vs2 .rb-nums span{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px}
+.rb-tug{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}.rb-tug i{display:block;height:100%}.rb-tug .rb-a{background:var(--good)}.rb-tug .rb-b{background:#6b7276}
+/* compare rows (current vs this dart) */
+.rb-cmp{display:grid;grid-template-columns:78px 1fr 46px;gap:10px;align-items:center;font-size:13.5px}
+.rb-cmp .rb-bars{display:flex;flex-direction:column;gap:3px}
+.rb-cmp .rb-d{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.rb-d.rb-up{color:var(--good)}.rb-d.rb-dn{color:var(--bad)}.rb-d.rb-eq{color:var(--ink3)}
+/* lock panel */
+.rb-lock{display:flex;gap:12px;align-items:center}
+.rb-lock .rb-ic{width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:var(--card2);border:1px solid var(--line2);display:grid;place-items:center}
+.rb-lock .rb-ic svg{width:20px;height:20px}
+/* position dots */
+.rb-pos{display:flex;gap:4px;align-items:center;align-self:flex-start}.rb-pos i{flex:0 0 14px;width:14px;height:14px;border-radius:50%;background:#2b3135;display:grid;place-items:center;font-size:9px;font-style:normal;font-weight:700;color:var(--ink3)}
+.rb-pos i.rb-up{background:#24412e}.rb-pos i.rb-me{background:var(--ink);color:#111}.rb-pos .rb-cut{width:2px;height:16px;background:var(--good);border-radius:1px}
+/* table */
+.rb-tbl{display:flex;flex-direction:column}
+.rb-tbl .rb-tr{display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;align-items:center;min-height:38px;font-size:14px;border-top:1px solid #262b2f}
+.rb-tbl .rb-tr:first-child{border-top:0}
+.rb-tbl .rb-tr.rb-me{background:var(--card2);margin:0 -8px;padding:0 8px;border-radius:8px;font-weight:700}
+.rb-tbl .rb-tr .rb-p{color:var(--ink3);font-variant-numeric:tabular-nums}.rb-tbl .rb-tr .rb-r{text-align:right;font-variant-numeric:tabular-nums}
+.rb-tbl .rb-cutl{height:0;border-top:1px dashed var(--good2);margin:2px 0;position:relative}
+.rb-tbl .rb-cutl span{position:absolute;right:0;top:-9px;font-size:11px;color:var(--good);background:var(--card);padding-left:6px}
+/* road */
+.rb-road{display:flex;align-items:center;gap:0}
+.rb-road .rb-st{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0}
+.rb-road .rb-st i{width:14px;height:14px;border-radius:50%;background:#2b3135;border:2px solid #2b3135}
+.rb-road .rb-st.rb-done i{background:var(--good);border-color:var(--good)}.rb-road .rb-st.rb-now i{background:var(--bg);border-color:var(--ink);width:18px;height:18px}
+.rb-road .rb-st span{font-size:10.5px;color:var(--ink3);text-align:center;line-height:1.15}.rb-road .rb-st.rb-now span{color:var(--ink);font-weight:700}
+.rb-road .rb-ln{flex:0 0 8px;height:2px;background:#2b3135;margin-bottom:16px}
+/* stat bars (locker) */
+.rb-stt{display:grid;grid-template-columns:86px 1fr 26px 37px;min-height:36px;gap:8px;align-items:center;font-size:14px}
+.rb-stt b{text-align:right;font-variant-numeric:tabular-nums}
+.rb-plus{width:44px;height:44px;margin:-7px -7px -7px 0;border-radius:8px;border:1px solid #2e5a3d;background:#16261c;color:var(--good);font-weight:800;cursor:pointer;padding:0}
+.rb-plus[disabled]{visibility:hidden}
+/* thumbs */
+.rb-thumbs{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:2px}.rb-thumbs::-webkit-scrollbar{display:none}
+.rb-th{flex:0 0 132px;scroll-snap-align:start;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px 6px 8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left}
+.rb-th[aria-pressed="true"]{border:2px solid #fff;padding:5px 5px 7px}
+.rb-th small{font-size:12px;font-weight:600;display:flex;gap:4px;align-items:center}
+.rb-th.rb-lk .rb-slot{opacity:.45}
+/* stat tiles */
+.rb-tile4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rb-tl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.rb-tl b{font-family:var(--d);font-size:32px;font-weight:800;line-height:1}
+.rb-tl small{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.rb-tl span{font-size:12.5px}
+/* cards grid */
+.rb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rb-cd{aspect-ratio:2/3;border-radius:8px;overflow:hidden;border:1px solid var(--line);position:relative;background:#101214}
+.rb-cd .rb-im{position:absolute;inset:0;background-size:cover;background-position:50% 50%}
+.rb-cd .rb-n{position:absolute;left:0;right:0;bottom:0;height:24px;line-height:24px;padding:0 8px;font-size:11px;font-weight:600;background:rgba(12,14,16,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-cd.rb-out{display:grid;place-items:center;color:#5b6266;font-family:var(--d);font-weight:700;font-size:18px;background:repeating-linear-gradient(135deg,#14171a 0 8px,#171b1e 8px 16px)}
+.rb-fchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}.rb-fchips::-webkit-scrollbar{display:none}
+.rb-fchips button{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
+.rb-fchips button[aria-pressed="true"]{background:var(--card2);color:var(--ink);border-color:var(--line2)}
+/* result lockup */
+.rb-lockup{position:absolute;right:12px;top:0;bottom:0;width:140px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;text-align:center}
+.rb-lockup small{font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.rb-lockup b{font-family:var(--d);font-weight:800;font-size:58px;line-height:.9}
+.rb-lockup span{font-size:13px;color:var(--ink2)}
+.rb-pin{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding-top:12px;margin-top:auto}
+.rb-empty{grid-column:1/-1;color:var(--ink2);font-size:13px;text-align:center;padding:10px}
+/* overlays */
+.rb-ov{position:absolute;inset:0;z-index:30;background:rgba(6,7,8,.84);display:flex;align-items:center;justify-content:center;padding:22px}
+.rb-pc{width:100%;max-width:330px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
+.rb-pc .rb-pi{aspect-ratio:2/3;max-height:470px;width:100%;background-size:cover;background-position:50% 20%;position:relative}
+.rb-pc .rb-pt{position:absolute;left:0;right:0;bottom:0;padding:44px 16px 14px;background:linear-gradient(transparent,rgba(8,9,10,.94));display:flex;flex-direction:column;gap:6px}
+.rb-pc .rb-pb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.rb-menu{position:absolute;inset:56px 0 0;z-index:40;background:rgba(6,7,8,.6);display:flex;justify-content:flex-end;align-items:flex-start}
+.rb-menu .rb-mc{width:250px;margin:8px 10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.rb-menu button{min-height:44px;text-align:left;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:14px;cursor:pointer}
+.rb-toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:50}
+.rb-toast.rb-on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rb-toast{transition:none}}
+
+
+
+
+}
+#rbBack{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:49;height:40px;padding:0 14px;border-radius:20px;border:1px solid #4a5156;background:#1a1e21;color:#f3f4f2;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#rbBack[hidden]{display:none}
+
+#rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:var(--good)}.rb-kg{background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px)}}
+
+#rbApp.rb-resmode{z-index:95}
+#rbApp.rb-resmode .rb-tabs{display:none}
+
+/* ===== EXP-REBRAND batch 1 · match view (colours and type only; nothing moved or resized; the pull pad and reticle are not touched) =====
+   The match HUD is built on --match-* tokens; the rebrand swaps them for the v9.1 set (graphite cards, white text, one red accent)
+   and replaces the hard-coded lime accents. Active only with ?rebrand=1 (html.rb-on). */
+html.rb-on body.lk-match{--acc:#d7232d;--acc2:#e5484f;--match-bg:#121517;--match-surface:#1a1e21;--match-raised:#22272b;--match-line:#343a3e;--match-text:#f3f4f2;--match-muted:#a0a6a3;--match-focus:#f3f4f2;--match-red:#d7232d;--match-oxblood:#3a1b1d}
+html.rb-on body.lk-match #hud .top{background:#121517!important;border-bottom:1px solid #343a3e!important}
+html.rb-on body.lk-phone.lk-match .sb{background:rgba(26,30,33,.96)!important;border-color:#343a3e!important}
+html.rb-on body.lk-phone.lk-match .pl.on .nm{color:#f3f4f2}
+html.rb-on body.lk-phone.lk-match .pl.on .nm::after{background:#d7232d;box-shadow:none}
+html.rb-on body.lk-phone.lk-match .pl.on .sc{color:#fff;text-shadow:none}
+html.rb-on body.lk-phone.lk-match #sbMid em.a{background:#f3f4f2}
+html.rb-on body.lk-phone.lk-match .chip.last::after{background:#d7232d}
+html.rb-on body.lk-match #btnSettle,html.rb-on body.lk-match .hr .settle{border-color:#7fd19a!important;color:#7fd19a!important}
+html.rb-on body.lk-match .hr .settle.breathing{background:rgba(127,209,154,.14)}
+html.rb-on body.lk-match .intro{background:rgba(26,30,33,.97)!important;border-color:#343a3e!important}
+html.rb-on body.lk-match .lk-menu{border-radius:12px!important;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+html.rb-on body.lk-match .lk-menu .ghost{border-radius:8px!important;min-height:44px!important}
+/* batch 1 · post-match stats screen (#result): graphite panels, white type, red primary (colours/type only) */
+html.rb-on #result{--acc:#d7232d;--panel:#1a1e21;--line:#343a3e;--chalk:#f3f4f2;--fg:#f3f4f2;--muted:#a0a6a3}
+html.rb-on #result .big{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important;box-shadow:none!important}
+html.rb-on #result .ghost{border-color:#6b7276!important;color:#f3f4f2!important;background:transparent!important}
+html.rb-on #result .res-score,html.rb-on #result .res-stats,html.rb-on #result .res-earn>div{background:#1a1e21!important;border:1px solid #343a3e!important;border-radius:12px!important}
+/* batch 1 r3 (ChatGPT design 7.8): stronger active-player read, quieter inactive side; 360 secondary text a touch larger (same boxes) */
+html.rb-on body.lk-phone.lk-match .pl.on .nm::after{height:4px;width:56px;border-radius:2px}
+html.rb-on body.lk-phone.lk-match .pl:not(.on) .nm{color:#a0a6a3}
+html.rb-on body.lk-phone.lk-match .pl:not(.on) .sc{color:#8d9497}
+@media (max-width:370px){html.rb-on body.lk-phone.lk-match .visit .tot{font-size:12px!important;color:#c3c8c5!important}html.rb-on body.lk-phone.lk-match .pl .av small,html.rb-on body.lk-phone.lk-match .pl .nm small{color:#a0a6a3!important}}
+html.rb-on body.lk-phone.lk-match .pl.on{background:linear-gradient(180deg,rgba(215,35,45,.22),rgba(215,35,45,.04) 70%)!important;box-shadow:inset 0 3px 0 #d7232d}
+/* batch 2 · cards system and its sheets (exhibition poster, binder, cabinet, pack opening): the After Hours tokens move to the v9.1 graphite set; the one primary ("Accept invite", "Open my picks") turns red. Colours only. */
+html.rb-on{--base:#121517;--surface:#1a1e21;--raised:#22272b;--divider:#343a3e;--text:#f3f4f2;--muted:#a0a6a3;--lime:#e9ecea}
+html.rb-on .tcpk__btn--go{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important}
+
+#rbApp{.rb-msheet{position:absolute;right:12px;top:calc(56px + env(safe-area-inset-top,0px));z-index:5;display:flex;flex-direction:column;gap:6px;min-width:200px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}.rb-msheet button{min-height:44px;padding:0 14px;border-radius:8px;background:var(--card2);color:var(--ink);text-align:left;font-weight:600}}
+
+/* pull-pad corner brackets: colour only (Overseer 22:08 approved; same 18x2 px geometry as the game's rule) */
+html.rb-on body.lk-phone.lk-match .pa.ready .pa-pad,html.rb-on body.lk-phone.lk-match .pa.pulling .pa-pad{background:linear-gradient(#f3f4f2,#f3f4f2) 0 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/2px 18px!important;background-repeat:no-repeat!important}
+/* the After Hours accent tokens (lime) → the rebrand red; primary buttons that sat on lime get white text */
+html.rb-on{--ah-act:#d7232d;--acc:#d7232d;--acc2:#e5484f}
+html.rb-on #btnGoogle,html.rb-on #btnNewCareer:not(.alt),html.rb-on #btnContinue,html.rb-on #btnCreate,html.rb-on .big:not(.ghost):not(.alt){color:#fff!important}
+html.rb-on #roomChip{color:#f3f4f2!important;border-color:#343a3e!important}
+
+#rbApp{.rb-th small .rb-lkc{display:inline-flex;width:12px;height:12px;margin-right:4px;opacity:.8}.rb-th small .rb-lkc svg{width:12px;height:12px}.rb-th.rb-lk .rb-slot{opacity:.6}}
+html.rb-on #rbMenuSheet{}
+/* Delivery QA R2 (01:08) findings 1, 2, 4: text floor 11 px, taps 44 px, head-to-head label room at 360 */
+#rbApp{
+  & .rb-ring small{font-size:11px;letter-spacing:.8px;bottom:7px}
+  & .rb-road .rb-st span{font-size:11px;letter-spacing:-.2px}
+  & .rb-pos{gap:4px}& .rb-pos i{flex:0 0 18px;width:18px;height:18px;border-radius:50%;font-size:11px}& .rb-pos .rb-cut{height:18px}& #rbSeason .rb-tx small{white-space:nowrap}
+  & .rb-me{min-height:44px}
+  & .rb-seg{height:46px;flex:0 0 46px}
+  & .rb-fchips button{height:44px;border-radius:22px}
+  & .rb-vs2 .rb-nums{gap:8px}& .rb-vs2 .rb-nums span{flex:1 1 auto;min-width:0;text-align:center;line-height:1.25}
+}
+html.rb-on .st2o .g small{font-size:11px}
+html.rb-on .tc-chips button,html.rb-on .tcpk__skip{min-height:44px}
+html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}

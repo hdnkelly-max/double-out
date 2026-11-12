@@ -1427,12 +1427,15 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
 
  // ===== LOOK (sprint) ===== pane layout, fixed board camera, thrower camera, earned push/reaction, lighting pass
  function lkPhone(){return innerWidth<=700||innerHeight>innerWidth*1.1;}
- let lkSafeB=0,lkProbe=null;function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';document.body.appendChild(lkProbe);}return lkProbe.offsetHeight||0;}
+ let lkSafeB=0,lkProbe=null;// EXP-MENU: top safe area (iPhone home-screen app, status bar drawn over the page). Read through --tops-sat so a test can emulate it.
+function lkSafeTop(){if(!lkProbeT){lkProbeT=document.createElement('div');lkProbeT.style.cssText='position:fixed;left:0;top:0;width:1px;height:var(--tops-sat,0px);pointer-events:none;visibility:hidden';document.body.appendChild(lkProbeT);}return lkProbeT.offsetHeight||0;}
+let lkProbeT=null;
+function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';document.body.appendChild(lkProbe);}return lkProbe.offsetHeight||0;}
  let lkKey='';const lkR={phone:false,hdr:48,sb:112,pull:0,pad:72,diam:400,board:{x:0,y:48,w:100,h:100},player:{x:100,y:48,w:100,h:100}};
- function lkRects(){const W=innerWidth,H=innerHeight;const phone=lkPhone();const key=W+'x'+H+(phone?'p':'d');if(key===lkKey)return lkR;lkKey=key;lkSafeB=lkSafe();
-  if(phone){const hdr=40,sb=116,pull=lkSafeB;const avail=Math.max(300,H-hdr-sb-pull);let board=Math.round(Math.min(W*1.05,avail*.52));board=Math.max(190,board);const ph=Math.max(0,avail-board);
+ function lkRects(){const W=innerWidth,H=innerHeight;const phone=lkPhone();const key=W+'x'+H+(phone?'p':'d');if(key===lkKey)return lkR;lkKey=key;lkSafeB=lkSafe();const sat=lkSafeTop();/* read only when the size changes: no per-frame layout */
+  if(phone){const hdr=44+sat,sb=116,pull=lkSafeB;const avail=Math.max(300,H-hdr-sb-pull);let board=Math.round(Math.min(W*1.05,Math.max(300,H-40-sb-pull)*.52));board=Math.max(190,board);const ph=Math.max(0,avail-board);
    Object.assign(lkR,{phone,hdr,sb,pull,pad:0,diam:Math.round(Math.min(W,board)*.897),board:{x:0,y:hdr,w:W,h:board},player:{x:0,y:hdr+board,w:W,h:ph}});}
-  else{const hdr=48,sb=112,pad=0;const bh=Math.max(240,H-hdr-sb-pad);const bw=Math.round(W*840/1440);Object.assign(lkR,{phone,hdr,sb,pull:0,pad,diam:Math.round(Math.min(bw,bh)*.842),board:{x:0,y:hdr,w:bw,h:bh},player:{x:bw,y:hdr,w:W-bw,h:bh}});}
+  else{const hdr=48+sat,sb=112,pad=0;const bh=Math.max(240,H-hdr-sb-pad);const bw=Math.round(W*840/1440);Object.assign(lkR,{phone,hdr,sb,pull:0,pad,diam:Math.round(Math.min(bw,bh)*.842),board:{x:0,y:hdr,w:bw,h:bh},player:{x:bw,y:hdr,w:W-bw,h:bh}});}
   const st=document.documentElement.style;st.setProperty('--lk-hdr',lkR.hdr+'px');st.setProperty('--lk-sb',lkR.sb+'px');st.setProperty('--lk-pull',lkR.pull+'px');st.setProperty('--lk-pad',lkR.pad+'px');st.setProperty('--lk-bw',lkR.board.w+'px');st.setProperty('--lk-bh',lkR.board.h+'px');st.setProperty('--lk-px',lkR.player.x+'px');st.setProperty('--lk-py',lkR.player.y+'px');st.setProperty('--lk-pw',lkR.player.w+'px');st.setProperty('--lk-ph',lkR.player.h+'px');st.setProperty('--lk-diam',lkR.diam+'px');document.body.classList.toggle('lk-phone',phone);return lkR;}
  // earned moments: 350 ms board push (140 in / 210 out, 8 %) toward a board point; 450-800 ms thrower reaction (player pane only)
  let lkPushS=null,lkReactS=null;function lookPush(x,y){if(RM)return;lkPushS={t0:performance.now(),x,y};}function lookReact(ms){if(RM)return;lkReactS={t0:performance.now(),dur:ms||450};}function lookSkip(){lkPushS=null;lkReactS=null;}
