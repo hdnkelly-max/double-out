@@ -7,7 +7,11 @@
 //  6 at most 3 backups, newest first; an unplayed restart never pushes a real career out
 //  7 storage refusing the backup: "That's me" and Bring back change nothing (no intro, no match), and say so
 //  8 an older cloud copy without the backups (sign-in, another device): the next save carries this device's backups again
-//  9 the old build: no sheet and no backup (the test fails there)
+//  9 CAR-S2 size: the save (cloud copy) carries one backup, the newest that isn't the career in play; the device keeps three
+// 10 CAR-S2 cross-device: a cloud copy's backup from another device and this device's own are all offered; bringing one back keeps the others
+// 11 CAR-S2 a save that fails right after a restore (storage full / app killed): after a reload the old career is there and the backup is offered again
+// 12 CAR-S2 eviction: with three backups and a played career, bringing back the oldest says which one makes room first, and never drops the one coming back
+// 13 the old build: no sheet and no backup (the test fails there)
 // usage: node tests/career-safe.js
 const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
@@ -81,8 +85,37 @@ const {chromium}=require('playwright');const path=require('path');
  ok(r7b.r==='fail'&&r7b.same,'restore changed the save although storing the outgoing career failed: '+JSON.stringify(r7b));
  // 8 an older cloud copy without the backups
  const r8=await p.evaluate(()=>{const n=TOPS_CAREER_BAK.list().length;const cloud=JSON.parse(JSON.stringify(save));delete cloud.careerBak;cloud.sv=(save.sv||0)+5;netAdopt(cloud);return {n,after:(save.careerBak||[]).length,stored:(JSON.parse(localStorage.getItem('doubleout2')).careerBak||[]).length};});
- ok(r8.n>0&&r8.after===r8.n&&r8.stored===r8.n,'backups not carried into the next save after an older cloud copy: '+JSON.stringify(r8));
+ ok(r8.n>0&&r8.after===1&&r8.stored===1,'the newest backup not carried into the next save after an older cloud copy: '+JSON.stringify(r8));
+
+ // 9 size
+ await p.evaluate(()=>{localStorage.removeItem('tops_career_bak');save.careerBak=[];});await p.reload();await p.waitForTimeout(4500);await setup();
+ for(const t of ['P','Q','R']){await mk(1,3,1,12,40,t);await p.evaluate(()=>newCareer());}
+ const r9=await p.evaluate(()=>{const loc=JSON.parse(localStorage.getItem('tops_career_bak')||'[]');return {cloud:(save.careerBak||[]).map(x=>x.d.career.tag),dev:loc.map(x=>x.d.career.tag)};});
+ ok(JSON.stringify(r9)===JSON.stringify({cloud:['R'],dev:['R','Q','P']}),'size: '+JSON.stringify(r9));
+ // 10 cross-device: the cloud copy (another phone) brings backup Z; this device has R,Q,P
+ const r10=await p.evaluate(()=>{const z=JSON.parse(JSON.stringify(TOPS_CAREER_BAK.list()[0]));z.id='other-phone-z';z.at=Date.now()+1000;z.d.career.tag='Z';
+  const cloud=JSON.parse(JSON.stringify(save));cloud.careerBak=[z];netAdopt(cloud);const before=TOPS_CAREER_BAK.shown().map(x=>x.d.career.tag);
+  const r=TOPS_CAREER_BAK.restore('other-phone-z');return {before,r,tag:career().tag,after:TOPS_CAREER_BAK.shown().map(x=>x.d.career.tag),cloud:(save.careerBak||[]).map(x=>x.d.career.tag)};});
+ ok(JSON.stringify(r10.before)==='["Z","R","Q"]','cross-device list: '+JSON.stringify(r10));ok(r10.r==='ok'&&r10.tag==='Z','cross-device restore: '+JSON.stringify(r10));
+ ok(JSON.stringify(r10.after)==='["R","Q"]'&&JSON.stringify(r10.cloud)==='["R"]','after a cross-device restore: '+JSON.stringify(r10));
+ // 11 the save fails right after the restore copy
+ await setup();await mk(0,2,2,4,15,'S');await p.evaluate(()=>{newCareer();});await mk(0,7,0,6,70,'T');
+ const r11a=await p.evaluate(()=>{const id=TOPS_CAREER_BAK.shown().find(x=>x.d.career.tag==='S').id;const si=Storage.prototype.setItem;window.__si=si;
+  Storage.prototype.setItem=function(k,v){if(k==='doubleout2')throw new Error('QuotaExceededError');return si.apply(this,arguments);};
+  const r=TOPS_CAREER_BAK.restore(id);Storage.prototype.setItem=si;return {r,mem:career().tag,id};});
+ await p.reload();await p.waitForTimeout(4500);
+ const r11=await p.evaluate(id=>({tag:career()&&career().tag,offered:TOPS_CAREER_BAK.shown().some(x=>x.id===id)}),r11a.id);
+ ok(r11a.r==='ok'&&r11.tag==='T'&&r11.offered,'failed save after a restore lost something: '+JSON.stringify([r11a,r11]));
+ // 12 eviction
+ await setup();await p.evaluate(()=>{localStorage.removeItem('tops_career_bak');save.careerBak=[];});await p.reload();await p.waitForTimeout(4500);await setup();
+ for(const t of ['U','V','W']){await mk(1,2,1,9,30,t);await p.evaluate(()=>newCareer());}await mk(1,5,5,10,50,'X');
+ await p.evaluate(()=>{showTitle();$('btnRestoreCareer').click();});await p.waitForTimeout(200);
+ await p.evaluate(()=>{const rows=[...document.querySelectorAll('#carSheet .cs-row')];rows[rows.length-1].querySelector('[data-r]').click();});await p.waitForTimeout(200);
+ const s12=await sheet();ok(s12&&/make room/i.test(s12)&&/Club singles · 2–1/.test(s12),'no make-room sheet: '+s12);
+ await p.evaluate(()=>[...document.querySelectorAll('#carSheet .cs-b')].find(b=>/bring it back/i.test(b.textContent)).click());await p.waitForTimeout(300);
+ const r12=await p.evaluate(()=>({tag:career().tag,dev:JSON.parse(localStorage.getItem('tops_career_bak')).map(x=>x.d.career.tag),shown:TOPS_CAREER_BAK.shown().map(x=>x.d.career.tag)}));
+ ok(r12.tag==='U'&&JSON.stringify(r12.dev)==='["X","W","U"]'&&JSON.stringify(r12.shown)==='["X","W"]','eviction: '+JSON.stringify(r12));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  await b.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}
- console.log('PASS: no sheet without a played career; sheet names the career, Keep/Escape/outside change nothing; Replace backs up to the save and the device field for field; Bring back restores it and keeps the played current one; device copy listed when the cloud copy lacks it; max 3, newest first, unplayed restarts kept out; a refused backup or restore changes nothing; an older cloud copy gets the backups back');})();
+ console.log('PASS: no sheet without a played career; sheet names the career, Keep/Escape/outside change nothing; Replace backs up to the save and the device field for field; Bring back restores it and keeps the played current one; device copy listed when the cloud copy lacks it; max 3, newest first, unplayed restarts kept out; a refused backup or restore changes nothing; an older cloud copy gets the newest backup back; CAR-S2: one backup in the save, three on the device, cross-device restore keeps the rest, a failed save after a restore loses nothing, making room is announced and never drops the one coming back');})();
