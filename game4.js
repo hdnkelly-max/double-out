@@ -3179,9 +3179,17 @@ window.TOPS_matchTeardown=matchTeardown;
   if(lab.length&&live){if(!t){t=document.createElement('div');t.id='q20tag';t.style.cssText='position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:95;pointer-events:none;font:700 11px/1 Manrope,sans-serif;letter-spacing:.06em;color:#0b0d0c;background:#C6F36B;border-radius:4px;padding:4px 6px;text-transform:uppercase';document.body.appendChild(t);}t.textContent='TEST · '+lab.join(' · ');}else if(t)t.remove();};
  sync();if(q){try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
  {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
- const menu=()=>{const pop=document.getElementById('hubPop');if(!pop)return;[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)']].forEach(([k,n])=>{let b=document.getElementById('q20b_'+k);
-   if(!b){b=document.createElement('button');b.type='button';b.id='q20b_'+k;b.onclick=e=>{e.stopPropagation();const s=appQ().split(',').filter(Boolean);const i=s.indexOf(k);if(i>=0)s.splice(i,1);else s.push(k);try{localStorage.setItem(APPK,s.join(','));}catch(er){}menu();sync();};pop.appendChild(b);}
+ /* ENG-10 (Overseer 06:27): the same three toggles in whichever hub menu is showing: the old #hubPop (rebrand off) and the rebrand's sheet
+    (#rbMenuSheet, made on each tap of its Menu button). Same localStorage key, nothing cleared automatically (the switches are #20 data). */
+ const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)']];
+ const rows=(host,rb)=>{if(!host)return;if(rb&&!host.querySelector('.q20-sep')){const sp=document.createElement('div');sp.className='q20-sep';sp.setAttribute('aria-hidden','true');sp.style.cssText='height:1px;margin:2px 4px;background:var(--line,#343a3e)';host.appendChild(sp);}
+  Q20B.forEach(([k,n])=>{let b=host.querySelector('[data-q20="'+k+'"]');
+   if(!b){b=document.createElement('button');b.type='button';b.setAttribute('data-q20',k);if(!rb)b.id='q20b_'+k;if(rb)b.style.cssText='min-height:44px;font-size:13px;font-weight:600;color:var(--ink3,#a0a6a3);justify-content:flex-start;text-align:left';
+    b.onclick=e=>{e.stopPropagation();const s=appQ().split(',').filter(Boolean);const i=s.indexOf(k);if(i>=0)s.splice(i,1);else s.push(k);try{localStorage.setItem(APPK,s.join(','));}catch(er){}menu();sync();};host.appendChild(b);}
    const on=appQ().split(',').indexOf(k)>=0;b.textContent=n+(on?': on':': off');b.setAttribute('aria-pressed',on?'true':'false');});};
+ const menu=()=>{rows(document.getElementById('hubPop'),false);rows(document.getElementById('rbMenuSheet'),true);};
+ /* the rebrand builds its sheet in its Menu button's click handler; add the rows right after (capture listener, next tick; no page-wide observer) */
+ document.addEventListener('click',e=>{try{if(e.target&&e.target.closest&&e.target.closest('#rbMenu'))setTimeout(()=>{try{menu();}catch(er){}},0);}catch(er){}},true);
  try{menu();}catch(e){}
  if(has('nolayers')){const st=document.createElement('style');st.textContent='body *:not(canvas#scene){-webkit-backdrop-filter:none!important;backdrop-filter:none!important;filter:none!important;will-change:auto!important;mix-blend-mode:normal!important}#grade,#grain,#vig,#nerve,#loading,#cardFog,#tcFx,#pubFxC,#fxLayer,#sceneBg,canvas#fx{display:none!important}';document.head.appendChild(st);}
  if(has('dpr1')){const go=()=>{try{const R=window.TOPS_R;if(R){R.setPixelRatio(1);window.dispatchEvent(new Event('resize'));}}catch(e){}};go();setTimeout(go,500);}
