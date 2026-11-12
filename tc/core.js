@@ -714,7 +714,7 @@
     window.TOPS_WALKFULL = true; document.body.classList.add('tc-walking');
     const ov = document.createElement('div'); ov.id = 'tcWalk';
     ov.innerHTML = `<div class="tc-wk-bars"></div><div class="tc-wk-ban"><small>Now walking on</small><b>${esc(WK.name)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}${song && song.id !== 'off' ? `<span>♪ ${esc(song.n)}</span>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
-    ov.onclick = () => { if (WK) WK.t0 = performance.now() - WK.dur; };
+    ov.onclick = () => { if (WK) { WK.t0 = performance.now() - WK.dur; WK.holding = false; WK.holdSkip = true; } };   // QA 14:24: a tap during the hold must land on k = 1 (the hold's time-back would leave k just under 1 and show one unposed frame)
     document.body.appendChild(ov);
     WK.ov = ov;
   }
@@ -797,7 +797,7 @@
       if (now - WK.hold0 < 4000) {
         WK.holding = true; me.visible = false; if (v.fpFig) v.fpFig.visible = false;
         const est = WK.home.clone().addScaledVector(WK.fwd, -3.4).addScaledVector(WK.side, -.6); est.y = 1.55;
-        v.pos.lerp(est, .2); v.look.lerp(new T3(0, 1.6, 0), .2); return { fov: 52 };
+        v.pos.copy(est); v.look.set(0, 1.6, 0); return { fov: 52 };   // QA 14:24: the game rebuilds pos/look every frame, so a lerp never got past 20%; set the shot outright
       }
       WK.t0 = now - WK.dur; WK.holdSkip = true; return null;
     }
