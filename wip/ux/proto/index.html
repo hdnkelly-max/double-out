@@ -311,7 +311,7 @@ const DARTS=[
  {id:'zen',n:'Shot Zen Jutsu 23g',line:'Front-loaded tungsten, ringed grip.',lv:25,price:170,img:'g_d_zen.jpg',sc:7,co:7,w:23},
  {id:'asp',n:'Target Aspinall G2 24g',line:'Tapered barrel, aggressive ring grip.',lv:33,price:270,img:'g_d_asp.jpg',sc:9,co:8,w:24},
  {id:'littler',n:'Target Luke Littler Gen 1 23g',line:'The Nuke\u2019s own. Grip everywhere.',lv:36,price:300,img:'g_d_littler.jpg',sc:10,co:9,w:23}];
-const LV=14;
+
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
 function centerThumb(){requestAnimationFrame(()=>{const t=$('#sThumbs'),q=t&&t.querySelector('[aria-pressed="true"]');if(!q||!t.clientWidth)return;t.scrollTo({left:Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2),behavior:'instant'});});}
 function money(n){return '$'+n.toLocaleString();}
@@ -360,19 +360,19 @@ $$('.legend button').forEach(b=>b.onclick=()=>{const k=b.dataset.state;document.
   if(k==='lost'){show('result');}else{show('tonight');if(k==='exh')poster();}toast(b.textContent+' state');});
 // Shop
 function renderShop(){
-  const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>LV,mine=DARTS.find(x=>x.id===st.eq),isEq=d.id===st.eq;
+  const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>XP.lv,mine=DARTS.find(x=>x.id===st.eq),isEq=d.id===st.eq;
   $('#sImg').style.backgroundImage='url(img/'+d.img+')';$('#sImg').setAttribute('aria-label',d.n+' dart');{const sp=d.n.match(/^(Harrows|Red Dragon|Target|Shot|Winmau|Unicorn) (.*)$/);$('#sBrand').textContent=sp?sp[1]:'';$('#sName').textContent=sp?sp[2]:d.n;}$('#sLine').textContent=d.line;
-  $('#sBadge').textContent=isEq?'EQUIPPED':owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · LV '+d.lv:'LV '+d.lv);
+  $('#sBadge').textContent=isEq?'EQUIPPED':owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · XP.lv '+d.lv:'LV '+d.lv);
   const dl=(a,b)=>{const v=a-b;return [(v>0?'+':v<0?'−':'±')+Math.abs(v),v>0?'up':v<0?'down':'neutral'];};const rows=isEq?[['This is your dart','','neutral']]:[['Scoring',...dl(d.sc,mine.sc)],['Control',...dl(d.co,mine.co)]].concat(d.w===mine.w?[['Weight','Same, '+d.w+' g','neutral']]:[[d.w>mine.w?'Heavier':'Lighter',d.w+' g vs '+mine.w+' g','neutral']]);
   $('#sCmp').innerHTML='<h3>'+(isEq?'Equipped now':'vs your '+mine.n.replace(/^(Harrows|Red Dragon|Target|Shot|Winmau|Unicorn) /,''))+'</h3>'+rows.map(r=>`<div><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join('');
   let a='';
   if(isEq)a=`<div class="lockline"><b>Equipped for your next match</b><span>Pick another dart to compare</span></div>`;
   else if(owned)a=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
-  else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${LV}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
+  else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${XP.lv}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
   else if(st.bank<d.price)a=`<div class="lockline"><b>${money(d.price)} · you have ${money(st.bank)}</b><span>${money(d.price-st.bank)} to go</span><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   $('#sAct').innerHTML=a;
-  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><span class="tp" style="background-image:url(img/${x.img})"></span><small>${x.id===st.eq?'● Equipped':st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
+  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>XP.lv&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><span class="tp" style="background-image:url(img/${x.img})"></span><small>${x.id===st.eq?'● Equipped':st.owned[x.id]?'✓ Owned':x.lv>XP.lv?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
   $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
   const buy=$('#sBuy');if(buy)buy.onclick=()=>{if(st.bank<d.price){renderShop();return;}st.owned[d.id]=1;st.eq=d.id;st.bank-=d.price;$('#bank').textContent=money(st.bank);renderShop();renderLoadout();};
   const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
@@ -393,7 +393,7 @@ $('#openPack').onclick=()=>{st.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='
 // Result
 $('#rOpen').onclick=()=>{if(!st.packs)return;$('#openPack').click();$('#rOpen').disabled=true;$('#rOpen').textContent='Opened';};
 $('#rMsgs').onclick=()=>toast('Full stats: 3 tons, best visit 140, checkout 3 of 8.');
-$('#cont').onclick=()=>{const m=st.mode;st.bank+=st.rw?st.rw.cash:0;if(m==='money')st.broke=false;st.mode='fixture';st.lost=false;$('#bank').textContent=money(st.bank);renderTonight();renderExh();renderResult();renderShop();show('tonight');toast(m==='money'?'+$100 banked. You can pay the $40 entry now.':m==='exh'?'Exhibition done. Back to the league: vs Big Mal':'Next fixture: vs Shazza, Week 6 of 8');};
+$('#cont').onclick=()=>{const m=st.mode;renderShop();st.bank+=st.rw?st.rw.cash:0;if(m==='money')st.broke=false;st.mode='fixture';st.lost=false;$('#bank').textContent=money(st.bank);renderTonight();renderExh();renderResult();renderShop();show('tonight');toast(m==='money'?'+$100 banked. You can pay the $40 entry now.':m==='exh'?'Exhibition done. Back to the league: vs Big Mal':'Next fixture: vs Shazza, Week 6 of 8');};
 renderTonight();renderShop();renderGrid();renderPacks();renderLoadout();renderResult();
 XP.pre=XP.cur-240;XP.preLv=14;syncXP();
 $$('#lkStats .sr').forEach(b=>b.onclick=()=>{if(!st.pts)return;const v=+b.dataset.v+1;b.dataset.v=v;b.querySelector('b').textContent=v;b.querySelector('i').style.width=Math.round(v/34*100)+'%';st.pts--;$('#lkPts').textContent=st.pts?st.pts+' point'+(st.pts>1?'s':'')+' to spend · tap a stat':'All points spent';$('#lkPts').style.color=st.pts?'':'var(--ink3)';});
