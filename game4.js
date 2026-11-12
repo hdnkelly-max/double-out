@@ -293,7 +293,8 @@ function swayMult(){if(S&&S.mp)return pubSway();let m=(gearCount('case')?.92:1)*
 function tolMult(){return (1+SK().win)*setupTolMult();}
 function compEff(){const c=career();return gearCount('coach')*.4+SK().comp+((c&&!c.run&&c.buffComp&&S&&!S.practice&&!S.local&&!S_money)?c.buffComp:0);}
 function barrel(){return BARRELS.find(b=>b.id===save.barrel)||BARRELS[0];}
-function setupParts(){const st=save.setup||{};return {shaft:SHAFTS.find(x=>x.id===st.shaft)||SHAFTS[1],fl:FSHAPES.find(x=>x.id===st.flight)||FSHAPES[0],pt:POINTS.find(x=>x.id===st.point)||POINTS[0]};}
+/* #20e: setupParts runs several times a frame (setupBaseMult/TolMult/SwayMult in the throw maths); cached per setup (callers copy it before changing it) */let _spK=null,_spV=null;function setupParts(){const st=save.setup||{};if(_spV&&_spK&&_spK[0]===st.shaft&&_spK[1]===st.flight&&_spK[2]===st.point)return _spV;_spK=[st.shaft,st.flight,st.point];_spV=Object.freeze(_setupParts(st));return _spV;}
+function _setupParts(st){return {shaft:SHAFTS.find(x=>x.id===st.shaft)||SHAFTS[1],fl:FSHAPES.find(x=>x.id===st.flight)||FSHAPES[0],pt:POINTS.find(x=>x.id===st.point)||POINTS[0]};}
 function setupBaseMult(){const p=setupParts();return (1+p.fl.base)*(1+p.pt.base);}
 function setupTolMult(){const p=setupParts();return (1+p.fl.tol)*(1+p.shaft.tol);}
 function setupSwayMult(){const p=setupParts();return 1+p.shaft.sway;}
@@ -919,35 +920,44 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  // GFX: darts arm for the Mixamo cast, built from explicit anatomical frames (authored + checked in Blender, blender/pose.py).
  // Set: forearm upright in front of the right eye, palm side of the wrist facing the board, wrist bent right back, dart on top pointing at the board.
  const DPH={set:{lift:-11,phi:-2,ext:70,dart:6},back:{lift:-11,phi:-20,ext:86,dart:20},rel:{lift:-6,phi:46,ext:32,dart:2},end:{lift:-1,phi:86,ext:-46,dart:-8}};
- function dartPhase(oa){const ph=oa.phase||'idle',k=oa.k||0,p=oa.pull||0;const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;const mix=(A,C,e)=>({lift:A.lift+(C.lift-A.lift)*e,phi:A.phi+(C.phi-A.phi)*e,ext:A.ext+(C.ext-A.ext)*e,dart:A.dart+(C.dart-A.dart)*e});
-  if(ph==='pull')return mix(DPH.set,DPH.back,1-Math.pow(1-Math.min(1,p),1.7));if(ph==='throw')return mix(DPH.back,DPH.rel,Math.pow(Math.min(1,k),1.8));
-  if(ph==='fly'||ph==='follow')return mix(DPH.rel,DPH.end,1-Math.pow(1-Math.min(1,k),2));if(ph==='reset'){const a=ease(Math.min(1,k*1.6)),b=ease(Math.min(1,k));const m=mix(DPH.end,DPH.set,b);m.phi=DPH.end.phi+(DPH.set.phi-DPH.end.phi)*a;m.ext=DPH.end.ext+(DPH.set.ext-DPH.end.ext)*a;return m;}return Object.assign({},DPH.set);}
+ /* #20e: dartPhase/poseDarts/setW run every frame for each rigged figure; they now reuse scratch objects (same maths, same order) instead of allocating ~6 KB a frame */
+ const _dp={lift:0,phi:0,ext:0,dart:0};const _dpEase=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;function _dpMix(A,C,e){_dp.lift=A.lift+(C.lift-A.lift)*e;_dp.phi=A.phi+(C.phi-A.phi)*e;_dp.ext=A.ext+(C.ext-A.ext)*e;_dp.dart=A.dart+(C.dart-A.dart)*e;return _dp;}
+ function dartPhase(oa){const ph=oa.phase||'idle',k=oa.k||0,p=oa.pull||0;/* returns one shared object, refilled each call: read it before the next call */
+  if(ph==='pull')return _dpMix(DPH.set,DPH.back,1-Math.pow(1-Math.min(1,p),1.7));if(ph==='throw')return _dpMix(DPH.back,DPH.rel,Math.pow(Math.min(1,k),1.8));
+  if(ph==='fly'||ph==='follow')return _dpMix(DPH.rel,DPH.end,1-Math.pow(1-Math.min(1,k),2));if(ph==='reset'){const a=_dpEase(Math.min(1,k*1.6)),b=_dpEase(Math.min(1,k));const m=_dpMix(DPH.end,DPH.set,b);m.phi=DPH.end.phi+(DPH.set.phi-DPH.end.phi)*a;m.ext=DPH.end.ext+(DPH.set.ext-DPH.end.ext)*a;return m;}return _dpMix(DPH.set,DPH.set,0);}
  const _M1=new T.Matrix4(),_M2=new T.Matrix4(),_Qa=new T.Quaternion(),_Qb=new T.Quaternion();
- function restAxis(bone,w){return w.clone().applyQuaternion(RIG.rest[bone.name].q.clone().invert()).normalize();}
- function setW(bone,yW,refL,refW){const y=yW.clone().normalize();const rw=refW.clone().addScaledVector(y,-refW.dot(y)).normalize();const ly=new T.Vector3(0,1,0);const lr=refL.clone().addScaledVector(ly,-refL.dot(ly)).normalize();const lz=new T.Vector3().crossVectors(lr,ly).negate();const wz=new T.Vector3().crossVectors(rw,y).negate();
+ const _RQI=new WeakMap();function restQI(bone){const r=RIG.rest[bone.name];let q=_RQI.get(r);if(!q){q=r.q.clone().invert();_RQI.set(r,q);}return q;}
+ function restAxisTo(out,bone,w){return out.copy(w).applyQuaternion(restQI(bone)).normalize();}
+ function restAxis(bone,w){return restAxisTo(new T.Vector3(),bone,w);}
+ function boneWTo(out,b){b.updateWorldMatrix(true,false);return out.setFromMatrixPosition(b.matrixWorld);}
+ const _wy=new T.Vector3(),_wrw=new T.Vector3(),_wly=new T.Vector3(),_wlr=new T.Vector3(),_wlz=new T.Vector3(),_wwz=new T.Vector3();
+ function setW(bone,yW,refL,refW){const y=_wy.copy(yW).normalize();const rw=_wrw.copy(refW).addScaledVector(y,-refW.dot(y)).normalize();const ly=_wly.set(0,1,0);const lr=_wlr.copy(refL).addScaledVector(ly,-refL.dot(ly)).normalize();const lz=_wlz.crossVectors(lr,ly).negate();const wz=_wwz.crossVectors(rw,y).negate();
   _M1.makeBasis(lr,ly,lz);_M2.makeBasis(rw,y,wz);_M2.multiply(_M1.transpose());_Qa.setFromRotationMatrix(_M2);bone.parent.getWorldQuaternion(_Qb);bone.quaternion.copy(_Qb.invert().multiply(_Qa));bone.updateWorldMatrix(true,false);}
+ const _pq=new T.Quaternion(),_pq2=new T.Quaternion(),_pm=new T.Matrix4(),_pe=new T.Euler(),_ra=new T.Vector3(),_pv=[];for(let i=0;i<24;i++)_pv.push(new T.Vector3());
+ const PD_SKIP=/UpLeg|Leg$|Foot|Toe|Hips/,PD_RF=['Index','Middle','Ring','Pinky'].map((k,i)=>[[1,2,3].map(j=>'RightHand'+k+j),[.15,.2,.5,.6][i],[.35,.45,.9,1][i]]),PD_LF=['Index','Middle','Ring','Pinky'].map(k=>[1,2,3].map(j=>'LeftHand'+k+j)),PD_TH=[['RightHandThumb1',-.3,0,-.5],['RightHandThumb2',.3,0,0],['RightHandThumb3',.2,0,0]];
  function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.updateWorldMatrix(true,true);
-  Object.keys(B).forEach(n=>{const b=B[n];if(b.isBone&&R[b.name]&&!/UpLeg|Leg$|Foot|Toe|Hips/.test(n))b.quaternion.copy(R[b.name].lq);});fig.updateWorldMatrix(true,true);
+  let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
+  for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
   const P=dartPhase(oa);if(fpv){P.lift-=4;}
-  {const sp=B.Spine1||B.Spine;if(sp&&!fpv){const ph=oa.phase||'idle',kk=oa.k||0,tt=performance.now()/1000;const lean=5+(ph==='pull'?-.6*(oa.pull||0):ph==='throw'?1.2*kk:ph==='fly'||ph==='follow'?1.6:ph==='reset'?1.6*(1-kk):.35*Math.sin(tt*1.5));const fq0=fig.getWorldQuaternion(new T.Quaternion());const rt0=new T.Vector3(1,0,0).applyQuaternion(fq0);sp.rotateOnWorldAxis(rt0,-lean*rad);fig.updateWorldMatrix(true,true);}}const up=new T.Vector3(0,1,0);const fq=fig.getWorldQuaternion(new T.Quaternion());const fwdC=new T.Vector3(0,0,-1).applyQuaternion(fq),rtC=new T.Vector3(1,0,0).applyQuaternion(fq);
-  const S=boneW(B.RightArm);const b=new T.Vector3().subVectors(boardTarget,S);b.y=0;b.normalize();const lat=new T.Vector3().crossVectors(up,b).normalize();
-  const dirU=b.clone().multiplyScalar(Math.cos(P.lift*rad)).addScaledVector(up,Math.sin(P.lift*rad)).addScaledVector(lat,.32).normalize();
-  const hinge=new T.Vector3().crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxis(B.RightArm,up),hinge);
-  const ph=P.phi*rad;const dirF=up.clone().multiplyScalar(Math.cos(ph)).addScaledVector(b,Math.sin(ph)).normalize();const pside=b.clone().multiplyScalar(Math.cos(ph)).addScaledVector(up,-Math.sin(ph)).normalize();
-  const DN=new T.Vector3(0,-1,0);setW(B.RightForeArm,dirF,restAxis(B.RightForeArm,DN),pside);
-  const ex=P.ext*rad;const fing=dirF.clone().multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=pside.clone().multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
-  setW(B.RightHand,fing,restAxis(B.RightHand,DN),palm);
+  {const sp=B.Spine1||B.Spine;if(sp&&!fpv){const ph=oa.phase||'idle',kk=oa.k||0,tt=performance.now()/1000;const lean=5+(ph==='pull'?-.6*(oa.pull||0):ph==='throw'?1.2*kk:ph==='fly'||ph==='follow'?1.6:ph==='reset'?1.6*(1-kk):.35*Math.sin(tt*1.5));const fq0=fig.getWorldQuaternion(_pq);const rt0=_pv[0].set(1,0,0).applyQuaternion(fq0);sp.rotateOnWorldAxis(rt0,-lean*rad);fig.updateWorldMatrix(true,true);}}const up=_pv[1].set(0,1,0);const fq=fig.getWorldQuaternion(_pq);const fwdC=_pv[2].set(0,0,-1).applyQuaternion(fq),rtC=_pv[3].set(1,0,0).applyQuaternion(fq);
+  const S=boneWTo(_pv[4],B.RightArm);const b=_pv[5].subVectors(boardTarget,S);b.y=0;b.normalize();const lat=_pv[6].crossVectors(up,b).normalize();
+  const dirU=_pv[7].copy(b).multiplyScalar(Math.cos(P.lift*rad)).addScaledVector(up,Math.sin(P.lift*rad)).addScaledVector(lat,.32).normalize();
+  const hinge=_pv[8].crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxisTo(_ra,B.RightArm,up),hinge);
+  const ph=P.phi*rad;const dirF=_pv[9].copy(up).multiplyScalar(Math.cos(ph)).addScaledVector(b,Math.sin(ph)).normalize();const pside=_pv[10].copy(b).multiplyScalar(Math.cos(ph)).addScaledVector(up,-Math.sin(ph)).normalize();
+  const DN=_pv[11].set(0,-1,0);setW(B.RightForeArm,dirF,restAxisTo(_ra,B.RightForeArm,DN),pside);
+  const ex=P.ext*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
+  setW(B.RightHand,fing,restAxisTo(_ra,B.RightHand,DN),palm);
   const rel=oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset';
-  [['Index',rel?.15:.35],['Middle',rel?.2:.45],['Ring',rel?.5:.9],['Pinky',rel?.6:1]].forEach(([k,c])=>{for(let j=1;j<=3;j++){const bn=B['RightHand'+k+j];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===1?1:.8));}});
-  [[1,[-.3,0,-.5]],[2,[.3,0,0]],[3,[.2,0,0]]].forEach(([j,e])=>{const bn=B['RightHandThumb'+j];if(!bn)return;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(new T.Euler(e[0],e[1],e[2],'ZYX')));});
+  for(let f=0;f<4;f++){const nm=PD_RF[f][0],c=rel?PD_RF[f][1]:PD_RF[f][2];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===0?1:.8));}}
+  for(let t=0;t<3;t++){const e=PD_TH[t];const bn=B[e[0]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(_pe.set(e[1],e[2],e[3],'ZYX')));}
   // left arm: hangs, forearm across the stomach with the spares
-  if(B.LeftArm&&B.LeftForeArm){setW(B.LeftArm,DN.clone().addScaledVector(fwdC,.24).addScaledVector(rtC,-.26),restAxis(B.LeftArm,up),fwdC);setW(B.LeftForeArm,fwdC.clone().multiplyScalar(.8).addScaledVector(rtC,.52).addScaledVector(up,.12),restAxis(B.LeftForeArm,DN),DN);
-   if(B.LeftHand){setW(B.LeftHand,rtC.clone().multiplyScalar(.6).addScaledVector(fwdC,.6).addScaledVector(up,-.15),restAxis(B.LeftHand,DN),fwdC.clone().negate().addScaledVector(up,-.4));
-    ['Index','Middle','Ring','Pinky'].forEach((k,i)=>{for(let j=1;j<=3;j++){const bn=B['LeftHand'+k+j];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX((.75+i*.08)*(j===1?1:.85));}});}}
+  if(B.LeftArm&&B.LeftForeArm){setW(B.LeftArm,_pv[14].copy(DN).addScaledVector(fwdC,.24).addScaledVector(rtC,-.26),restAxisTo(_ra,B.LeftArm,up),fwdC);setW(B.LeftForeArm,_pv[15].copy(fwdC).multiplyScalar(.8).addScaledVector(rtC,.52).addScaledVector(up,.12),restAxisTo(_ra,B.LeftForeArm,DN),DN);
+   if(B.LeftHand){setW(B.LeftHand,_pv[16].copy(rtC).multiplyScalar(.6).addScaledVector(fwdC,.6).addScaledVector(up,-.15),restAxisTo(_ra,B.LeftHand,DN),_pv[17].copy(fwdC).negate().addScaledVector(up,-.4));
+    for(let f=0;f<4;f++){const nm=PD_LF[f];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX((.75+f*.08)*(j===0?1:.85));}}}}
   // head steady, eyes on the board
-  if(B.Head&&B.HeadTop_End){const HD=boneW(B.Head);const look=new T.Vector3().subVectors(boardTarget,HD).normalize();aimBone(B.Head,B.HeadTop_End,up.clone().addScaledVector(look,.12).normalize(),0);}
-  if(fig.userData.dt){const dt=fig.userData.dt;const mid=boneW(B.RightHandIndex2).lerp(boneW(B.RightHandThumb3),.5);const dd=b.clone().multiplyScalar(Math.cos(P.dart*rad)).addScaledVector(up,Math.sin(P.dart*rad)).normalize();
-   const w=mid.clone().addScaledVector(palm,.008);fig.worldToLocal(w);dt.position.copy(w);const m=new T.Matrix4().lookAt(mid.clone().add(dd),mid,up);const iq=fig.getWorldQuaternion(new T.Quaternion()).invert();dt.quaternion.copy(iq.multiply(new T.Quaternion().setFromRotationMatrix(m)));dt.rotateY(Math.PI);dt.scale.set(1/fig.scale.x,1/fig.scale.y,1/fig.scale.z);dt.visible=!rel;}}
+  if(B.Head&&B.HeadTop_End){const HD=boneWTo(_pv[18],B.Head);const look=_pv[19].subVectors(boardTarget,HD).normalize();aimBone(B.Head,B.HeadTop_End,_pv[20].copy(up).addScaledVector(look,.12).normalize(),0);}
+  if(fig.userData.dt){const dt=fig.userData.dt;const mid=boneWTo(_pv[21],B.RightHandIndex2).lerp(boneWTo(_pv[22],B.RightHandThumb3),.5);const dd=_pv[23].copy(b).multiplyScalar(Math.cos(P.dart*rad)).addScaledVector(up,Math.sin(P.dart*rad)).normalize();
+   const w=_pv[18].copy(mid).addScaledVector(palm,.008);fig.worldToLocal(w);dt.position.copy(w);const m=_pm.lookAt(_pv[19].copy(mid).add(dd),mid,up);const iq=fig.getWorldQuaternion(_pq).invert();dt.quaternion.copy(iq.multiply(_pq2.setFromRotationMatrix(m)));dt.rotateY(Math.PI);dt.scale.set(1/fig.scale.x,1/fig.scale.y,1/fig.scale.z);dt.visible=!rel;}}
  function standRigged(fig,kind){const B=fig.userData.B;fig.updateWorldMatrix(true,true);if(kind==='set'){poseRigged(fig,{phase:'idle'},fig.localToWorld(new T.Vector3(0,1.73,-2.4)));return;}
   const fwd=new T.Vector3(0,0,-1).applyQuaternion(fig.getWorldQuaternion(new T.Quaternion())),down=new T.Vector3(0,-1,0);
   const arm=(side,dirU,dirF,handDir)=>{const rt=new T.Vector3(-fwd.z,0,fwd.x);const nrm=new T.Vector3().copy(rt).multiplyScalar(side==='Right'?-1:1);aimBone(B[side+'Arm'],B[side+'ForeArm'],dirU,0);aimFrame(B[side+'ForeArm'],B[side+'Hand'],dirF,nrm);aimFrame(B[side+'Hand'],B[side+'HandMiddle1'],handDir,nrm);curl(B,side,[.35,.4,.45,.5,.2]);};
@@ -1559,7 +1569,8 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
 // Release cue (v3): pressing locks the aim and starts a ring shrinking from R0 to its tightest (1.794*s0) at D ms. Inside ±P ms it holds; outside it widens again
 // (sqrt curve, faster when late). The ring at release IS the spread (80th percentile), plus a small early-high / late-low lean. No timing bar.
 const TT=[[0,50,1.9,2.4,13,28,660,74],[.3,38,2.2,2.1,11.2,30,630,62],[.6,26,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,6.4,30,560,48]]; // L, sway A mm, loop s, tremor, perfect sigma, perfect ±ms, ms to tightest, start ring mm
-function ttAt(L){L=Math.max(0,Math.min(1,L));let i=0;while(i<TT.length-2&&TT[i+1][0]<L)i++;const a=TT[i],b=TT[i+1],k=(L-a[0])/(b[0]-a[0]);const m=j=>a[j]+(b[j]-a[j])*k;return {A:m(1),T:m(2),tr:m(3),s0:m(4),P:m(5),D:m(6),R0:m(7)};}
+/* #20e: ttAt runs several times a frame (throwParams) with the same level; the last result is reused (callers only read it) */let _ttL=NaN,_ttV=null;function ttAt(L){L=Math.max(0,Math.min(1,L));if(L===_ttL&&_ttV)return _ttV;_ttL=L;_ttV=Object.freeze(_ttAt(L));return _ttV;}
+function _ttAt(L){let i=0;while(i<TT.length-2&&TT[i+1][0]<L)i++;const a=TT[i],b=TT[i+1],k=(L-a[0])/(b[0]-a[0]);const m=j=>a[j]+(b[j]-a[j])*k;return {A:m(1),T:m(2),tr:m(3),s0:m(4),P:m(5),D:m(6),R0:m(7)};}
 function throwLevel(){if(!S)return .3;if(typeof LES!=='undefined'&&LES.on)return Math.max(.3,throwLevelRaw());return throwLevelRaw();}
 function throwLevelRaw(){if(S.mp){const sk=S.mp.arm;return Math.max(0,Math.min(1,(sk-.3)/.55));}const avg=(lvOf('sc')+lvOf('fi')+lvOf('co')+lvOf('cn'))/4;return Math.max(0,Math.min(1,(save.arm/10)*.4+(avg/16)*.6));}
 function drinkLvl(){if(typeof cardFxHas==='function'&&cardFxHas('clear'))return 0;return (S&&S.pub&&S.pub.p[S.cur])?Math.min(8,S.pub.p[S.cur].lvl||0):0;}
