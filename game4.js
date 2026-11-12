@@ -303,6 +303,11 @@ const AU={ctx:null,on:true,caller:true,crowdGain:null,master:null};try{const a=J
 function persistAudio(){try{localStorage.setItem('doubleout_audio',JSON.stringify({on:AU.on,caller:AU.caller}));}catch(e){}}
 function speechWarm(){if(speechWarm.done||!('speechSynthesis'in window))return;speechWarm.done=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}catch(e){}}
 function audioWarm(){if(audioWarm.done||!AU.ctx)return;audioWarm.done=true;setTimeout(()=>{try{[.5,.7,1,1.3,1.5,2,2.2,2.6].forEach(d=>swBuf(AU.ctx,d));[.05,.06,.08,.12,.5].forEach(d=>nbBuf(AU.ctx,d));}catch(e){}},300);}
+/* #20 (Overseer 07:59): what the audio graph is doing, logged once per match in dev.t20.cnt.au: [sources playing now, sources started since
+   the last read, the context's state]. Counting only: a start() is passed straight through. */
+{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start'))return;const st=P.start;P.start=function(){try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}return st.apply(this,arguments);};};
+ try{wrap(window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype);wrap(window.AudioBufferSourceNode&&AudioBufferSourceNode.prototype);wrap(window.OscillatorNode&&OscillatorNode.prototype);}catch(e){}
+ window.TOPS_AU=()=>{const r=[AUC.live,AUC.started,AU.ctx?AU.ctx.state:'none'];AUC.started=0;return r;};}
 function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
  const len=c.sampleRate*3,buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);let last=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*8;}
  const src=c.createBufferSource();src.buffer=buf;src.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=520;bp.Q.value=.6;
@@ -3177,7 +3182,7 @@ window.TOPS_matchTeardown=matchTeardown;
 //  keepfig    the teardown between matches frees nothing (opponent figure, character templates, hair tints stay as they were)
 //  nohub3d    no 3D drawing while the hub is up and no match is live (the GPU rests between matches)
 //  hub3d      ENG-13 off: the 3D scene is drawn behind an opaque full-screen menu again (as before 3.32), for an A/B
-//  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames)
+//  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames); also a hub Menu row
 // Each perf row carries the switch in dev.t20.q20.
 {let q='';try{const u=new URLSearchParams(location.search).get('q20');if(u!=null){q=u;sessionStorage.setItem('tops_q20',u);}else q=sessionStorage.getItem('tops_q20')||'';}catch(e){}
  q=String(q).toLowerCase().replace(/[^a-z0-9,]/g,'');const has=k=>q.split(',').indexOf(k)>=0;
@@ -3187,13 +3192,13 @@ window.TOPS_matchTeardown=matchTeardown;
  const cur=()=>{const s=[];(q+','+appQ()).split(',').forEach(k=>{if(k&&s.indexOf(k)<0)s.push(k);});return s.join(',');};
  window.TOPS_q20has=k=>cur().split(',').indexOf(k)>=0;
  const sync=()=>{const c=cur();if(c)window.TOPS_Q20=c;else{try{delete window.TOPS_Q20;}catch(e){window.TOPS_Q20=undefined;}}
-  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');if(window.TOPS_AJS)lab.push('frame split');if(TOPS_q20has('nogyro'))lab.push('no tilt');
+  const live=typeof S!=='undefined'&&S&&!S.done;let t=document.getElementById('q20tag');const lab=[];if(TOPS_q20has('nowalk'))lab.push('no walk-on');if(TOPS_q20has('nofx'))lab.push('no effects');if(TOPS_q20has('mute'))lab.push('no audio');if(window.TOPS_AJS)lab.push('frame split');if(TOPS_q20has('nogyro'))lab.push('no tilt');
   if(lab.length&&live){if(!t){t=document.createElement('div');t.id='q20tag';t.style.cssText='position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:95;pointer-events:none;font:700 11px/1 Manrope,sans-serif;letter-spacing:.06em;color:#0b0d0c;background:#C6F36B;border-radius:4px;padding:4px 6px;text-transform:uppercase';document.body.appendChild(t);}t.textContent='TEST · '+lab.join(' · ');}else if(t)t.remove();};
  sync();if(q){try{console.warn('TOPS q20 switches on: '+q);}catch(e){}}
  {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
  /* ENG-10 (Overseer 06:27): the same three toggles in whichever hub menu is showing: the old #hubPop (rebrand off) and the rebrand's sheet
     (#rbMenuSheet, made on each tap of its Menu button). Same localStorage key, nothing cleared automatically (the switches are #20 data). */
- const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)']];
+ const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)'],['mute','Test: no game audio (next match)']];
  const rows=(host,rb)=>{if(!host)return;if(rb&&!host.querySelector('.q20-sep')){const sp=document.createElement('div');sp.className='q20-sep';sp.setAttribute('aria-hidden','true');sp.style.cssText='height:1px;margin:2px 4px;background:var(--line,#343a3e)';host.appendChild(sp);}
   Q20B.forEach(([k,n])=>{let b=host.querySelector('[data-q20="'+k+'"]');
    if(!b){b=document.createElement('button');b.type='button';b.setAttribute('data-q20',k);if(!rb)b.id='q20b_'+k;if(rb)b.style.cssText='min-height:44px;font-size:13px;font-weight:600;color:var(--ink3,#a0a6a3);justify-content:flex-start;text-align:left';
@@ -3208,7 +3213,14 @@ window.TOPS_matchTeardown=matchTeardown;
  if(has('keepvenue')&&typeof V!=='undefined'&&V.buildVenue){const bv=V.buildVenue;let built=null;V.buildVenue=function(t){if(built!==null&&t===built)return;built=t;return bv.apply(this,arguments);};}
  if(has('keepfig')&&typeof V!=='undefined'&&V.teardownMatch){V.teardownMatch=function(){window.__teardowns=(window.__teardowns||0)+1;};}
  if(has('nohub3d')){const go=()=>{const R=window.TOPS_R;if(!R){setTimeout(go,300);return;}const rr=R.render;R.render=function(){try{const h=document.getElementById('hub');if(h&&!h.hidden&&!(typeof S!=='undefined'&&S&&!S.done))return;}catch(e){}return rr.apply(this,arguments);};};go();}
- if(has('mute')){const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='running')AU.ctx.suspend();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(AU&&AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();}catch(e){}return r;};}
+ /* #20 A/B (Overseer 07:58): 'mute' = the game's AudioContext is suspended for the whole match, so the audio thread does no work at all (crowd,
+    caller, effects, walk-on song). Also a hub Menu row now (the home-screen app can't take a URL). Read at each match start. Before, a tap on the
+    pull pad resumed the context in the match (the pad's own unlock), so the URL switch only muted until the first throw: resume() is held off
+    while a muted match is live. */
+ {const muteOn=()=>!!(window.TOPS_q20has&&TOPS_q20has('mute')&&typeof S!=='undefined'&&S&&!S.done);
+  const hold=()=>{try{const c=AU&&AU.ctx;if(!c||c.__q20m)return;c.__q20m=1;const r=c.resume.bind(c);c.__q20r=r;c.resume=function(){if(muteOn())return Promise.resolve();return r();};}catch(e){}};
+  const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{hold();if(muteOn()&&AU.ctx&&AU.ctx.state!=='closed')AU.ctx.suspend();}catch(e){}return r;};
+  const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{const c=AU&&AU.ctx;if(c&&c.__q20r&&c.state!=='running'&&TOPS_q20has('mute'))c.__q20r().catch(()=>{});}catch(e){}return r;};}
  if(has('fresh')){let played=0;const bm=beginMatch;beginMatch=function(){played++;return bm.apply(this,arguments);};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(played>=1&&!window.__hubSoft&&!sessionStorage.getItem('tops_q20_fresh')&&S&&S.done){sessionStorage.setItem('tops_q20_fresh','1');try{persist();}catch(e){}setTimeout(()=>location.reload(),400);}}catch(e){}return r;};}
 }
 </script>

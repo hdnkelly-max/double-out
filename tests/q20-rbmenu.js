@@ -23,7 +23,7 @@ const {chromium,devices}=require('playwright');const path=require('path');
  const lab=(r,k)=>{const x=r&&r.rows.find(y=>y.q===k);return x?x.t:null;};
  if(!out.first)fails.push('Menu sheet did not open');else{
   const t=out.first.rows.map(r=>r.t);if(!t.includes('Edit look')||!t.includes('Main menu'))fails.push('sheet lost its own items: '+JSON.stringify(t));
-  const q=out.first.rows.filter(r=>r.q);if(q.length!==3)fails.push('expected 3 test rows, got '+q.length);
+  const q=out.first.rows.filter(r=>r.q);if(q.length!==4)fails.push('expected 4 test rows (nowalk, nofx, split, mute), got '+q.length);
   q.forEach(r=>{if(r.h<44)fails.push(r.t+' is '+r.h+' px tall');if(!r.on)fails.push(r.t+' not on screen');});
   if(lab(out.first,'nowalk')!=='Test: no walk-on: on'||lab(out.first,'nofx')!=='Test: no effects: on'||lab(out.first,'split')!=='Test: frame split (from next launch): off')fails.push('initial states wrong (stored nowalk,nofx must read on/on/off): '+JSON.stringify(q.map(r=>r.t)));}
  // tap each: nowalk off, nofx off, split on
@@ -40,7 +40,7 @@ const {chromium,devices}=require('playwright');const path=require('path');
   if(JSON.stringify(out.reload.has)!=='[false,false,true]')fails.push('TOPS_q20has after reload: '+JSON.stringify(out.reload.has));}
  out.splitOn=await p.evaluate(()=>!!window.TOPS_AJS);
  // close and reopen: no duplicate rows
- await p.locator('#rbMenu').tap();await p.waitForTimeout(150);out.again=await openMenu();if(out.again&&out.again.rows.filter(r=>r.q).length!==3)fails.push('rows duplicated on reopen');
+ await p.locator('#rbMenu').tap();await p.waitForTimeout(150);out.again=await openMenu();if(out.again&&out.again.rows.filter(r=>r.q).length!==4)fails.push('rows duplicated on reopen');
  // rebrand off: the old menu keeps them
  await p.evaluate(()=>{localStorage.setItem('tops_rebrand','0');});await p.reload();await boot();
  out.old=await p.evaluate(async()=>{const m=document.getElementById('btnHubMenu');if(m)m.click();await new Promise(z=>setTimeout(z,200));return ['nowalk','nofx','split'].map(k=>{const x=document.getElementById('q20b_'+k);return x?x.textContent:null;});});
