@@ -1,19 +1,25 @@
-# TOPS release from a QA pass (SHIP-3b spec v1, design v2: ChatGPT 8.4 APPROVE to build + dry-run, 12 Nov 12:20).
-# Dispatch: gh workflow run release.yml -f commit=<sha> -f tree=<QA tree> -f risk=R2|R3 -f attest="R2/R3 confirmed by Shipping" -f item="<name>" [-f dry_run=false]
-# Rules: exact QA tree only (no merge exceptions); R0/R1 refused (manual on the Overseer's call); main is the release record
-# (RELEASES.log: prepared -> live|failed); rollback runs inside this run and redeploys the last *live* release's tag.
+# TOPS release from a QA pass (SHIP-3b, then SHIP-4: every risk class + the rule-2 new-combination check, 12 Nov).
+# Dispatch with tools/dispatch-release.sh (it cancels queued release runs first for an R0, then dispatches and waits).
+# Rules: a QA PASS line names (commit, tree). If commit merged onto the CURRENT src gives that tree, release as is.
+# If src has moved since the pass, `base` must be the src commit QA merged onto: the workflow proves QA's tree from
+# (base + commit), merges onto the current src, runs the item's named `tests` + regress.js 2 in a separate copy, and
+# releases only if all pass. Items that touch sql/ need migration=applied. main is the release record
+# (RELEASES.log: prepared -> live|failed); rollback runs inside this run and redeploys the last *live* release's ref.
 name: release
+run-name: "${{ inputs.risk }} | ${{ inputs.item }} | commit=${{ inputs.commit }} | tree=${{ inputs.tree }} | base=${{ inputs.base }} | tests=${{ inputs.tests }} | migration=${{ inputs.migration }} | mode=${{ inputs.mode }}"
 on:
   workflow_dispatch:
     inputs:
       commit: { description: 'QA-passed commit (sha on this repo)', required: true }
       tree:   { description: 'QA-tested source tree hash (pre-bump)', required: true }
-      risk:   { description: 'R2 or R3 (R0/R1 are refused)', required: true }
-      attest: { description: 'Type exactly: R2/R3 confirmed by Shipping', required: true }
+      risk:   { description: 'R0, R1, R2 or R3 (from the QA PASS line)', required: true }
+      attest: { description: 'Type exactly: QA PASS names this tree', required: true }
+      base:   { description: 'src commit QA merged onto (needed only if src has moved since the pass)', required: false, default: '' }
+      tests:  { description: 'Item tests for the new-combination check, space-separated paths (regress.js 2 always runs)', required: false, default: '' }
+      migration: { description: 'none, or applied (required when the release changes sql/)', required: false, default: 'none' }
       item:   { description: 'Item name for the release log', required: true }
-      dry_run: { description: 'Gate + build only; nothing pushed or deployed', type: boolean, default: true }
+      mode: { description: 'dry_run = gate + build only, nothing pushed; release; test_rollback = TEST ONLY: deploy, then fail the live check on purpose', type: choice, options: [dry_run, release, test_rollback], default: dry_run }
       version: { description: 'Optional exact version (X.YY), e.g. a jump the old 2.0x version gate reads as newer; must be higher than the current one. Empty = next hundredth', required: false, default: '' }
-      test_rollback: { description: 'TEST ONLY: deploy, then fail the live check on purpose to exercise the rollback', type: boolean, default: false }
 concurrency:
   group: tops-production-release
   queue: max
@@ -22,24 +28,27 @@ permissions: { contents: read }
 jobs:
   gate_build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     outputs:
       mode: ${{ steps.gate.outputs.mode }}
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.ver.outputs.tag }}
     steps:
-      - name: Refuse R0/R1 and unattested runs
-        env: { RISK: '${{ inputs.risk }}', ATTEST: '${{ inputs.attest }}' }
+      - name: Check inputs
+        env: { RISK: '${{ inputs.risk }}', ATTEST: '${{ inputs.attest }}', MIG: '${{ inputs.migration }}', TESTS: '${{ inputs.tests }}' }
         run: |
-          case "$RISK" in R2|R3) ;; *) echo "::error::REFUSED: risk '$RISK' is not R2/R3 (R0/R1 ship by hand on the Overseer's call)"; exit 1;; esac
-          [ "$ATTEST" = "R2/R3 confirmed by Shipping" ] || { echo "::error::REFUSED: attest input missing or wrong"; exit 1; }
+          case "$RISK" in R0|R1|R2|R3) ;; *) echo "::error::REFUSED: risk '$RISK' is not R0-R3"; exit 1;; esac
+          [ "$ATTEST" = "QA PASS names this tree" ] || { echo "::error::REFUSED: attest input missing or wrong"; exit 1; }
+          case "$MIG" in none|applied) ;; *) echo "::error::REFUSED: migration must be none or applied"; exit 1;; esac
+          case "${{ inputs.item }}" in *'|'*) echo "::error::REFUSED: item name must not contain '|' (the run name carries the inputs)"; exit 1;; esac
+          for t in $TESTS; do echo "$t" | grep -qE '^tests/[A-Za-z0-9_.-]+\.js$' || { echo "::error::REFUSED: test '$t' is not tests/<name>.js"; exit 1; }; done
       - uses: actions/checkout@v4
         with: { ref: main, path: site, fetch-depth: 1 }
       - uses: actions/checkout@v4
         with: { ref: src, path: src, fetch-depth: 0 }
-      - name: Gate (exact QA tree, inside the lock, against the current remote src)
+      - name: Gate (QA tree, inside the lock, against the current remote src)
         id: gate
-        env: { COMMIT: '${{ inputs.commit }}', TREE: '${{ inputs.tree }}' }
+        env: { COMMIT: '${{ inputs.commit }}', TREE: '${{ inputs.tree }}', BASE: '${{ inputs.base }}', MIG: '${{ inputs.migration }}' }
         run: |
           cd src
           git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
@@ -54,10 +63,31 @@ jobs:
             git merge -q --no-edit "$C" || { echo "::error::REFUSED: merge conflict onto src"; exit 1; }
           fi
           GOT=$(git rev-parse HEAD^{tree})
-          case "$GOT" in "$TREE"*) ;; *) echo "::error::REFUSED: tree mismatch: QA $TREE, candidate $GOT (src moved or wrong commit; ship by hand)"; exit 1;; esac
+          [ "$GOT" != "$(git rev-parse origin/src^{tree})" ] || { echo "mode=noop" >> $GITHUB_OUTPUT; echo "::notice::commit is already in src; nothing new to release"; exit 0; }
+          case "$GOT" in
+            "$TREE"*) echo "recheck=false" >> $GITHUB_OUTPUT
+                      echo "candidate $(git rev-parse --short HEAD) tree $GOT = QA $TREE (exact)" >> $GITHUB_STEP_SUMMARY ;;
+            *) [ -n "$BASE" ] || { echo "::error::REFUSED: tree mismatch: QA $TREE, candidate $GOT. src has moved since the pass: dispatch again with base=<src commit QA merged onto>"; exit 1; }
+               CAND=$(git rev-parse HEAD)
+               git fetch -q origin "$BASE" 2>/dev/null || true
+               B=$(git rev-parse --verify -q "$BASE^{commit}") || { echo "::error::REFUSED: base $BASE not found"; exit 1; }
+               git merge-base --is-ancestor "$B" origin/src || { echo "::error::REFUSED: base $BASE is not an earlier src commit"; exit 1; }
+               git checkout -q --detach "$B"
+               if ! git merge-base --is-ancestor "$B" "$C"; then git merge -q --no-edit "$C" || { echo "::error::REFUSED: commit does not merge onto base"; exit 1; }; else git checkout -q --detach "$C"; fi
+               QT=$(git rev-parse HEAD^{tree})
+               case "$QT" in "$TREE"*) ;; *) echo "::error::REFUSED: base + commit gives tree $QT, not QA's $TREE (wrong base or commit)"; exit 1;; esac
+               git checkout -q --detach "$CAND"
+               [ -n "${{ inputs.tests }}" ] || { echo "::error::REFUSED: src has moved since the pass, so the item's tests must be named (tests=tests/x.js ...) for the new-combination check"; exit 1; }
+               echo "recheck=true" >> $GITHUB_OUTPUT
+               { echo "QA's tree $TREE reproduced from base $(git rev-parse --short $B) + commit."; echo "src has moved: new combination $(git rev-parse --short HEAD) tree $GOT, so the item's tests + regress.js 2 run before release."; } >> $GITHUB_STEP_SUMMARY ;;
+          esac
+          CH=$(git diff --name-only origin/src HEAD -- sql/ | tr '\n' ' ')
+          if [ -n "$CH" ] && [ "$MIG" != "applied" ]; then echo "::error::REFUSED: this release changes $CH; apply the migration first, then dispatch with migration=applied"; exit 1; fi
+          [ -n "$CH" ] && echo "migration(s) marked applied: $CH" >> $GITHUB_STEP_SUMMARY
           echo "mode=new" >> $GITHUB_OUTPUT
           echo "base=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "candidate $(git rev-parse --short HEAD) tree $GOT = QA $TREE" >> $GITHUB_STEP_SUMMARY
+          echo "cand_tree=$GOT" >> $GITHUB_OUTPUT
+          { echo "| | |"; echo "|---|---|"; echo "| item commit | \`$C\` |"; echo "| QA tree | \`$TREE\` |"; echo "| release candidate | \`$(git rev-parse --short HEAD)\` tree \`$GOT\` |"; echo "| src at gate | \`$(git rev-parse --short origin/src)\` |"; echo "| migration | ${MIG} |"; } >> $GITHUB_STEP_SUMMARY
       - name: Allocate version (integer hundredths) and bump
         id: ver
         if: steps.gate.outputs.mode == 'new'
@@ -82,6 +112,36 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.mode == 'new'
         with: { node-version: '20' }
+      - name: New-combination check (rule 2) - item tests + regress.js 2 in a separate copy
+        if: steps.gate.outputs.mode == 'new' && steps.gate.outputs.recheck == 'true'
+        env: { TESTS: '${{ inputs.tests }}' }
+        run: |
+          # separate worktree: tests/setup.sh copies main's assets over the working tree, which must not reach the release build
+          cd src && git worktree add -q ../chk HEAD && cd ../chk
+          # exact pins, the same as CI and QA's boxes (playwright 1.48.2 pins its own Chromium build)
+          npm i --no-save --no-package-lock three@0.128.0 playwright@1.48.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          echo "recheck tools: node $(node -v), three $(node -p "require('three/package.json').version"), playwright $(node -p "require('playwright/package.json').version")" | tee ../chk.log
+          bash tests/setup.sh
+          fail=
+          for t in $TESTS; do
+            [ -f "$t" ] || { echo "::error::RECHECK: $t not found in the release tree"; fail=1; continue; }
+            echo "== $t" | tee -a ../chk.log
+            node "$t" "$PWD" 2>&1 | tail -20 | tee -a ../chk.log; [ "${PIPESTATUS[0]}" = 0 ] || { echo "::error::RECHECK FAILED: $t"; fail=1; }
+          done
+          echo "== tests/regress.js 2" | tee -a ../chk.log
+          node tests/regress.js 2 2>&1 | tail -20 | tee -a ../chk.log; [ "${PIPESTATUS[0]}" = 0 ] || { echo "::error::RECHECK FAILED: regress.js 2"; fail=1; }
+          { echo "### New-combination check"; echo '```'; tail -40 ../chk.log; echo '```'; } >> $GITHUB_STEP_SUMMARY
+          [ -z "$fail" ] || { echo "::error::NOT RELEASED: the new combination failed its checks; tell the builder and QA (run ${{ github.run_id }})"; exit 1; }
+      - name: Release identity (the build is the gated candidate + the version bump, nothing else)
+        if: steps.gate.outputs.mode == 'new'
+        env: { CT: '${{ steps.gate.outputs.cand_tree }}' }
+        run: |
+          cd src
+          [ "$(git rev-parse HEAD~1^{tree})" = "$CT" ] || { echo "::error::IDENTITY: release parent tree is not the gated candidate $CT"; exit 1; }
+          [ "$(git diff --name-only HEAD~1 HEAD)" = "v051.js" ] || { echo "::error::IDENTITY: the release commit changes more than v051.js"; exit 1; }
+          [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "::error::IDENTITY: tracked files changed in the release checkout (test setup leaked?)"; git status --short | head; exit 1; }
+          echo "identity: release $(git rev-parse --short HEAD) = candidate tree ${CT:0:7} + version bump only" >> $GITHUB_STEP_SUMMARY
       - name: Build (same steps as ship.sh)
         if: steps.gate.outputs.mode == 'new'
         run: |
@@ -105,13 +165,13 @@ jobs:
         if: steps.gate.outputs.mode == 'new'
         with: { name: src-bundle, path: src.bundle, retention-days: 30 }
       - name: Dry run stops here
-        if: inputs.dry_run && steps.gate.outputs.mode == 'new'
+        if: inputs.mode == 'dry_run' && steps.gate.outputs.mode == 'new'
         run: |
           echo "DRY RUN - gate and build passed for v${{ steps.ver.outputs.version }}; nothing pushed, tagged or deployed." >> $GITHUB_STEP_SUMMARY
 
   publish:
     needs: gate_build
-    if: ${{ !inputs.dry_run && needs.gate_build.outputs.mode == 'new' }}
+    if: ${{ inputs.mode != 'dry_run' && needs.gate_build.outputs.mode == 'new' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions: { contents: write, pages: write, id-token: write }
@@ -148,7 +208,7 @@ jobs:
           npm i --no-save playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});const e=[];p.on('pageerror',x=>e.push(x.message));await p.goto('${U}?cb='+Date.now());await p.waitForTimeout(8000);const v=await p.evaluate(()=>window.TOPS_VER);await b.close();console.log('TOPS_VER',v,'errors',e.length);if(v!=='$V'||e.length){console.error(e.join('\n'));process.exit(1)}})()"
           echo "LIVE: $U shows $V, no page errors" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.test_rollback }}" = "true" ]; then echo "::error::TEST: live check passed; failing on purpose (test_rollback) to exercise the rollback"; exit 1; fi
+          if [ "${{ inputs.mode }}" = "test_rollback" ]; then echo "::error::TEST: live check passed; failing on purpose (test_rollback) to exercise the rollback"; exit 1; fi
       - uses: actions/checkout@v4
         with: { ref: src, path: srcrepo, fetch-depth: 0 }
       - name: Mark live on main and push the bump to src
