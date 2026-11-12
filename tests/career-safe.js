@@ -59,7 +59,7 @@ const {chromium}=require('playwright');const path=require('path');
  await p.evaluate(()=>{const c=career();c.wins=1;c.stage='pub';persist();});/* the new one has been played: it must become a backup */
  await p.evaluate(()=>$('btnRestoreCareer').click());await p.waitForTimeout(200);const s4=await sheet();ok(s4&&s4.includes('Club singles · 6–28')&&s4.includes('Level 16 · $154 · saved'),'restore list: '+s4);
  await p.evaluate(()=>document.querySelector('#carSheet [data-r]').click());await p.waitForTimeout(300);
- const r4=await p.evaluate(()=>{const K=['career','perks','attr','arm','picks','owned','barrel','setup','ownedSetup','st2','v12res'];const o={};K.forEach(k=>o[k]=save[k]);const bk=save.careerBak||[];return {now:JSON.stringify(o),n:bk.length,top:bk[0]&&bk[0].sum,title:$('btnContinue').textContent};});
+ const r4=await p.evaluate(()=>{const K=['career','perks','attr','arm','picks','owned','barrel','setup','ownedSetup','st2','v12res'];const o={};K.forEach(k=>o[k]=save[k]);o.career=Object.assign({},o.career);delete o.career.bakId;/* CAR-S2: the restored career is marked with the backup it came from */const bk=save.careerBak||[];return {now:JSON.stringify(o),n:bk.length,top:bk[0]&&bk[0].sum,title:$('btnContinue').textContent};});
  ok(r4.now===oldA,'restored career differs from the original');ok(r4.top&&r4.top.w===1&&r4.top.tier===0,'the played current career was not kept as a backup: '+JSON.stringify(r4));ok(/Club singles/.test(r4.title),'title after restore: '+r4.title);
  // 5 a cloud copy without the backup
  const r5=await p.evaluate(()=>{const keep=save.careerBak;delete save.careerBak;const n=TOPS_CAREER_BAK.list().length;save.careerBak=keep;return n;});ok(r5>=1,'local backup not listed when the save lacks it');
