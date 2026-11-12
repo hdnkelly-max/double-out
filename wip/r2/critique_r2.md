@@ -14,3 +14,6 @@ Framework: first impression · usability · hierarchy · consistency · accessib
 | 8 | Messages | "Deano about Thursday" | Message tied to its fixture; bubbles + chips | Copy is placeholder; sender hero render only where we have a 3D character |
 
 Accessibility: all text ≥ 11 px, taps ≥ 44 px, white on graphite/red ≥ 4.5:1.
+
+## ChatGPT ("Design review verdict")
+r1 8.1 BLOCK (P1: leg end showed a mismatched scoreboard and too much for 1.5 s; reward copy read as owning the dart; message replies didn't fit the thread) → r2 fixes → **8.9 APPROVE** (Setup 8.8, Leg end 9.1, Opponent visit 8.6, Menu 9.1, Intro 8.7, Result 9.1, Title 8.9, Messages 8.7). Left as P2: the unlock card is louder than the match result (fine for a level-up only); dead space above the message replies.
