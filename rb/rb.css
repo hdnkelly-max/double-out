@@ -80,6 +80,47 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 .rb-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .rb-ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--d);font-weight:800;font-size:24px;line-height:1}
 .rb-ring small{position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:9px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase}
+/* Match the mockup (Hayden 06:10, Overseer 06:13): green only on small positive numbers and the thin XP line. No rings: a caps label, the
+   number in condensed type and a thin line. Stat meters thinner and white; table/road/position marks grey; tug bar white. */
+.rb-ring{width:auto;min-width:64px;height:auto;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px}
+.rb-ring small{position:static;font-size:11px;letter-spacing:1.2px;color:var(--ink3);text-transform:uppercase;text-align:left}
+.rb-ring b{position:static;display:block;font-family:var(--d);font-weight:800;font-size:40px;line-height:.9}
+.rb-lvb{display:block;width:64px;height:3px;border-radius:2px;background:#2b3135;overflow:hidden}
+.rb-lvb i{display:block;height:100%;border-radius:2px;background:var(--good)}
+#rbRing{width:auto!important;height:auto!important;flex:0 0 auto!important;min-width:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+#rbRing .rb-lvt{font-size:12px;font-weight:600;color:var(--ink2);line-height:1}
+#rbRing .rb-lvb{width:56px}
+.rb-meter{height:6px}
+.rb-meter i.rb-f{background:#4a8fe0}
+.rb-meter i.rb-gh{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}
+.rb-kf{background:#4a8fe0}
+.rb-kg{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}
+.rb-kt{background:#d9dcda}
+.rb-bar{height:6px}
+.rb-bar i{background:#d9dcda}
+.rb-tug .rb-a{background:var(--ink)}
+.rb-pos i.rb-up{background:#2b3135;color:var(--ink)}
+.rb-pos .rb-cut{background:var(--line2)}
+.rb-tbl .rb-cutl{border-top-color:var(--line2)}
+.rb-tbl .rb-cutl span{color:var(--ink3)}
+.rb-road .rb-st.rb-done i{background:var(--ink);border-color:var(--ink)}
+.rb-plus{border-color:var(--line2);background:var(--card2);color:var(--ink)}
+  /* iPhone (Hayden: Locker KIT heading with nothing under it): image slots also get a padding-box height, so they never collapse where aspect-ratio misbehaves */
+.rb-g2 .rb-card>.rb-slot.rb-sq{aspect-ratio:auto;height:0;padding-bottom:100%}
+.rb-g2 .rb-card>.rb-slot.rb-wide{aspect-ratio:auto;height:0;padding-bottom:56.25%}
+.rb-lvb{background:#3a4044}
+/* header as the mockup: wordmark | name, Lv line; no face */
+.rb-hd .rb-wm{padding-right:12px;border-right:1px solid var(--line2);line-height:1.1}
+#rbFace{display:none!important}
+#rbRing{flex-direction:column;justify-content:center}
+/* Tonight as the mockup: plain head-to-head line, plain season link, text tiles */
+.rb-hero .rb-win{font-size:15px;color:var(--ink2)}
+.rb-line{text-align:center;font-size:17px;font-weight:500;color:var(--ink)}
+.rb-link{display:block;width:100%;min-height:44px;text-align:center;font-size:14px;color:var(--ink3)!important;text-decoration:none!important}
+.rb-tiles .rb-tile{padding:14px 14px 12px;gap:4px;min-height:104px;justify-content:flex-start;align-items:flex-start;text-align:left}
+.rb-tiles .rb-t1{font-size:17px;white-space:nowrap}
+.rb-tiles .rb-sub{font-size:13px}
+.rb-tdart{display:block;width:100%;height:26px;margin-top:6px;background:center/contain no-repeat}
 /* row: [slot] title/sub [right] chevron */
 .rb-row{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;text-align:left;cursor:pointer}
 .rb-row .rb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
@@ -114,7 +155,7 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 .rb-vs2 .rb-nums{display:flex;justify-content:space-between;align-items:baseline}
 .rb-vs2 .rb-nums b{font-family:var(--d);font-size:24px;font-weight:800;line-height:1}
 .rb-vs2 .rb-nums span{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px}
-.rb-tug{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}.rb-tug i{display:block;height:100%}.rb-tug .rb-a{background:var(--good)}.rb-tug .rb-b{background:#6b7276}
+.rb-tug{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}.rb-tug i{display:block;height:100%}.rb-tug .rb-a{background:var(--ink)}.rb-tug .rb-b{background:#6b7276}
 /* compare rows (current vs this dart) */
 .rb-cmp{display:grid;grid-template-columns:78px 1fr 46px;gap:10px;align-items:center;font-size:13.5px}
 .rb-cmp .rb-bars{display:flex;flex-direction:column;gap:3px}
@@ -126,26 +167,26 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 .rb-lock .rb-ic svg{width:20px;height:20px}
 /* position dots */
 .rb-pos{display:flex;gap:4px;align-items:center;align-self:flex-start}.rb-pos i{flex:0 0 14px;width:14px;height:14px;border-radius:50%;background:#2b3135;display:grid;place-items:center;font-size:9px;font-style:normal;font-weight:700;color:var(--ink3)}
-.rb-pos i.rb-up{background:#24412e}.rb-pos i.rb-me{background:var(--ink);color:#111}.rb-pos .rb-cut{width:2px;height:16px;background:var(--good);border-radius:1px}
+.rb-pos i.rb-up{background:#2b3135;color:var(--ink)}.rb-pos i.rb-me{background:var(--ink);color:#111}.rb-pos .rb-cut{width:2px;height:16px;background:var(--line2);border-radius:1px}
 /* table */
 .rb-tbl{display:flex;flex-direction:column}
 .rb-tbl .rb-tr{display:grid;grid-template-columns:24px 1fr 28px 34px;gap:8px;align-items:center;min-height:38px;font-size:14px;border-top:1px solid #262b2f}
 .rb-tbl .rb-tr:first-child{border-top:0}
 .rb-tbl .rb-tr.rb-me{background:var(--card2);margin:0 -8px;padding:0 8px;border-radius:8px;font-weight:700}
 .rb-tbl .rb-tr .rb-p{color:var(--ink3);font-variant-numeric:tabular-nums}.rb-tbl .rb-tr .rb-r{text-align:right;font-variant-numeric:tabular-nums}
-.rb-tbl .rb-cutl{height:0;border-top:1px dashed var(--good2);margin:2px 0;position:relative}
-.rb-tbl .rb-cutl span{position:absolute;right:0;top:-9px;font-size:11px;color:var(--good);background:var(--card);padding-left:6px}
+.rb-tbl .rb-cutl{height:0;border-top:1px dashed var(--line2);margin:2px 0;position:relative}
+.rb-tbl .rb-cutl span{position:absolute;right:0;top:-9px;font-size:11px;color:var(--ink3);background:var(--card);padding-left:6px}
 /* road */
 .rb-road{display:flex;align-items:center;gap:0}
 .rb-road .rb-st{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0}
 .rb-road .rb-st i{width:14px;height:14px;border-radius:50%;background:#2b3135;border:2px solid #2b3135}
-.rb-road .rb-st.rb-done i{background:var(--good);border-color:var(--good)}.rb-road .rb-st.rb-now i{background:var(--bg);border-color:var(--ink);width:18px;height:18px}
+.rb-road .rb-st.rb-done i{background:var(--ink);border-color:var(--ink)}.rb-road .rb-st.rb-now i{background:var(--bg);border-color:var(--ink);width:18px;height:18px}
 .rb-road .rb-st span{font-size:10.5px;color:var(--ink3);text-align:center;line-height:1.15}.rb-road .rb-st.rb-now span{color:var(--ink);font-weight:700}
 .rb-road .rb-ln{flex:0 0 8px;height:2px;background:#2b3135;margin-bottom:16px}
 /* stat bars (locker) */
 .rb-stt{display:grid;grid-template-columns:86px 1fr 26px 37px;min-height:36px;gap:8px;align-items:center;font-size:14px}
 .rb-stt b{text-align:right;font-variant-numeric:tabular-nums}
-.rb-plus{width:44px;height:44px;margin:-7px -7px -7px 0;border-radius:8px;border:1px solid #2e5a3d;background:#16261c;color:var(--good);font-weight:800;cursor:pointer;padding:0}
+.rb-plus{width:44px;height:44px;margin:-7px -7px -7px 0;border-radius:8px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:800;cursor:pointer;padding:0}
 .rb-plus[disabled]{visibility:hidden}
 /* thumbs */
 .rb-thumbs{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:2px}.rb-thumbs::-webkit-scrollbar{display:none}
@@ -195,7 +236,7 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 #rbBack{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:49;height:40px;padding:0 14px;border-radius:20px;border:1px solid #4a5156;background:#1a1e21;color:#f3f4f2;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.5)}
 #rbBack[hidden]{display:none}
 
-#rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:var(--good)}.rb-kg{background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px)}}
+#rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:#4a8fe0}.rb-kg{background:repeating-linear-gradient(135deg,#9cc6f5 0 2px,#2a3a4e 2px 4px)}.rb-kt{background:#d9dcda}}
 
 #rbApp.rb-resmode{z-index:95}
 #rbApp.rb-resmode .rb-tabs{display:none}
@@ -262,3 +303,11 @@ html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
     background:linear-gradient(90deg,transparent calc(50% - 261px),var(--line) calc(50% - 261px),var(--bg) calc(50% - 260px),var(--bg) calc(50% + 260px),var(--line) calc(50% + 260px),transparent calc(50% + 261px)),linear-gradient(rgba(8,10,12,.8),rgba(8,10,12,.86)),url(assets/rb/venue_t1.jpg) center/cover no-repeat,var(--bg)}
   #rbApp .rb-msheet{right:calc(var(--rbside) + 12px)}
 }
+
+/* EXP-STATS (Lee 07:27, Hayden approved 08:20): player stat bars are blue for what you have, green dashed for what you'd gain, red only for a real
+   penalty. Overrides the launch lime->red recolour (rb-lime.css) on the game's own stat screens (level-up pick, player card) and reward XP. */
+html.rb-on body .st2bar .base,html.rb-on body .st2bar .me{background:#4a8fe0!important;color:#fff!important}
+html.rb-on body .st2bar .kb{background:repeating-linear-gradient(135deg,#9cc6f5 0 3px,rgba(156,198,245,.4) 3px 6px)!important}
+html.rb-on body .st2bar .gain{background:rgba(127,209,154,.45)!important;outline:1px dashed #7fd19a!important}
+html.rb-on body .c3-bar i{background:#4a8fe0!important}
+html.rb-on body #c3rwXp{color:#7fd19a!important}
