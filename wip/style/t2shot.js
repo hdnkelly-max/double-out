@@ -1,0 +1,5 @@
+const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out=process.argv[2];
+for(const [w,h,s] of [[390,844,'hub'],[390,844,'kit'],[390,844,'cards'],[360,640,'hub'],[360,640,'kit']]){const p=await b.newPage({viewport:{width:w,height:h},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+await p.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());await p.goto('file://'+__dirname+'/t2/index.html#'+s);await p.waitForTimeout(600);
+const cdp=await p.context().newCDPSession(p);const {data}=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,width:w,height:h,scale:2}});require('fs').writeFileSync(`${out}/t2_${s}_${w}x${h}.png`,Buffer.from(data,'base64'));
+const m=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,small:[...document.querySelectorAll('main:not([hidden]) button,header button')].filter(b=>b.getBoundingClientRect().height<36).map(b=>b.textContent.trim().slice(0,18))}));console.log(w,h,s,JSON.stringify(m));await p.close();}await b.close();})();
