@@ -148,13 +148,17 @@
   const Gyro = {
     asked: false, ok: false, el: null, h: null, n: 0,
     off() { try { return !!(root.TOPS_q20has && root.TOPS_q20has('nogyro')); } catch (e) { return false; } },
+    /* one active pack at a time: a new pack takes over (the old one's properties are cleared first). Motion permission is page-wide,
+       so a grant that lands later applies to whichever pack is open then, if any. Denied or failed: the next pick tap may ask again. */
     ask(el) {
+      if (this.el && this.el !== el) this.stop();
       this.el = el;
-      if (this.asked) { if (this.ok) this.listen(); return; }
-      this.asked = true;
+      if (this.ok) { this.listen(); return; }
+      if (this.asked) return;
       const D = root.DeviceOrientationEvent; if (!D) return;
-      const go = () => { this.ok = true; this.listen(); };
-      if (typeof D.requestPermission === 'function') D.requestPermission().then(s => { if (s === 'granted') go(); }).catch(() => {});
+      this.asked = true;
+      const go = () => { this.ok = true; this.listen(); }, no = () => { this.asked = false; };
+      if (typeof D.requestPermission === 'function') D.requestPermission().then(s => { if (s === 'granted') go(); else no(); }).catch(no);
       else go();
     },
     listen() { if (this.h || !this.el || !this.el.isConnected || this.off()) return; this.h = e => this.move(e); root.addEventListener('deviceorientation', this.h); },
