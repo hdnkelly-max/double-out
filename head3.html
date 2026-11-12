@@ -13,6 +13,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Manrope:wght@500;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>/* #20 (Overseer 21:50): live listener counts on window/document/body/canvas, for the recorder (dev.t20.lsn). once:true listeners aren't counted (they remove themselves). */
+(function(){try{const P=EventTarget.prototype,A=P.addEventListener,R=P.removeEventListener,K=new WeakMap();
+const tg=t=>t===window?'w':t===document?'d':(t&&t===document.body)?'b':(t&&t.tagName==='CANVAS')?'c':null;
+const cap=o=>!!(o===true||(o&&o.capture));
+P.addEventListener=function(ty,fn,o){try{const g=tg(this);if(g&&fn&&!(o&&o.once)){let m=K.get(this);if(!m){m=new Map();K.set(this,m);}let s=m.get(fn);if(!s){s=new Map();m.set(fn,s);}const k=ty+'|'+cap(o);if(!s.has(k))s.set(k,!(o&&o.passive));}}catch(e){}return A.apply(this,arguments);};
+P.removeEventListener=function(ty,fn,o){try{const m=K.get(this);const s=m&&m.get(fn);if(s){s.delete(ty+'|'+cap(o));if(!s.size)m.delete(fn);}}catch(e){}return R.apply(this,arguments);};
+const HOT={touchstart:1,touchmove:1,pointermove:1,pointerdown:1,wheel:1};
+/* #20 (22:40): frame split, only when the 'split' test switch is on at launch (?q20=split, or the hub Menu toggle, applied from the next launch).
+   Times every timer callback and event handler (our JS outside rAF) into TOPS_AJS.ms; the recorder subtracts it from the time between frames.
+   Blind spots: onX property handlers, promise/fetch callbacks, MessageChannel; three.min.js loads before this but registers no listeners or timers at load. */
+let SPLIT=false;try{const sw=(new URLSearchParams(location.search).get('q20')||sessionStorage.getItem('tops_q20')||'')+','+(localStorage.getItem('tops_q20_app')||'');SPLIT=sw.split(',').indexOf('split')>=0;}catch(e){}
+if(SPLIT){const AJ=window.TOPS_AJS={ms:0,n:0};let depth=0;const now=()=>performance.now();
+ const timed=f=>function(){if(depth||window.__TOPS_INF){return f.apply(this,arguments);}/* not inside the game frame: that time is already in the recorder's frame time (ChatGPT P1: no double count) */depth=1;const a=now();try{return f.apply(this,arguments);}finally{depth=0;AJ.ms+=now()-a;AJ.n++;}};
+ const st=window.setTimeout,si=window.setInterval;
+ window.setTimeout=function(f){if(typeof f==='function'){const a=Array.prototype.slice.call(arguments);a[0]=timed(f);return st.apply(this,a);}return st.apply(this,arguments);};
+ window.setInterval=function(f){if(typeof f==='function'){const a=Array.prototype.slice.call(arguments);a[0]=timed(f);return si.apply(this,a);}return si.apply(this,arguments);};
+ const W=new WeakMap();const key=(ty,o)=>ty+'|'+cap(o);
+ const A2=P.addEventListener,R2=P.removeEventListener;
+ P.addEventListener=function(ty,fn,o){if(typeof fn!=='function')return A2.apply(this,arguments);let m=W.get(fn);if(!m){m=new Map();W.set(fn,m);}let w=m.get(key(ty,o));if(!w){w=timed(fn);m.set(key(ty,o),w);}const a=Array.prototype.slice.call(arguments);a[1]=w;return A2.apply(this,a);};
+ P.removeEventListener=function(ty,fn,o){if(typeof fn!=='function')return R2.apply(this,arguments);const m=W.get(fn);const w=m&&m.get(key(ty,o));if(!w)return R2.apply(this,arguments);const a=Array.prototype.slice.call(arguments);a[1]=w;return R2.apply(this,a);};
+}
+window.TOPS_LSN=function(){const o={};const one=(t,g)=>{const m=t&&K.get(t);let n=0,np=0;if(m)m.forEach(s=>s.forEach((act,k)=>{n++;if(act&&HOT[k.split('|')[0]])np++;}));if(n)o[g]=[n,np];};
+one(window,'w');one(document,'d');one(document.body,'b');document.querySelectorAll('canvas').forEach((c,i)=>{one(c,'c'+(c.id||i));});return o;};
+}catch(e){}})();
+</script>
 <script>
 ( function () {
 
