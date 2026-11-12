@@ -290,6 +290,8 @@
     try { const c = career(); if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
     return r;
   };
+  // any other game screen (messages, online lobby, title, creator, the Run's screens, perk, results) takes over from the new look
+  const _scr = window.showScreen; window.showScreen = showScreen = function (id) { const r = _scr.apply(this, arguments); try { if (id === 'result' && resOn) return r; /* the reward overlay sits on the result screen: our Result stays over both */ if (id !== 'hub') { if (resOn) endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; } } catch (e) { console.warn('rb screen', e); } return r; };
   const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } clearInterval(armT); endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
   const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
   const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
