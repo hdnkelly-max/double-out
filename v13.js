@@ -87,9 +87,9 @@ let exp=0,tickN=0;setInterval(()=>{const t=performance.now();if(!M||M.done||docu
 // a real break: no pull, no busy turn, no dart in the air (QA 09:03 / 11:00 finding 2); otherwise wait for the next break or match end
 // ENG-9 (Q&D 21:19): counters() costs 5-11 ms (a getComputedStyle walk of the page), so it runs only when no pull can start: it's the opponent's
 // turn, the camera is on the opponent, or a card (#intro) is up while the game is busy (startPull refuses all three), and no pull or dart flight is
-// under way. quiet() alone was also true while the player aimed. noPull.why records which moment it was ('opp', 'view' or 'card') in cnt.at.
+// under way. quiet() alone was also true while the player aimed. noPull.why records which moment it was ('opp', 'view', 'card' or 'busy') in cnt.at.
 function noPull(){try{if(typeof S==='undefined'||!S||S.done||S.pulling)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;if(d&&d.flying)return false;
- if(S.p&&S.p[S.cur]&&S.p[S.cur].ai){noPull.why='opp';return true;}if(S.view===1){noPull.why='view';return true;}const it=document.getElementById('intro');if(S.busy&&it&&it.classList.contains('show')){noPull.why='card';return true;}return false;}catch(e){return false;}}
+ if(S.p&&S.p[S.cur]&&S.p[S.cur].ai){noPull.why='opp';return true;}if(S.view===1){noPull.why='view';return true;}const it=document.getElementById('intro');if(S.busy&&it&&it.classList.contains('show')){noPull.why='card';return true;}if(S.busy){noPull.why='busy';return true;}/* Delivery QA 05:51: practice/drills have no opponent turn; the scoring beat after the player's own dart is busy (startPull refuses) */return false;}catch(e){return false;}}
 function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
 // CAR-5 (the CAR-2 rules, ChatGPT 8.8): during a match nothing is sent and the queue isn't touched except inside a break window: a leg has
 // ended, the game is quiet AND the who-throws-first card (S.bull) is up (quiet() alone is also true while the player aims). Rechecked where
