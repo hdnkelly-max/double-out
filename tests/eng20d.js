@@ -29,7 +29,7 @@ out.gyro=await p.evaluate(async()=>{const tilt=(g,bt)=>{const e=new Event('devic
   pk.querySelector('.tcpk__later').click();/* Open later: the pack's own close */await new Promise(r=>setTimeout(r,500));o.packGone=!document.querySelector('.tcpk');
   tilt(20,80);await new Promise(r=>setTimeout(r,50));o.listenersAfter=__GL;o.bodyFxAfter=document.body.style.getPropertyValue('--fx');o.bodyClassAfter=document.body.classList.contains('tc-gyro');o.gyroStat=window.TOPS_GYRO?TOPS_GYRO():null;return o;});
 // (2) dart image cache
-out.dart=await p.evaluate(()=>{const base=setupParts();const cols=[];for(let i=0;i<60;i++)cols.push('#'+(0x100000+i*997).toString(16).slice(-6));const t0=performance.now();cols.forEach(c=>V.dartShot(c,Object.assign({},base,{custom:true})));const t1=performance.now();
+out.dart=await p.evaluate(()=>{const base=Object.assign({},setupParts(),{barrel:barrel()});const cols=[];for(let i=0;i<60;i++)cols.push('#'+(0x100000+i*997).toString(16).slice(-6));const t0=performance.now();cols.forEach(c=>V.dartShot(c,Object.assign({},base,{custom:true})));const t1=performance.now();
   V.dartShot(cols[59],Object.assign({},base,{custom:true}));const hit=performance.now()-t1;return {n:window.TOPS_IMGC?TOPS_IMGC().d:null,per:(t1-t0)/60,hit,imgc:window.TOPS_IMGC?TOPS_IMGC():null};});
 // (3) per frame at aim
 await p.evaluate(()=>{V._qa.renderer.render=function(){};beginMatch({mode:'career',tier:0,p0:'Lee',oppKey:'Carl Maddox',oppName:'Carl Maddox',oppAvg:40,legs:3,start:501});});
