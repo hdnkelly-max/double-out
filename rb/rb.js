@@ -112,7 +112,7 @@
       game = `<div class="rb-card">${sh('Your game')}${st.bank > 0 ? `<div class="rb-chips">${chip(st.bank + ' point' + (st.bank > 1 ? 's' : '') + ' to spend · tap +', 'g')}</div>` : ''}${rows}<div class="rb-mlab"><span><span class="rb-key rb-kf"></span>You</span><span><span class="rb-key rb-kg"></span>From your kit</span><span>Cap ${cap} at ${esc(t.n.replace(/ singles| league/i, ''))}</span></div></div>`;
     }
     const b = barrel(), shirt = (save.look && save.look.shirt) || '';
-    const kit = `<div class="rb-sh" style="margin-top:2px"><h3>Kit</h3></div><div class="rb-g2"><button class="rb-card" type="button" data-go="shop" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-sq"><div class="rb-im" style="background-image:url(${dartImg(b, 'dsq')});${DART_PHOTO[b.id] ? '' : 'background-size:contain'}"></div><span class="rb-chip" style="position:absolute;left:8px;top:8px">Equipped</span></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">Darts</small><span class="rb-t2" style="font-size:14px">${esc(b.n)}</span><span class="rb-sub" style="font-size:12.5px">Change in Shop ›</span></div></button><div class="rb-card" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-sq"><div class="rb-im" style="background-image:${shirt ? `linear-gradient(${shirt},${shirt}),` : ''}url(${IMG}shirt.jpg);${shirt ? 'background-blend-mode:color,normal' : ''}"></div><span class="rb-chip" style="position:absolute;left:8px;top:8px">Wearing</span></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">Shirt</small><span class="rb-t2" style="font-size:14px">Your colours</span><span class="rb-sub" style="font-size:12.5px">New ones every 5 levels</span></div></div></div>`;
+    const kit = `<div class="rb-sh" style="margin-top:2px"><h3>Kit</h3></div><div class="rb-g2"><button class="rb-card" type="button" data-go="shop" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-sq" style="background:var(--dartbg)"><div class="rb-im" style="background-image:url(${dartImg(b, 'ds')});background-size:92% auto"></div><span class="rb-chip" style="position:absolute;left:8px;top:8px">Equipped</span></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">Darts</small><span class="rb-t2" style="font-size:14px">${esc(b.n)}</span><span class="rb-sub" style="font-size:12.5px">Change in Shop ›</span></div></button><div class="rb-card" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot rb-sq"><div class="rb-im" style="background-image:${shirt ? `linear-gradient(${shirt},${shirt}),` : ''}url(${IMG}shirt.jpg);${shirt ? 'background-blend-mode:color,normal' : ''}"></div><span class="rb-chip" style="position:absolute;left:8px;top:8px">Wearing</span></div><div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px"><small class="rb-kick" style="font-size:11px">Shirt</small><span class="rb-t2" style="font-size:14px">Your colours</span><span class="rb-sub" style="font-size:12.5px">New ones every 5 levels</span></div></div></div>`;
     return seg + hero + lvl + game + kit;
   }
   function stats(M) {
@@ -156,10 +156,11 @@
   }
   // press the game's own shop control for this dart; returns what changed
   function gameShop(id, kind) {
-    const before = { bank: career().bank, owned: (save.owned || []).length, eq: save.barrel };
+    const before = { bank: career().bank, owned: (save.owned || []).length, eq: save.barrel }, prevTab = (typeof hubTab !== 'undefined' && hubTab.cur) || null;
     try { showShop('barrel', true); } catch (e) { console.warn('rb showShop', e); }
     const row = document.querySelector(`#shopList .opt[data-v12id="${id}"]`);
     if (row) { if (kind === 'buy') { const btn = row.querySelector('.v12buy'); if (btn) btn.click(); } else { row.click(); const go = row.nextElementSibling && row.nextElementSibling.querySelector('.st2go'); if (save.barrel === before.eq && go) go.click(); } }   // with stats on, the row opens the game's detail and its Equip button does the equip
+    try { if (hubTab.cur !== prevTab && prevTab) hubTab(prevTab); } catch (e) {}   // the game's buy/equip re-opens its shop screen under ours; put the hub back as it was
     const after = { bank: career().bank, owned: (save.owned || []).length, eq: save.barrel };
     return { ok: !!row && (after.eq !== before.eq || after.owned !== before.owned || after.bank !== before.bank), before, after };
   }
@@ -183,14 +184,14 @@
   const xpTotal = v => { let t = v.xp; for (let L = 1; L < v.lv; L++) t += C3.lvNeed(L); return t; };
   function result(M) {
     const { c, v } = M, me = S.p[0], op = S.p[1] || {}, won = !!S.won, money0 = !!(S.local || S.after === 'money' || S.intro), avg = x => x && x.darts ? +(x.pts / x.darts * 3).toFixed(1) : 0;
-    const a = avg(me), b = avg(op), cash = pre0 ? Math.max(0, c.bank - pre0.bank) : 0, xp = pre0 ? Math.max(0, xpTotal(v) - pre0.xp) : 0, up = pre0 && v.lv > pre0.lv;
+    const a = avg(me), b = avg(op), cash = c.bank - pre0.bank, xp = Math.max(0, xpTotal(v) - pre0.xp), up = pre0 && v.lv > pre0.lv;
     const ov = $id('c3rw'), unl = ov && ov.querySelector('#c3rwUnl b'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
     const head = `<div class="rb-hero" style="height:250px"><div class="rb-im" style="background-image:url(${IMG}result_${won ? 'win' : 'loss'}.jpg);background-position:22% 30%"></div><div class="rb-sh2" style="background:linear-gradient(270deg,rgba(10,12,14,.92) 0,rgba(10,12,14,.4) 45%,rgba(10,12,14,0) 70%)"></div><div class="rb-lockup"><small style="color:${won ? 'var(--ink)' : 'var(--ink2)'}">${won ? 'Won' : 'Lost'}</small><b class="rb-num">${me.legs || 0}–${op.legs || 0}</b><span>vs ${esc(op.disp || op.name || '')}</span></div></div>`;
     const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
     const opPt = (pre0 && pre0.opPt) || (() => { try { return op.look ? V.portrait(op.look, op.name, c.tier, 0) : ''; } catch (e) { return ''; } })();
     const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) + '%' : '–';
     const h2h = `<div class="rb-card" style="gap:8px"><div class="rb-h2h"><span class="rb-face" style="${mePt ? `background-image:url(${mePt})` : 'background:#2b3135'}"></span><div class="rb-vs2"><div class="rb-nums"><b class="rb-num">${a || '–'}</b><span>Match average</span><b class="rb-num">${b || '–'}</b></div><div class="rb-tug"><i class="rb-a" style="width:${a + b ? a / (a + b) * 100 : 50}%"></i><i class="rb-b" style="width:${a + b ? b / (a + b) * 100 : 50}%"></i></div></div><span class="rb-face" style="${opPt ? `background-image:url(${opPt})` : 'background:#2b3135'}"></span></div><div class="rb-chips" style="justify-content:center">${chip('Checkout ' + co, 'l')}${chip(me.t180 ? me.t180 + ' × 180' : 'Best visit ' + (me.bestVisit || '–'), 'l')}${me.hf ? chip('High out ' + me.hf, 'l') : ''}</div></div>`;
-    const rw = `<div class="rb-card">${sh(won ? 'Rewards' : 'Match summary')}<div style="display:flex;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="rb-big rb-num" id="rbRCash" style="font-size:32px;color:${cash ? 'var(--good)' : 'var(--ink3)'}">+${money(cash)}</span><span class="rb-t2 rb-num" id="rbRXp">+${xp} XP</span></div><span class="rb-sub">${up ? `<b style="color:var(--good)">Level up · ${v.lv}</b>${unl ? ' · ' + esc(unl.textContent) + ' unlocked' : ''} · ` : ''}${M.need - v.xp} XP to level ${v.lv + 1}</span>${extra ? `<div class="rb-chips">${chip('+' + extra + ' achievement' + (extra > 1 ? 's' : '') + ' and contracts', 'g')}</div>` : ''}</div></div></div>`;
+    const rw = `<div class="rb-card">${sh(won ? 'Rewards' : 'Match summary')}<div style="display:flex;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="rb-big rb-num" id="rbRCash" style="font-size:32px;color:${cash > 0 ? 'var(--good)' : 'var(--ink3)'}">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</span><span class="rb-t2 rb-num" id="rbRXp">+${xp} XP</span></div><span class="rb-sub">${up ? `<b style="color:var(--good)">Level up · ${v.lv}</b>${unl ? ' · ' + esc(unl.textContent) + ' unlocked' : ''} · ` : ''}${M.need - v.xp} XP to level ${v.lv + 1}</span>${extra ? `<div class="rb-chips">${chip('+' + extra + ' achievement' + (extra > 1 ? 's' : '') + ' and contracts', 'g')}</div>` : ''}</div></div></div>`;
     let want = '';
     const nb = BARRELS.filter(x => { const d = dState(x); return !d.own && !d.g; }).sort((x, y) => x.price - y.price)[0];
     if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rb-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default"><span style="display:flex;align-items:center;gap:12px"><div class="rb-slot rb-dart rb-r8" style="width:110px;flex:0 0 110px"><div class="rb-im" style="background-image:url(${dartImg(nb, 'ds')})"></div></div><span class="rb-tx"><small>Next dart</small><span class="rb-t2">${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))} · ${left ? money(left) + ' to go' : 'you can buy it'}</span></span></span><div class="rb-bar"><i style="width:${Math.min(100, c.bank / cost * 100)}%"></i></div></div>`; }
@@ -199,20 +200,25 @@
     const act = `<div class="rb-pin" style="display:flex;flex-direction:column;gap:8px;padding-bottom:4px"><button class="rb-primary" type="button" id="rbRGo"><b>${esc(go ? go.textContent : 'Continue')}</b></button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}<button class="rb-link" type="button" id="rbRDet" style="align-self:center;color:var(--ink2)">Full match stats ›</button></div>`;
     return head + h2h + rw + want + tbl + act;
   }
+  let resMO = null, bodyMO = null;
   function showResult() {
+    if (!pre0 || !S || !S.p || !$id('c3rw')) return;   // nothing recorded for this match: the game's own overlay stays as it is
+    const M = model(); if (!M) return;
+    let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); return; }
     const el = ensure(); resOn = true; el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
-    const M = model(); if (!M || !S || !S.p) { endResult(); return; }
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
-    let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); endResult(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`;
-    const press = id => { const b = $id(id); endResult(); if (b) b.click(); };
+    // press the overlay's own button; if it isn't there or can't be pressed, step aside and leave the game's overlay in charge
+    const press = id => { const b = $id(id); endResult(); if (b && !b.disabled && b.offsetParent !== null) b.click(); };
     $id('rbRGo').onclick = () => press('c3rwGo');
     const k = $id('rbRKeep'); if (k) k.onclick = () => press('c3rwKeep');
     $id('rbRDet').onclick = () => press('c3rwDet');
-    // if the game closes its overlay by any other route, this screen goes with it
-    const ov = $id('c3rw'); if (ov) { const mo = new MutationObserver(() => { if (ov.hidden && resOn) { mo.disconnect(); endResult(); } }); mo.observe(ov, { attributes: true, attributeFilter: ['hidden'] }); }
+    const ov = $id('c3rw');
+    // one observer each, always disconnected in endResult: the overlay closing by any other route, or anything new opening on top of the page, hands control back to the game
+    resMO = new MutationObserver(() => { if (ov.hidden || !document.body.contains(ov)) endResult(); }); resMO.observe(ov, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+    bodyMO = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n !== el && n.id !== 'rbBack' && getComputedStyle(n).position === 'fixed') { endResult(); return; } }); bodyMO.observe(document.body, { childList: true });
   }
-  function endResult() { resOn = false; const el = $id('rbApp'); if (el) { el.classList.remove('rb-resmode'); el.hidden = true; } }
+  function endResult() { if (resMO) { resMO.disconnect(); resMO = null; } if (bodyMO) { bodyMO.disconnect(); bodyMO = null; } const was = resOn; resOn = false; pre0 = was ? null : pre0; const el = $id('rbApp'); if (el && was) { el.classList.remove('rb-resmode'); el.hidden = true; } }
 
   /* ---------- Practice (live data; Start calls the game's own startDrill) ---------- */
   function practice(M) {
@@ -224,11 +230,14 @@
     return hero + rows;
   }
   function wire(M) {
-    const go = $id('rbGo'); if (go) go.onclick = () => {
-      const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
-      g.click();   // the game's own Walk on: it may ask for a second tap on a big entry
-      if (g.dataset.arm) { go.querySelector('small').textContent = g.textContent; go.querySelector('b').textContent = 'Tap again'; setTimeout(() => { try { render(); } catch (e) {} }, 3000); }
-    };
+    const go = $id('rbGo'); if (go) { let busy = 0;
+      const sync = () => { const g = $id('c3Go'); if (!g || !document.body.contains(go)) return false; const armed = !!g.dataset.arm; go.querySelector('b').textContent = armed ? 'Tap again' : 'Walk on'; if (armed) go.querySelector('small').textContent = g.textContent; return armed; };
+      go.onclick = () => {
+        if (busy) return; busy = 1; setTimeout(() => { busy = 0; }, 450);   // no double fire from a fast double tap
+        const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
+        g.click();   // the game's own Walk on: it may ask for a second tap on a big entry
+        if (sync()) { clearInterval(go._t); go._t = setInterval(() => { if (!sync()) { clearInterval(go._t); try { if (!$id('rbApp').hidden) render(); } catch (e) {} } }, 400); }   // mirror the game's armed state until it clears
+      }; }
     const mm = () => { try { moneyMatch(); } catch (e) { console.warn('rb money', e); } };
     const m1 = $id('rbMoney'); if (m1) m1.onclick = mm;
     const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
