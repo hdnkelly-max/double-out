@@ -19,9 +19,9 @@ for(const mode of ['A','B']){const ctx=await b.newContext({viewport:{width:W,hei
  const before=await p.evaluate(probe);await p.evaluate(()=>document.getElementById('tcPGo').click());
  await p.waitForTimeout(3000);const during=await p.evaluate(probe);res[mode]={before,during};
  if(mode==='B'){ // C: end the match, back to the hub
-  await p.evaluate(()=>{S.done=true;showHub();});await p.waitForTimeout(1500);const hub1=await p.evaluate(probe);
+  await p.evaluate(()=>{S.done=true;showHub();});await p.waitForSelector('.tc-sheet.tc-welcome',{state:'attached',timeout:60000}).catch(()=>{});const hub1=await p.evaluate(probe);   // showHub blocks the page for seconds here; the welcome follows on its 700 ms timer
   await p.evaluate(()=>{const l=document.getElementById('tcWelLater');l&&l.click();});await p.waitForTimeout(300);
-  await p.evaluate(()=>showHub());await p.waitForTimeout(1500);const hub2=await p.evaluate(probe);res.C={hub1,hub2};}
+  await p.evaluate(()=>{showHub();window.__h2=performance.now();});await p.waitForFunction(()=>performance.now()-window.__h2>4000,null,{timeout:90000,polling:500});const hub2=await p.evaluate(probe);   // 4 s of page time after the hub: well past the 700 ms timerres.C={hub1,hub2};}
  await ctx.close();}
 await b.close();
 const f=[];['A','B'].forEach(m=>{const d=res[m].during;if(!d.match)f.push(m+': match not running');if(d.wel)f.push(m+': welcome over the match');if(d.inf)f.push(m+': '+d.inf+' infinite tc animations during play');});
