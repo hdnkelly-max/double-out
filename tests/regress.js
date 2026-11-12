@@ -28,7 +28,7 @@ const one=async(m)=>{
    {const bad={};setInterval(()=>{try{if(!S||S.bull||S.done||!V._qa.opp)return;const o=V._qa.opp();if(!o)return;const seen=new Set();const chk=(m,c)=>{if(c){seen.add(m);bad[m]=(bad[m]||0)+1;if(bad[m]>=12&&!window.__T.viol.includes(m))window.__T.viol.push(m);}};
     chk('opponent in throw pose on human visit',S.cur===0&&!S.p[0].ai&&!S.mateTurn&&o.visible!==false&&!o.userData.waiting);
     chk('opponent hidden on his visit',S.p[S.cur].ai&&o.visible!==true);
-    if(S.p[S.cur].ai&&o.visible===true){const got=o.userData.B.LeftHand.children.filter(c=>c.userData.spare&&c.visible).length,want=Math.max(0,2-S.visit.length);chk('opp spares wrong',got!==want);}
+    if(S.p[S.cur].ai&&o.visible===true){const got=o.userData.B.LeftHand.children.filter(c=>c.userData.spare&&c.visible).length,want=o.userData.noSp?0:Math.max(0,2-S.visit.length);/* CAR-7a/7b: wider-build opponents hold no spares */chk('opp spares wrong',got!==want);}
     Object.keys(bad).forEach(k=>{if(!seen.has(k))bad[k]=0;});}catch(e){}},150);}
    return 'ok';}catch(e){return 'setup '+e.message;}},m);
   if(setup!=='ok'){fails.push(`match ${m}: ${setup}`);await p.close();return;}
