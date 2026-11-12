@@ -16,12 +16,17 @@ const {chromium}=require('playwright');const path=require('path');
   const at=rh=>{save.st2=save.st2||(window.TOPS_st&&TOPS_st());save.st2.v={sc:40,fi:40,ct:40,rh,co:40};save.st2.trait=null;save.barrel='assassin';save.setup={point:'std',shaft:'med',flight:'standard'};save.arm=0;
    beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:50,legs:1});S.aim=targetPoint('T20');S.adren=0;S.calm=99;const en=effNerves;effNerves=()=>0;let tp;try{tp=Object.assign({},throwParams());}finally{effNerves=en;}
    const L=window.TOPS_LofT?TOPS_LofT('rh'):Math.max(0,Math.min(1,(rh-20)/75));S.done=true;return {rh,L:+L.toFixed(4),P:+tp.P.toFixed(4),A:+tp.A.toFixed(4),s0:+tp.s0.toFixed(4),k:+(tp.P/W(L)).toFixed(4)};};
-  const rows=[20,40,58,76,95].map(at);return {pts,mono,rows};});
+  const rows=[20,40,58,76,95].map(at);
+  // the Rhythm card shows the same window the throw uses (QA 19:40): fxLine('rh', v, v+1) for a spread of stats
+  const kp=(window.TOPS_kitPts?TOPS_kitPts().rh:0)||0;const Lv=v=>Math.max(0,Math.min(1,(v+kp-20)/75));const f=w=>String(Math.round(w*10)/10);
+  const card=[20,21,33,40,58,76,94,95].map(v=>{const got=window.TOPS_FXLINE?TOPS_FXLINE('rh',v,v+1):null;const want=`Perfect window ${f(W(Lv(v)))} → ${f(W(Lv(v+1)))} ms`;return {v,got,want};});
+  return {pts,mono,rows,card};});
  const f=[];if(r.err)f.push(r.err);else{
   r.pts.forEach(x=>{if(Math.abs(x.got-x.want)>.01)f.push(`TOPS_WIN(${x.L}) = ${x.got}, want ${x.want}`);});if(!r.mono)f.push('window narrows somewhere as Rhythm rises');
+  r.card.forEach(c=>{if(c.got!==c.want)f.push(`Rhythm card at ${c.v}: "${c.got}", want "${c.want}"`);});
   const ks=r.rows.map(x=>x.k);if(Math.max(...ks)-Math.min(...ks)>.002)f.push('career window is not the table times one factor: '+JSON.stringify(r.rows));
   const A=r.rows.map(x=>x.A),S0=r.rows.map(x=>x.s0);if(Math.max(...A)-Math.min(...A)>1e-3)f.push('sway moves with Rhythm: '+A.join(','));if(Math.max(...S0)-Math.min(...S0)>1e-3)f.push('scatter moves with Rhythm: '+S0.join(','));}
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  console.log(JSON.stringify(r.rows||r));await b.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}
- console.log('PASS: window table 10/12/16.5/21/26 ms at Rhythm level 0/.265/.5/.75/1, linear between, clamped, never narrowing; career throwParams follows it at Rhythm 20-95 (factor '+r.rows[0].k+'); sway and scatter unchanged');})();
+ console.log('PASS: window table 10/12/16.5/21/26 ms at Rhythm level 0/.265/.5/.75/1, linear between, clamped, never narrowing; career throwParams follows it at Rhythm 20-95 (factor '+r.rows[0].k+'); sway and scatter unchanged; Rhythm card text matches the table (e.g. '+r.card[0].got+')');})();
