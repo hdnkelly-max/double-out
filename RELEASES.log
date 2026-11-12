@@ -1,3 +1,4 @@
 2026-11-11T22:44:00Z live version=2.08 tag=d9e5d5d tree=a398d79 commit=6000e65 risk=R0 run=manual item=R0-16 reticle lag (seeded: last manual release)
 2026-11-12T00:25:00Z live version=2.09 tag=a55ea5d tree=3afcea5 commit=fd806f2 risk=R0 run=manual item=R0-17/18 walk-on figure
 2026-11-12T02:01:31Z live version=3.00 tag=24db2ce tree=1d057ec commit=77199bd risk=R1 run=manual item=CAR-1+CAR-2+ENG-3+crowd-atlas+F6F7
+2026-11-12T02:22:38Z prepared version=3.01 tag=rel-3.01 tree=898d12f commit=8bfc1a446321d33979dd37b9d55d0303e2a06738 risk=R2 run=43140854959 item=EXP-6 card welcome never sits over a match
