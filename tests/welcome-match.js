@@ -13,7 +13,7 @@ for(const mode of ['A','B']){const ctx=await b.newContext({viewport:{width:W,hei
  await p.evaluate(()=>{save.authSeen=true;$('login').hidden=true;newCareer();career().tier=1;career().stage='pub';save.name='Hayden';save.lessonDone=true;save.matches=1;save.tcIntro=0;try{V.walkOn=()=>{};}catch(e){}showHub();});
  // The poster opens on a 600 ms timer once the exhibition is created; under SwiftShader showHub itself blocks the page ~10 s here and the poster lands ~20 s in,
  // so if it hasn't shown after 60 s, open the same poster through the game's own TC_API.poster (same sheet, same Accept handler).
- let natural=true;try{await p.waitForSelector('#tcPGo',{state:'attached',timeout:60000});}catch(e){natural=false;await p.evaluate(()=>{const t=TC_API.st(),ex=t.exh.active;TC_API.poster(ex,TC_API.D.LEGENDS.find(l=>l.id===ex.id),true);});await p.waitForSelector('#tcPGo',{state:'attached',timeout:5000});}
+ let natural=true;try{await p.waitForSelector('#tcPGo',{state:'attached',timeout:90000});}catch(e){natural=false;await p.evaluate(()=>{const t=TC_API.st(),ex=t.exh.active;TC_API.poster(ex,TC_API.D.LEGENDS.find(l=>l.id===ex.id),true);});await p.waitForSelector('#tcPGo',{state:'attached',timeout:90000});}
  res['nat'+mode]=natural;
  if(mode==='B')await p.waitForSelector('.tc-sheet.tc-welcome',{state:'attached',timeout:60000});
  const before=await p.evaluate(probe);await p.evaluate(()=>document.getElementById('tcPGo').click());
