@@ -31,9 +31,9 @@
   }
   /* ---------- shell ---------- */
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
-  const OLD = { shop: 'kit', locker: 'player', practice: 'practice' };
-  const BUILT = { tonight: 1, season: 1, locker: 1 };   // until each new screen lands, the tab opens the old one
-  let tab = 'tonight', lk = 'load';
+  const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
+  const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1 };   // until each new screen lands, the tab opens the old one
+  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
     el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
@@ -53,7 +53,7 @@
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
     qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
-    let html = ''; try { html = tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
+    let html = ''; try { html = tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M);
   }
   /* ---------- Tonight (live data) ---------- */
@@ -126,6 +126,42 @@
     const recs = `<div class="rb-card" style="gap:8px">${sh('Records')}${rec('Highest checkout', b.hf || '–')}${rec('Best match average', b.avg ? b.avg.toFixed(1) : '–')}${rec('v Deano', `${c.rivalW || 0}–${c.rivalL || 0}`)}</div>`;
     return tiles + form + recs;
   }
+
+  /* ---------- Shop (live data). Buy and Equip press the game's own shop row (rendered off-screen by showShop),
+     so price, level gates, sponsor sets, the bank and the save stay entirely the game's (v12 buyBtn → buyBarrel; owned row → equip). ---------- */
+  const bPts = b => { const acc = Math.round((5.6 - b.base) / 1.8 * 7); return { sc: acc, fi: acc, rh: Math.round((b.tol - 1) / .15 * 6), ct: Math.round((1.25 - b.sway) / .6 * 7) }; };   // same formula as the game's v09 barrelPts (display only)
+  function dState(b) { const G = window.TOPS_GATE, own = (save.owned || []).includes(b.id), eq = save.barrel === b.id || (!save.barrel && b.id === BARRELS[0].id), g = !own && G ? G.gateBarrel(b) : null; return { own, eq, g, sp: !!(g && g.sp), lockLv: g && g.lv && !g.res ? g.lv : 0, res: !!(g && g.res), cost: price(b.price) }; }
+  function shop(M) {
+    const c = M.c, mine = barrel(); if (!sel) sel = mine.id; const b = BARRELS.find(x => x.id === sel) || mine, st = dState(b);
+    const seg = `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="true">Darts</button><button type="button" role="tab" aria-selected="false" data-go="kit">Setup &amp; gear</button></div>`;
+    const wt = (b.n.match(/(\d+)g$/) || [])[1], name = b.n.replace(/ \d+g$/, '').replace(new RegExp('^' + b.brand + ' '), '');
+    const badge = st.eq ? chip('Equipped') : st.sp ? chip('Sponsor set', 'w') : st.own ? chip('Owned') : st.lockLv ? chip(IC.lock + ' Level ' + st.lockLv, 'l') : '';
+    const photo = DART_PHOTO[b.id] ? `${IMG}d_${b.id}.jpg` : dartImg(b, 'ds');
+    const hero = `<div class="rb-card" style="padding:0;gap:0;overflow:hidden"><div class="rb-slot" style="aspect-ratio:16/9;background:var(--dartbg)"><div class="rb-im" style="background-image:url(${photo});background-size:${DART_PHOTO[b.id] ? 'cover' : '88% auto'}"></div></div><div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px"><div class="rb-chips">${badge}<span class="rb-kick" style="align-self:center">${esc(b.brand)}</span></div><span class="rb-big" style="font-size:28px">${esc(name)}</span><span class="rb-sub">${esc(b.s)}${wt ? ' · ' + wt + ' g' : ''}</span></div></div>`;
+    const A = window.TOPS_ST2_API, names = A ? Object.fromEntries(A.STATS.map(x => [x.id, x.n])) : { sc: 'Scoring', fi: 'Finishing', ct: 'Control', rh: 'Rhythm' };
+    const pa = bPts(mine), pb = bPts(b), mx = 10;
+    const bars = id => { const a = pa[id], v = pb[id], dv = v - a; return `<div class="rb-cmp"><span>${names[id]}</span><div class="rb-bars"><div class="rb-bar"><i class="rb-prev" style="width:${Math.max(2, (a + 3) / (mx + 3) * 100)}%"></i></div><div class="rb-bar"><i style="width:${Math.max(2, (v + 3) / (mx + 3) * 100)}%"></i></div></div><span class="rb-d ${dv > 0 ? 'rb-up' : dv < 0 ? 'rb-dn' : 'rb-eq'}">${dv > 0 ? '+' : dv < 0 ? '−' : '±'}${Math.abs(dv)}</span></div>`; };
+    const cmp = st.eq ? `<div class="rb-card">${sh('Equipped now')}<span class="rb-sub">This is the dart you throw. Pick another to compare.</span></div>` : `<div class="rb-card">${sh('vs your ' + esc(mine.n.replace(/ \d+g$/, '')))}<div class="rb-mlab"><span><span class="rb-key" style="background:#4a5156"></span>Yours</span><span><span class="rb-key rb-kf"></span>This dart</span></div>${['sc', 'fi', 'ct', 'rh'].map(bars).join('')}<span class="rb-sub" style="font-size:12px">Stat points the dart adds on top of yours.</span></div>`;
+    let act = '';
+    if (st.eq) act = '';
+    else if (st.own) act = `<button class="rb-primary" type="button" id="rbEquip"><b>Equip</b><small>Throw with it from your next match</small></button>`;
+    else if (st.sp) act = `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.lock}</span><div style="flex:1"><span class="rb-t2">Comes with a sponsor deal</span><div class="rb-sub">Not sold. Sponsors offer their set as you climb.</div></div></div></div>`;
+    else if (st.lockLv || st.res) { const lv = M.v.lv, need = st.lockLv || (st.g && st.g.lv) || lv; act = `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.lock}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${st.res ? 'Reserved for you · back at level ' + need : 'Unlocks at level ' + need}</span><div class="rb-chips">${chip('Level ' + need)}${chip(money(st.cost))}</div></div></div><div class="rb-mlab"><span>You · level ${lv}</span><span>${Math.max(0, need - lv)} level${need - lv === 1 ? '' : 's'} to go</span></div>${meter(10, Math.round(Math.min(1, lv / need) * 10))}<button class="rb-link" type="button" data-go="tonight" style="align-self:flex-start;min-height:44px">Play to level up ›</button></div>`; }
+    else if (c.bank < st.cost) act = `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.cash}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${money(st.cost - c.bank)} to go</span><div class="rb-chips">${chip('Price ' + money(st.cost))}${chip('You have ' + money(c.bank), 'l')}</div></div></div><div class="rb-bar"><i style="width:${Math.min(100, c.bank / st.cost * 100)}%"></i></div></div>`;
+    else act = `<button class="rb-primary" type="button" id="rbBuy"><b>Buy · ${money(st.cost)}</b><small>${money(c.bank)} → ${money(c.bank - st.cost)}</small></button>`;
+    const msg = shopMsg ? `<div class="rb-card" role="status" style="padding:10px 14px"><span class="rb-sub">${esc(shopMsg)}</span></div>` : ''; shopMsg = '';
+    const th = BARRELS.map(x => { const s2 = dState(x), lk = !s2.own && (s2.lockLv || s2.sp || s2.res); return `<button class="rb-th ${lk ? 'rb-lk' : ''}" type="button" data-bid="${x.id}" aria-pressed="${x.id === b.id}" aria-label="${esc(x.n)}"><div class="rb-slot rb-dart rb-r8"><div class="rb-im" style="background-image:url(${dartImg(x, 'ds')})"></div></div><small>${s2.eq ? '● Equipped' : s2.own ? '✓ Owned' : s2.sp ? 'Sponsor' : s2.lockLv ? IC.lock + ' Lv ' + s2.lockLv : money(s2.cost)}</small></button>`; }).join('');
+    return seg + hero + cmp + act + msg + `<div class="rb-card" style="padding:12px 0 12px 12px">${sh('All darts')}<div class="rb-thumbs" id="rbThumbs">${th}</div></div>`;
+  }
+  // press the game's own shop control for this dart; returns what changed
+  function gameShop(id, kind) {
+    const before = { bank: career().bank, owned: (save.owned || []).length, eq: save.barrel };
+    try { showShop('barrel', true); } catch (e) { console.warn('rb showShop', e); }
+    const row = document.querySelector(`#shopList .opt[data-v12id="${id}"]`);
+    if (row) { if (kind === 'buy') { const btn = row.querySelector('.v12buy'); if (btn) btn.click(); } else { row.click(); const go = row.nextElementSibling && row.nextElementSibling.querySelector('.st2go'); if (save.barrel === before.eq && go) go.click(); } }   // with stats on, the row opens the game's detail and its Equip button does the equip
+    const after = { bank: career().bank, owned: (save.owned || []).length, eq: save.barrel };
+    return { ok: !!row && (after.eq !== before.eq || after.owned !== before.owned || after.bank !== before.bank), before, after };
+  }
   function wire(M) {
     const go = $id('rbGo'); if (go) go.onclick = () => {
       const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
@@ -139,6 +175,9 @@
     const nx = $id('rbNext'); if (nx) nx.onclick = () => { tab = 'locker'; lk = 'load'; render(); };
     qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; if (k === 'cards' || k === 'troph') { toOld('locker'); return; } lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
+    qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
+    const bu = $id('rbBuy'); if (bu) bu.onclick = () => { const r = gameShop(sel, 'buy'); shopMsg = r.ok ? 'Bought and equipped.' : 'The shop said no. Nothing was charged.'; render(); };
+    const eqb = $id('rbEquip'); if (eqb) eqb.onclick = () => { const r = gameShop(sel, 'equip'); shopMsg = r.ok ? 'Equipped. You throw it from your next match.' : 'Couldn\'t equip it.'; render(); };
     qa('#rbApp [data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go; if (BUILT[k]) { tab = k; render(); } else toOld(k); });
   }
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */
