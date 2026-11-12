@@ -4,6 +4,8 @@
 // with a phone-like delay of 300 ms + 1 ms per KB, so the smaller stadium files land first, as on a phone. Each bed take that starts is
 // identified by the bytes it was decoded from. Pub and Club (tiers 0, 1) want the pub set; Regional (tier 2) wants the crowd set.
 // Cases per tier: 'warm' (Walk on after 4 s in the hub) and 'cold' (Walk on 0.3 s after the hub opens: the files can't have landed yet).
+// 'switch': a Regional match, back to the hub, the player is now at the Pub, Walk on: the stadium take is gone by then and only the pub
+// set is held (ChatGPT P1: hold only the venue's set; live decodes all nine takes, ~80 MB of PCM, for the session).
 // PASS: from the walk-on start through 12 s of the match, every bed take that starts is the venue's own set; when a take starts, any earlier
 // one is in its last 1.5 s (the normal crossfade) or stopped; 'warm': the first take starts within 1.5 s of the walk-on.
 // Live 3.32 fails Pub/Club cold (a stadium take starts the walk-on and runs ~15 s).
@@ -13,8 +15,8 @@ const types={'.html':'text/html','.js':'text/javascript','.glb':'model/gltf-bina
 const serve=(q,r,u)=>{const f=path.join(dir,u==='/'?'index.html':u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(d);});};
 const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);if(/\/(crowd|pub)_\d\.mp3$/.test(u)){let n=0;try{n=fs.statSync(path.join(dir,u)).size;}catch(e){}setTimeout(()=>serve(q,r,u),300+n/1024);return;}serve(q,r,u);});srv.listen(0);
 const port=srv.address().port;const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--autoplay-policy=user-gesture-required']});const res=[];
-for(const c of [{tier:0,mode:'cold'},{tier:1,mode:'cold'},{tier:1,mode:'warm'},{tier:2,mode:'cold'},{tier:2,mode:'warm'},{tier:0,mode:'warm'}]){
- const want=c.tier<=1?'pub':'crowd';
+for(const c of [{tier:2,mode:'warm',then:0},{tier:0,mode:'cold'},{tier:1,mode:'cold'},{tier:1,mode:'warm'},{tier:2,mode:'cold'},{tier:2,mode:'warm'},{tier:0,mode:'warm'}]){
+ const want=(c.then!=null?c.then:c.tier)<=1?'pub':'crowd';
  const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:1,userAgent:devices['iPhone 13'].userAgent});const p=await ctx.newPage();
  await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('tops_rebrand','1');const L=window.__B={starts:[],stops:[]};
@@ -31,12 +33,19 @@ for(const c of [{tier:0,mode:'cold'},{tier:1,mode:'cold'},{tier:1,mode:'warm'},{
  await p.locator('#rbGo').tap();
  for(let i=0;i<40;i++){await p.waitForTimeout(250);if(await p.evaluate(()=>__W!==null))break;}
  await p.waitForTimeout(12000);
+ if(c.then!=null){/* quit to the hub, the player is now at the Pub, Walk on again: the stadium take must go, only the pub set is held */
+  await p.evaluate(t=>{try{S.done=true;}catch(e){}try{V.teardownMatch&&V.teardownMatch();}catch(e){}career().tier=t;showHub();},c.then);await p.waitForTimeout(4000);
+  await p.evaluate(()=>{window.__W1=__W;window.__W=null;const f=()=>{if(V.walking&&V.walking()&&__W===null)__W=performance.now();if(__W===null)requestAnimationFrame(f);};requestAnimationFrame(f);});
+  await p.locator('#rbGo').tap();for(let i=0;i<40;i++){await p.waitForTimeout(250);if(await p.evaluate(()=>__W!==null))break;}await p.waitForTimeout(8000);}
  const r=await p.evaluate(()=>({W:__W,starts:__B.starts.map(e=>({set:e.set,t:Math.round(e.t),dur:Math.round(e.dur),end:e.end==null?null:Math.round(e.end)})),tier:document.body.dataset.tier,bed:window.TOPS_bed?TOPS_bed():null}));
  const W=r.W;const win=r.starts.filter(e=>W!=null&&e.t>=W-500&&e.t<=W+12000);const fails=[];
  win.forEach(e=>{if(e.set!==want)fails.push(e.set+' take at +'+Math.round(e.t-W)+' ms (venue wants '+want+')');});
  for(let i=1;i<win.length;i++){const a=win[i-1],x=win[i];const aEnd=Math.min(a.end==null?Infinity:a.end,a.t+a.dur);if(aEnd-x.t>1500)fails.push('two beds at once from +'+Math.round(x.t-W)+' ms ('+a.set+' still '+Math.round(aEnd-x.t)+' ms)');}
+ if(c.then!=null){r.starts.filter(e=>e.set!==want&&e.t<W).forEach(e=>{const end=Math.min(e.end==null?Infinity:e.end,e.t+e.dur);if(end>W+400)fails.push('the '+e.set+' take from the last match still plays '+Math.round(end-W)+' ms into this walk-on');});
+  if(!r.bed||r.bed[want==='pub'?'crowd':'pub']!==0)fails.push('the other venue\'s takes are still held: '+JSON.stringify(r.bed));}
+ if(r.bed&&r.bed[want==='pub'?'crowd':'pub']>0&&c.then==null)fails.push('both sets held: '+JSON.stringify(r.bed));
  if(c.mode==='warm'&&!(win.length&&win[0].t-W<=1500))fails.push('first take '+(win.length?Math.round(win[0].t-W)+' ms':'never')+' after the walk-on');
  if(W==null)fails.push('no walk-on');if(pe.length)fails.push('page errors '+pe.slice(0,2).join(' | '));
- res.push({case:'tier '+c.tier+' '+c.mode,want,firstTake:win.length?{set:win[0].set,at:Math.round(win[0].t-W)}:null,takes:win.map(e=>e.set+'@'+Math.round(e.t-W)+(e.end!=null&&e.end<e.t+e.dur?' (cut at +'+Math.round(e.end-W)+')':'')),bed:r.bed,ok:!fails.length,fails});await ctx.close();}
+ res.push({case:'tier '+c.tier+' '+c.mode+(c.then!=null?' then tier '+c.then:''),want,firstTake:win.length?{set:win[0].set,at:Math.round(win[0].t-W)}:null,takes:win.map(e=>e.set+'@'+Math.round(e.t-W)+(e.end!=null&&e.end<e.t+e.dur?' (cut at +'+Math.round(e.end-W)+')':'')),bed:r.bed,ok:!fails.length,fails});await ctx.close();}
 await b.close();srv.close();
 const ok=res.every(x=>x.ok);res.forEach(x=>console.log(JSON.stringify(x)));console.log(ok?'WALK-AMB PASS':'WALK-AMB FAIL');process.exit(ok?0:1);})();
