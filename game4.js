@@ -987,7 +987,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  // --- opponent
  let opp=null;const O={};
  let lastOpp=null,lastMe=null;
- let _chT=0;function charsChanged(){clearTimeout(_chT);_chT=setTimeout(()=>{try{if(lastMe)setPlayerLook(...lastMe);if(lastOpp)setOpponentLook(...lastOpp);if(lastTier>=0)buildVenue(lastTier);}catch(e){console.warn('chars',e);}try{if(window.__avPending){window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}}catch(e){}},120);}
+ let _chT=0;function charsChanged(){clearTimeout(_chT);_chT=setTimeout(()=>{/* ENG-7 (ChatGPT): checked again when the debounced rebuild runs: a file that landed in the hub just before Go would otherwise rebuild everything at the start of the match; then it waits for the hub */{const rs=document.getElementById('result');if((typeof S!=='undefined'&&S&&!S.done)||!!(rs&&!rs.hidden)){animsPend=true;return;}}try{if(lastMe)setPlayerLook(...lastMe);if(lastOpp)setOpponentLook(...lastOpp);if(lastTier>=0)buildVenue(lastTier);}catch(e){console.warn('chars',e);}try{if(window.__avPending){window.__avPending=0;document.dispatchEvent(new Event('tops-avatars'));}}catch(e){}},120);}
  /* #15: character templates (one GLB per character, ~5-8 MB of textures on phones) were kept for the whole session. After each
     opponent is set, free every template no live figure uses, keeping the player's and the opponent's (and remy, and any still loading).
     A freed one reloads on demand (loadChar only checks RIGS/RIG_WAIT). */

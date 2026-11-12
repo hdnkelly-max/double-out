@@ -45,7 +45,17 @@ const waitMe=async(p,k,ms)=>{const t0=Date.now();while(Date.now()-t0<ms){if(awai
  const during=await me(p);const live=await p.evaluate(()=>!!(S&&!S.done));
  await p.evaluate(()=>{try{quitMatch&&quitMatch();}catch(e){}showHub();});const ms=await waitMe(p,k,6000);
  out.match={key:k,held:H.hit,landedMs:landed,before,during,stillLive:live,afterHub:await me(p),hubMs:ms,pe};await ctx.close();}
+// race (ChatGPT P1): the file lands in the hub and Go is pressed within a few ms; the debounced rebuild (120 ms) must not run inside the match.
+// Signal: the venue's lights are rebuilt by every venue rebuild (clearGroup + new lights), so their objects must stay the same through the first 600 ms of the match.
+{const {ctx,p,pe,H,k}=await page();
+ await p.evaluate(k=>{save.authSeen=true;save.name='Lee';save.lessonDone=true;$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());V.walkOn=()=>{};showHub();
+  save.look=Object.assign({},save.look||{},{model:k});V.setPlayerLook(save.look,save.flight,'Lee',0);
+  window.__race=new Promise(res=>{const iv=setInterval(()=>{if(!TOPS_RIGS().ids.includes(k))return;clearInterval(iv);const t0=performance.now();
+   beginMatch({mode:'career',tier:0,p0:'Lee',oppKey:'Carl Maddox',oppName:'Carl Maddox',oppAvg:40,legs:3,start:501});const L=V._qa.lights;const u0=L.children.map(c=>c.uuid).join();
+   setTimeout(()=>res({lightsSame:L.children.map(c=>c.uuid).join()===u0,n:L.children.length,live:!!(S&&!S.done)}),600);},1);});},k);
+ await p.waitForTimeout(1000);H.rel();const r=await p.evaluate(()=>window.__race);
+ out.race=Object.assign({key:k,held:H.hit},r,{pe});await ctx.close();}
 await b.close();srv.close();
-const c=out.creator,t=out.title,m=out.match;
-const ok=c.tapped&&c.held&&c.before===0&&c.swapMs>=0&&t.held&&t.before===0&&t.swapMs>=0&&m.held&&m.landedMs>=0&&m.stillLive&&m.before===0&&m.during===0&&m.hubMs>=0&&!c.pe.length&&!t.pe.length&&!m.pe.length;
+const c=out.creator,t=out.title,m=out.match,rc=out.race;
+const ok=c.tapped&&c.held&&c.before===0&&c.swapMs>=0&&t.held&&t.before===0&&t.swapMs>=0&&m.held&&m.landedMs>=0&&m.stillLive&&m.before===0&&m.during===0&&m.hubMs>=0&&rc.held&&rc.live&&rc.lightsSame&&!rc.pe.length&&!c.pe.length&&!t.pe.length&&!m.pe.length;
 console.log(JSON.stringify(out));console.log(ok?'CHAR-SCREENS PASS':'CHAR-SCREENS FAIL');process.exit(ok?0:1);})();
