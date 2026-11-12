@@ -305,7 +305,13 @@ function speechWarm(){if(speechWarm.done||!('speechSynthesis'in window))return;s
 function audioWarm(){if(audioWarm.done||!AU.ctx)return;audioWarm.done=true;setTimeout(()=>{try{[.5,.7,1,1.3,1.5,2,2.2,2.6].forEach(d=>swBuf(AU.ctx,d));[.05,.06,.08,.12,.5].forEach(d=>nbBuf(AU.ctx,d));}catch(e){}},300);}
 /* #20 (Overseer 07:59): what the audio graph is doing, logged once per match in dev.t20.cnt.au: [sources playing now, sources started since
    the last read, the context's state]. Counting only: a start() is passed straight through. */
-{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start'))return;const st=P.start;P.start=function(){try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}return st.apply(this,arguments);};};
+{const AUC=window.__AUC={live:0,started:0};const wrap=P=>{if(!P||!Object.prototype.hasOwnProperty.call(P,'start')||P.start.__auc)return;const st=P.start;P.start=function(){if(this.__aucS)return st.apply(this,arguments);this.__aucS=1;try{AUC.live++;AUC.started++;let done=false;this.addEventListener('ended',()=>{if(!done){done=true;AUC.live--;}},{once:true});}catch(e){}
+   const r=st.apply(this,arguments);
+   /* #20 'no game audio': a sound started while the muted match's context is suspended would wait in the queue and play, with every other one,
+      the moment the hub resumes the context (ChatGPT P1). It is stopped at once and later stop() calls on it are ignored, so it never sounds. */
+   try{if(window.TOPS_muteOn&&TOPS_muteOn()){this.__q20k=1;SP0.call(this,0);}}catch(e){}return r;};P.start.__auc=1;};
+ const SSN=window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype,SP0=SSN&&SSN.stop;
+ if(SSN&&SP0){SSN.stop=function(){if(this.__q20k)return;return SP0.apply(this,arguments);};}
  try{wrap(window.AudioScheduledSourceNode&&AudioScheduledSourceNode.prototype);wrap(window.AudioBufferSourceNode&&AudioBufferSourceNode.prototype);wrap(window.OscillatorNode&&OscillatorNode.prototype);}catch(e){}
  window.TOPS_AU=()=>{const r=[AUC.live,AUC.started,AU.ctx?AU.ctx.state:'none'];AUC.started=0;return r;};}
 function audioInit(){speechWarm();setTimeout(audioWarm,0);if(AU.ctx)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?1:0;AU.master.connect(c.destination);
@@ -3217,10 +3223,12 @@ window.TOPS_matchTeardown=matchTeardown;
     caller, effects, walk-on song). Also a hub Menu row now (the home-screen app can't take a URL). Read at each match start. Before, a tap on the
     pull pad resumed the context in the match (the pad's own unlock), so the URL switch only muted until the first throw: resume() is held off
     while a muted match is live. */
- {const muteOn=()=>!!(window.TOPS_q20has&&TOPS_q20has('mute')&&typeof S!=='undefined'&&S&&!S.done);
-  const hold=()=>{try{const c=AU&&AU.ctx;if(!c||c.__q20m)return;c.__q20m=1;const r=c.resume.bind(c);c.__q20r=r;c.resume=function(){if(muteOn())return Promise.resolve();return r();};}catch(e){}};
-  const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{hold();if(muteOn()&&AU.ctx&&AU.ctx.state!=='closed')AU.ctx.suspend();}catch(e){}return r;};
-  const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{const c=AU&&AU.ctx;if(c&&c.__q20r&&c.state!=='running'&&TOPS_q20has('mute'))c.__q20r().catch(()=>{});}catch(e){}return r;};}
+ {const muteOn=()=>!!(window.TOPS_q20has&&TOPS_q20has('mute')&&typeof S!=='undefined'&&S&&!S.done);window.TOPS_muteOn=muteOn;
+  /* the instance's resume() is held off only while a muted match is live, and put back as soon as the switch is off */
+  const hold=()=>{try{const c=AU&&AU.ctx;if(!c||c.__q20r)return;const r=c.resume.bind(c);c.__q20r=r;c.resume=function(){if(muteOn())return Promise.resolve();return r();};}catch(e){}};
+  const unhold=()=>{try{const c=AU&&AU.ctx;if(c&&c.__q20r){c.resume=c.__q20r;delete c.__q20r;}}catch(e){}};
+  const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{if(muteOn()){hold();if(AU.ctx&&AU.ctx.state!=='closed'){const p=AU.ctx.suspend();if(p&&p.catch)p.catch(()=>{});}}else unhold();}catch(e){}return r;};
+  const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{const c=AU&&AU.ctx;const r0=c&&c.__q20r;if(!TOPS_q20has('mute'))unhold();if(r0&&c.state!=='running'&&c.state!=='closed')r0().catch(()=>{});}catch(e){}return r;};}
  if(has('fresh')){let played=0;const bm=beginMatch;beginMatch=function(){played++;return bm.apply(this,arguments);};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{if(played>=1&&!window.__hubSoft&&!sessionStorage.getItem('tops_q20_fresh')&&S&&S.done){sessionStorage.setItem('tops_q20_fresh','1');try{persist();}catch(e){}setTimeout(()=>location.reload(),400);}}catch(e){}return r;};}
 }
 </script>
