@@ -62,7 +62,7 @@
 
   // ---- particles over the board pane ----
   function drop(o) { PF.parts.push(Object.assign({ t0: now(), age: 0 }, o)); kick(); }
-  function kick() { if (!PF.raf) { PF.last = now(); PF.raf = requestAnimationFrame(tick); } }
+  function kick() { if (cv) cv.style.display = ''; if (!PF.raf) { PF.last = now(); PF.raf = requestAnimationFrame(tick); } }
   function tick(t) {
     PF.raf = 0; if (!cv) return;
     const dt = Math.min(.05, (t - PF.last) / 1000); PF.last = t;
@@ -71,7 +71,7 @@
     PF.on.forEach(e => draw(e, W, H, t));
     PF.parts = PF.parts.filter(p => (p.age += dt) < p.life);
     PF.parts.forEach(p => part(p, W, H, dt));
-    if (PF.on.length || PF.parts.length || PF.cam.length) PF.raf = requestAnimationFrame(tick);
+    if (PF.on.length || PF.parts.length || PF.cam.length) PF.raf = requestAnimationFrame(tick); else cv.style.display = 'none'; /* #20: idle canvas out of the page (no compositing layer over the 3D view) */
   }
   function part(p, W, H, dt) {
     const k = p.age / p.life;

@@ -45,9 +45,9 @@ window.TC_FX = (function () {
       else { cx.globalCompositeOperation = 'source-over'; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot += p.vr * dt); cx.fillStyle = rgba(p.c, a); cx.fillRect(-p.s, -p.s * .4, p.s * 2, p.s * .8); cx.restore(); cx.globalCompositeOperation = 'lighter'; }
     });
     cx.globalCompositeOperation = 'source-over';
-    if (parts.length || beams.length || flashes.length) raf = requestAnimationFrame(loop); else { raf = 0; last = 0; cx.clearRect(0, 0, W, H); }
+    if (parts.length || beams.length || flashes.length) raf = requestAnimationFrame(loop); else { raf = 0; last = 0; cx.clearRect(0, 0, W, H); cv.style.display = 'none'; /* #20: an idle full-screen canvas above the 3D view still costs a compositing pass every frame on iPhone; out of the page until the next effect */ }
   }
-  function kick() { ensure(); if (!raf) raf = requestAnimationFrame(loop); }
+  function kick() { ensure(); cv.style.display = ''; if (!raf) raf = requestAnimationFrame(loop); }
   const HEX = {}; function rgb(h) { if (HEX[h]) return HEX[h]; const n = parseInt(h.slice(1), 16); return HEX[h] = [n >> 16 & 255, n >> 8 & 255, n & 255]; }
   function rgba(h, a) { const c = rgb(h); return `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`; }
   // lightning: wide blue bloom, white-hot core, and two or three forking branches
