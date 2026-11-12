@@ -10,8 +10,8 @@ const {chromium,devices}=require('playwright');(async()=>{const dir=process.argv
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--allow-file-access-from-files']});
 const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,userAgent:devices['iPhone 13'].userAgent});const p=await ctx.newPage();
 await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());const pe=[];p.on('pageerror',e=>pe.push(e.message));
-await p.addInitScript(()=>{/* a phone's DeviceOrientationEvent with no permission prompt (Android-style), and a count of live sensor listeners */
-  window.DeviceOrientationEvent=window.DeviceOrientationEvent||function(){};window.__GL=0;const A=EventTarget.prototype.addEventListener,R=EventTarget.prototype.removeEventListener;
+await p.addInitScript(()=>{/* iOS-style DeviceOrientationEvent (permission granted on the first pick tap), and a count of live sensor listeners */
+  window.DeviceOrientationEvent=window.DeviceOrientationEvent||function(){};window.DeviceOrientationEvent.requestPermission=()=>Promise.resolve('granted');/* as iOS after the player allows motion */window.__GL=0;const A=EventTarget.prototype.addEventListener,R=EventTarget.prototype.removeEventListener;
   EventTarget.prototype.addEventListener=function(t){if(this===window&&t==='deviceorientation')__GL++;return A.apply(this,arguments);};
   EventTarget.prototype.removeEventListener=function(t){if(this===window&&t==='deviceorientation')__GL--;return R.apply(this,arguments);};});
 await p.goto('file://'+dir+'/index.html');
@@ -52,7 +52,7 @@ chk('gyro: sensor listener removed when the pack closes',g.listenersAfter===0);
 chk('dart cache capped (<=16 of 60)',out.dart.n!=null&&out.dart.n<=16);
 chk('dart cache: newest still a hit (<2 ms)',out.dart.hit<2);
 chk('frame: #fx not cleared every frame with no particles',out.frame.frames>5&&out.frame.clears<=1);
-chk('frame: #nerve style not rewritten every frame',out.frame.nerveWrites<=2);
+chk('frame: #nerve style not rewritten every frame',out.frame.nerveWrites<=2);/* Chromium records no mutation for a same-value style write, so this can't fail on live here; it guards against a regression */
 chk('kitPts: same kit -> same cached result',out.kit.sameObj);
 chk('kitPts: kit change -> new values, and back',out.kit.back&&out.kit.barrelChanges&&out.kit.flightChanges);
 chk('no page errors',!pe.length);
