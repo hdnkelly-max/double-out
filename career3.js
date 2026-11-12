@@ -265,7 +265,7 @@ const LUX_T=3;
 function luxOpen(){const c=career();return !!(c&&!c.run&&c.tier>=LUX_T);}
 function luxSt(){const c=career();if(!c||c.run)return null;if(!c.lux)c.lux={owned:[],at:{}};return c.lux;}
 function kitAtRisk(cost){const c=career();const G=window.TOPS_GATE;if(!c||!G||typeof BARRELS==='undefined')return [];const bank=c.bank||0;
- return BARRELS.filter(b=>(G.LV[b.id]||1)>1&&!save.owned.includes(b.id)&&!G.gateBarrel(b)).filter(b=>{const p=price(b.price);return p<=bank&&bank-cost<p;}).map(b=>b.n);}
+ return BARRELS.filter(b=>(G.LV[b.id]||1)>1&&!save.owned.includes(b.id)&&!G.gateBarrel(b)).filter(b=>{const p=price(b.price);return p<=bank&&bank-cost<p;}).map(b=>({id:b.id,n:b.n,price:price(b.price)}));}/* names and costs for the confirm (S3 calls buy(id,true) only after an explicit second tap) */
 function luxBuy(id,force){const c=career(),L=luxSt();const it=LUX.find(x=>x.id===id);if(!it||!L)return {err:'item'};if(!luxOpen())return {err:'tier'};
  if(L.owned.includes(id))return {err:'owned'};if((c.bank||0)<it.price)return {err:'bank'};const risk=kitAtRisk(it.price);if(risk.length&&!force)return {err:'kit',kit:risk};
  c.bank-=it.price;L.owned.push(id);L.at[id]=Date.now();if(it.k==='edition')L.edition=save.barrel;try{persist();}catch(e){}return {ok:1,item:it};}

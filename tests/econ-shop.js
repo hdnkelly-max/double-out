@@ -14,7 +14,7 @@ const {chromium}=require('playwright');const path=require('path');
   const before=tp();
   // kit first: an unlocked, unowned level-gated barrel affordable now
   const G=TOPS_GATE;const gated=BARRELS.filter(b=>(G.LV[b.id]||1)>1);const v=C3.V3();v.lv=50;const bb=gated.filter(b=>!G.gateBarrel(b)).sort((x,y)=>price(y.price)-price(x.price))[0];save.owned=save.owned.filter(id=>id!==bb.id);
-  const bp=price(bb.price);c.bank=Math.max(bp,2000)+500;/* can buy the clinic, but then not the barrel */out.kit={barrel:bb.n,bp,res:X.buy('coach_doubles')};out.kitForce=X.buy('coach_doubles',true);out.bankAfter=c.bank;
+  const bp=price(bb.price);c.bank=Math.max(bp,2000)+500;/* can buy the clinic, but then not the barrel */out.kit={barrel:bb.n,bp,res:X.buy('coach_doubles')};out.kitForce=X.buy('coach_doubles',true);c.lux.owned=[];c.bank=bp+2000;out.edge=X.buy('coach_doubles');/* exactly the barrel's price left after: no warning (ChatGPT P1) */c.lux.owned=['coach_doubles'];out.bankAfter=c.bank;
   // plenty of cash: buy everything once
   save.owned=save.owned.concat(gated.map(b=>b.id));c.bank=100000;const res=['coach_doubles','coach_scoring','coach_pro','walkon_prod','kit_edition'].map(id=>[id,X.buy(id).err||'ok']);out.all=res;out.spent=100000-c.bank;out.again=X.buy('coach_pro').err;
   out.badges=X.badges();out.sets=X.sets();out.edition=X.edition();
@@ -24,7 +24,8 @@ const {chromium}=require('playwright');const path=require('path');
  const f=[];const eq=(a,b,m)=>{if(JSON.stringify(a)!==JSON.stringify(b))f.push(m+': '+JSON.stringify(a)+' want '+JSON.stringify(b));};
  eq(r.reg.open,false,'shut at Regional');eq(r.reg.buy,'tier','Regional buy refused');eq(r.reg.bank,50000,'Regional bank untouched');
  eq(r.dpnz.open,true,'open at DPNZ');eq(r.dpnz.items,[['coach_doubles',2000],['coach_scoring',6000],['coach_pro',15000],['walkon_prod',3000],['kit_edition',8000]],'catalogue');
- eq(r.kit.res.err,'kit','gated kit asks first');if(!(r.kit.res.kit||[]).includes(r.kit.barrel))f.push('kit warning names the barrel: '+JSON.stringify(r.kit));eq(r.kitForce.ok,1,'force buys');
+ eq(r.kit.res.err,'kit','gated kit asks first');if(!(r.kit.res.kit||[]).some(k=>k.n===r.kit.barrel&&k.price===r.kit.bp))f.push('kit warning names the barrel: '+JSON.stringify(r.kit));eq(r.kitForce.ok,1,'force buys');
+ eq(r.edge.ok,1,'no warning when exactly the barrel price is left');
  eq(r.all.map(x=>x[1]),['owned','ok','ok','ok','ok'],'buy everything once (doubles already owned)');eq(r.spent,15000+6000+3000+8000,'spent');eq(r.again,'owned','owned once');
  eq(r.badges.sort(),['camp','clinic','pro'],'badges');eq(r.sets.sort(),['doubles','pro','scoring'],'challenge sets');if(!r.edition)f.push('kit edition records the barrel');
  eq(r.poor,'bank','not enough cash refused');eq(r.rt,true,'save round-trip keeps purchases');eq(r.same,true,'throw unchanged after buying everything');
