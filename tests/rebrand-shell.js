@@ -32,7 +32,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.evaluate(() => { const c = career(); c.wins = 3; c.losses = 2; c.pts = 2400; c.darts = 150; c.tierAvgs = [41.2, 45.8, 39.9, 48.3]; c.best = { avg: 52.1, hf: 88, leg: 21, visit: 140 }; TOPS_st(); if (!save.st2) TOPS_ST2_API.spend && 0; persist(); });
       await p.evaluate(() => { if (!save.st2) { try { TOPS_spend('sc'); } catch (e) {} } save.st2.bank = 2; persist(); });
       await p.click('#rbTabs [data-t="locker"]'); await p.waitForTimeout(600);
-      r.locker = await p.evaluate(() => ({ stats: document.querySelectorAll('#rbApp .rb-stt').length, plus: [...document.querySelectorAll('#rbApp .rb-plus')].filter(b => !b.disabled).length, kit: document.querySelectorAll('#rbApp .rb-g2 .rb-card').length, ring: !!document.querySelector('#rbApp .rb-ring svg'), sc0: save.st2.v.sc, bank0: save.st2.bank }));
+      r.locker = await p.evaluate(() => ({ stats: document.querySelectorAll('#rbApp .rb-stt').length, plus: [...document.querySelectorAll('#rbApp .rb-plus')].filter(b => !b.disabled).length, kit: document.querySelectorAll('#rbApp .rb-g2 .rb-card').length, ring: !!document.querySelector('#rbApp .rb-ring b'), sc0: save.st2.v.sc, bank0: save.st2.bank }));
       await p.screenshot({ path: path.join(dir, `tests/rb_locker_${W}.png`), fullPage: false });
       await p.click('#rbApp [data-st="sc"]'); await p.waitForTimeout(300);
       r.locker.after = await p.evaluate(() => ({ sc: save.st2.v.sc, bank: save.st2.bank, chip: (document.querySelector('#rbApp .rb-chip.rb-g') || {}).textContent || '' }));
