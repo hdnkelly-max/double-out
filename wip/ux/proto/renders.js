@@ -24,7 +24,7 @@ const dir = process.argv[2], out = path.join(__dirname, 'img');
     tryit('me_hero', () => V.heroShot(save.look, 'Hayden', 1));
     tryit('mal_hero', () => V.heroShot(mal, 'Big Mal', 1));
     const bar = id => (typeof BARRELS !== 'undefined' ? BARRELS.find(x => x.id === id) : null);
-    ['razor', 'assassin', 'zen', 'vapor8', 'asp'].forEach(id => tryit('dart_' + id, () => V.dartShot(save.flight, Object.assign(setupParts(), { barrel: bar(id) }))));
+    ['razor', 'assassin', 'zen', 'vapor8', 'asp', 'supergrip'].forEach(id => tryit('dart_' + id, () => V.dartShot(save.flight, Object.assign(setupParts(), { barrel: bar(id) }))));
     return o;
   });
   const sizes = {};
