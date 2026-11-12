@@ -1,0 +1,316 @@
+<title>TOPS Career Screens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone (390 wide, 844 tall) centred on a dark desk; tier-2 calm frame: flat graphite panels, hairline borders,
+   real game renders inside panel frames, red only on the one primary button and the active main tab. Single dark look by design. */
+:root{
+  --desk:#0b0d0f; --bg:#14171a; --panel:#1c2024; --panel2:#22272c; --line:#3a4043; --ink:#f2f3f1; --ink2:#b7bdb9; --ink3:#868d89;
+  --red:#d7232d; --red2:#b81c25; --good:#8fc49a; --badge:#5b6266;
+  --display:"Barlow Condensed","Arial Narrow",Impact,sans-serif; --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--desk);color:var(--ink);font-family:var(--body);font-size:14px;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px;
+  display:flex;flex-direction:column;align-items:center;gap:14px}
+.note{max-width:390px;width:100%;color:var(--ink3);font-size:12px;line-height:1.5}
+.note b{color:var(--ink2);font-weight:600}
+.phone{position:relative;width:390px;max-width:100%;height:844px;background:var(--bg);border:1px solid #2a2f33;border-radius:28px;overflow:hidden;display:flex;flex-direction:column}
+@media (max-width:430px){body{padding:0}.phone{width:100%;height:100%;border:0;border-radius:0}.note{display:none}}
+/* header 56 */
+.hd{height:56px;flex:0 0 56px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line)}
+.wm{font-family:var(--display);font-weight:800;font-style:italic;font-size:22px;letter-spacing:.5px}
+.sep{width:1px;height:22px;background:var(--line)}
+.nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lv{display:flex;flex-direction:column;gap:3px;flex:1;min-width:56px;cursor:pointer}
+.lv small{font-size:12px;font-weight:600;color:var(--ink2)}
+.bar{height:4px;background:#2c3236;border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;background:var(--good);border-radius:2px}
+.bank{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.icon{position:relative;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;color:var(--ink);cursor:pointer;padding:0}
+.icon svg{width:22px;height:22px}
+.icon .b{position:absolute;top:7px;right:5px;min-width:16px;height:16px;border-radius:8px;background:var(--badge);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+/* tabs 46 */
+.tabs{height:46px;flex:0 0 46px;display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;color:var(--ink3);font-family:var(--display);font-weight:700;font-size:12.5px;letter-spacing:.3px;text-transform:uppercase;cursor:pointer;position:relative;padding:0;min-width:0}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;background:var(--red);border-radius:2px}
+.sub{height:38px;flex:0 0 38px;display:flex;margin:10px 16px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sub button{flex:1;background:none;border:0;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer}
+.sub button[aria-selected="true"]{background:var(--panel2);color:var(--ink)}
+/* body */
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;padding:12px 16px 24px}
+.scr[hidden]{display:none}
+.scr>*{flex-shrink:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.hero{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0e1012;flex:0 0 auto}
+.hero .img{position:absolute;inset:0;background-size:cover;background-position:center}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,12,14,0) 35%,rgba(10,12,14,.92) 100%)}
+.hero .txt{position:absolute;left:14px;right:14px;bottom:12px;display:flex;flex-direction:column;gap:2px}
+.kick{font-size:11.5px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink2)}
+.h1{font-family:var(--display);font-weight:800;font-size:36px;line-height:1;letter-spacing:.3px;text-transform:uppercase;text-wrap:balance}
+.lead{font-size:14px;color:var(--ink2)}
+.primary{height:56px;flex:0 0 56px;width:100%;border:0;border-radius:10px;background:var(--red);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.primary:hover{background:var(--red2)}
+.primary b{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:1px;text-transform:uppercase;line-height:1}
+.primary small{font-size:12px;opacity:.9}
+.line{font-size:15px;font-weight:500;text-align:center;font-variant-numeric:tabular-nums}
+.meta{font-size:13px;color:var(--ink3);text-align:center;background:none;border:0;cursor:pointer;min-height:32px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{padding:12px;display:flex;flex-direction:column;gap:4px;min-height:96px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.tile .t{font-family:var(--display);font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:.4px}
+.tile .s{font-size:13px;color:var(--ink2)}
+.tile img{width:105px;height:30px;object-fit:contain;object-position:left center;align-self:flex-start;margin-top:auto}
+button.panel{color:var(--ink);font:inherit}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.link{background:none;border:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-size:14px;cursor:pointer;min-height:36px}
+/* opponent portrait inside Tonight hero */
+.opp{position:absolute;right:0;bottom:0;height:88%;aspect-ratio:4/5;background-size:contain;background-repeat:no-repeat;background-position:right bottom;max-width:100%}
+/* shop */
+.prod{display:grid;place-items:start center;padding-top:30px;background:radial-gradient(ellipse at 50% 32%,#2c3237 0%,#121417 68%)}
+.prod img{width:min(330px,88%);max-width:100%;transform:rotate(-9deg);filter:drop-shadow(0 16px 14px rgba(0,0,0,.65))}
+.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px;align-self:flex-start;background:rgba(20,23,26,.7)}
+.cmp{padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.cmp h3{margin:0;font-size:13px;color:var(--ink2);font-weight:600}
+.cmp div{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
+.up{color:var(--good);font-weight:700}.neutral{color:var(--ink3)}
+.strip{display:flex;align-items:center;gap:6px}
+.strip .arr{width:32px;height:78px;flex:0 0 32px}
+.thumbs{display:flex;gap:8px;flex:1;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.thumbs::-webkit-scrollbar{display:none}
+.th{flex:0 0 calc((100% - 24px)/4);height:78px;scroll-snap-align:start;border:1px solid var(--line);border-radius:8px;background:var(--panel);display:grid;place-items:center;position:relative;cursor:pointer;padding:0;min-width:0}
+.th img{width:88%;height:44%;object-fit:contain;margin-bottom:16px}
+.th[aria-pressed="true"]{border-color:#fff}
+.th small{position:absolute;bottom:5px;left:0;right:0;font-size:12px;color:var(--ink2);text-align:center}
+.th.lock img{opacity:.35}
+.lockline{font-size:14px;color:var(--ink2);text-align:center;display:flex;flex-direction:column;gap:2px;align-items:center;min-height:56px;justify-content:center}
+.lockline b{color:var(--ink);font-weight:600}
+/* locker */
+.me{display:flex;align-items:flex-end}
+.me .fig{position:absolute;right:6px;bottom:0;height:100%;aspect-ratio:4/5;background-size:contain;background-repeat:no-repeat;background-position:right bottom}
+.setbar{padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px}
+.setbar .bar{flex:1}
+.packs{padding:8px 8px 8px 14px;display:flex;align-items:center;gap:10px}
+.packs .t{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.4px;flex:1}
+.packs .primary{width:112px;flex:0 0 112px;height:48px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:#596066}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.card{aspect-ratio:2/3;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#101214;position:relative;max-width:100%}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.card.out{display:grid;place-items:center;color:#4a5155;font-family:var(--display);font-weight:700;font-size:18px}
+.card .n{position:absolute;left:0;right:0;bottom:0;height:24px;line-height:24px;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(12,14,16,.86);border-top:1px solid rgba(255,255,255,.06)}
+/* result */
+.res .vs{position:absolute;inset:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:end}
+.res .p{height:88%;background-size:contain;background-repeat:no-repeat;background-position:bottom}
+.res .score{align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;width:116px;text-align:center;background:radial-gradient(ellipse at 50% 50%,rgba(8,10,12,.85) 0%,rgba(8,10,12,.55) 55%,rgba(8,10,12,0) 80%);position:relative;z-index:1}
+.res .score b{font-family:var(--display);font-weight:800;font-size:54px;line-height:.9;display:block;font-variant-numeric:tabular-nums}
+.res .score small{font-size:18px;font-weight:600;letter-spacing:2px;color:var(--ink);text-transform:uppercase}
+.rw{display:flex;flex-direction:column;gap:8px}
+.rw h3{margin:2px 0 0;font-size:11.5px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1.6fr;gap:0}
+.two>div{padding:10px 14px;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:52px}
+.two>div+div{border-left:1px solid var(--line)}
+.cash{font-family:var(--display);font-weight:800;font-size:24px;color:var(--good)}
+.xp{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+.r{min-height:48px;padding:0 14px;display:flex;align-items:center;gap:10px;font-size:14px}
+.r img{height:22px}
+.r .sp{flex:1}
+.ghost{height:34px;padding:0 14px;border-radius:8px;border:1px solid #6b7276;background:none;color:var(--ink);font-weight:600;cursor:pointer}
+.pin{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding-top:12px;margin-top:auto}
+/* toast */
+.toast{position:absolute;left:16px;right:16px;bottom:24px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.legend{max-width:390px;width:100%;display:flex;flex-wrap:wrap;gap:6px}
+.legend button{height:32px;padding:0 12px;border-radius:16px;border:1px solid #2a2f33;background:#15181b;color:var(--ink2);font-size:12px;cursor:pointer}
+@media (max-width:430px){.legend{display:none}}
+</style>
+
+<p class="note"><b>TOPS · career screens, round 2.</b> Clickable at real phone size (390 × 844). Every picture is rendered by the game itself: venue stills from our 3D rooms, players from our rigs, darts from the dart renderer. Tap the tabs, Walk on, Buy, Open and Continue.</p>
+<div class="legend" aria-label="Prototype states">
+  <button type="button" data-state="first">First match</button>
+  <button type="button" data-state="broke">Can't afford entry</button>
+  <button type="button" data-state="normal">Normal</button>
+</div>
+
+<div class="phone" id="phone">
+  <header class="hd">
+    <span class="wm">TOPS</span><span class="sep"></span>
+    <span class="nm">Hayden</span>
+    <div class="lv" id="lvBtn" role="button" tabindex="0" aria-label="Level 14, open Locker"><small id="lvTxt">Lv 14</small><div class="bar"><i id="lvBar" style="width:62%"></i></div></div>
+    <span class="bank" id="bank">$640</span>
+    <button class="icon" type="button" id="msgBtn" aria-label="3 new messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="b" id="msgN">3</span></button>
+    <button class="icon" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-tab="tonight" aria-selected="true">Tonight</button>
+    <button role="tab" data-tab="season" aria-selected="false">Season</button>
+    <button role="tab" data-tab="shop" aria-selected="false">Shop</button>
+    <button role="tab" data-tab="locker" aria-selected="false">Locker</button>
+    <button role="tab" data-tab="practice" aria-selected="false">Practice</button>
+  </nav>
+
+  <!-- TONIGHT -->
+  <section class="scr" data-scr="tonight">
+    <div class="hero" style="height:265px">
+      <div class="img" style="background-image:url(img/venue_club.jpg)"></div>
+      <div class="opp" style="background-image:url(img/mal_hero.png)"></div>
+      <div class="shade"></div>
+      <div class="txt"><span class="kick" id="tKick">Club singles · Week 5 of 8</span><span class="h1">vs Big Mal</span><span class="lead" id="tStake">Win: a place in the team</span></div>
+    </div>
+    <div class="line" id="tForm">You 47 (last 10) · Him 42 · Best of 3</div>
+    <button class="primary" type="button" id="walkOn"><b>Walk on</b><small id="tEntry">Entry $40</small></button>
+    <button class="meta" type="button" data-go="season" id="tSeason">Week 5 of 8 · 3rd · 2 pts off 2nd ›</button>
+    <div class="row2" id="tTiles">
+      <button class="panel tile" type="button" id="moneyTile"><span class="t">Money match</span><span class="s">Back room · $100</span></button>
+      <button class="panel tile" type="button" data-go="shop"><span class="t">Next dart</span><span class="s">Razor Edge · Lv 15</span><img src="img/dart_razor_t.png" alt=""></button>
+    </div>
+    <div class="meta" id="tGoal" style="margin-top:auto">Goal: average 61+ → $40</div>
+  </section>
+
+  <!-- SEASON (out of this round's scope: a stub so the tab answers) -->
+  <section class="scr" data-scr="season" hidden>
+    <div class="panel" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+      <span class="kick">Season · not in this round</span>
+      <span class="h1" style="font-size:28px">3rd · 2 pts off 2nd</span>
+      <span class="lead">Top two go up. The table, the road to the Palace and the trophy cabinet live here in round 3.</span>
+    </div>
+  </section>
+
+  <!-- SHOP -->
+  <section class="scr" data-scr="shop" hidden>
+    <div class="sub" role="tablist" style="margin:0"><button aria-selected="true">Darts</button><button aria-selected="false">Shafts &amp; flights</button><button aria-selected="false">Shirts</button></div>
+    <div class="hero prod" style="height:240px">
+      <img id="sImg" src="img/dart_razor_t.png" alt="Razor Edge dart">
+      <div class="shade" style="background:linear-gradient(180deg,transparent 55%,rgba(10,12,14,.9))"></div>
+      <div class="txt"><span class="badge" id="sBadge">NEW · LV 15</span><span class="h1" id="sName">Razor Edge 24g</span><span class="lead" id="sLine">Sharp razor grip, 85% tungsten</span></div>
+    </div>
+    <div class="panel cmp" id="sCmp"></div>
+    <div id="sAct"></div>
+    <div class="strip">
+      <button class="icon arr" type="button" id="sPrev" aria-label="Previous dart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 5-7 7 7 7"/></svg></button>
+      <div class="thumbs" id="sThumbs"></div>
+      <button class="icon arr" type="button" id="sNext" aria-label="Next dart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg></button>
+    </div>
+  </section>
+
+  <!-- LOCKER / CARDS -->
+  <section class="scr" data-scr="locker" hidden>
+    <div class="sub" role="tablist" style="margin:0"><button aria-selected="false">Loadout</button><button aria-selected="true">Cards</button><button aria-selected="false">Stats</button><button aria-selected="false">Trophies</button></div>
+    <div class="hero me" style="height:140px">
+      <div class="img" style="background-image:url(img/venue_regional.jpg);opacity:.45"></div>
+      <div class="fig" style="background-image:url(img/me_hero.png)"></div>
+      <div class="shade" style="background:linear-gradient(90deg,rgba(10,12,14,.85) 0%,rgba(10,12,14,.2) 70%)"></div>
+      <div class="txt" style="right:45%"><span class="h1" style="font-size:30px">Hayden</span><span class="lead">The Fill-in · Lv 14</span></div>
+    </div>
+    <div class="panel packs" id="packRow"><span class="t" id="packTxt">3 packs waiting</span><button class="primary" type="button" id="openPack"><b>Open</b></button></div>
+    <div class="panel setbar"><span>Closest set: Kiwi Pub Life</span><div class="bar"><i style="width:78%"></i></div><span style="font-variant-numeric:tabular-nums">7/9</span></div>
+    <div class="chips" role="group" aria-label="Filter cards"><button aria-pressed="true">All · 37/142</button><button>Regulars</button><button>Venues</button><button>Moments</button><button>Disasters</button><button>Kit</button><button>House rules</button></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- PRACTICE (stub) -->
+  <section class="scr" data-scr="practice" hidden>
+    <div class="panel" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+      <span class="kick">Practice · not in this round</span>
+      <span class="h1" style="font-size:28px">Round the clock doubles</span>
+      <span class="lead">Your doubles are 14 %. Free to play, a little XP every session (capped).</span>
+    </div>
+  </section>
+
+  <!-- RESULT (no tab rail) -->
+  <section class="scr res" data-scr="result" hidden>
+    <div class="hero" style="height:250px">
+      <div class="img" style="background-image:url(img/venue_club.jpg);opacity:.38"></div>
+      <div class="vs"><div class="p" style="background-image:url(img/me_hero.png)"></div><div class="score"><small id="rWho">Won</small><b id="rScore">2–1</b></div><div class="p" id="rThem" style="background-image:url(img/mal_hero.png);transform:scaleX(-1);filter:brightness(.5) saturate(.6)"></div></div>
+    </div>
+    <div class="line" id="rLine">You 51 · Him 44 · Checkout 38%</div>
+    <div class="rw">
+      <h3>Rewards</h3>
+      <div class="panel two"><div><span class="cash" id="rCash">+$55</span></div><div><div class="xp"><span id="rXp">+240 XP</span><span>Lv 14</span></div><div class="bar"><i style="width:78%"></i></div></div></div>
+      <div class="panel r"><img src="img/dart_razor_t.png" alt=""><span class="sp" id="rWant">Razor Edge: $45 to go</span></div>
+      <div class="panel r"><span class="sp">🂠 1 card pack</span><button class="ghost" type="button" id="rOpen">Open</button></div>
+      <div class="panel r"><span class="sp" id="rSeason">Now 2nd · top two go up</span></div>
+    </div>
+    <button class="meta" type="button" id="rMsgs">✉ 2 new · See all stats ›</button>
+    <div class="pin"><button class="primary" type="button" id="cont"><b>Continue</b></button></div>
+  </section>
+
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const st={bank:640,owned:{assassin:1},sel:'supergrip',packs:3,first:false,broke:false};
+const DARTS=[
+ {id:'assassin',n:'Club Brass 22g',line:'Your starter set. Brass, 22 g.',lv:1,price:0,img:'dart_assassin_t.png',sc:0,co:0,w:22},
+ {id:'supergrip',n:'Supergrip Ultra 22g',line:'Knurled grip that holds in a sweaty hand',lv:8,price:95,img:'dart_supergrip_t.png',sc:2,co:3,w:22,isNew:1},
+ {id:'razor',n:'Razor Edge 24g',line:'Sharp razor grip, 85% tungsten',lv:15,price:120,img:'dart_razor_t.png',sc:4,co:5,w:24},
+ {id:'vapor8',n:'Vapor8 21g',line:'Slim, light, quick through the air',lv:18,price:150,img:'dart_vapor8_t.png',sc:5,co:3,w:21},
+ {id:'zen',n:'Zen Jutsu 23g',line:'Ringed grip, settled flight',lv:25,price:170,img:'dart_zen_t.png',sc:7,co:7,w:23},
+ {id:'asp',n:'Asp G2 24g',line:'Front-weighted, built for treble 20',lv:33,price:270,img:'dart_asp_t.png',sc:9,co:8,w:24}];
+const LV=14;
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
+function money(n){return '$'+n.toLocaleString();}
+function show(tab){
+  const res=tab==='result';$('#tabs').hidden=res;
+  $$('.scr').forEach(s=>s.hidden=s.dataset.scr!==tab);
+  $$('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  const s=$('.scr[data-scr="'+tab+'"]');if(s)s.scrollTop=0;
+}
+$$('#tabs button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+$$('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
+$('#lvBtn').onclick=()=>show('locker');
+$('#msgBtn').onclick=()=>{$('#msgN').hidden=true;$('#msgBtn').setAttribute('aria-label','Messages');toast('Messages: Big Mal says see you on the oche. Club secretary: subs due Friday.');};
+$('#moneyTile').onclick=()=>toast('Money match: best of 1 in the back room, $100 to the winner.');
+// Tonight states
+function renderTonight(){
+  $('#tForm').textContent=st.first?'Your first match · Him 42 · Best of 3':'You 47 (last 10) · Him 42 · Best of 3';
+  $('#tKick').textContent=st.first?'Club singles · Week 1 of 8':'Club singles · Week 5 of 8';
+  $('#tStake').textContent=st.first?'Your first night at the Waitakere Club':'Win: a place in the team';
+  $('#tTiles').hidden=st.first;$('#tGoal').hidden=st.first;$('#tSeason').hidden=st.first;
+  $('#tEntry').textContent=st.broke?'Entry $40 · you have $25':'Entry $40';
+  $('#walkOn').disabled=false;
+  $('#bank').textContent=money(st.broke?25:st.bank);
+  $('#moneyTile .s').textContent=st.broke?'Back room · $100 · play this first':'Back room · $100';
+}
+$('#walkOn').onclick=()=>{if(st.broke){toast('Short of the $40 entry. Take the money match first, or the club covers it this once.');return;}show('result');};
+$$('.legend button').forEach(b=>b.onclick=()=>{st.first=b.dataset.state==='first';st.broke=b.dataset.state==='broke';renderTonight();show('tonight');toast(b.textContent+' state');});
+// Shop
+function renderShop(){
+  const d=DARTS.find(x=>x.id===st.sel),owned=!!st.owned[d.id],locked=d.lv>LV,mine=DARTS.find(x=>x.id==='assassin');
+  $('#sImg').src='img/'+d.img;$('#sImg').alt=d.n+' dart';$('#sName').textContent=d.n;$('#sLine').textContent=d.line;
+  $('#sBadge').textContent=owned?'OWNED':locked?'LOCKED · LV '+d.lv:(d.isNew?'NEW · LV '+d.lv:'LV '+d.lv);
+  const rows=owned&&d.id==='assassin'?[['Your current dart','','neutral']]:[['Scoring','+'+(d.sc-mine.sc),'up'],['Control','+'+(d.co-mine.co),'up']].concat(d.w===mine.w?[['Weight','Same, '+d.w+' g','neutral']]:[[d.w>mine.w?'Heavier':'Lighter',d.w+' g vs '+mine.w+' g','neutral']]);
+  $('#sCmp').innerHTML='<h3>vs your Club Brass</h3>'+rows.map(r=>`<div><span>${r[0]}</span><span class="${r[2]}">${r[1]}</span></div>`).join('');
+  let a='';
+  if(owned)a=`<button class="primary" type="button" id="sEquip"><b>Equip</b></button>`;
+  else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${LV}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
+  else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
+  $('#sAct').innerHTML=a;
+  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><img src="img/${x.img}" alt=""><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');{const t=$('#sThumbs'),q=t.querySelector('[aria-pressed="true"]');if(q)t.scrollLeft=Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2);}
+  $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
+  const buy=$('#sBuy');if(buy)buy.onclick=()=>{st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
+  const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
+  const eq=$('#sEquip');if(eq)eq.onclick=()=>toast(d.n+' equipped.');
+  $$('[data-go2]').forEach(b=>b.onclick=()=>show(b.dataset.go2));
+}
+const idx=()=>DARTS.findIndex(x=>x.id===st.sel);
+$('#sPrev').onclick=()=>{st.sel=DARTS[(idx()+DARTS.length-1)%DARTS.length].id;renderShop();};
+$('#sNext').onclick=()=>{st.sel=DARTS[(idx()+1)%DARTS.length].id;renderShop();};
+// Locker cards
+const CARDS=[['chalk','The Chalk'],['db_top','Double Top'],['bar','The Bar'],['db_bull','Bullseye'],['case','The Case'],['barrel','The Barrel'],['flights','Flights'],[null,'#041'],[null,'#042']];
+function renderGrid(){$('#grid').innerHTML=CARDS.map(c=>c[0]?`<div class="card"><img src="img/card_${c[0]}.jpg" alt="${c[1]}"><span class="n">${c[1]}</span></div>`:`<div class="card out" aria-label="Not collected yet">${c[1]}</div>`).join('');}
+function renderPacks(){const n=st.packs;$('#packTxt').textContent=n?n+(n===1?' pack waiting':' packs waiting'):'Win matches to earn packs';$('#openPack').hidden=!n;}
+$('#openPack').onclick=()=>{st.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='kw_fishchips';c[1]='Fish & Chips';}renderGrid();renderPacks();toast('New card: Fish & Chips (Kiwi Pub Life 8/9)');};
+// Result
+$('#rOpen').onclick=()=>{toast('Pack opened: The Chalk (duplicate, +10 XP)');$('#rOpen').disabled=true;$('#rOpen').textContent='Opened';};
+$('#rMsgs').onclick=()=>toast('Full stats: 3 tons, best visit 140, checkout 3 of 8.');
+$('#cont').onclick=()=>{show('tonight');toast('Next fixture: vs Shazza, Week 6 of 8');};
+renderTonight();renderShop();renderGrid();renderPacks();
+</script>
