@@ -9,6 +9,8 @@ const {chromium}=require('playwright');const path=require('path');const http=req
 const root=path.resolve(__dirname,'..');const srv=http.createServer((q,s)=>{const f=path.join(root,decodeURIComponent(q.url.split('?')[0]));fs.readFile(f,(e,d)=>{if(e){s.writeHead(404);s.end();return;}s.writeHead(200,{'Content-Type':f.endsWith('.html')?'text/html':f.endsWith('.js')?'text/javascript':'application/octet-stream'});s.end(d);});});
 const WOMEN=['Lisa Tane','Pania Walters','Maia Tuhoe','Ngaire Pou'];
 const MEN=[['Kev Marsh','bryce'],['Shane Bell','pete'],['Dave Hurring','lewis']];
+// CAR-7d: Brian-model men wear the short library crop; Mere Hohepa's own hair is tinted dark (no library mesh, no beard)
+const HAIR=[['Craig Caldwell','brian','short']];
 (async()=>{await new Promise(r=>srv.listen(0,r));const port=srv.address().port;const f=[];
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});const p=await b.newPage({viewport:{width:360,height:640}});
  const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
@@ -32,7 +34,10 @@ const MEN=[['Kev Marsh','bryce'],['Shane Bell','pete'],['Dave Hurring','lewis']]
   return p.evaluate(n=>{V.setOpponentLook(lookFor(n),n,0);const o=V._qa.opp();let beard=0,lib=0;o.traverse(m=>{if(m.userData.hairStyle)lib++;if(m.isMesh&&m.userData.hairStyle==='beard'&&m.visible)beard++;});return {n,ck:o.userData.ck,beard,lib};},n);};
  const rows=[];for(const n of WOMEN){const want=hasVar?by[n].ck:{'Lisa Tane':'bryce','Pania Walters':'bryce','Maia Tuhoe':'lewis','Ngaire Pou':'pete'}[n];const r=await shot(n,want);rows.push(r);if(r.ck!==want)f.push(`${n}: built on ${r.ck}, expected ${want} (test setup)`);else if(r.beard)f.push(`${n} (${r.ck}) figure has ${r.beard} visible beard mesh(es)`);}
  for(const [n,ck] of MEN){const r=await shot(n,ck);rows.push(r);if(r.ck!==ck)f.push(`${n}: built on ${r.ck}, expected ${ck} (test setup)`);else if(!r.beard)f.push(`control ${n} (${ck}) lost its beard${r.lib?'':' (no library mesh at all: stand-in model? test setup)'}`);}
+ for(const [n,ck,st] of HAIR){const r=await shot(n,ck);const h=await p.evaluate(st=>{let k=0;V._qa.opp().traverse(m=>{if(m.isMesh&&m.userData.hairStyle===st&&m.visible)k++;});return k;},st);r.hair=h;rows.push(r);if(r.ck!==ck)f.push(`${n}: built on ${r.ck}, expected ${ck} (test setup)`);else if(!h)f.push(`${n} (${ck}) has no ${st} library hair`);}
+ if(hasVar){const m=by['Mere Hohepa'];if(!m||m.beard)f.push('Mere Hohepa: '+JSON.stringify(m));const mv=await p.evaluate(()=>V.oppVar('Mere Hohepa',V.charKey(lookFor('Mere Hohepa'),'Mere Hohepa')));if(!mv||!mv.hairCol)f.push('Mere Hohepa has no hair tint: '+JSON.stringify(mv));}
+ if(hasVar){const hf=await p.evaluate(()=>V.hairFor(lookFor('Craig Caldwell'),'Craig Caldwell'));if(!hf)f.push('the hub would not prefetch hair.glb for a Brian-model fixture');}
  console.log(JSON.stringify(rows));if(errs.length)f.push('page errors: '+errs.slice(0,2).join(' | '));
  await b.close();srv.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}
- console.log(`PASS: ${t.length} opponent names checked; no beard or build on ${WOMEN.join(', ')} (table and real figures); Big Mal, Kev Marsh, Shane Bell, Dave Hurring keep theirs`);})();
+ console.log(`PASS: ${t.length} opponent names checked; no beard or build on ${WOMEN.join(', ')} (table and real figures); Big Mal, Kev Marsh, Shane Bell, Dave Hurring keep theirs; Craig Caldwell wears the short crop; Mere Hohepa's hair is tinted`);})();
