@@ -912,7 +912,7 @@
     window.TOPS_WALKFULL = true; document.body.classList.add('tc-walking');
     const ov = document.createElement('div'); ov.id = 'tcWalk';
     ov.innerHTML = `<div class="tc-wk-bars"></div><div class="tc-wk-ban"><small>Now walking on</small><b>${esc(WK.name)}</b>${title ? `<em>${esc(title.n)}</em>` : ''}${song && song.id !== 'off' ? `<span>♪ ${esc(song.n)}</span>` : ''}</div><div class="tc-wk-skip">Tap to skip</div>`;
-    ov.onclick = () => { if (WK) WK.t0 = performance.now() - WK.dur; };
+    ov.onclick = () => { if (WK) { WK.t0 = performance.now() - WK.dur; WK.holdSkip = true; WK.hold0 = 0; } };   // EXP-1d: a tap during the hold lands straight on the end (k = 1), never on an unposed frame
     document.body.appendChild(ov);
     WK.ov = ov;
   }
@@ -966,10 +966,29 @@
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
-    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE; if (k < 0) return { fov: 50 };
+    let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE;
+    // EXP-1d (Q&D 22:46): never a T-pose. Until the walk clip plays (clipOn asks for anims.glb and returns null until the clip and a
+    // mixer exist; a rebuilt figure starts without one) the figure stays hidden on an establishing shot. Held time doesn't count
+    // against the timeline; after 4 s held in total the walk-on skips cleanly to its end.
+    if (WK.me && WK.me !== v.me) { WK.walking = false; WK.arrived = false; WK.me = v.me; }   // the figure was rebuilt mid-walk (models landing): its clip starts again before it's shown (ChatGPT P1)
+    if (!WK.walking && !WK.holdSkip && (k < WA || WK.hold0)) {   // once holding, the timeline is paused: a slow frame mustn't carry k past the walk and show an unposed figure
+      if (WK.vis0 === undefined) WK.vis0 = !!v.me.visible;
+      const a = clipOn(v, v.me, 'walk', false);
+      if (a) { WK.walking = true; WK.me = v.me; if (WK.hold0) { const d = now - WK.hold0; WK.held = (WK.held || 0) + d; WK.t0 += d; WK.hold0 = 0; } WK.holding = false; k = (now - WK.t0) / WK.dur; }
+      else {
+        if (!WK.hold0) WK.hold0 = now;
+        if ((WK.held || 0) + now - WK.hold0 < 4000) {
+          WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
+          const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board
+          return { fov: 52 };
+        }
+        WK.held = (WK.held || 0) + now - WK.hold0; WK.hold0 = 0; WK.holding = false; WK.holdSkip = true; WK.t0 = now - WK.dur; k = 1;
+      }
+    }
+    if (k < 0) return { fov: 50 };
     const me = v.me, T3 = v.T.Vector3;
     if (!WK.home) {
-      WK.vis0 = !!me.visible;   // #17/#18 (from Experience's exp-fix18 b500b3d): the figure's visibility before the walk-on shows it (hidden in a match)
+      if (WK.vis0 === undefined) WK.vis0 = !!me.visible;   // #17/#18 (from Experience's exp-fix18 b500b3d): the figure's visibility before the walk-on shows it (hidden in a match)
       WK.rot = me.rotation.y;
       // the room is fixed: board at z≈0, oche line at OCHE_Z, the player faces -z. (The figure can be mid-rebuild at the origin
       // and the camera can still be the hub camera on the first frame, so neither is trusted for the end point.)
@@ -981,7 +1000,6 @@
       WK.start = WK.home.clone().addScaledVector(fwd, -2.4).addScaledVector(side, 1.0);   // walk in from the room behind the oche
       WK.cam = WK.home.clone().addScaledVector(fwd, .15).addScaledVector(side, 1.3); WK.cam.y = 1.5;   // beside the oche, facing back at you
     }
-    if (!WK.walking && k < WA) { const a = clipOn(v, me, 'walk', false); if (a) WK.walking = true; }
     me.visible = true; if (v.fpFig) { v.fpFig.visible = false; WK.fp = v.fpFig; }
     // clear the stage: other figures (opponent, crowd) near the walk path hide until the walk-on ends
     if (me.parent && (!WK.hidAt || now - WK.hidAt > 500)) {
@@ -1016,7 +1034,8 @@
     const atOche = Math.atan2(WK.fwd.x, WK.fwd.z) + Math.PI;   // square to the board for the hero shot; the game's own stance returns at the end
     me.rotation.y = k < WA ? face : face + (atOche - face) * Math.min(1, (k - WA) / .08);
     if (k >= WA && !WK.arrived) { WK.arrived = true; clipOn(v, me, WK.fx ? 'pump' : 'idle', !!WK.fx); }
-    if (k >= .8 && !WK.hero) { WK.hero = true; clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); }   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
+    if (k >= .8 && !WK.hero) { WK.hero = true; clipOn(v, me, window.TC_HERO_CLIP || 'cheer', true); }
+    if (!(me.userData && me.userData.mixer)) me.visible = false;   // EXP-1d: a figure with no animation is never shown (a rebuild after the walk, before its arrival clip lands)   // hero pose for the final hold: arms up to the crowd (ChatGPT review 5)
     if (k >= .645 && !WK.fired && WK.fx) { WK.fired = true; WK.flash = now; window.TC_FX_ANCHOR = WK.anchor || null; try { FX.run(WK.fx, WK.name); } finally { window.TC_FX_ANCHOR = null; } }
     walkLights(v, me, now);
     const F = WK.fwd, Sd = WK.side, p0 = me.position, up = (v3, y) => { v3.y = y; return v3; };
