@@ -136,10 +136,10 @@ setTimeout(retry,6000);
 // Per frame only an O(n<=~60) signature of the program cache (ids summed, no allocation) and a slow-run counter. Everything heavier
 // (scene traversal, attribution, health checks, diffs, the thumbnail) waits for a quiet moment (not aiming, pulling or darts flying).
 // No WebGL patching: three.js r128's own renderer.info.programs, renderer.properties and program.diagnostics.
-const BIG_MAX=2600;
+const BIG_MAX=2600,THUMB_MAX=12000;
 const RED_SH=RED.filter(r=>String(r[0])!==String(/\b[A-Za-z0-9_]{32,}\b/g));/* shader logs: no long-identifier rule (it would hide the failing GLSL/MSL function name; shader text carries no user data) */
 function bigText(s,n){s=String(s);for(const [re,to] of RED_SH)s=s.replace(re,to);return s.slice(0,n);}
-function logBig(k,o){try{let s=JSON.stringify(o);if(s.length>BIG_MAX){if(o.log)o.log=String(o.log).slice(0,Math.max(200,o.log.length-(s.length-BIG_MAX)));s=JSON.stringify(o);}
+function logBig(k,o,cap){try{cap=cap||BIG_MAX;let s=JSON.stringify(o);if(s.length>cap&&o.img){return null;}/* thumbnails: own documented cap, never trimmed into a broken image */if(s.length>cap){if(o.log)o.log=String(o.log).slice(0,Math.max(200,o.log.length-(s.length-cap)));s=JSON.stringify(o);}if(s.length>cap)return null;
  const t=now();const e={t,q:++seq,k,d:JSON.parse(s)};if(MID)e.m=MID;if(count===CAP)dropped++;else count++;RING[head]=e;head=(head+1)%CAP;return e;}catch(x){return null;}}
 const SHADER_RE=/WebGLProgram|shader|MSL|getProgramInfoLog/i;
 let progSig=-1,progLen=-1,progIds=new Set(),progPend=[],pendFail=null,diagPend=false,fails=0;
@@ -185,10 +185,12 @@ function objState(o){if(!o)return {ok:false,why:'missing'};const R=R_();let v=tr
  o.traverse(m=>{if(!m.isMesh||!m.material)return;meshes++;const ms=Array.isArray(m.material)?m.material:[m.material];for(const mt of ms){let pr=null;try{pr=R.properties.get(mt);}catch(e){}const cp=pr&&pr.currentProgram;if(!cp)noProg++;else if(cp.diagnostics&&cp.diagnostics.runnable===false)bad++;const im=mt.map&&mt.map.image;if(mt.map&&(!im||(im.width===0)||(im.complete===false)))noTex++;}});
  Object.assign(st,{meshes,noProg,bad,noTex});return st;}
 function health(own){if(!healthDue())return;const h=hDue.shift();const R=R_();if(!R)return;if(!boardFace||!boardFace.parent)boardFace=findBoard();
- const opp=(()=>{try{return V._qa.opp();}catch(e){return null;}})();const b=objState(boardFace),o=opp?objState(opp):null;
+ const opp=(()=>{try{return V._qa.opp();}catch(e){return null;}})();const b=boardFace?objState(boardFace):{missing:1},o=opp?objState(opp):null;
  const progs=R.info.programs||[];const keys=progs.map(p=>hashStr(String(p.cacheKey||''))).sort();
  const snap={w:h.w,n:matchN,lights:lightCounts(),progs:progs.length,calls:R.info.render.calls,geo:R.info.memory.geometries,tex:R.info.memory.textures,board:b,opp:o,figs:visibleFigs()};
- const miss=[];if(!b||b.vis===false)miss.push('board hidden');if(b&&b.meshes&&(b.bad||(b.noProg&&h.w==='5s')))miss.push('board program '+(b.bad?'failed':'missing'));/* 'missing' only from 5 s in: the first frames may not have drawn it yet */if(b&&b.noTex)miss.push('board texture');if(o&&o.bad)miss.push('opponent program failed');if(o&&o.noTex)miss.push('opponent texture');
+ const miss=[];const late=h.w==='5s';const vsAI=(()=>{try{return !!(S&&S.p&&S.p[1]&&S.p[1].ai&&!S.practice);}catch(e){return false;}})();
+ if(!boardFace){if(late)miss.push('board missing');}else if(b.vis===false)miss.push('board hidden');
+ if(late&&vsAI&&!opp)miss.push('opponent missing');if(b.meshes&&(b.bad||(b.noProg&&late)))miss.push('board program '+(b.bad?'failed':'missing'));/* 'missing' only from 5 s in: the first frames may not have drawn it yet */if(b.noTex)miss.push('board texture');if(o&&o.bad)miss.push('opponent program failed');if(o&&o.noTex)miss.push('opponent texture');
  log('health',snap);if(miss.length){logBig('health_fail',{w:h.w,miss,board:b,opp:o,lights:snap.lights,progs:snap.progs});thumbWant('health_fail');incident(true);}
  if(h.w==='5s'){const k={keys,lights:snap.lights,figs:snap.figs,geo:snap.geo,tex:snap.tex,progs:snap.progs};if(!h1)h1=k;else{const d={};const add=k.keys.filter(x=>h1.keys.indexOf(x)<0),gone=h1.keys.filter(x=>k.keys.indexOf(x)<0);if(add.length)d.prog_new=add.slice(0,12);if(gone.length)d.prog_gone=gone.length;
   for(const t in k.lights)if(k.lights[t]!==h1.lights[t])d['l_'+t]=h1.lights[t]+'>'+k.lights[t];if(k.figs!==h1.figs)d.figs=h1.figs+'>'+k.figs;d.geo=k.geo-h1.geo;d.tex=k.tex-h1.tex;d.progs=h1.progs+'>'+k.progs;
@@ -197,9 +199,9 @@ function visibleFigs(){const sc=SC_();let n=0;if(!sc)return 0;sc.traverse(o=>{if
 // ---- thumbnail: 160 px JPEG of our own canvas, right after a quiet render, max 2 a session, blank captures rejected ----
 let thumbReq=null,thumbN=0,thumbBusy=false;function thumbWant(why){if(thumbN<2&&!thumbReq)thumbReq=why;}
 function thumbShot(){const why=thumbReq;thumbReq=null;try{const R=R_();const cv=R&&R.domElement;if(!cv||!cv.width)return;const W=160,H=Math.max(1,Math.round(cv.height*W/cv.width));const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');const a=performance.now();
- x.drawImage(cv,0,0,W,H);/* same task as the render: the drawing buffer is still valid without preserveDrawingBuffer */const px=x.getImageData(0,0,W,H).data;let mn=255,mx=0;for(let i=0;i<px.length;i+=64){const v=px[i]+px[i+1]+px[i+2];if(v<mn)mn=v;if(v>mx)mx=v;}
+ x.drawImage(cv,0,0,W,H);/* same task as the render: the drawing buffer is still valid without preserveDrawingBuffer */const px=x.getImageData(0,0,W,H).data;let mn=765,mx=0;for(let i=0;i<px.length;i+=64){const v=px[i]+px[i+1]+px[i+2];if(v<mn)mn=v;if(v>mx)mx=v;}
  if(mx-mn<12){log('thumb_blank',{why});return;}thumbN++;thumbBusy=true;const cap=Math.round(performance.now()-a);
- const done=url=>{thumbBusy=false;if(url&&url.length<14000){const e=logBig('thumb',{why,w:W,h:H,cap_ms:cap,img:url});}else log('thumb_big',{why,len:url?url.length:0});};
+ const done=url=>{thumbBusy=false;/* THUMB_MAX: the one event allowed above 2.6 KB; the row stays under the 48 KiB body cap (row() trims oldest events) */if(!(url&&url.length<=THUMB_MAX&&logBig('thumb',{why,w:W,h:H,cap_ms:cap,img:url},THUMB_MAX+200)))log('thumb_big',{why,len:url?url.length:0});};
  if(c.toBlob)c.toBlob(bl=>{if(!bl){done(null);return;}const fr=new FileReader();fr.onload=()=>done(fr.result);fr.onerror=()=>done(null);fr.readAsDataURL(bl);},'image/jpeg',.5);else done(c.toDataURL('image/jpeg',.5));}catch(e){thumbBusy=false;}}
 if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf2=V.frame;V.frame=function(nowT){const r=vf2.apply(this,arguments);/* the game's frame always runs first, outside any try */try{frameTick(typeof nowT==='number'?nowT:performance.now());}catch(e){}return r;};}
 if(typeof beginMatch==='function'){const bm2=beginMatch;beginMatch=function(){const r=bm2.apply(this,arguments);try{slowRun=0;slowFired=false;const t=now();hDue=[{w:'start',at:t+1000},{w:'5s',at:t+5000}];}catch(e){}return r;};}

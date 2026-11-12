@@ -20,12 +20,12 @@ function newM(){return {id:uid(),t0:performance.now(),vis:0,last:0,skip:true,fh:
  want30:false,sent30:false,done:false,mode:mode(),tier:(S&&S.tier&&S.tier.n)||'',hid:0,ix:++MATCH_IX,app:Math.round(performance.now()/1000),mem0:mem(),ur0:underruns()};}
 // --- the frame hook: wraps V.frame (called once per game frame from tick) ---
 // CAR-6: render time inside each game frame, from a JS wrapper on renderer.render (not a GL call); JS time = frame callback - render
-let RND=0;function wrapRender(){try{const R=window.TOPS_R;if(!R||R.render.__car6)return;const rr=R.render;const w=function(){const a=performance.now();try{return rr.apply(this,arguments);}finally{RND+=performance.now()-a;}};w.__car6=true;R.render=w;}catch(e){}}
+let RND=0,RW=false;function wrapRender(){try{const R=window.TOPS_R;if(!R)return;if(R.render.__car6){RW=true;return;}const rr=R.render;const w=function(){const a=performance.now();try{return rr.apply(this,arguments);}finally{RND+=performance.now()-a;}};w.__car6=true;R.render=w;RW=true;}catch(e){}}
 wrapRender();setTimeout(wrapRender,0);
 const SCR_IDS=['hub','game','tcWalk','c3rw','cardDraft','perkSheet','result','login','tcExh','shop'];
 function openScreens(){const o=[];try{for(const id of SCR_IDS){const e=document.getElementById(id);if(e&&!e.hidden&&e.getClientRects().length)o.push(id);}const cd=document.querySelector('.cd-wrap');if(cd&&cd.getClientRects().length)o.push('cards');}catch(e){}return o.join(',');}
 function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);if(d>33)M.c33++;if(d>50){M.c50++;M.pinc=[d,now];}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
- M.skip=false;M.last=now;RND=0;const R=window.TOPS_R;const counting=!!(R&&R.info)&&now-M.infoAt>2000;if(counting){M.infoAt=now;M.ar=R.info.autoReset;R.info.autoReset=false;R.info.reset();}return counting;}
+ M.skip=false;M.last=now;RND=0;if(!RW)wrapRender();/* installs once the renderer exists */const R=window.TOPS_R;const counting=!!(R&&R.info)&&now-M.infoAt>2000;if(counting){M.infoAt=now;M.ar=R.info.autoReset;R.info.autoReset=false;R.info.reset();}return counting;}
 function post(t0,t1,counting){const pc=M.cpu,pr=M.rnd||0;M.cpu=t1-t0;M.rnd=RND;bump(M.rh,M.cpu);if(M.pinc){incident(M.pinc[0],M.pinc[1],pc,pr);M.pinc=null;}if(counting){try{const R=window.TOPS_R;const c=R.info.render.calls,tr=R.info.render.triangles;R.info.autoReset=M.ar;if(c>M.draws)M.draws=c;if(tr>M.tris)M.tris=tr;}catch(e){}}
  if(M.pend){const lat=t1-M.pend;M.pend=0;if(lat<0)M.iNeg++;else{bump(M.ih,lat);M.iN++;M.lat=lat;if(lat>50)M.i50++;}}
  if(!M.sent30&&!M.want30&&M.vis>=(window.TOPS_PERF_30||30000)){M.want30=true;M.want30At=M.vis;}}

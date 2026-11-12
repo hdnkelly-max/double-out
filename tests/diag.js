@@ -43,7 +43,14 @@ const {chromium}=require('playwright');const path=require('path');
  await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'),15000);const hf=(await evs('health_fail'))[0];
  if(!hf||!hf.d.miss.some(m=>/board hidden/.test(m)))f.push('hidden board: no health_fail naming it: '+JSON.stringify(hf&&hf.d));
  const hd=(await evs('health_diff'));if(!hd.length||!JSON.stringify(hd[hd.length-1].d).includes('l_point'))f.push('match 2: no health_diff with the extra light: '+JSON.stringify(hd.map(x=>x.d)));
- await ev(()=>{__bd.visible=true;S.won=true;endMatch();});
+ // a board that's gone from the scene altogether -> 'board missing' (ChatGPT code review P0-1)
+ await ev(()=>{__bd.visible=true;window.__bdp=__bd.parent;__bdp.remove(__bd);TOPS_LOG._health();});
+ await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))),15000);
+ if(!(await ev(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))))))f.push('a removed board does not log health_fail "board missing"');
+ await ev(()=>{__bdp.add(__bd);S.won=true;endMatch();});
+ // thumbnails within their documented cap (12,000 chars), every other event within 2,600
+ const sizes=await ev(()=>TOPS_LOG.events().map(e=>[e.k,JSON.stringify(e.d||'').length]));const th2=sizes.filter(x=>x[0]==='thumb');if(th2.some(x=>x[1]>12200))f.push('thumbnail over its cap: '+JSON.stringify(th2));
+ const other=sizes.filter(x=>x[0]!=='thumb'&&x[1]>2700);if(other.length)f.push('events over 2.6 KB: '+JSON.stringify(other.slice(0,3)));
  await waitFor(i=>__ins.slice(i).some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='health_fail')),20000,ins1);
  if(!(await ev(i=>__ins.slice(i).some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='health_fail')),ins1)))f.push('health_fail was not uploaded');
  // 3 a failure while aiming: nothing uploads until a break --------------------------------------------------------------------------
