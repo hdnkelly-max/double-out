@@ -4,7 +4,8 @@
 // r128 constructors assign) and every dispose(), and tags each with an OWNER (the game functions on the creation stack) and when it
 // was BORN (match, visit). Rendering is stubbed (the ledger needs no GPU, and software GL makes every frame take seconds here); the
 // scenes the game asks to draw are still recorded, so "reachable" = in a scene the game rendered recently, or kept (V._qa.kept).
-// An ORPHAN = made, never disposed, not reachable, not kept: GPU memory nothing will ever free.
+// An ORPHAN = drawn at least once (visible in a scene the game rendered, so three.js uploaded it), never disposed, no longer reachable,
+// not kept: GPU memory nothing will ever free. (Objects never drawn are never uploaded; once unreferenced they're plain garbage.)
 // Checks: D darts: orphans per dart thrown across 6 real visits (player land(), AI's own fly()+land()) ~ 0
 //         T teardown: 4 start/quit cycles against different characters: orphans born in a finished match don't accumulate;
 //           character templates loaded <= player + last + current opponent + remy
@@ -19,7 +20,8 @@ const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blockl
 const ctx=await b.newContext({viewport:{width:360,height:640},isMobile:true,hasTouch:true});const p=await ctx.newPage();
 const pe=[];p.on('pageerror',e=>pe.push(e.message));await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
 await p.addInitScript(()=>{
- const L=window.__L={rec:new Map(),m:0,v:0,scenes:new Map(),frame:0,lis:new Map()};Error.stackTraceLimit=40;
+ const L=window.__L={rec:new Map(),m:0,v:0,scenes:new Map(),frame:0,lis:new Map(),up:new WeakSet()};
+ L.markUp=sc=>{sc.traverseVisible(o=>{if(o.geometry)L.up.add(o.geometry);const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{L.up.add(m);for(const k in m){const x=m[k];if(x&&x.isTexture)L.up.add(x);}});});};Error.stackTraceLimit=40;
  const own=()=>{const out=[];for(const l of String(new Error().stack).split('\n').slice(3)){const m=l.match(/at (?:new )?([\w$.]+) \((.*?):\d+:\d+\)/);if(!m||/three\.(min|module)/.test(m[2])||/^(Array|Object|Map|Set|Function|Promise)\./.test(m[1]))continue;out.push(m[1].replace(/^.*\./,''));if(out.length>=3)break;}return out.join('<')||'?';};
  const install=T=>{if(!T||!T.BufferGeometry||L.inst)return;L.inst=1;
   for(const [C,k] of [[T.BufferGeometry,'geo'],[T.Material,'mat'],[T.Texture,'tex']]){const P=C.prototype;
@@ -37,26 +39,26 @@ await p.addInitScript(()=>{
   L.scenes.forEach((f,sc)=>{if(L.frame-f>30)return;sc.traverse(o=>{if(seen.has(o))return;seen.add(o);if(o.geometry)live.add(o.geometry);const ms=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]);ms.forEach(m=>{live.add(m);tex(m);if(m.uniforms)for(const u in m.uniforms){const x=m.uniforms[u]&&m.uniforms[u].value;if(x&&x.isTexture)live.add(x);}});if(o.skeleton&&o.skeleton.boneTexture)live.add(o.skeleton.boneTexture);});
    if(sc.background&&sc.background.isTexture)live.add(sc.background);if(sc.environment)live.add(sc.environment);});return live;};
  L.orphans=()=>{const live=L.reach();const kept=(typeof V!=='undefined'&&V._qa&&V._qa.kept)?V._qa.kept:null;const by={};let n=0;
-  L.rec.forEach((r,o)=>{if(r.d||live.has(o)||(kept&&kept(o)))return;n++;const k=r.k+' '+r.o;by[k]=(by[k]||0)+1;});return {n,by};};
+  const det={};L.rec.forEach((r,o)=>{if(r.d||!L.up.has(o)||live.has(o)||(kept&&kept(o)))return;n++;const k=r.k+' '+r.o;by[k]=(by[k]||0)+1;const dk=k+' '+(o.type||'')+(o.color&&o.color.getHexString?' #'+o.color.getHexString():'')+(o.name?' '+o.name:'');det[dk]=(det[dk]||0)+1;});return {n,by,det};};
 });
 await p.goto('file://'+dir+'/'+page);
 await p.waitForFunction(()=>typeof S!=='undefined'&&typeof beginMatch==='function'&&typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady()&&window.__L.inst,null,{timeout:120000});
 log('loaded');
-await p.evaluate(()=>{const L=__L;const R=V._qa.renderer;R.render=function(sc){if(sc&&sc.isScene)L.scenes.set(sc,L.frame);};/* stub: record what would be drawn */
+await p.evaluate(()=>{const L=__L;const R=V._qa.renderer;R.render=function(sc){if(sc&&sc.isScene){L.scenes.set(sc,L.frame);L.markUp(sc);}};/* stub: record what would be drawn */
  const st=window.setTimeout;window.setTimeout=(f,ms,...a)=>st(f,Math.max(0,(ms||0)*0.06),...a);
  const bm=beginMatch;beginMatch=function(){L.m++;L.v=0;return bm.apply(this,arguments);};const sT=startTurn;startTurn=function(){L.v++;return sT.apply(this,arguments);};
  window.__darts=0;const ld=land;land=function(){__darts++;return ld.apply(this,arguments);};
  save.authSeen=true;save.name='Lee';save.lessonDone=true;$('login').hidden=true;newCareer();save.tcIntro=1;save.tcWelcomed=1;document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());V.walkOn=()=>{};});
 const step=()=>p.evaluate(()=>{try{if(!S||S.done)return 'done';if(S.bull){if(S.cur===0&&!S.busy&&S.bull.me==null){S.busy=true;land(gauss()*30,gauss()*30);}return 'bull';}
  if(S.cur===0&&!S.busy&&S.visit.length<3&&!S.p[0].ai){const first=S.visit.length===0;const tp=targetPoint(aimFor(S.p[0].score,4-S.dart));S.busy=true;land(tp.x+gauss()*14,tp.y+gauss()*14);return first?'visit':'aim';}return 'wait';}catch(e){return 'ERR '+e.message;}});
-const snap=()=>p.evaluate(()=>{const o=__L.orphans();return {n:o.n,by:o.by,darts:__darts,lis:__L.liveLis(),rigs:V._qa.gfx().rigs.slice()};});
+const snap=()=>p.evaluate(()=>{const o=__L.orphans();return {n:o.n,by:o.by,det:o.det,darts:__darts,lis:__L.liveLis(),rigs:V._qa.gfx().rigs.slice()};});
 const fails=[];const out={};
 // ---- D: darts
 await p.evaluate(()=>beginMatch({mode:'career',tier:1,p0:'Lee',oppKey:'deano',oppName:'Deano Marsh',oppAvg:60,legs:9,start:501}));
 const vis=[];for(let i=0;i<3000&&vis.length<7;i++){const s=await step();if(s==='visit'){vis.push(await snap());}if(s==='done'||String(s).startsWith('ERR')){out.dEnd=s;break;}await p.waitForTimeout(15);}
 log('darts',vis.length,'visits');
 if(vis.length<5)fails.push('D: only '+vis.length+' visits played');else{const a=vis[1],z=vis[vis.length-1];const dd=Math.max(1,z.darts-a.darts);const grow={};
- Object.keys(z.by).forEach(k=>{const g=z.by[k]-(a.by[k]||0);if(g>0)grow[k]=g;});out.D={darts:dd,orphans:[a.n,z.n],perDart:+((z.n-a.n)/dd).toFixed(2),grew:grow};
+ Object.keys(z.by).forEach(k=>{const g=z.by[k]-(a.by[k]||0);if(g>0)grow[k]=g;});const gd={};Object.keys(z.det||{}).forEach(k=>{const g=z.det[k]-((a.det||{})[k]||0);if(g>0)gd[k]=g;});out.D={darts:dd,orphans:[a.n,z.n],perDart:+((z.n-a.n)/dd).toFixed(2),grew:grow,grewDetail:Object.entries(gd).sort((x,y)=>y[1]-x[1]).slice(0,6)};
  if((z.n-a.n)/dd>0.3)fails.push('D: '+out.D.perDart+' orphan GPU objects per dart thrown (should be ~0): '+JSON.stringify(Object.entries(grow).sort((x,y)=>y[1]-x[1]).slice(0,4)));}
 // ---- L1: background/foreground x5 mid-match (sampler loops)
 const rate=async()=>{const a=await p.evaluate(()=>[__L.raf,__L.frame]);await p.waitForTimeout(700);const z=await p.evaluate(()=>[__L.raf,__L.frame]);return (z[0]-a[0])/Math.max(1,z[1]-a[1]);};
@@ -71,7 +73,7 @@ for(const nm of ['Pete the Plumber','Shazza','Tama Rewiri','Kev Mercer']){
  for(let i=0;i<6;i++){await step();await p.waitForTimeout(30);}await quit();await p.waitForTimeout(300);cyc.push(await snap());}
 log('cycles done');
 const c1=cyc[1],cz=cyc[cyc.length-1];const gT={};Object.keys(cz.by).forEach(k=>{const g=cz.by[k]-(c1.by[k]||0);if(g>0)gT[k]=g;});
-out.T={orphans:cyc.map(c=>c.n),rigs:cyc.map(c=>c.rigs.length),rigsLast:cz.rigs,lis:cyc.map(c=>c.lis),grew:gT};
+const gTd={};Object.keys(cz.det||{}).forEach(k=>{const g=cz.det[k]-((c1.det||{})[k]||0);if(g>0)gTd[k]=g;});out.T={orphans:cyc.map(c=>c.n),rigs:cyc.map(c=>c.rigs.length),rigsLast:cz.rigs,lis:cyc.map(c=>c.lis),grew:gT,grewDetail:Object.entries(gTd).sort((x,y)=>y[1]-x[1]).slice(0,6)};
 if(cz.n-c1.n>12)fails.push('T: orphans grow over start/quit cycles '+out.T.orphans.join(' → ')+': '+JSON.stringify(Object.entries(gT).sort((x,y)=>y[1]-x[1]).slice(0,4)));
 if(cz.rigs.length>4)fails.push('T: '+cz.rigs.length+' character templates still loaded after 5 opponents ('+cz.rigs.join(',')+'); expected <= 4 (remy, player, last, current)');
 if(cz.lis-c1.lis>3)fails.push('L: live listeners grow over cycles '+out.T.lis.join(' → '));
