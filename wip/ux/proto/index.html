@@ -82,7 +82,7 @@ button.panel{color:var(--ink);font:inherit}
 .thumbs::-webkit-scrollbar{display:none}
 .th{flex:0 0 calc((100% - 24px)/4);height:78px;scroll-snap-align:start;border:1px solid var(--line);border-radius:8px;background:var(--panel);display:grid;place-items:center;position:relative;cursor:pointer;padding:0;min-width:0}
 .th img{width:88%;height:44%;object-fit:contain;margin-bottom:16px}
-.th[aria-pressed="true"]{border-color:#fff}
+.th[aria-pressed="true"]{border:2px solid #fff;background:var(--panel2)}
 .th small{position:absolute;bottom:5px;left:0;right:0;font-size:12px;color:var(--ink2);text-align:center}
 .th.lock img{opacity:.35}
 .lockline{font-size:14px;color:var(--ink2);text-align:center;display:flex;flex-direction:column;gap:2px;align-items:center;min-height:56px;justify-content:center}
@@ -97,11 +97,12 @@ button.panel{color:var(--ink);font:inherit}
 .packs .primary{width:112px;flex:0 0 112px;height:48px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-right:-16px;padding-right:24px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
 .chips::-webkit-scrollbar{display:none}
-.chips button{flex:0 0 auto;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
+.chips button{flex:0 0 auto;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--ink2);font-size:13px;cursor:pointer}
 .chips button[aria-pressed="true"]{background:var(--panel2);color:var(--ink);border-color:#596066}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .card{aspect-ratio:2/3;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#101214;position:relative;max-width:100%}
 .card img{width:100%;height:100%;object-fit:cover;display:block}
+.empty{grid-column:1/-1;margin:8px 0;color:var(--ink2);font-size:13px;text-align:center}
 .card.out{display:grid;place-items:center;color:#4a5155;font-family:var(--display);font-weight:700;font-size:18px}
 .card .n{position:absolute;left:0;right:0;bottom:0;height:24px;line-height:24px;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(12,14,16,.86);border-top:1px solid rgba(255,255,255,.06)}
 /* result */
@@ -145,7 +146,7 @@ button.panel{color:var(--ink);font:inherit}
     <div class="lv" id="lvBtn" role="button" tabindex="0" aria-label="Level 14, open Locker"><small id="lvTxt">Lv 14</small><div class="bar"><i id="lvBar" style="width:62%"></i></div></div>
     <span class="bank" id="bank">$640</span>
     <button class="icon" type="button" id="msgBtn" aria-label="3 new messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><span class="b" id="msgN">3</span></button>
-    <button class="icon" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <button class="icon" type="button" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
   <nav class="tabs" id="tabs" role="tablist">
     <button role="tab" data-tab="tonight" aria-selected="true">Tonight</button>
@@ -170,7 +171,7 @@ button.panel{color:var(--ink);font:inherit}
       <button class="panel tile" type="button" id="moneyTile"><span class="t">Money match</span><span class="s">Back room · $100</span></button>
       <button class="panel tile" type="button" data-go="shop"><span class="t">Next dart</span><span class="s">Razor Edge · Lv 15</span><img src="img/dart_razor_t.png" alt=""></button>
     </div>
-    <div class="meta" id="tGoal" style="margin-top:auto">Goal: average 61+ → $40</div>
+    <div class="meta" id="tGoal" style="margin-top:-4px;min-height:24px">Goal: average 61+ → $40</div>
   </section>
 
   <!-- SEASON (out of this round's scope: a stub so the tab answers) -->
@@ -256,17 +257,21 @@ const DARTS=[
  {id:'asp',n:'Asp G2 24g',line:'Front-weighted, built for treble 20',lv:33,price:270,img:'dart_asp_t.png',sc:9,co:8,w:24}];
 const LV=14;
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
+function centerThumb(){requestAnimationFrame(()=>{const t=$('#sThumbs'),q=t&&t.querySelector('[aria-pressed="true"]');if(!q||!t.clientWidth)return;t.scrollTo({left:Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2),behavior:'instant'});});}
 function money(n){return '$'+n.toLocaleString();}
 function show(tab){
   const res=tab==='result';$('#tabs').hidden=res;
   $$('.scr').forEach(s=>s.hidden=s.dataset.scr!==tab);
   $$('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const s=$('.scr[data-scr="'+tab+'"]');if(s)s.scrollTop=0;
+  if(tab==='shop')centerThumb();
 }
 $$('#tabs button').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 $$('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
 $('#lvBtn').onclick=()=>show('locker');
 $('#msgBtn').onclick=()=>{$('#msgN').hidden=true;$('#msgBtn').setAttribute('aria-label','Messages');toast('Messages: Big Mal says see you on the oche. Club secretary: subs due Friday.');};
+$('#menuBtn').onclick=()=>toast('Menu: settings, how to throw, credits. Not part of this prototype.');
+$$('.sub button').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-selected')==='true')return;toast(b.textContent+' comes in the next round of the prototype.');});
 $('#moneyTile').onclick=()=>toast('Money match: best of 1 in the back room, $100 to the winner.');
 // Tonight states
 function renderTonight(){
@@ -293,7 +298,7 @@ function renderShop(){
   else if(locked)a=`<div class="lockline"><b>Unlocks at level ${d.lv} · ${money(d.price)}</b><span>You're level ${LV}</span><button class="link" type="button" data-go2="tonight">Play to reach it →</button></div>`;
   else a=`<button class="primary" type="button" id="sBuy"><b>Buy · ${money(d.price)}</b></button><div class="meta" style="min-height:20px">${money(st.bank)} → ${money(st.bank-d.price)}</div><div style="text-align:center"><button class="link" type="button" id="sTry">Try it in practice</button></div>`;
   $('#sAct').innerHTML=a;
-  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><img src="img/${x.img}" alt=""><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');{const t=$('#sThumbs'),q=t.querySelector('[aria-pressed="true"]');if(q)t.scrollLeft=Math.max(0,q.offsetLeft-t.offsetLeft-(t.clientWidth-q.clientWidth)/2);}
+  $('#sThumbs').innerHTML=DARTS.map(x=>`<button class="th ${x.lv>LV&&!st.owned[x.id]?'lock':''}" type="button" data-id="${x.id}" aria-pressed="${x.id===st.sel}" aria-label="${x.n}"><img src="img/${x.img}" alt=""><small>${st.owned[x.id]?'✓ Owned':x.lv>LV?'🔒 Lv '+x.lv:money(x.price)}</small></button>`).join('');centerThumb();
   $$('#sThumbs .th').forEach(b=>b.onclick=()=>{st.sel=b.dataset.id;renderShop();});
   const buy=$('#sBuy');if(buy)buy.onclick=()=>{st.owned[d.id]=1;st.bank-=d.price;$('#bank').textContent=money(st.bank);toast('Bought '+d.n+'. Equipped for your next match.');renderShop();};
   const tr=$('#sTry');if(tr)tr.onclick=()=>toast('Free practice session with '+d.n+'. No XP or money from it.');
@@ -304,8 +309,10 @@ const idx=()=>DARTS.findIndex(x=>x.id===st.sel);
 $('#sPrev').onclick=()=>{st.sel=DARTS[(idx()+DARTS.length-1)%DARTS.length].id;renderShop();};
 $('#sNext').onclick=()=>{st.sel=DARTS[(idx()+1)%DARTS.length].id;renderShop();};
 // Locker cards
-const CARDS=[['chalk','The Chalk'],['db_top','Double Top'],['bar','The Bar'],['db_bull','Bullseye'],['case','The Case'],['barrel','The Barrel'],['flights','Flights'],[null,'#041'],[null,'#042']];
-function renderGrid(){$('#grid').innerHTML=CARDS.map(c=>c[0]?`<div class="card"><img src="img/card_${c[0]}.jpg" alt="${c[1]}"><span class="n">${c[1]}</span></div>`:`<div class="card out" aria-label="Not collected yet">${c[1]}</div>`).join('');}
+const CARDS=[['chalk','The Chalk','House rules'],['db_top','Double Top','Moments'],['bar','The Bar','Venues'],['db_bull','Bullseye','Moments'],['case','The Case','Kit'],['barrel','The Barrel','Kit'],['flights','Flights','Kit'],[null,'#041','Venues'],[null,'#042','Regulars']];
+let cardF='All';
+function renderGrid(){const L=CARDS.filter(c=>cardF==='All'||c[2]===cardF);$('#grid').innerHTML=L.length?L.map(c=>c[0]?`<div class="card"><img src="img/card_${c[0]}.jpg" alt="${c[1]}"><span class="n">${c[1]}</span></div>`:`<div class="card out" aria-label="Not collected yet">${c[1]}</div>`).join(''):`<p class="empty">No ${cardF.toLowerCase()} cards yet. Every pack has a chance at one.</p>`;}
+$$('.chips button').forEach(b=>b.onclick=()=>{$$('.chips button').forEach(x=>x.setAttribute('aria-pressed',x===b));cardF=b.textContent.split(' ·')[0];renderGrid();});
 function renderPacks(){const n=st.packs;$('#packTxt').textContent=n?n+(n===1?' pack waiting':' packs waiting'):'Win matches to earn packs';$('#openPack').hidden=!n;}
 $('#openPack').onclick=()=>{st.packs--;const c=CARDS.find(x=>!x[0]);if(c){c[0]='kw_fishchips';c[1]='Fish & Chips';}renderGrid();renderPacks();toast('New card: Fish & Chips (Kiwi Pub Life 8/9)');};
 // Result
