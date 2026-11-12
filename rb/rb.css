@@ -255,3 +255,10 @@ html.rb-on #rbMenuSheet{}
 html.rb-on .st2o .g small{font-size:11px}
 html.rb-on .tc-chips button,html.rb-on .tcpk__skip{min-height:44px}
 html.rb-on .cred-card a{display:inline-block;min-height:44px;line-height:44px}
+/* EXP-WIDE (Overseer 03:12): on a wide window the new look is a phone-width column (520 px) centred over the Club, dimmed, filling the sides;
+   phones (< 600 px) are untouched. Padding keeps every child's own layout; the ☰ sheet follows the column's right edge. */
+@media (min-width:600px){
+  #rbApp{--rbside:max(0px,calc((100vw - 520px) / 2));padding-left:var(--rbside);padding-right:var(--rbside);
+    background:linear-gradient(90deg,transparent calc(50% - 261px),var(--line) calc(50% - 261px),var(--bg) calc(50% - 260px),var(--bg) calc(50% + 260px),var(--line) calc(50% + 260px),transparent calc(50% + 261px)),linear-gradient(rgba(8,10,12,.8),rgba(8,10,12,.86)),url(assets/rb/venue_t1.jpg) center/cover no-repeat,var(--bg)}
+  #rbApp .rb-msheet{right:calc(var(--rbside) + 12px)}
+}
