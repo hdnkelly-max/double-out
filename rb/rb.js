@@ -206,25 +206,49 @@
      this screen sits over it, reads the match and the save, and its buttons press the overlay's own buttons, so the after-match chain is unchanged. ---------- */
   let pre0 = null, resOn = false;
   const xpTotal = v => { let t = v.xp; for (let L = 1; L < v.lv; L++) t += C3.lvNeed(L); return t; };
+  /* ---------- Result (EXP-WIN, Hayden 08:38 + 09:05: generated scenes instead of our 3D models, broadcast type) ---------- */
+  const WIMG = t => `${IMG}w_win_t${Math.max(0, Math.min(6, t | 0))}.jpg`;
+  const shirtCache = {};
+  // the generated light-grey shirt, recoloured to the unlocked colour through the mask made from the same image
+  function shirtImg(hex, done) {
+    if (shirtCache[hex]) return shirtCache[hex];
+    if (shirtCache[hex] === undefined) { shirtCache[hex] = null; const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; try {
+      const w = A.naturalWidth, h = A.naturalHeight, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
+      const r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
+      g.putImageData(im, 0, 0); shirtCache[hex] = cv.toDataURL('image/jpeg', .86); if (done) done(shirtCache[hex]); } catch (e) { shirtCache[hex] = `${IMG}w_rw_shirt.jpg`; } };
+      A.onload = Mk.onload = go; A.onerror = Mk.onerror = () => { shirtCache[hex] = `${IMG}w_rw_shirt.jpg`; }; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`; }
+    return `${IMG}w_rw_shirt.jpg`;
+  }
   function result(M) {
     const { c, v } = M, me = S.p[0], op = S.p[1] || {}, won = !!S.won, money0 = !!(S.local || S.after === 'money' || S.intro), avg = x => x && x.darts ? +(x.pts / x.darts * 3).toFixed(1) : 0;
     const a = avg(me), b = avg(op), cash = c.bank - pre0.bank, xp = Math.max(0, xpTotal(v) - pre0.xp), up = pre0 && v.lv > pre0.lv;
-    const ov = $id('c3rw'), unl = ov && ov.querySelector('#c3rwUnl b'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
-    const head = `<div class="rb-hero" style="height:250px"><div class="rb-im" style="background:${heroBg(c.tier, '18% 100%')}"></div><div class="rb-sh2" style="background:linear-gradient(270deg,rgba(10,12,14,.92) 0,rgba(10,12,14,.4) 45%,rgba(10,12,14,0) 70%)"></div><div class="rb-lockup"><small style="color:${won ? 'var(--ink)' : 'var(--ink2)'}">${won ? 'Won' : 'Lost'}</small><b class="rb-num">${me.legs || 0}–${op.legs || 0}</b><span>vs ${esc(op.disp || op.name || '')}</span></div></div>`;
-    const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
-    const opPt = (pre0 && pre0.opPt) || (() => { try { return op.look ? V.portrait(op.look, op.name, c.tier, 0) : ''; } catch (e) { return ''; } })();
-    const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) + '%' : '–';
-    const h2h = `<div class="rb-line">You ${a || '–'} · Him ${b || '–'} · Checkout ${co}${me.t180 ? ' · ' + me.t180 + ' × 180' : ''}${me.hf ? ' · High out ' + me.hf : ''}</div>`;
-    const rw = `<div class="rb-card">${sh(won ? 'Rewards' : 'Match summary')}<div style="display:flex;align-items:center;gap:14px">${up ? '' : `<div class="rb-ring">${ring(M.pct, v.lv)}</div>`}<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="rb-big rb-num" id="rbRCash" style="font-size:32px;color:${cash > 0 ? 'var(--good)' : 'var(--ink3)'}">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</span><span class="rb-t2 rb-num" id="rbRXp">+${xp} XP</span></div><span class="rb-sub">${M.need - v.xp} XP to level ${v.lv + 1}</span>${extra ? `<div class="rb-chips">${chip('+' + extra + ' achievement' + (extra > 1 ? 's' : '') + ' and contracts', 'g')}</div>` : ''}</div></div></div>`;
+    const ov = $id('c3rw'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
+    const t = TIERS[c.tier] || {}, kick = S.intro ? 'Your fill-in night' : money0 ? (S.local ? 'Local night' : 'Money match · back room') : `${t.n || ''}${M.rows && M.yi >= 0 ? ` · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}` : ''}`;
+    const heroIm = !won && c.tier === 1 ? `${IMG}w_loss_t1.jpg` : WIMG(c.tier);
+    const head = `<div class="rbw-hero${won ? '' : ' rbw-lost'}${!won && c.tier !== 1 ? ' rbw-dim' : ''}"><div class="rb-im" style="background-image:url(${heroIm})"></div><div class="rbw-lt"><span class="rbw-kick">${esc(kick)}</span><span class="rbw-res">${won ? 'Won' : 'Lost'}</span><div class="rbw-score"><b class="rb-num rb-lockup-n">${me.legs || 0}–${op.legs || 0}</b><span>vs<em>${esc(op.disp || op.name || '')}</em></span></div></div></div>`;
+    const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) : null;
+    const third = me.hf ? ['High out', me.hf] : me.t180 ? ['180s', me.t180] : ['Best visit', me.bestVisit || '–'];
+    const best = !won ? '' : a && a > b ? 'avg' : co != null && co >= 40 ? 'co' : '';
+    const tile = (k, l, val) => `<div class="rbw-t${best === k ? ' rbw-best' : ''}"><small>${l}${best === k ? ' <i>Best</i>' : ''}</small><b class="rb-num">${val}</b></div>`;
+    const tiles = `<div class="rbw-tiles">${tile('avg', 'Average', a || '–')}${tile('co', 'Checkout', co != null ? co + '%' : '–')}${tile('x', third[0], third[1])}</div>`;
+    const need = M.need, pNow = Math.min(1, v.xp / need), pPrev = up ? 0 : Math.max(0, Math.min(pNow, (v.xp - xp) / need));
+    const cashLab = won || cash <= 0 ? 'Prize' : 'Appearance money';
+    const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
+    // unlock cards: the level reward big (image for its kind), the next dart and achievements quieter
+    let main = '';
+    if (up && C3.rewardAt) { const rs = []; for (let L = pre0.lv + 1; L <= v.lv; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
+      const pick = rs.filter(x => x[1].k === 'shirt').pop() || rs.filter(x => x[1].big).pop() || rs[rs.length - 1];  // a new shirt first: the game's own button below offers to wear it
+      if (pick) { const [L, r] = pick, more = rs.length - 1; const img = r.k === 'shirt' ? shirtImg(r.v, u => { const e = $id('rbRUnl'); if (e) e.style.backgroundImage = `url(${u})`; }) : r.k === 'flight' ? `${IMG}w_rw_darts.jpg` : r.k === 'cash' ? `${IMG}w_rw_cash.jpg` : `${IMG}w_rw_trophy.jpg`;
+        main = `<div class="rbw-uc${won ? ' rbw-lv' : ''}" id="rbRUnl" style="background-image:url(${img})"><div class="rbw-x"><small>Level ${L} unlocked</small><b>${esc(r.n.replace(/^Title: /, ''))}</b><span>${r.k === 'shirt' ? 'Wear it from your next match' : r.k === 'flight' ? 'Fit them in Shop · Setup & gear' : r.k === 'title' ? 'Your new title' : 'Added to your bank'}${more > 0 ? ` · +${more} more` : ''}</span></div></div>`; } }
     let want = '';
     const nb = BARRELS.filter(x => { const d = dState(x); return !d.own && !d.g; }).sort((x, y) => x.price - y.price)[0];
-    if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rb-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default"><span style="display:flex;align-items:center;gap:12px"><div class="rb-slot rb-dart rb-r8" style="width:110px;flex:0 0 110px"><div class="rb-im" style="background-image:url(${dartImg(nb, 'ds')})"></div></div><span class="rb-tx"><small>Next dart</small><span class="rb-t2">${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))} · ${left ? money(left) + ' to go' : 'you can buy it'}</span></span></span><div class="rb-bar"><i style="width:${Math.min(100, c.bank / cost * 100)}%"></i></div></div>`; }
+    if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_darts.jpg)"><div class="rbw-x"><small class="rbw-gk">Next dart</small><b>${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))}</b><span>${left ? money(left) + ' to go' : 'You can buy it now'}</span></div></div>`; }
+    const ach = won && extra ? `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_trophy.jpg)"><div class="rbw-x"><small class="rbw-gk">${extra} achievement${extra > 1 ? 's' : ''} and contracts</small><b>Nice work</b><span>See them in Locker · Trophies</span></div></div>` : '';
     let tbl = '';
-    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rb-row" style="cursor:default"><span class="rb-tx"><small>Season</small><span class="rb-t2">Now ${ord(M.yi + 1)}${M.yi <= 1 ? ' · top two go up' : ' · ' + (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</span></span></div>`;
-    const act = `<div class="rb-pin" style="display:flex;flex-direction:column;gap:8px;padding-bottom:4px"><button class="rb-primary" type="button" id="rbRGo"><b>${esc(go ? go.textContent : 'Continue')}</b></button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
-    // the milestone moment: a level-up gets its own card above the rewards (v8 note: real milestones get a stronger moment)
-    const lvl = up ? `<div class="rb-card rb-lvup" style="flex-direction:row;align-items:center;gap:16px;border-color:#6a2226;background:linear-gradient(90deg,#2a1416,#1a1e21 70%)"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><small class="rb-kick" style="color:#f0a3a7">Level up</small><span class="rb-big" style="font-size:34px">Level ${v.lv}</span>${unl ? `<span class="rb-sub">${esc(unl.textContent)} unlocked</span>` : ''}</div></div>` : '';
-    return head + lvl + h2h + rw + want + tbl + act;
+    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
+    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go" type="button" id="rbRGo">${esc(go ? go.textContent : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    return head + tiles + rw + main + want + ach + tbl + act;
   }
   let resMO = null, bodyMO = null;
   // any game layer showing at or above our level (sheets 55-61, pack opening, messages) other than the reward overlay itself
