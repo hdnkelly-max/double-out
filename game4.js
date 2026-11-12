@@ -2342,6 +2342,17 @@ zoomSync();
 // ===== LOOP =====
 const ecgC=$('ecg'),ecgX=ecgC.getContext('2d');let ecgPhase=0,ecgLast=0,ecgBeat=0;function ecgDraw(now,hr,nv){const W=ecgC.width,H=ecgC.height;const dt=Math.min(.1,(now-(ecgLast||now))/1000);ecgLast=now;ecgPhase=(ecgPhase+dt*hr/60)%1;ecgX.clearRect(0,0,W,H);ecgX.lineWidth=2;ecgX.strokeStyle=hr>105?'#ff5a4e':'#f3efe6';ecgX.beginPath();for(let x=0;x<W;x++){const ph=((x/W)*1.0+ (1-ecgPhase))%1;let y=0;if(ph>.40&&ph<.44)y=-.15;else if(ph>=.44&&ph<.47)y=1;else if(ph>=.47&&ph<.50)y=-.5;else if(ph>.58&&ph<.66)y=.18*Math.sin((ph-.58)/.08*Math.PI);const amp=H*.36*(0.8+Math.min(1.2,nv*.25));const py=H*.62-y*amp;if(x===0)ecgX.moveTo(x,py);else ecgX.lineTo(x,py);}ecgX.stroke();}
 let lastBeat=0;
+/* ENG-13 (#20, Overseer 07:12): with no match live, the 3D scene was drawn every frame (60/s on an iPhone) behind the rebrand hub, which is
+   opaque and covers the whole screen: GPU and main-thread work nobody sees, sharing the phone with the menu sounds. Now no 3D frame is drawn
+   while a full-screen opaque menu covers the scene. Checked at most every 400 ms (two style reads), never during a match: a live match always
+   draws. Portraits and hero renders are separate calls and unaffected. Test switch 'hub3d' (URL q20) keeps the old drawing for an A/B. */
+function menuCovers(now){if(now-(menuCovers.t||0)<400)return !!menuCovers.on;menuCovers.t=now;let on=false;
+ try{if(!(window.TOPS_q20has&&TOPS_q20has('hub3d'))){const W=innerWidth,H=innerHeight;const els=[document.getElementById('rbApp')].concat(SCREENS.map(id=>document.getElementById(id)));
+  for(const e of els){if(!e||e.hidden)continue;const r=e.getBoundingClientRect();if(r.left>1||r.top>1||r.right<W-1||r.bottom<H-1)continue;const c=getComputedStyle(e);if(c.display==='none'||c.visibility==='hidden'||+c.opacity<.99)continue;
+   const m=/rgba?\(([^)]*)\)/.exec(c.backgroundColor);const a=m?(m[1].split(',').length>3?+m[1].split(',')[3]:1):0;if(a>=.99){/* and it sits above the 3D canvas */const st=document.elementsFromPoint(W/2,H/2);const ci=st.indexOf(document.getElementById('scene'));const ei=st.findIndex(x=>x===e||e.contains(x));if(ei>=0&&(ci<0||ei<ci)){on=true;break;}}}}}catch(e){on=false;}
+ if(on!==!!menuCovers.on){try{document.body.classList.toggle('tops-covered',on);}catch(e){}}menuCovers.on=on;return on;}
+{const st=document.createElement('style');st.textContent='body.tops-covered #grain{display:none}';/* the film grain sits under the opaque menu (z 2 vs 50) but kept animating and blending a 4x-screen layer */document.head.appendChild(st);}
+window.TOPS_menuCovers=()=>({on:!!menuCovers.on,skipped:menuCovers.skipped|0});
 function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();
   if(window.TH_LEGACY){const amp=2.0*S.barrel.sway*swayMult()*(1+nv*.4)*(0.7+armMult()*.3);S.sway={x:amp*(Math.sin(t*1.7)+.5*Math.sin(t*4.3+1)),y:amp*(Math.sin(t*2.1+2)+.5*Math.sin(t*3.7))};}
   else{if(!tick._p||now-tick._pt>250){tick._p=throwParams();tick._pt=now;}const tp=tick._p;S.tp=tp;
@@ -2349,8 +2360,8 @@ function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();
   if(S.pulling){S.pull=pullAt(performance.now());if(S.pull>=1.0)S.over=true;if(S.pull>=1.3)release(null,'auto');}S.inWin=S.pulling&&isPerfect();feelBreathe(now);
   const thr=targetHR();S.hr+=(thr-S.hr)*.02;const period=60000/S.hr;if(now-lastBeat>period){lastBeat=now;if(nv>1.2)sfxHeart();ecgBeat=now;if(!window.TH_LEGACY&&tick._p&&!(S.pulling&&S.lock))driftBeat(now,tick._p);}
   /* #16: this runs every frame. Assigning textContent/hidden counts as a page change even when the value is the same, so it forced a style recalc of the whole page every frame, which costs more as the page grows (~1,240 nodes in match 1, ~1,730 from match 2). Write only when the value changes; the page ends up the same every frame. */setTx($('bpm'),String(Math.round(S.hr)));$('hr').classList.toggle('hot',S.hr>105);{const pc=nervePct();const me=S.p[S.cur];const mine=!me.ai&&!S.mateTurn&&!S.practice;setTx($('hrNote'),mine&&nv>.3?`${nerveCause()} · spread +${pc}%`:(mine?'Settled':''));const bs=$('btnSettle'),hid=!(S.breathe||(mine&&nv>.9&&!S.settled&&!S.pulling&&!S.busy));if(bs&&bs.hidden!==hid)bs.hidden=hid;}ecgDraw(now,S.hr,nv);{const o=Math.round((S.view===1?0:Math.min(.7,Math.max(0,nv-.8)*.22))*100)/100;const ne=$('nerve');if(ne&&ne._o!==o){ne._o=o;ne.style.opacity=o;}}/* #20: write only on change, like setTx */sfxPubAmbience();
-  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);V.frame(now,S);shownPush(now);}
- else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);V.frame(now,S);}
+  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);if(menuCovers.on){/* a match is live: everything shows again */menuCovers.on=false;menuCovers.t=0;try{document.body.classList.remove('tops-covered');}catch(e){}}V.frame(now,S);shownPush(now);}
+ else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);if(!menuCovers(now))V.frame(now,S);else menuCovers.skipped=(menuCovers.skipped|0)+1;}
  fxTick();requestAnimationFrame(tick);}
 requestAnimationFrame(tick);
 if('speechSynthesis'in window){try{speechSynthesis.getVoices();}catch(e){}}
@@ -3165,6 +3176,7 @@ window.TOPS_matchTeardown=matchTeardown;
 //  keepvenue  no venue rebuild when the hub comes back on the same tier (match 2 draws match 1's venue objects and textures)
 //  keepfig    the teardown between matches frees nothing (opponent figure, character templates, hair tints stay as they were)
 //  nohub3d    no 3D drawing while the hub is up and no match is live (the GPU rests between matches)
+//  hub3d      ENG-13 off: the 3D scene is drawn behind an opaque full-screen menu again (as before 3.32), for an A/B
 //  mute       the game's audio is suspended during matches (tells whether the audio graph costs frames)
 // Each perf row carries the switch in dev.t20.q20.
 {let q='';try{const u=new URLSearchParams(location.search).get('q20');if(u!=null){q=u;sessionStorage.setItem('tops_q20',u);}else q=sessionStorage.getItem('tops_q20')||'';}catch(e){}
