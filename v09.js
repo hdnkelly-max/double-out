@@ -577,8 +577,8 @@ const _ss=showShop;showShop=function(){const r=_ss.apply(this,arguments);try{
 <script>
 // v0.95: never play on an old build. Checks version.json every minute and when the app comes back into view
 (function(){
-const vnum=s=>{const p=String(s||'0').split('.');return (+p[0]||0)*1000+(+(p[1]||0)+'').padEnd(2,'0').slice(0,2)*1+ (p[1]&&p[1].length>2?0:0);};
-const cmp=(a,b)=>{const A=String(a).split('.').map(Number),B=String(b).split('.').map(Number);const fa=A[0]+((A[1]||0)/Math.pow(10,String(A[1]||0).length)),fb=B[0]+((B[1]||0)/Math.pow(10,String(B[1]||0).length));return fa-fb;};
+// ENG-3: compare each part as a whole number, so "2.10" is newer than "2.09" (the old compare read "2.10" as 2.1 and "2.09" as 2.9)
+const cmp=(a,b)=>{const A=String(a||'0').split('.'),B=String(b||'0').split('.');for(let i=0;i<Math.max(A.length,B.length);i++){const x=parseInt(A[i],10)||0,y=parseInt(B[i],10)||0;if(x!==y)return x-y;}return 0;};
 window.TOPS_vcmp=cmp;
 let latest=null;
 function gate(v){let g=document.getElementById('verGate');if(!g){g=document.createElement('div');g.id='verGate';document.body.appendChild(g);}

@@ -252,6 +252,7 @@
     const _bm = beginMatch;
     window.beginMatch = beginMatch = function (opts) {
       walkAbort();   // #17: a walk-on left from the last match ends here
+      document.querySelectorAll('.tc-sheet.tc-welcome').forEach(e => e.remove());   // EXP-6: never over a match; it stays pending (welPend) for the next hub
       const r = _bm.apply(this, arguments);
       try { H.sess = []; if (opts && opts.tcExh) S.tcExh = opts.tcExh; const d = oppWalk(opts); if (d) { const s0 = S; setTimeout(() => { try { if (S === s0 && S && !S.done) walkOnStart(opts); } catch (e) {} }, d); } else walkOnStart(opts);   /* #17: the delayed walk-on only starts if the same match is still running */ } catch (e) { console.warn('tc begin', e); }
       return r;
@@ -366,7 +367,12 @@
     const t = st(); t.stats[stat] = Math.max(t.stats[stat] || 0, n);
     D.TIERS.filter(x => x.stat === stat).forEach(T => { const have = t.tiers[T.id] || 0; for (let lv = have; lv < 3; lv++) { if (t.stats[stat] >= T.lv[lv]) { t.tiers[T.id] = lv + 1; award('tier:' + T.id + ':' + lv, 'tier', `Welcome · ${T.n} ${D.TIER_NAMES[lv].toLowerCase()}`); } else break; } });
   }
+  // EXP-6: the welcome must never sit over a match. It waits (kept in the tc save) until the hub, and a match start closes it.
+  function matchOn() { return typeof S !== 'undefined' && !!S && !S.done; }
+  function welcomeDone() { const t = st(); if (t && t.welPend) { delete t.welPend; keep(); } }
   function welcome(info) {
+    { const t = st(); if (t) { t.welPend = info; keep(); } }
+    if (matchOn() || document.querySelector('.tc-sheet.tc-welcome')) return;   // a match is on (or it's already open): show it at the next hub
     const peek = CARD.littler;
     const el = sheet('tc-welcome', `<div class="tc-wel"><div class="tc-wel-fan"><img src="assets/cards/back.webp" alt=""><img src="assets/cards/back.webp" alt=""><div class="tc-wel-peek"></div></div>
       <div class="tcpk__kicker">New in TOPS</div><h2 class="tc-h">Cards are here</h2>
@@ -376,14 +382,15 @@
       <button type="button" class="tcpk__btn tcpk__btn--go" id="tcWelGo">Open ${info.picks} picks</button><button type="button" class="tcpk__later" id="tcWelLater">Later</button></div>`);
     const pk = TCC.card(peek); pk.classList.add('is-flipped'); el.querySelector('.tc-wel-peek').appendChild(pk);
     save.tcIntro = save.tcIntro || Date.now(); keep(); // #13: the welcome carries the explainer, so no second sheet before the first pick
-    el.querySelector('#tcWelGo').onclick = () => { el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
-    el.querySelector('#tcWelLater').onclick = () => { el.remove(); hubTiles(); };
+    el.querySelector('#tcWelGo').onclick = () => { welcomeDone(); el.remove(); H.ready().then(() => openPack(openPicks(), () => hubTiles())); };
+    el.querySelector('#tcWelLater').onclick = () => { welcomeDone(); el.remove(); hubTiles(); };
+    el.querySelector('.tc-x').addEventListener('click', welcomeDone);
   }
   // tab switches re-run the hub renderers; keep our rows in place
   if (typeof hubTab === 'function') { const _ht = hubTab; window.hubTab = hubTab = function () { const r = _ht.apply(this, arguments); try { hubTiles(); } catch (e) {} return r; }; }
   if (typeof showHub === 'function') {
     const _sh = showHub;
-    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); if (bf) setTimeout(() => welcome(bf), 700); } catch (e) { console.warn('tc hub', e); } return r; };
+    window.showHub = showHub = function () { walkAbort(); const r = _sh.apply(this, arguments); try { trophyCheck(); exhibitionTick(); const bf = backfill(); hubTiles(); { const t0 = st(); if (bf && t0) { t0.welPend = bf; keep(); } if (t0 && t0.welPend) setTimeout(() => { try { const t = st(); if (t && t.welPend && !matchOn() && !document.querySelector('.tc-sheet.tc-welcome')) welcome(t.welPend); } catch (e) { console.warn('tc welcome', e); } }, 700); }   /* EXP-6: read the pending welcome when the timer fires, so a dismissed one never comes back from an older timer */ } catch (e) { console.warn('tc hub', e); } return r; };
   }
   if (typeof showTitle === 'function') {   // #17: quitting to the title ends a walk-on too
     const _st = showTitle;
@@ -662,34 +669,224 @@
       const btn = new T.Mesh(new T.SphereGeometry(.009, 10, 6), tw); btn.position.set(0, .058, .01); g.add(btn);
       g.position.set(0, bx.y1 - h * .33 + .006, (bx.z0 + bx.z1) / 2 + .006); g.rotation.x = -.06; g.scale.setScalar(sc); add(g);
     }
-    if (W.hair === 'wear_mullet') {
-      const col = (L.hairCol && new T.Color(L.hairCol)) || new T.Color(0x2b2119);
-      const g = new T.Group(), hm = M(col.getHex(), { roughness: .7 });
-      for (let i = 0; i < 11; i++) { const s = new T.Mesh(new T.SphereGeometry(.028, 10, 8), hm); const a = (i - 5) / 5; s.position.set(a * .058, -(i % 2) * .018 - Math.abs(a) * .012, -(i % 3) * .006); s.scale.set(1, 3.3 - Math.abs(a) * 1.1, .75); s.rotation.z = a * .25; g.add(s); }
-      g.position.set(0, bx.y0 + h * .18, bx.z0 + .03); g.scale.setScalar(sc); add(g);
-    }
-    if (W.shoulder === 'wear_towel') {
-      const par = B.Spine2 || B.Spine1 || B.Neck; if (!par) return;
-      const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#efe9dc'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#9b3b32'; for (let i = 0; i < 64; i += 16) { x.fillRect(i, 0, 5, 64); x.fillRect(0, i, 64, 5); }
-      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(2, 4);
-      const mat = new T.MeshStandardMaterial({ map: tex, roughness: 1, side: T.DoubleSide });
-      // one strip bent over the shoulder: hangs down the front, curls over the top, hangs longer down the back
-      const W0 = .11, F = .16, R = .092, Bk = .22, Ltot = F + Math.PI * R + Bk;
-      const geo = new T.PlaneGeometry(W0, Ltot, 6, 40), pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const u = pos.getX(i), sAlong = Ltot / 2 - pos.getY(i); let y, z;
-        if (sAlong < F) { y = -(F - sAlong); z = R; }
-        else if (sAlong < F + Math.PI * R) { const th = (sAlong - F) / R; y = Math.sin(th) * R; z = Math.cos(th) * R; }
-        else { y = -(sAlong - F - Math.PI * R); z = -R; }
-        const wob = Math.sin(sAlong * 38 + u * 20) * .003 + (y < 0 ? -y * .06 : 0);
-        pos.setXYZ(i, u * (1 + (y < 0 ? -y * .8 : 0)), y, z + Math.sign(z || 1) * wob);
-      }
-      geo.computeVertexNormals();
-      const g = new T.Group(), cloth = new T.Mesh(geo, mat); g.add(cloth);
-      g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
-      g.position.set(.115, .11, -.012); g.rotation.set(0, 0, -.3); g.scale.setScalar(1); par.add(g);
-    }
+    if (W.hair === 'wear_mullet') { try { wearMullet(T, B, L, bx, fig); } catch (e) { console.warn('wear mullet', e); } }
+    if (W.shoulder === 'wear_towel') { try { wearTowel(T, B, fig); } catch (e) { console.warn('wear towel', e); } }
   };
+
+  // ---- wearable helpers: sample the skinned body so cloth and hair sit on each model's own shape ----
+  // CPU-skins the figure (same maths as the shader, quantised attributes included) and returns the vertices
+  // weighted mostly to the `want` bones, in `space` (a bone) coordinates. Runs once when the look is built.
+  // CPU-skinned points are the same for every rebuild of a model (each figure is a fresh clone of the same rig and shares
+  // its geometry), so they're cached per geometry: a phone profile spent ~50 ms per call when the opponent swap rebuilt
+  // figures mid-match (QA 05:13). The WeakMap lets a model's entry go when its geometry does.
+  const SKIN_CACHE = new WeakMap();
+  function skinPts(T, fig, space, want, minW, skipMesh) {
+    let g0 = null; fig.traverse(o => { if (!g0 && o.isSkinnedMesh && o.geometry) g0 = o.geometry; });
+    const key = want.source + '|' + minW + '|' + (skipMesh ? 1 : 0) + '|' + (space.name || '');
+    const hit = g0 && SKIN_CACHE.get(g0); if (hit && hit[key]) return hit[key].slice();
+    const out = skinPts0(T, fig, space, want, minW, skipMesh);
+    if (g0) { const m = hit || {}; m[key] = out.slice(); if (!hit) SKIN_CACHE.set(g0, m); }
+    return out;
+  }
+  function skinPts0(T, fig, space, want, minW, skipMesh) {
+    fig.updateWorldMatrix(true, true);
+    const inv = new T.Matrix4().copy(space.matrixWorld).invert(), out = [], v = new T.Vector3(), acc = new T.Vector3(), tmp = new T.Vector3();
+    const rd = (at, i, k) => { const A = at.isInterleavedBufferAttribute ? at.data.array : at.array; let x = at.isInterleavedBufferAttribute ? A[i * at.data.stride + at.offset + k] : A[i * at.itemSize + k];
+      if (at.normalized) x = A instanceof Int16Array ? Math.max(x / 32767, -1) : A instanceof Uint16Array ? x / 65535 : A instanceof Int8Array ? Math.max(x / 127, -1) : A instanceof Uint8Array ? x / 255 : x; return x; };
+    fig.traverse(o => {
+      if (!o.isSkinnedMesh || /Hair|Eye|Lash|Teeth|Tongue|Brow/i.test(o.name) || (skipMesh && skipMesh(o))) return;
+      const g = o.geometry, P = g.attributes.position, J = g.attributes.skinIndex, Wt = g.attributes.skinWeight, sk = o.skeleton; if (!P || !J || !Wt || !sk) return;
+      const ok = sk.bones.map(bn => want.test(bn.name)), bm = sk.bones.map((bn, i) => new T.Matrix4().multiplyMatrices(bn.matrixWorld, sk.boneInverses[i]));
+      const toS = new T.Matrix4().multiplyMatrices(inv, o.matrixWorld).multiply(o.bindMatrixInverse);
+      for (let i = 0; i < P.count; i++) {
+        let w = 0, tw = 0; for (let k = 0; k < 4; k++) { const wk = rd(Wt, i, k); tw += wk; if (ok[rd(J, i, k)]) w += wk; }
+        if (!tw || w / tw < minW) continue;
+        v.set(rd(P, i, 0), rd(P, i, 1), rd(P, i, 2)).applyMatrix4(o.bindMatrix); acc.set(0, 0, 0);
+        for (let k = 0; k < 4; k++) { const wk = rd(Wt, i, k); if (wk) acc.add(tmp.copy(v).applyMatrix4(bm[rd(J, i, k)]).multiplyScalar(wk)); }
+        acc.multiplyScalar(1 / tw).applyMatrix4(toS); out.push(acc.x, acc.y, acc.z);
+      }
+    });
+    return out;
+  }
+  const hsh = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
+
+  // Shazza's tea towel: a folded cotton towel draped over the left shoulder. Each lengthwise column is wrapped
+  // round that slice of the shoulder (front, over the trapezius, down the back), hangs straight off the chest and
+  // shoulder blade, then gets soft folds, a little flare at the hems, and a back face so it reads as cloth.
+  function wearTowel(T, B, fig) {
+    const par = B.Spine2 || B.Spine1; if (!par) return;
+    const P = skinPts(T, fig, par, /_(Spine1|Spine2|Neck|LeftShoulder)$/, .55);
+    const lp = n => B[n] && par.worldToLocal(B[n].getWorldPosition(new T.Vector3()));
+    const la = lp('LeftArm') || new T.Vector3(.17, .15, 0), nk = lp('Neck') || new T.Vector3(0, .17, 0);
+    const side = Math.sign(la.x - nk.x) || 1, d = Math.abs(la.x - nk.x);
+    const TW = Math.min(.13, d * .7), xc = nk.x + side * d * .52, LF = .27, LB = .33, GAP = .013;
+    const NU = 9, NV = 56, cy = la.y - .02;
+    const cols = [];
+    for (let iu = 0; iu < NU; iu++) {
+      const u = iu / (NU - 1) - .5, x = xc + side * u * TW;
+      let sl = []; for (let hw = .012; hw < .05 && sl.length < 60; hw += .008) { sl = []; for (let i = 0; i < P.length; i += 3) if (Math.abs(P[i] - x) < hw) sl.push(P[i + 1], P[i + 2]); }
+      let zs = 0, zn = 0; for (let i = 0; i < sl.length; i += 2) if (Math.abs(sl[i] - cy) < .04) { zs += sl[i + 1]; zn++; }
+      const cz = zn ? zs / zn : 0;
+      // radial profile round (cy, cz): 0 = straight forward, PI/2 = up, PI = straight back
+      const NB = 30, rb = new Array(NB + 1).fill(0);
+      for (let i = 0; i < sl.length; i += 2) { const dy = sl[i] - cy, dz = sl[i + 1] - cz; let th = Math.atan2(dy, dz); if (th < -Math.PI / 2) th += Math.PI * 2; if (th < -.15 || th > Math.PI + .15) continue; const b = Math.max(0, Math.min(NB, Math.round(th / Math.PI * NB))); rb[b] = Math.max(rb[b], Math.hypot(dy, dz)); }
+      for (let b = 0; b <= NB; b++) if (!rb[b]) { let l = b, r = b; while (l > 0 && !rb[l]) l--; while (r < NB && !rb[r]) r++; rb[b] = rb[l] && rb[r] ? (rb[l] + rb[r]) / 2 : rb[l] || rb[r] || .08; }
+      const rd = rb.map((_, b) => Math.max(rb[Math.max(0, b - 1)], rb[b], rb[Math.min(NB, b + 1)])), rs = rd.map((_, b) => (rd[Math.max(0, b - 1)] + rd[b] * 2 + rd[Math.min(NB, b + 1)]) / 4);
+      // surface depth bands for the hanging parts
+      const zF = y => { let m = -1e9; for (let i = 0; i < sl.length; i += 2) if (Math.abs(sl[i] - y) < .012 && sl[i + 1] > cz) m = Math.max(m, sl[i + 1]); return m; };
+      const zB = y => { let m = 1e9; for (let i = 0; i < sl.length; i += 2) if (Math.abs(sl[i] - y) < .012 && sl[i + 1] < cz) m = Math.min(m, sl[i + 1]); return m; };
+      const pl = [];
+      let z = cz + rs[0] + GAP; const fr = []; for (let y = cy - .01; y > cy - .42; y -= .01) { const s = zF(y); if (s > -1e8) z = Math.max(z, s + GAP); fr.push([y, z]); }
+      fr.reverse().forEach(p => pl.push(p));
+      for (let b = 0; b <= NB; b++) { const th = b / NB * Math.PI, r = rs[b] + GAP; pl.push([cy + Math.sin(th) * r, cz + Math.cos(th) * r, b === NB / 2]); }
+      z = cz - rs[NB] - GAP; for (let y = cy - .01; y > cy - .5; y -= .01) { const s = zB(y); if (s < 1e8) z = Math.min(z, s - GAP); pl.push([y, z]); }
+      const L = [0]; for (let i = 1; i < pl.length; i++) L.push(L[i - 1] + Math.hypot(pl[i][0] - pl[i - 1][0], pl[i][1] - pl[i - 1][1]));
+      const s0 = L[pl.findIndex(p => p[2])];
+      const at = s => { let i = 1; while (i < L.length - 1 && L[i] < s) i++; const t = (s - L[i - 1]) / ((L[i] - L[i - 1]) || 1); const a = pl[i - 1], b = pl[i]; const ty = b[0] - a[0], tz = b[1] - a[1], tl = Math.hypot(ty, tz) || 1;
+        return { y: a[0] + ty * t, z: a[1] + tz * t, ny: -tz / tl, nz: ty / tl }; };
+      cols.push({ u, x, at, s0, cy, cz });
+    }
+    // sample every column, then smooth across the width so neighbouring slices of the body don't make it ragged
+    const G = cols.map(C => { const r = []; for (let iv = 0; iv < NV; iv++) { const f = iv / (NV - 1), s = C.s0 - LF + f * (LF + LB), p = C.at(s); r.push([p.y, p.z, s]); } return r; });
+    for (let pass = 0; pass < 4; pass++) for (let iv = 0; iv < NV; iv++) { const row = G.map(c => c[iv].slice()); for (let iu = 0; iu < NU; iu++) { const a = row[Math.max(0, iu - 1)], b = row[iu], e = row[Math.min(NU - 1, iu + 1)]; G[iu][iv][0] = (a[0] + 2 * b[0] + e[0]) / 4; G[iu][iv][1] = (a[1] + 2 * b[1] + e[1]) / 4; } }
+    for (let pass = 0; pass < 2; pass++) G.forEach(c => { const o = c.map(q => q.slice()); for (let iv = 1; iv < NV - 1; iv++) { c[iv][0] = (o[iv - 1][0] + 2 * o[iv][0] + o[iv + 1][0]) / 4; c[iv][1] = (o[iv - 1][1] + 2 * o[iv][1] + o[iv + 1][1]) / 4; } });
+    // build outer + inner (back face) + hem walls
+    const NUV = NU * NV, pos = new Float32Array(NUV * 3 * 2), uv = new Float32Array(NUV * 2 * 2);
+    const ph = hsh(TW, d) * 6, cyM = cols[NU >> 1].cy, czM = cols[NU >> 1].cz;
+    for (let iu = 0; iu < NU; iu++) {
+      const C = cols[iu], c = G[iu];
+      for (let iv = 0; iv < NV; iv++) {
+        const f = iv / (NV - 1), s = c[iv][2], a = c[Math.max(0, iv - 1)], b = c[Math.min(NV - 1, iv + 1)];
+        let ty = b[0] - a[0], tz = b[1] - a[1]; const tl = Math.hypot(ty, tz) || 1; let ny = -tz / tl, nz = ty / tl;
+        if (ny * (c[iv][0] - cyM) + nz * (c[iv][1] - czM) < 0) { ny = -ny; nz = -nz; }
+        const p = { y: c[iv][0], z: c[iv][1] };
+        const hang = Math.max(0, Math.abs(s - C.s0) - .06) / (s < C.s0 ? LF - .06 : LB - .06);  // 0 on the shoulder, 1 at a hem
+        const fold = (.003 + .013 * hang) * (.5 + .5 * Math.sin(C.u * 9.5 + ph + s * 6)) + .006 * hang * (.5 + .5 * Math.sin(C.u * 19 - s * 9 + ph * 2)) + .011 * hang * hang + .008 * hang * hang * (C.u - .5) * (s > 0 ? 1.4 : -.6);   // Art: deeper, uneven folds and a slight twist, so it reads thrown on rather than laid
+        const x = nkx(C.x, C.u, hang), i3 = (iu * NV + iv) * 3;
+        pos[i3] = x; pos[i3 + 1] = p.y + ny * fold; pos[i3 + 2] = p.z + nz * fold;
+        const j3 = i3 + NUV * 3; pos[j3] = x; pos[j3 + 1] = p.y + ny * (fold - .004); pos[j3 + 2] = p.z + nz * (fold - .004);
+        const i2 = (iu * NV + iv) * 2; uv[i2] = iu / (NU - 1); uv[i2 + 1] = f; uv[i2 + NUV * 2] = iu / (NU - 1); uv[i2 + 1 + NUV * 2] = f;
+      }
+    }
+    function nkx(x, u, hang) { return x + side * u * TW * .16 * hang + side * .012 * hang * hang; }
+    const idxO = [], idxI = [];
+    for (let iu = 0; iu < NU - 1; iu++) for (let iv = 0; iv < NV - 1; iv++) {
+      const a = iu * NV + iv, b = a + NV, c = b + 1, e = a + 1;
+      idxO.push(a, b, e, b, c, e); idxI.push(a + NUV, e + NUV, b + NUV, b + NUV, e + NUV, c + NUV);
+    }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2));
+    geo.setIndex(idxO.concat(idxI)); geo.addGroup(0, idxO.length, 0); geo.addGroup(idxO.length, idxI.length, 1); geo.computeVertexNormals();
+    // make the outer face point away from the body
+    { const n = geo.attributes.normal, mid = Math.floor(NU / 2) * NV + Math.floor(NV * LF / (LF + LB)); const C = cols[Math.floor(NU / 2)]; const oy = pos[mid * 3 + 1] - C.cy, oz = pos[mid * 3 + 2] - C.cz;
+      if (n.getY(mid) * oy + n.getZ(mid) * oz < 0) { const I = geo.index.array; for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t; } geo.index.needsUpdate = true; geo.computeVertexNormals(); } }
+    // hem walls (thickness at the edges)
+    const wp = [], wu = [];
+    const edge = (list) => { for (let k = 0; k < list.length - 1; k++) { const a = list[k], b = list[k + 1];
+      [a, b, b + NUV, a, b + NUV, a + NUV].forEach(q => { wp.push(pos[q * 3], pos[q * 3 + 1], pos[q * 3 + 2]); wu.push(uv[(q % NUV) * 2], uv[(q % NUV) * 2 + 1]); }); } };
+    const L0 = [], L1 = [], E0 = [], E1 = []; for (let iv = 0; iv < NV; iv++) { L0.push(iv); L1.push((NU - 1) * NV + iv); } for (let iu = 0; iu < NU; iu++) { E0.push(iu * NV); E1.push(iu * NV + NV - 1); }
+    [L0, L1, E0, E1].forEach(edge);
+    const wg = new T.BufferGeometry(); wg.setAttribute('position', new T.Float32BufferAttribute(wp, 3)); wg.setAttribute('uv', new T.Float32BufferAttribute(wu, 2)); wg.computeVertexNormals();
+    // tea-towel canvas: cream cotton, red border stripes down both long edges, a band near each hem, stitched hems
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 512; const c = cv.getContext('2d');
+    c.fillStyle = '#ddd2bb'; c.fillRect(0, 0, 128, 512);
+    for (let y = 0; y < 512; y += 2) { c.fillStyle = `rgba(120,100,70,${.03 + hsh(y, 1) * .05})`; c.fillRect(0, y, 128, 1); }
+    for (let x = 0; x < 128; x += 2) { c.fillStyle = `rgba(255,255,255,${hsh(x, 2) * .06})`; c.fillRect(x, 0, 1, 512); }
+    c.fillStyle = '#93302a'; [[8, 7], [19, 3], [101, 3], [113, 7]].forEach(([x, w]) => c.fillRect(x, 0, w, 512));
+    // Art: a used tea towel, not a costume sash: soft mottling, a couple of faint tea/beer marks and a crease line
+    for (let k = 0; k < 26; k++) { const x = hsh(k, 21) * 128, y = hsh(k, 22) * 512, r = 6 + hsh(k, 23) * 22, g2 = c.createRadialGradient(x, y, 0, x, y, r); g2.addColorStop(0, `rgba(150,120,80,${.05 + hsh(k, 24) * .06})`); g2.addColorStop(1, 'rgba(150,120,80,0)'); c.fillStyle = g2; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+    [[40, 300, 14], [86, 150, 10]].forEach(([x, y, r]) => { c.strokeStyle = 'rgba(120,85,50,.16)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r, 0, 6.2); c.stroke(); });
+    c.fillStyle = 'rgba(90,70,45,.10)'; c.fillRect(0, 250, 128, 2); c.fillStyle = 'rgba(255,255,255,.10)'; c.fillRect(0, 253, 128, 1);
+    [[34, 9], [48, 3], [512 - 43, 9], [512 - 51, 3]].forEach(([y, h]) => c.fillRect(0, y, 128, h));
+    c.fillStyle = 'rgba(70,40,25,.28)'; [[0, 9], [503, 9]].forEach(([y, h]) => c.fillRect(0, y, 128, h));
+    c.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 2; x < 128; x += 6) { c.fillRect(x, 11, 3, 1); c.fillRect(x, 500, 3, 1); }
+    c.fillStyle = 'rgba(70,40,25,.22)'; c.fillRect(0, 0, 3, 512); c.fillRect(125, 0, 3, 512);
+    const tex = new T.CanvasTexture(cv); tex.encoding = T.sRGBEncoding; tex.anisotropy = 4;
+    const mO = new T.MeshStandardMaterial({ map: tex, color: 0xe8e2d8, roughness: 1, side: T.FrontSide });
+    const mI = new T.MeshStandardMaterial({ map: tex, color: 0xb9b0a0, roughness: 1, side: T.FrontSide });
+    const mW = new T.MeshStandardMaterial({ map: tex, color: 0xcfc6b4, roughness: 1, side: T.DoubleSide });
+    const g = new T.Group(), cloth = new T.Mesh(geo, [mO, mI]), wall = new T.Mesh(wg, mW); g.add(cloth, wall); g.name = 'wear_towel';
+    g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } }); par.add(g);
+  }
+
+  // The Deano mullet: short on top, long at the back. A strand-textured shell that follows this model's skull
+  // from the crown down past the nape, wraps round to just behind the ears and falls past the jaw at the sides,
+  // so it shows either side of the neck from the front without touching the face.
+  function wearMullet(T, B, L, bx, fig) {
+    const hd = B.Head; let P = skinPts(T, fig, hd, /_(Head|Neck)$/, .6, o => !/Body/i.test(o.name)); if (P.length < 300) P = skinPts(T, fig, hd, /_(Head|Neck)$/, .6);
+    const h = bx.y1 - bx.y0; let y0 = 1e9, y1 = -1e9; for (let i = 1; i < P.length; i += 3) { y0 = Math.min(y0, P[i]); y1 = Math.max(y1, P[i]); }
+    if (!(y1 > y0)) { y0 = bx.y0; y1 = bx.y1; }
+    const hh = y1 - y0; let zl = 1e9, zh = -1e9; for (let i = 0; i < P.length; i += 3) if (P[i + 1] > y0 + hh * .35 && P[i + 1] < y0 + hh * .7) { zl = Math.min(zl, P[i + 2]); zh = Math.max(zh, P[i + 2]); }
+    const cz = isFinite(zl) ? zl + (zh - zl) * .42 : (bx.z0 + bx.z1) / 2;
+    // radius of the head along each direction from the back (phi=0) round the side, per height band
+    const NP = 26, PMAX = 1.62, NYB = 40, yb0 = y0 - .14, yb1 = y1, dyb = (yb1 - yb0) / NYB;
+    const R = []; for (let a = 0; a <= NP; a++) R.push(new Float32Array(NYB + 1));
+    for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2] - cz; const phi = Math.atan2(Math.abs(x), -z); if (phi > PMAX + .15) continue;
+      const a = Math.min(NP, Math.round(phi / PMAX * NP)), yi = Math.max(0, Math.min(NYB, Math.round((y - yb0) / dyb))); const r = Math.hypot(x, z); if (r > R[a][yi]) R[a][yi] = r; }
+    const rAt = (a, y) => { const yi = Math.max(0, Math.min(NYB, Math.round((y - yb0) / dyb))); let m = 0; for (let k = yi; k <= Math.min(NYB, yi + 1); k++) for (let q = Math.max(0, a - 1); q <= Math.min(NP, a + 1); q++) m = Math.max(m, R[q][k]); return m; };
+    const col = new T.Color((L.hairCol) || 0x2b2119);
+    const NA = 30, NV = 30, pos = [], uv = [], idx = [];
+    for (let ia = 0; ia <= NA; ia++) {
+      const sgn = ia < NA / 2 ? -1 : 1, f = Math.abs(ia / NA * 2 - 1), phi = f * PMAX, ab = Math.round(phi / PMAX * NP);
+      const tail = Math.max(0, 1 - f / .5), tl = tail * tail * (3 - 2 * tail);   // Art: the long part is only at the back; the sides come up short above the ear
+      const yTop = y0 + hh * (.66 - .14 * Math.pow(f, 2)), yBot = y0 + hh * (.34 - 1.32 * tl - .06 * Math.pow(Math.max(0, f - .9) / .1, 2)) - .022 * Math.sin(ia * 2.3) * tl - .012 * Math.sin(ia * 5.1);
+      let rr = 0;
+      for (let iv = 0; iv <= NV; iv++) {
+        const t = iv / NV, y = yTop + (yBot - yTop) * t, rs = rAt(ab, y);
+        // follow the skull, then hang: at the back it eases in towards the nape, at the sides it falls straight past the jaw
+        rr = t < .3 ? rs : Math.max(rs, rr - .0035 * (1 - f) * (1 - f));
+        const vol = (.004 + .008 * Math.sin(Math.min(1, t * 1.6) * Math.PI / 2) + (.012 + .07 * tl) * Math.pow(Math.max(0, t - .55) / .45, 2) + .002 * f) * (.2 + .8 * Math.min(1, t / .3));   // tight at the sides, a flick out at the back ends // top edge tucks under the crop
+        const r = (rr || .085) + vol, dx = Math.sin(phi) * sgn, dz = -Math.cos(phi);
+        pos.push(dx * r, y, cz + dz * r); uv.push(ia / NA, 1 - t);
+      }
+    }
+    for (let ia = 0; ia < NA; ia++) for (let iv = 0; iv < NV; iv++) { const a = ia * (NV + 1) + iv, b = a + NV + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    // strands: streaky colour, ragged ends at the bottom, feathered top that blends under the model's own hair
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const c = cv.getContext('2d');
+    const hx = '#' + col.getHexString(); c.fillStyle = hx; c.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 900; i++) { const x = hsh(i, 3) * 256, l = hsh(i, 4); c.strokeStyle = l > .55 ? `rgba(255,235,200,${(l - .55) * .25})` : `rgba(0,0,0,${(.55 - l) * .55})`; c.lineWidth = .6 + hsh(i, 5) * 1.4; c.beginPath(); c.moveTo(x, 0); c.bezierCurveTo(x + (hsh(i, 6) - .5) * 10, 90, x + (hsh(i, 7) - .5) * 14, 170, x + (hsh(i, 8) - .5) * 18, 256); c.stroke(); }
+    c.globalCompositeOperation = 'destination-out';
+    for (let x = 0; x < 256; x += 2) { const e = 2 + hsh(x, 9) * 6; c.fillStyle = 'rgba(0,0,0,1)'; c.fillRect(x, 0, 2, e); /* Art: ragged, clumped ends (strand groups ~10 px wide) so the back reads as hair, not a blunt bob */ const cl = Math.floor(x / 10), top = 10 + hsh(cl, 10) * 46 + hsh(x, 11) * 14; c.fillRect(x, 256 - top, 2, top); }
+    const tex = new T.CanvasTexture(cv); tex.encoding = T.sRGBEncoding; tex.anisotropy = 4; tex.wrapS = T.RepeatWrapping; tex.repeat.set(3, 1);
+    const hm = new T.MeshStandardMaterial({ map: tex, color: 0x9a9a9a, roughness: .78, alphaTest: .5, side: T.DoubleSide });
+    const m = new T.Mesh(geo, hm); m.name = 'wear_mullet'; m.castShadow = true; m.frustumCulled = false; hd.add(m);
+    try { mulletCrop(T, fig, hd, P, y0, hh, cz, col, cv); } catch (e) { console.warn('mullet crop', e); }
+  }
+  // Business at the front: hide the model's own hair (every rig ships with its own cut, often long) and lay a short
+  // crop over the crown and sides, sampled from that model's skull, so the long back reads as a mullet from the front.
+  function mulletCrop(T, fig, hd, P, y0, hh, cz, col, strands) {
+    fig.traverse(o => { if (!o.isMesh || o.name === 'wear_mullet' || o.userData.hairStyle === 'beard') return; const mn = (o.material && o.material.name) || ''; if (/Hair/i.test(o.name + ' ' + mn) && !/Brow|Lash|Beard|Mous?tach/i.test(o.name + ' ' + mn)) o.visible = false; });
+    const yc = y0 + hh * .5, NAZ = 48, NEL = 24, EL0 = -.45, R = [];
+    for (let a = 0; a < NAZ; a++) R.push(new Float32Array(NEL + 1));
+    for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1] - yc, z = P[i + 2] - cz, r = Math.hypot(x, y, z); if (r < .02) continue;
+      const el = Math.asin(y / r); if (el < EL0) continue; const az = Math.atan2(x, z);
+      const ia = ((Math.round((az + Math.PI) / (2 * Math.PI) * NAZ) % NAZ) + NAZ) % NAZ, ie = Math.min(NEL, Math.round((el - EL0) / (Math.PI / 2 - EL0) * NEL)); if (r > R[ia][ie]) R[ia][ie] = r; }
+    // fill gaps, then a small blur so the crop doesn't pick up ears or noise
+    for (let pass = 0; pass < 3; pass++) for (let a = 0; a < NAZ; a++) for (let e = 0; e <= NEL; e++) if (!R[a][e]) { let s = 0, n = 0; for (const [da, de] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const v = R[(a + da + NAZ) % NAZ][Math.max(0, Math.min(NEL, e + de))]; if (v) { s += v; n++; } } if (n) R[a][e] = s / n; }
+    const rAt = (az, el) => { const fa = (az + Math.PI) / (2 * Math.PI) * NAZ, fe = Math.max(0, Math.min(NEL, (el - EL0) / (Math.PI / 2 - EL0) * NEL)); let m = 0;
+      for (let da = -1; da <= 1; da++) for (let de = -1; de <= 1; de++) { const a = ((Math.round(fa) + da) % NAZ + NAZ) % NAZ, e = Math.max(0, Math.min(NEL, Math.round(fe) + de)), v = R[a][e]; if (v > m) m = v; } return m || hh * .55; }; // max, like the long back piece, so its top edge always sits under the crop
+    // hairline by direction: forehead at the front, just above the ears at the sides, down into the long back at the nape
+    const sm = t => t * t * (3 - 2 * t);
+    const hl = az => { const a = Math.abs(az); return a < Math.PI / 2 ? .6 + (-.06 - .6) * sm(a / (Math.PI / 2)) : -.06 + (-.32 + .06) * sm((a - Math.PI / 2) / (Math.PI / 2)); };
+    const NA = 64, NV = 18, pos = [], uv = [], idx = [];
+    for (let ia = 0; ia <= NA; ia++) { const az = -Math.PI + ia / NA * 2 * Math.PI, e0 = hl(az);
+      for (let iv = 0; iv <= NV; iv++) { const t = iv / NV, el = e0 + (Math.PI / 2 - e0) * t, front = Math.max(0, Math.cos(az));
+        const back = Math.max(0, -Math.cos(az)), side = Math.abs(Math.sin(az));
+        // Art: break up the helmet: shallow directional clumps over the crown, a little uneven lift toward the back, sides kept tight
+        const clump = (.0035 + .0065 * back) * Math.sin(Math.min(1, t * 1.4) * Math.PI) * (.55 + .45 * Math.sin(az * 11 + t * 5 + Math.sin(az * 3) * 2)) + .0025 * (.5 + .5 * Math.sin(az * 23 - t * 9)) * Math.sin(t * Math.PI);
+        const r = rAt(az, el) + .0025 + .0025 * Math.sin(t * Math.PI) + .002 * front * Math.sin(t * Math.PI) + clump * (1 - .6 * side * (1 - t)) + .005 * back * Math.pow(Math.sin(t * Math.PI * .8), 2);
+        pos.push(Math.cos(el) * Math.sin(az) * r, yc + Math.sin(el) * r, cz + Math.cos(el) * Math.cos(az) * r); uv.push(ia / NA * 4, t); } }
+    for (let ia = 0; ia < NA; ia++) for (let iv = 0; iv < NV; iv++) { const a = ia * (NV + 1) + iv, b = a + NV + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    // short-cut texture: the mullet's strand colour, with a soft feathered hairline instead of ragged ends
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.drawImage(strands, 0, 64, 256, 128, 0, 0, 256, 128);
+    c.globalCompositeOperation = 'source-atop'; c.fillStyle = '#' + col.getHexString(); c.globalAlpha = .35; c.fillRect(0, 0, 256, 128); c.globalAlpha = 1;
+    for (let i = 0; i < 70; i++) { const x = hsh(i, 31) * 256, w = 3 + hsh(i, 32) * 7, l = hsh(i, 33); c.fillStyle = l > .5 ? `rgba(255,230,190,${(l - .5) * .22})` : `rgba(0,0,0,${(.5 - l) * .35})`; c.fillRect(x, 0, w, 128); }   // Art: clump highlights and shadows
+    c.globalCompositeOperation = 'destination-out'; for (let x = 0; x < 256; x += 2) { const e = 3 + hsh(x, 21) * 9; c.fillRect(x, 0, 2, e); }
+    const tex = new T.CanvasTexture(cv); tex.encoding = T.sRGBEncoding; tex.anisotropy = 4; tex.wrapS = T.RepeatWrapping;
+    const mat = new T.MeshStandardMaterial({ map: tex, color: 0x9a9a9a, roughness: .8, alphaTest: .5, side: T.DoubleSide });
+    const cap = new T.Mesh(geo, mat); cap.name = 'wear_mullet_crop'; cap.castShadow = true; cap.frustumCulled = false; hd.add(cap);
+  }
 
   // barrel finish from the loadout (own dart only)
   window.TOPS_BARREL = function (mat) {
@@ -878,27 +1075,45 @@
     if (ex) { ex.wins.push(rec); } else t.troph.push({ id: T.id, tier, wins: [rec] });
     keep(); toast('Title won', T.n, 'A new trophy for the cabinet', 'legendary');
   }
+  function cabTitle(t) { return `<div class="tcpk__kicker">Trophy cabinet</div><h2 class="tc-h">${t.troph.length ? 'Your titles' : 'Empty for now'}</h2><p class="tc-dim">${t.troph.length ? `${t.troph.length} ${t.troph.length === 1 ? 'title' : 'titles'} won · ${(n => n + (n === 1 ? ' trophy' : ' trophies'))(t.troph.reduce((a, x) => a + x.wins.length, 0))} lifted<span class="tc-cabhint"> · tap a trophy</span>` : 'Win a league or a knockout and the trophy goes here. Your best cards sit in the case.'}</p>`; }
+  function cabDetail(T, got) { return `<b>${esc(T.n)}</b>${got.wins.map(w => `<div class="tc-plate"><span>${new Date(w.at).toLocaleDateString()}</span><span>${w.opp ? 'Final v ' + esc(w.opp) : ''} ${esc(w.score)}</span><span>${w.avg ? 'Avg ' + w.avg : ''}${w.co ? ' · High out ' + w.co : ''}</span></div>`).join('')}`; }
+  // display case: best six cards, legendary first
+  function cabBest(t) { const ord = ['legendary', 'epic', 'rare']; return Object.keys(t.own).map(id => CARD[id]).filter(c => c && ord.includes(c.rarity)).sort((a, b) => ord.indexOf(a.rarity) - ord.indexOf(b.rarity) || a.no - b.no).slice(0, 6); }
+  // 3D cabinet (tc/cab3d.js) with the wall case as a strip of cards below; the painted 2D cabinet is the fallback
+  function cabinet() {
+    const t = st();
+    if (!window.TC_CAB3D || /[?&]cab2d=1/.test(location.search) || window.TC_CAB2D) return cabinet2D();
+    const el = sheet('tc-cab tc-cab-3d', `<div class="tc-cabwrap tc-cab3"></div><div class="tc-cabinfo">${cabTitle(t)}<div class="tc-cabdet" id="tcCabDet"></div><div class="tc-case"><div class="tcpk__kicker">In the case</div><div class="tc-casestrip"></div></div></div>`);
+    const det = el.querySelector('#tcCabDet');
+    const trophies = D.TROPHIES.map((T, i) => { const got = t.troph.find(x => x.id === T.id); return got && { id: T.id, slot: i, name: T.n, count: got.wins.length }; }).filter(Boolean);
+    let cab = null;
+    try { cab = TC_CAB3D.mount(el.querySelector('.tc-cab3'), { trophies, onPick: id => { const T = D.TROPHIES.find(x => x.id === id), got = T && t.troph.find(x => x.id === T.id); det.innerHTML = got ? cabDetail(T, got) : ''; } }); } catch (e) { console.warn('cab3d', e); cab = null; }
+    if (!cab) { el.remove(); return cabinet2D(); }
+    const x = el.querySelector('.tc-x'), close0 = x.onclick; x.onclick = () => { try { cab.dispose(); } catch (e) {} close0(); };
+    const strip = el.querySelector('.tc-casestrip'), best = cabBest(t);
+    if (!best.length) strip.innerHTML = '<p class="tc-dim">Your best rare, epic and legendary cards go on show here.</p>';
+    best.forEach(c => { const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini'); k.onclick = () => inspect(c); strip.appendChild(k); });
+    el._cab = cab; return el;
+  }
   // shelf slots on hub_cabinet.webp (fractions of the image), measured from the art
   const SHELF = [ // bottom shelf: club night, club champs, regional; middle: DPNZ, Trans-Tasman, Pro Tour; top centre: the Palace
     { x: .232, y: .70, w: .145 }, { x: .372, y: .70, w: .145 }, { x: .512, y: .70, w: .145 },
     { x: .232, y: .495, w: .145 }, { x: .372, y: .495, w: .145 }, { x: .512, y: .495, w: .145 },
     { x: .372, y: .322, w: .2 }];
   const CASE = [{ x: .779, y: .316 }, { x: .896, y: .316 }, { x: .779, y: .419 }, { x: .896, y: .419 }, { x: .779, y: .529 }, { x: .896, y: .529 }];
-  function cabinet() {
+  function cabinet2D() {
     const t = st();
-    const el = sheet('tc-cab', `<div class="tc-cabwrap"><img class="tc-cabimg" src="assets/cards/hub_cabinet.webp" alt=""><div class="tc-cablayer"></div></div><div class="tc-cabinfo"><div class="tcpk__kicker">Trophy cabinet</div><h2 class="tc-h">${t.troph.length ? 'Your titles' : 'Empty for now'}</h2><p class="tc-dim">${t.troph.length ? `${t.troph.length} ${t.troph.length === 1 ? 'title' : 'titles'} won · ${t.troph.reduce((a, x) => a + x.wins.length, 0)} trophies lifted` : 'Win a league or a knockout and the trophy goes here. Your best cards sit in the case.'}</p><div class="tc-cabdet" id="tcCabDet"></div></div>`);
+    const el = sheet('tc-cab', `<div class="tc-cabwrap"><img class="tc-cabimg" src="assets/cards/hub_cabinet.webp" alt=""><div class="tc-cablayer"></div></div><div class="tc-cabinfo">${cabTitle(t)}<div class="tc-cabdet" id="tcCabDet"></div></div>`);
     const lay = el.querySelector('.tc-cablayer');
     D.TROPHIES.forEach((T, i) => {
       const got = t.troph.find(x => x.id === T.id); if (!got) return;
       const s = SHELF[i]; const b = document.createElement('button'); b.type = 'button'; b.className = 'tc-tro'; b.style.left = (s.x * 100) + '%'; b.style.top = (s.y * 100) + '%'; b.style.width = (s.w * 100) + '%';
       b.innerHTML = `<img src="assets/cards/${T.img}.webp" alt="${esc(T.n)}">${got.wins.length > 1 ? `<em>×${got.wins.length}</em>` : ''}`;
-      b.onclick = () => { lay.querySelectorAll('.tc-tro').forEach(x => x.classList.toggle('sel', x === b)); const w = got.wins[got.wins.length - 1]; el.querySelector('#tcCabDet').innerHTML = `<b>${esc(T.n)}</b>${got.wins.map(w => `<div class="tc-plate"><span>${new Date(w.at).toLocaleDateString()}</span><span>${w.opp ? 'Final v ' + esc(w.opp) : ''} ${esc(w.score)}</span><span>${w.avg ? 'Avg ' + w.avg : ''}${w.co ? ' · High out ' + w.co : ''}</span></div>`).join('')}`; };
+      b.onclick = () => { lay.querySelectorAll('.tc-tro').forEach(x => x.classList.toggle('sel', x === b)); el.querySelector('#tcCabDet').innerHTML = cabDetail(T, got); };
       lay.appendChild(b);
     });
-    // display case: best six cards, legendary first
-    const ord = ['legendary', 'epic', 'rare'];
-    const best = Object.keys(t.own).map(id => CARD[id]).filter(c => c && ord.includes(c.rarity)).sort((a, b) => ord.indexOf(a.rarity) - ord.indexOf(b.rarity) || a.no - b.no).slice(0, 6);
-    best.forEach((c, i) => { const s = CASE[i]; const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini', 'tc-incase'); k.style.left = (s.x * 100) + '%'; k.style.top = (s.y * 100) + '%'; k.onclick = () => inspect(c); lay.appendChild(k); });
+    cabBest(t).forEach((c, i) => { const s = CASE[i]; const k = TCC.card(c); k.classList.add('is-flipped', 'is-mini', 'tc-incase'); k.style.left = (s.x * 100) + '%'; k.style.top = (s.y * 100) + '%'; k.onclick = () => inspect(c); lay.appendChild(k); });
+    return el;
   }
 
   // ---------- exhibition nights ----------
@@ -963,5 +1178,5 @@
     clearInterval(zoneTimer);
     if (want) zoneTimer = setInterval(() => { try { if (!zoneOn) return; sfxHeart(); } catch (e) {} }, 820);
   }
-  window.TC_API = { oppWalk, trades, openPack, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, tiersView, st, FX, zone, addTrophy, poster, D };
+  window.TC_API = { oppWalk, trades, openPack, exhResult: exhibitionResult, sync: () => srvSync(), maxText, award, choose, openPicks, grant, equip, binder, loadout, cabinet, cabinet2D, tiersView, st, FX, zone, addTrophy, poster, D };
 })();
