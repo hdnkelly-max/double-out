@@ -1625,7 +1625,8 @@ addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();release(e,'
 /* CAR-5c (Overseer 05:29): frame times for the per-dart release record: a 128-slot ring of frame timestamps (one store per frame) and the
    longest gap between frames inside a window, including the open gap from the last frame to the window's end (a stall still in progress) */
 const FT=new Float64Array(128);let FTn=0;function ftPush(now){FT[FTn&127]=now;FTn++;}
-function gapMax(t0,t1){let m=0,prev=null;const n=Math.min(FTn,128);for(let i=FTn-n;i<FTn;i++){const t=FT[i&127];if(t>t1)break;if(prev!=null&&t>t0)m=Math.max(m,t-Math.max(prev,t0));prev=t;}if(prev!=null&&t1>prev)m=Math.max(m,t1-Math.max(prev,t0));return Math.round(m);}
+function gapMax(t0,t1){/* a gap counts in full when it ends inside the window (a freeze that started just before still shows its real length; ChatGPT P1) */let m=0,prev=null;const n=Math.min(FTn,128);for(let i=FTn-n;i<FTn;i++){const t=FT[i&127];if(t>t1)break;if(prev!=null&&t>t0)m=Math.max(m,t-prev);prev=t;}if(prev!=null&&t1>prev)m=Math.max(m,t1-prev);return Math.round(m);}
+function frameAge(t){const n=Math.min(FTn,128);for(let i=FTn-1;i>=FTn-n;i--){const f=FT[i&127];if(f<=t)return Math.round(t-f);}return null;}window.TOPS_FAGE=frameAge;/* ms since the last frame drawn before t */
 window.TOPS_GAP=gapMax;
 const SHOWN=[];function shownPush(now){if(!S||S.done||S.pulling||!S.sway)return;SHOWN.push({t:now,x:S.sway.x,y:S.sway.y});if(SHOWN.length>6)SHOWN.shift();}
 function shownSway(){/* ChatGPT P1: only after a slow frame (>50 ms between the last two frames, or since the last one); at a steady frame rate the lock is exactly as before */const n=SHOWN.length;if(n>=2){const a=SHOWN[n-1],b=SHOWN[n-2];if(a.t-b.t>50||performance.now()-a.t>50)return b;}return S.sway;}

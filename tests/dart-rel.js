@@ -33,9 +33,9 @@ await p.evaluate(()=>{window.TOPS_DARTS_REL=true;});const rD=await throwOne('ste
 out.D2=await p.evaluate(()=>{const r=__rows[__rows.length-1];return r&&r.rel?{has:1,keys:Object.keys(r.rel).sort().join(',')}:{has:0};});
 const f=[];const A=out.A,B=out.B,C=out.C;
 if(!A||A.err)f.push('A: '+JSON.stringify(A));else{if(!(A.gp>=250))f.push('A: stall before the press not seen (gp '+A.gp+')');if(A.lag!==1)f.push('A: lag flag not set after the stall');if(A.s[0]===A.g[0]&&A.s[1]===A.g[1])f.push('A: shown reticle equals game sway after a stall (test did not exercise it)');}
-if(!B||B.err)f.push('B: '+JSON.stringify(B));else{if(!(B.gp<100))f.push('B: steady press shows a gap '+B.gp);if(B.lag!==0)f.push('B: lag set on a steady press');}
-if(!C||C.err)f.push('C: '+JSON.stringify(C));else{if(!(C.gpl>=250&&C.gr>=250))f.push('C: stall during the pull not seen '+JSON.stringify(C));if(!(C.gp<100))f.push('C: pre-press gap '+C.gp);}
-for(const x of [A,B,C])if(x&&!x.err&&!(['lg','d','sb','pf','gp','gr','gpl','pm','lag'].every(k=>k in x)&&['a','k','l','s','g','r'].every(k=>Array.isArray(x[k])&&x[k].length===2&&x[k].every(v=>typeof v==='number'))))f.push('event fields missing: '+JSON.stringify(x));
+if(!B||B.err)f.push('B: '+JSON.stringify(B));else{if(!(B.gp<100))f.push('B: steady press shows a gap '+B.gp);if(B.lag!==0)f.push('B: lag set on a steady press');if(!(B.ra<60))f.push('B: frame age at the release '+B.ra);}
+if(!C||C.err)f.push('C: '+JSON.stringify(C));else{if(!(C.gpl>=250&&C.gr>=250))f.push('C: stall during the pull not seen '+JSON.stringify(C));if(!(C.gp<100))f.push('C: pre-press gap '+C.gp);if(!(C.ra>=250))f.push('C: the frame on screen at the release should be ~300 ms old, got '+C.ra);}
+for(const x of [A,B,C])if(x&&!x.err&&!(['lg','d','sb','pf','gp','gr','gpl','pm','ra','lag'].every(k=>k in x)&&['a','k','l','s','g','r'].every(k=>Array.isArray(x[k])&&x[k].length===2&&x[k].every(v=>typeof v==='number'))))f.push('event fields missing: '+JSON.stringify(x));
 if(!(out.D1.n>=3))f.push('dart rows not sent: '+JSON.stringify(out.D1));if(out.D1.rel)f.push('tops_darts rows carry rel before the migration');
 if(rD.err||!out.D2.has)f.push('with TOPS_DARTS_REL the row has no rel: '+JSON.stringify(out.D2));
 if(pe.length)f.push('page errors: '+pe.slice(0,2).join(' | '));
