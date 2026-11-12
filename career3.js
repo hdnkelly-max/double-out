@@ -251,6 +251,27 @@ const _gx=gainXP;gainXP=function(id,amt,mult){const c=career();if(c&&!c.run&&amt
 try{applyUnlocks();}catch(e){}
 // every flight colour a level you've reached has awarded stays yours, equipped or not (needed once 'Keep current flights' exists); derived from your level, so nothing extra is stored
 const lvFlights=()=>{const out=[];try{const lv=V3().lv;for(let L=2;L<=lv;L++){const r=rewardAt(L);if(r&&r.k==='flight'&&!out.includes(r.v))out.push(r.v);}}catch(e){}return out;};
+// ECON-M2 S2 (Hayden 21:41, Director 04 §5 M2 item 2): things worth buying from DPNZ (tier index 3) up. None of them reads or changes
+// the throw (rule 1): they only set flags the screens, walk-on and training read (S3, Experience). Stored in career.lux (save JSON, no table).
+// Level-gated kit keeps buy-order priority: buying one of these when it would put an unlocked, unowned level-gated barrel you can afford
+// now out of reach asks first (err 'kit'; pass force to buy anyway).
+const LUX=[
+ {id:'coach_doubles',k:'coach',n:'Doubles clinic',price:2000,set:'doubles',badge:'clinic',s:'Coaching programme: the doubles challenge set and the Clinic badge.'},
+ {id:'coach_scoring',k:'coach',n:'Scoring camp',price:6000,set:'scoring',badge:'camp',s:'Coaching programme: the scoring challenge set and the Camp badge.'},
+ {id:'coach_pro',k:'coach',n:'Pro programme',price:15000,set:'pro',badge:'pro',s:'Coaching programme: the pro challenge set and the Pro badge.'},
+ {id:'walkon_prod',k:'walkon',n:'Walk-on production',price:3000,s:'Lights, smoke and your name on the big screen at every walk-on.'},
+ {id:'kit_edition',k:'edition',n:'Kit edition',price:8000,s:'A limited-edition finish and name for the barrel you have equipped.'}];
+const LUX_T=3;
+function luxOpen(){const c=career();return !!(c&&!c.run&&c.tier>=LUX_T);}
+function luxSt(){const c=career();if(!c||c.run)return null;if(!c.lux)c.lux={owned:[],at:{}};return c.lux;}
+function kitAtRisk(cost){const c=career();const G=window.TOPS_GATE;if(!c||!G||typeof BARRELS==='undefined')return [];const bank=c.bank||0;
+ return BARRELS.filter(b=>(G.LV[b.id]||1)>1&&!save.owned.includes(b.id)&&!G.gateBarrel(b)).filter(b=>{const p=price(b.price);return p<=bank&&bank-cost<p;}).map(b=>b.n);}
+function luxBuy(id,force){const c=career(),L=luxSt();const it=LUX.find(x=>x.id===id);if(!it||!L)return {err:'item'};if(!luxOpen())return {err:'tier'};
+ if(L.owned.includes(id))return {err:'owned'};if((c.bank||0)<it.price)return {err:'bank'};const risk=kitAtRisk(it.price);if(risk.length&&!force)return {err:'kit',kit:risk};
+ c.bank-=it.price;L.owned.push(id);L.at[id]=Date.now();if(it.k==='edition')L.edition=save.barrel;try{persist();}catch(e){}return {ok:1,item:it};}
+window.TOPS_LUX={items:()=>{const L=luxSt();return LUX.map(x=>Object.assign({},x,{owned:!!(L&&L.owned.includes(x.id))}));},open:luxOpen,buy:luxBuy,
+ owns:id=>{const L=luxSt();return !!(L&&L.owned.includes(id));},badges:()=>{const L=luxSt();return L?LUX.filter(x=>x.badge&&L.owned.includes(x.id)).map(x=>x.badge):[];},
+ sets:()=>{const L=luxSt();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxSt();return L&&L.edition||null;},kitAtRisk};
 window.C3={conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
