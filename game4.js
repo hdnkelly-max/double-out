@@ -1694,8 +1694,8 @@ const EXTRA_NAMES=[['Gaz Tapsell','Mere Hohepa','Sione Fifita','Old Trev'],['Pan
 // named regulars keep their own average at a tier: the tier's names (pool + named characters) are ranked by a fixed hash and dealt
 // offsets evenly across the designed spread, so a name always gets the same offset and the field keeps the old spread and mean
 const REG_OFFS=[-6,-5,-3,-2,-1,0,1,2,3,4,5,6,7],REG_RANK={};
-function regOff(tier,nm){let L=REG_RANK[tier];if(!L){let ex=[];try{ex=regularsFor(tier);}catch(e){}L=REG_RANK[tier]=[...new Set(AINAMES[tier].concat(EXTRA_NAMES[tier]||[],ex))].filter(x=>x!==RIVAL.name).sort((a,b)=>hash(a+'|reg')-hash(b+'|reg'));}
- const i=L.indexOf(nm),P=L.length;if(i<0)return REG_OFFS[hash(nm+'|reg')%REG_OFFS.length];return REG_OFFS[P<2?5:Math.round(i*(REG_OFFS.length-1)/(P-1))];}
+function regOff(tier,nm){let L=REG_RANK[tier];if(!L){const ready=typeof OPPS!=='undefined';const ex=ready?regularsFor(tier):[];L=[...new Set(AINAMES[tier].concat(EXTRA_NAMES[tier]||[],ex))].filter(x=>x!==RIVAL.name).sort((a,b)=>hash(a+'|reg')-hash(b+'|reg'));if(ready)REG_RANK[tier]=L;/* cache only once the named characters exist */}
+ const i=L.indexOf(nm),P=L.length;if(i<0){console.warn('regOff: name not in tier '+tier+' roster',nm);return REG_OFFS[hash(nm+'|reg')%REG_OFFS.length];}return REG_OFFS[P<2?5:Math.round(i*(REG_OFFS.length-1)/(P-1))];}
 function seasonNeedsNew(c){return !c.run&&c.stage!=='intro'&&(!c.season||c.season.done);}
 function newSeason(c){const t=TIERS[c.tier];const len=SEASON_LEN[c.tier];const n=((c.seasons||[]).filter(x=>x.tier===c.tier).length)+1;c.seasonN=n;const ko=c.tier===6;
  let pool=[...new Set(AINAMES[c.tier].concat(EXTRA_NAMES[c.tier]||[]))];pool=pool.filter(x=>x!==RIVAL.name); /* unique names: no player twice in one table */
