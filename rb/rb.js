@@ -46,7 +46,7 @@
     return el;
   }
   function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
-  function close() { const el = $id('rbApp'); if (el) el.hidden = true; }
+  function close() { clearInterval(armT); const el = $id('rbApp'); if (el) el.hidden = true; }
   function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; try { hubTab(OLD[t] || 'play'); } catch (e) { console.warn('rb old tab', e); } }
   function render() {
     const M = model(); if (!M) { close(); return; }
