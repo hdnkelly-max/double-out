@@ -32,7 +32,7 @@
   /* ---------- shell ---------- */
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
-  const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1 };   // until each new screen lands, the tab opens the old one
+  const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1 };   // until each new screen lands, the tab opens the old one
   let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
@@ -53,7 +53,7 @@
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
     qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
-    let html = ''; try { html = tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
+    let html = ''; try { html = tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tab === 'practice' ? practice(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M);
   }
   /* ---------- Tonight (live data) ---------- */
@@ -213,6 +213,16 @@
     const ov = $id('c3rw'); if (ov) { const mo = new MutationObserver(() => { if (ov.hidden && resOn) { mo.disconnect(); endResult(); } }); mo.observe(ov, { attributes: true, attributeFilter: ['hidden'] }); }
   }
   function endResult() { resOn = false; const el = $id('rbApp'); if (el) { el.classList.remove('rb-resmode'); el.hidden = true; } }
+
+  /* ---------- Practice (live data; Start calls the game's own startDrill) ---------- */
+  function practice(M) {
+    const c = M.c, rew = (() => { try { return drillRewardOpen(c); } catch (e) { return false; } })();
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" style="background-image:url(${IMG}locker.jpg);background-position:30% 40%;filter:brightness(.6)"></div><div class="rb-sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 30%,rgba(10,12,14,.9))"></div><div class="rb-tx"><span class="rb-kick">Practice</span><span class="rb-big" style="font-size:32px">Drills</span><div class="rb-chips">${rew ? chip('This week: one rewarded drill', 'g') : chip('Best kept · no XP this week', 'l')}</div></div></div>`;
+    const rows = DRILLS.map(d => { const sv = save.drills && save.drills[d.id], best = sv && sv.best != null ? d.fmt(sv.best) : null;
+      return d.soon ? `<div class="rb-row" style="cursor:default;opacity:.55"><span class="rb-tx"><small>${esc(d.kick)} · soon</small><span class="rb-t2">${esc(d.n)}</span><span class="rb-sub">${esc(d.line)}</span></span></div>`
+        : `<button class="rb-row" type="button" data-drill="${d.id}"><span class="rb-tx"><small>${esc(d.kick)}${d.darts ? ' · ' + d.darts + ' darts' : ''}</small><span class="rb-t2">${esc(d.n)}</span><span class="rb-sub">${esc(d.line)}</span>${best ? `<span class="rb-chips">${chip('Best ' + esc(best), 'l')}${chip((sv.runs || 0) + ' run' + (sv.runs === 1 ? '' : 's'), 'l')}</span>` : ''}</span><span class="rb-chev">›</span></button>`; }).join('');
+    return hero + rows;
+  }
   function wire(M) {
     const go = $id('rbGo'); if (go) go.onclick = () => {
       const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
@@ -235,6 +245,7 @@
     const bi = $id('rbBinder'); if (bi && T) bi.onclick = () => { try { T.binder(); } catch (e) { console.warn('rb binder', e); } };
     qa('#rbApp [data-card]').forEach(b => b.onclick = () => { try { T.binder(); } catch (e) {} });
     const lo = $id('rbLoad'); if (lo && T) lo.onclick = () => { close(); const bk = $id('rbBack'); if (bk) bk.hidden = false; try { T.loadout(); } catch (e) { console.warn('rb loadout', e); } };
+    qa('#rbApp [data-drill]').forEach(b => b.onclick = () => { try { startDrill(b.dataset.drill); } catch (e) { console.warn('rb drill', e); } });
     qa('#rbApp [data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go; if (BUILT[k]) { tab = k; render(); } else toOld(k); });
   }
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */

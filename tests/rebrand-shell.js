@@ -21,7 +21,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       r.match = await p.evaluate(() => ({ S: !!(typeof S !== 'undefined' && S && !S.done), rbHidden: document.getElementById('rbApp').hidden }));
       // tabs: Shop falls back to the old screen, New look returns
       await p.evaluate(() => { S && (S.done = true); showHub('play'); }); await p.waitForTimeout(1500);
-      await p.click('#rbTabs [data-t="practice"]'); await p.waitForTimeout(800);
+      await p.click('#rbTabs [data-t="shop"]'); await p.waitForTimeout(400); await p.click('#rbApp [data-go="kit"]'); await p.waitForTimeout(800);
       r.shopOld = await p.evaluate(() => ({ rbHidden: document.getElementById('rbApp').hidden, back: !document.getElementById('rbBack').hidden }));
       await p.click('#rbBack'); await p.waitForTimeout(500); r.backOk = await p.evaluate(() => !document.getElementById('rbApp').hidden);
       await p.evaluate(() => { const c = career(); c.next = null; if (!c.season) newSeason(c); persist(); TOPS_RB.render(); });
@@ -71,6 +71,13 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.waitForTimeout(1500); await p.screenshot({ path: path.join(dir, `tests/rb_result_${W}.png`) });
       await p.click('#rbRGo'); await p.waitForTimeout(1200);
       r.result.after = await p.evaluate(() => ({ ovHidden: document.getElementById('c3rw').hidden, resmode: document.getElementById('rbApp').classList.contains('rb-resmode') }));
+      // Practice: drills listed; Start runs the game's own startDrill
+      await p.evaluate(() => { const c = career(); c.next = null; persist(); showHub('play'); }); await p.waitForTimeout(600);
+      await p.click('#rbTabs [data-t="practice"]'); await p.waitForTimeout(400);
+      r.practice = await p.evaluate(() => ({ drills: document.querySelectorAll('#rbApp [data-drill]').length }));
+      await p.screenshot({ path: path.join(dir, `tests/rb_practice_${W}.png`) });
+      await p.click('#rbApp [data-drill="doubles"]'); await p.waitForTimeout(1500);
+      r.practice.started = await p.evaluate(() => ({ drill: !!(S && S.drill && S.drill.id === 'doubles'), hidden: document.getElementById('rbApp').hidden }));
       r.hscroll = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     }
     r.errors = pe.slice(0, 3); out[mode] = r; await p.close();
@@ -84,6 +91,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   const SH = out['1'].shop || {}; if (!SH.visible || SH.thumbs !== SH.n || !/level 15/i.test(SH.razor || '') || !/sponsor/i.test(SH.littler || '') || !SH.buy || SH.buy.bank !== 595 || !SH.buy.owned || SH.buy.eq !== 'neutron' || !SH.buy.visible || !SH.back || SH.back.eq !== 'assassin' || SH.back.bank !== 595) fails.push('Shop: gates/buy/equip wrong');
   const CD = out['1'].cards || {}; if (CD.owned !== 2 || CD.total < 20 || !CD.open || !/picks? waiting/.test(CD.title || '') || !(CD.pack || []).length) fails.push('Cards: grid/open wrong');
   const RS = out['1'].result || {}; if (!RS.on || RS.z !== '95' || RS.cash !== '+$55' || RS.lock !== '2–1' || !RS.lvup || RS.tabs !== 'none' || !RS.after || !RS.after.ovHidden || RS.after.resmode) fails.push('Result: screen/continue wrong');
+  const PR = out['1'].practice || {}; if (PR.drills !== 3 || !PR.started || !PR.started.drill || !PR.started.hidden) fails.push('Practice: drills/start wrong');
   const T = out['1'].stats || {}; if (T.tiles !== 4 || T.pts !== 4 || T.avg !== '48.0') fails.push('Stats: tiles/form wrong');
   if (!out['1'].season || out['1'].season.rows < 4 || !out['1'].season.me || out['1'].season.road !== 7) fails.push('Season: table/you/road missing');
   if (out['0'].errors.length || out['1'].errors.length) fails.push('page errors');
