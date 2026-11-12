@@ -39,6 +39,10 @@ const {chromium}=require('playwright');const path=require('path');
   // 7 the real match path at DPNZ: a fixture through beginMatch/endMatch/careerAfterMatch runs the pool without errors
   {newCareer();const c=career();c.tier=3;c.stage=null;c.season=null;c.next=null;C3.V3();newSeason(c);C3.fillContracts();const n=nextOpponent();c.next=n;
    try{beginMatch({mode:'career',tier:3,p0:'Tester',oppName:n.oppName,oppKey:n.oppKey,oppAvg:n.oppAvg,legs:3,start:501});S.p[0].legs=2;S.p[1].legs=0;S.won=true;endMatch();out.real={week:c.season.week,live:C3.poolLive(),st:c.v3.cpool.items.map(k=>k.st),con:c.v3.con.length};}catch(e){out.real={err:e.message};}}
+  // 8 the last fixture of the season through the real path: a contract met earlier pays at that match's end, before any new season (ChatGPT P1)
+  {newCareer();const c=career();c.tier=3;c.stage=null;c.season=null;c.next=null;C3.V3();newSeason(c);C3.fillContracts();const sn=c.season;const P=c.v3.cpool;P.mid=true;P.items[1].st='met';sn.week=sn.len;
+   const bank0=c.bank;const n=nextOpponent();c.next=n;try{beginMatch({mode:'career',tier:3,p0:'Tester',oppName:n.oppName,oppKey:n.oppKey,oppAvg:n.oppAvg,legs:3,start:501});S.p[0].legs=0;S.p[1].legs=2;S.won=false;endMatch();
+    out.last={done:sn.done,same:c.season===sn,st:P.items.map(k=>k.st),gain:c.bank-bank0,cash:P.items[1].cash};}catch(e){out.last={err:e.message};}}
   return out;});
  const f=[];const eq=(a,b,m)=>{if(JSON.stringify(a)!==JSON.stringify(b))f.push(m+': '+JSON.stringify(a)+' want '+JSON.stringify(b));};
  eq(r.reg.n,3,'Regional drip contracts');eq(r.reg.cash,[120,120,120],'Regional contract pay');eq(r.reg.pool,false,'Regional has no pool');
@@ -51,6 +55,7 @@ const {chromium}=require('playwright');const path=require('path');
  eq(r.rt,{key:true,items:3},'save round-trip keeps the pool');
  eq(r.tt.live,true,'T-T pool live');eq(r.tt.cash,[750,1125,1875],'T-T pool pay');eq(r.tt.st,['open','open','open'],'new pool open');
  eq(r.legacy.pool,false,'in-flight DPNZ season: no pool yet');eq(r.legacy.con,3,'in-flight DPNZ season keeps drip contracts');eq(r.legacyNext.live,true,'next season: pool');eq(r.legacyNext.con,0,'next season: no drip');
+ if(!r.last||r.last.err||!r.last.done||r.last.st[1]!=='paid'||r.last.gain<r.last.cash)f.push('last fixture pays the met contract at season end: '+JSON.stringify(r.last));
  if(!r.real||r.real.err||r.real.week!==2||!r.real.live||r.real.con!==0)f.push('real DPNZ fixture path: '+JSON.stringify(r.real));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  console.log(JSON.stringify(r).slice(0,1500));await b.close();
