@@ -32,11 +32,23 @@ let RND=0,RW=false;function wrapRender(){try{const R=window.TOPS_R;if(!R)return;
 wrapRender();setTimeout(wrapRender,0);
 const SCR_IDS=['hub','game','tcWalk','c3rw','cardDraft','perkSheet','result','login','tcExh','shop'];
 function openScreens(){const o=[];try{for(const id of SCR_IDS){const e=document.getElementById(id);if(e&&!e.hidden&&e.getClientRects().length)o.push(id);}const cd=document.querySelector('.cd-wrap');if(cd&&cd.getClientRects().length)o.push('cards');}catch(e){}return o.join(',');}
-// #20 (Overseer 20:30): the match in 30 s windows of visible play [secs since match start, fps, p95 ms, stalls >100 ms], so one long match shows
+// #20 (Overseer 20:30): the match in 30 s windows of visible play [secs since match start, fps, p95 ms, stalls >100 ms, p50 ms], so one long match shows
 // whether the frame rate falls with time (heat) or stays flat. Up to 40 windows (20 min); the open window is added when the row is built.
-function winRow(w){const p=pct(w.h,.95);return [Math.round((w.at-M.t0)/1000),w.vis?+(w.n/(w.vis/1000)).toFixed(1):null,p,w.c100];}
+function winRow(w){const p=pct(w.h,.95);return [Math.round((w.at-M.t0)/1000),w.vis?+(w.n/(w.vis/1000)).toFixed(1):null,p,w.c100,pct(w.h,.5)];}/* + p50: a p50 near 33 ms with fps ~30 means the browser is capping the frame rate, not that a frame got dearer */
 function winAdd(now,d){let w=M.w;if(!w){w=M.w={at:now,vis:0,n:0,c100:0,h:hist()};}w.n++;w.vis+=d;bump(w.h,d);if(d>100)w.c100++;if(w.vis>=30000){if(M.win.length<40)M.win.push(winRow(w));M.w=null;}}
-function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);winAdd(now,d);if(d>33)M.c33++;if(d>50){M.c50++;M.pinc=[d,now];}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
+// #20 (Overseer 20:51): what this match draws and stacks, once per match after ~10 s of visible play (idle callback, quiet moments only),
+// so match 1 and match 2 rows can be compared on the phone: lights by type (visible) and shadow casters, GPU objects, scene objects, canvases in
+// the page, shown layers with backdrop-filter / filter / will-change / blend, shown fixed full-screen layers, running CSS animations.
+function counters(){const o={};try{const R=window.TOPS_R;let root=null;try{root=V._qa.opp();while(root&&root.parent)root=root.parent;}catch(e){}const L={};let objs=0,sh=0;
+ if(root)root.traverse(x=>{objs++;if(x.isLight){let v=true;for(let q=x;q;q=q.parent)if(!q.visible){v=false;break;}if(v){L[x.type]=(L[x.type]||0)+1;if(x.castShadow)sh++;}}});o.lights=L;o.shadow=sh;o.objs=objs;
+ if(R&&R.info)o.gpu=[R.info.memory.geometries,R.info.memory.textures,R.info.programs?R.info.programs.length:null];
+ const W=innerWidth,H=innerHeight,cs=e=>getComputedStyle(e);const shown=e=>{for(let q=e;q&&q.nodeType===1;q=q.parentElement){const c=cs(q);if(c.display==='none'||c.visibility==='hidden'||+c.opacity===0)return false;}return true;};
+ const nm=e=>e.id?'#'+e.id:(e.tagName.toLowerCase()+(typeof e.className==='string'&&e.className.trim()?'.'+e.className.trim().split(/\s+/)[0]:''));
+ o.canv=[...document.querySelectorAll('canvas')].map(c=>nm(c)+(shown(c)?'':'-'));const lay=[];let full=0;
+ document.querySelectorAll('body *').forEach(e=>{const c=cs(e);if(c.display==='none')return;const bf=c.backdropFilter||c.webkitBackdropFilter;const fx=(bf&&bf!=='none')||(c.filter&&c.filter!=='none')||(c.willChange&&c.willChange!=='auto')||(c.mixBlendMode&&c.mixBlendMode!=='normal');
+  let big=false;if(c.position==='fixed'){const r=e.getBoundingClientRect();big=r.width*r.height>=.4*W*H;}if(!(fx||big)||!shown(e))return;if(big)full++;if(fx&&lay.length<12)lay.push(nm(e)+(bf&&bf!=='none'?':bd':'')+(c.filter&&c.filter!=='none'?':f':'')+(c.willChange&&c.willChange!=='auto'?':wc':'')+(c.mixBlendMode&&c.mixBlendMode!=='normal'?':bl':''));});
+ o.full=full;o.fxl=lay;o.css=document.getAnimations().filter(a=>a.playState==='running').length;}catch(e){o.err=String(e.message||e).slice(0,60);}return o;}
+function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);winAdd(now,d);if(!M.cTry&&M.vis>10000){M.cTry=1;const id=M.id;const go=n=>{try{if(!M||M.id!==id||M.done)return;if(!quiet()){if(n<40)setTimeout(()=>go(n+1),500);return;}M.cnt=counters();}catch(e){}};idle(()=>go(0));}if(d>33)M.c33++;if(d>50){M.c50++;M.pinc=[d,now];}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
  M.skip=false;M.last=now;RND=0;if(!RW)wrapRender();/* installs once the renderer exists */const R=window.TOPS_R;const counting=!!(R&&R.info)&&now-M.infoAt>2000;if(counting){M.infoAt=now;M.ar=R.info.autoReset;R.info.autoReset=false;R.info.reset();}return counting;}
 function post(t0,t1,counting){const pc=M.cpu,pr=M.rnd||0;M.cpu=t1-t0;M.rnd=RND;if(MQ&&!MQt&&(++MQn%10===0)){MQt=performance.now();MQ.port2.postMessage(0);}bump(M.rh,M.cpu);if(M.pinc){incident(M.pinc[0],M.pinc[1],pc,pr);M.pinc=null;}if(counting){try{const R=window.TOPS_R;const c=R.info.render.calls,tr=R.info.render.triangles;R.info.autoReset=M.ar;if(c>M.draws)M.draws=c;if(tr>M.tris)M.tris=tr;}catch(e){}}
  if(M.pend){const lat=t1-M.pend;M.pend=0;if(lat<0)M.iNeg++;else{bump(M.ih,lat);M.iN++;M.lat=lat;if(lat>50)M.i50++;}}
@@ -104,7 +116,7 @@ function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.f
   heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,frame_hist:fbins(fh),standalone:standalone(),app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev(),t20())});}
 // #20: no new columns (tops_perf is strict), so the extra per-match detail rides in the dev JSON: fps per 30 s window, frames drawn between matches,
 // how far a stale screen would have moved the lock point (TOPS_LOCKLAG), and the bisect switch in use (?q20=)
-function t20(){try{const o={fps_30s:M.win.concat(M.w&&M.w.vis>=5000?[winRow(M.w)]:[]),idle:M.idle};const L=window.TOPS_LOCKLAG;if(L&&L.n)o.lock={n:L.n,over5:L.o5,max:+L.max.toFixed(1),mean:+(L.sum/L.n).toFixed(1)};if(window.TOPS_Q20)o.q20=TOPS_Q20;return {t20:o};}catch(e){return {};}}
+function t20(){try{const o={fps_30s:M.win.concat(M.w&&M.w.vis>=5000?[winRow(M.w)]:[]),idle:M.idle};if(M.cnt)o.cnt=M.cnt;const L=window.TOPS_LOCKLAG;if(L&&L.n)o.lock={n:L.n,over5:L.o5,max:+L.max.toFixed(1),mean:+(L.sum/L.n).toFixed(1)};if(window.TOPS_Q20)o.q20=TOPS_Q20;return {t20:o};}catch(e){return {};}}
 // frame-interval histogram in 10 fixed bins (ms): <9, 9-12, 13-17, 18-20, 21-25, 26-33, 34-50, 51-100, 101-199, >=200 (Overseer 10:31: per-match histogram, rows < 5 KB)
 const FEDGE=[9,13,18,21,26,34,51,101,200];function fbins(h){const o=[0,0,0,0,0,0,0,0,0,0];try{for(let i=0;i<h.length;i++){if(!h[i])continue;let b=0;while(b<FEDGE.length&&i>=FEDGE[b])b++;o[b]+=h[i];}}catch(e){}return o;}
 // home-screen web app (iOS navigator.standalone, or display-mode standalone elsewhere); null if unknown
