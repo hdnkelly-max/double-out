@@ -152,12 +152,16 @@ function shaderConsole(args){try{const txt=args.map(a=>a&&a.message?a.message:(t
  logBig('shader_fail',{log:pendFail.log,scr:lastScreen,n:fails});incident(true);return true;}catch(e){return false;}}
 // per frame (after the game's own frame): program-cache signature and the slow-frame run
 let lastF=0,slowRun=0,slowFired=false;
-let pgSeen=0;let SL=[],SLn=0,SLt={js:0,rnd:0,o:0,dom:0};
-function slow(it){try{SLn++;SLt.js+=it.js||0;SLt.rnd+=it.rnd||0;SLt.o+=it.other||0;if(it.dom>SLt.dom)SLt.dom=it.dom;if(SL.length<60)SL.push([it.s,it.f,Math.round(it.js||0),Math.round(it.rnd||0),it.other||0,it.dom||0,it.ph]);}catch(e){}}
-function slowFlush(){try{if(!SLn)return;logBig('slow_sum',{n:SLn,js:Math.round(SLt.js),rnd:Math.round(SLt.rnd),other:Math.round(SLt.o),dom_max:SLt.dom,cols:'s,f,js,rnd,other,dom,ph',f:SL});}catch(e){}SL=[];SLn=0;SLt={js:0,rnd:0,o:0,dom:0};}
-function frameTick(nowT){try{const PGx=window.TOPS_PG;if(PGx&&PGx.failed&&PGx.failed.length!==pgSeen){diagPend=true;thumbWant('shader_fail');}const R=R_();const P=R&&R.info&&R.info.programs;if(P){let s=P.length*1000003;for(let i=0;i<P.length;i++)s+=P[i].id*(i+7);if(s!==progSig){progSig=s;progLen=P.length;onProgChange(P,nowT-lastF);}}
+let pgSeq=0;let domQ=[],domBusy=false;let SL=[],SLn=0,SLt={js:0,rnd:0,o:0,dom:0};
+function slow(it){try{SLn++;SLt.js+=it.js||0;SLt.rnd+=it.rnd||0;SLt.o+=it.other||0;const row=[it.s,it.f,Math.round(it.js||0),Math.round(it.rnd||0),it.other||0,null,it.ph,it.mq_max||0];if(SL.length<60)SL.push(row);if(domQ.length<60)domQ.push([it,row,performance.now()]);}catch(e){}}
+/* DOM size for slow frames: counted once at the next quiet idle moment and written back into every waiting row (dom_lag = ms after the frame) */
+function domFill(){try{if(!domQ.length)return;const n=document.getElementsByTagName('*').length,t=performance.now();for(const [it,row,at] of domQ){it.dom=n;it.dom_lag=Math.round(t-at);row[5]=n;}if(n>SLt.dom)SLt.dom=n;domQ=[];}catch(e){domQ=[];}}
+function domIdle(){if(domBusy)return;domBusy=true;const go=()=>{domBusy=false;if(quiet())domFill();};try{if(window.requestIdleCallback)requestIdleCallback(go,{timeout:1000});else setTimeout(go,200);}catch(e){setTimeout(go,200);}}
+function slowFlush(){try{domFill();/* match end is a break: fill any still waiting */if(!SLn)return;logBig('slow_sum',{n:SLn,js:Math.round(SLt.js),rnd:Math.round(SLt.rnd),other:Math.round(SLt.o),dom_max:SLt.dom,cols:'s,f,js,rnd,other,dom,ph,mq_max',f:SL});}catch(e){}SL=[];SLn=0;SLt={js:0,rnd:0,o:0,dom:0};}
+function frameTick(nowT){try{const PGx=window.TOPS_PG;if(PGx&&(PGx.failSeq|0)!==pgSeq){diagPend=true;thumbWant('shader_fail');}const R=R_();const P=R&&R.info&&R.info.programs;if(P){let s=P.length*1000003;for(let i=0;i<P.length;i++)s+=P[i].id*(i+7);if(s!==progSig){progSig=s;progLen=P.length;onProgChange(P,nowT-lastF);}}
  const d=lastF?nowT-lastF:0;lastF=nowT;if(inMatch&&d>50&&d<5000){slowRun+=d;if(slowRun>=2000&&!slowFired){slowFired=true;thumbWant('slow2s');log('slow_run',{ms:Math.round(slowRun),scr:lastScreen});}}else if(d<=50)slowRun=0;/* 2 s of back-to-back frames over 50 ms, once a match */
  if(thumbReq&&quiet())thumbShot();
+ if(domQ.length&&!domBusy&&quiet())domIdle();
  if((diagPend||healthDue())&&quiet()&&!thumbBusy)idleDiag();}catch(e){}}
 // a change in the program cache: which programs came and went (ids only now; names and owners at the quiet moment)
 function onProgChange(P,frameMs){const ids=new Set();const add=[];for(const p of P){ids.add(p.id);if(!progIds.has(p.id))add.push(p);}let gone=0;for(const id of progIds)if(!ids.has(id))gone++;progIds=ids;
@@ -179,8 +183,8 @@ function runDiag(){const R=R_();if(!R)return;let own=null;
   for(const p of (R.info.programs||[]))if(p.diagnostics&&p.diagnostics.runnable===false&&!bad.some(b=>b.p===p))bad.push({p,o:{id:p.id,sh:p.name,key:hashStr(String(p.cacheKey||'')),by:own.get(p.id)||null,defs:defs(p)}});
   for(const b of bad){const d=b.p.diagnostics;logBig('shader_fail_at',Object.assign({},b.o,{lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)}));}
   // #19's progRescue takes a failed program out of the cache inside the render call: it keeps what it rescued in TOPS_PG.failed
-  const PGx=window.TOPS_PG;let resc=0;if(PGx&&PGx.failed){const F=PGx.failed;const startAt=Math.max(0,F.length-Math.max(0,F.length-pgSeen));for(const r of F){if(r._car6)continue;r._car6=1;resc++;const d=r.diag||{};
-   logBig('shader_fail_at',{sh:r.name,key:hashStr(String(r.key||'')),by:r.by,rescued:1,defs:defs({diagnostics:d}),lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)});}pgSeen=F.length;}
+  const PGx=window.TOPS_PG;let resc=0;if(PGx&&PGx.failed&&(PGx.failSeq|0)!==pgSeq){const F=PGx.failed;const seq=PGx.failSeq|0;for(const r of F){if(r._car6||(r.seq|0)<=pgSeq)continue;r._car6=1;resc++;const d=r.diag||{};
+   logBig('shader_fail_at',{sh:r.name,key:hashStr(String(r.key||'')),by:r.by,rescued:1,defs:defs({diagnostics:d}),lights:lc,log:bigText([d.programLog,d.fragmentShader&&d.fragmentShader.log,d.vertexShader&&d.vertexShader.log].filter(Boolean).join(' | '),2000)});}const lost=(seq-pgSeq)-resc;if(lost>0)log('shader_fail_lost',{n:lost});/* more failures than the list keeps */pgSeq=seq;}
   if(pendFail||bad.length||resc){pendFail=null;incident(true);}}
  health(own);}
 // ---- match health: first quiet frame after the start, and again from 5 s in ----

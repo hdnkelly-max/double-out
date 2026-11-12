@@ -29,6 +29,12 @@ const {chromium}=require('playwright');const path=require('path');
  if(!sf)f.push('no shader_fail event');else if(!(sf.d.log.length>200))f.push('shader_fail text cut: '+sf.d.log.length+' chars');
  if(!sfa)f.push('no shader_fail_at (attribution)');else{if(!/diagTestMesh/.test(JSON.stringify(sfa.d.by)))f.push('shader_fail_at does not name the mesh: '+JSON.stringify(sfa.d.by));if(!sfa.d.lights)f.push('no light counts');if(!/undefined_function_for_car6_test/.test(sfa.d.log||''))f.push('the compile log is missing from shader_fail_at: '+JSON.stringify(sfa.d).slice(0,600));}
  await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='thumb'),8000);const th=(await evs('thumb'))[0];if(!th||!/^data:image\/jpeg/.test(th.d.img))f.push('no thumbnail: '+JSON.stringify(await evs('thumb_blank')));
+ // failures 11+: the list keeps 10 but failSeq keeps counting, so the recorder still sees them and says how many it lost (ChatGPT rework P0)
+ const n0=(await evs('shader_fail_at')).length;
+ await ev(()=>{const PG=window.TOPS_PG,F=PG.failed||(PG.failed=[]);for(let i=0;i<12;i++){PG.failSeq=(PG.failSeq||0)+1;F.push({seq:PG.failSeq,name:'car6many'+i,key:'k'+i,diag:{programLog:'car6 many '+i},by:['m/x try 1'],at:performance.now()});if(F.length>10)F.splice(0,F.length-10);}});
+ await waitFor(n0=>TOPS_LOG.events().filter(e=>e.k==='shader_fail_at').length>=n0+10&&TOPS_LOG.events().some(e=>e.k==='shader_fail_lost'),15000,n0);
+ const nm=(await evs('shader_fail_at')).length-n0,lost=(await evs('shader_fail_lost'))[0];
+ if(nm!==10||!lost||lost.d.n!==2)f.push('12 failures with a full list: '+nm+' shader_fail_at, lost '+JSON.stringify(lost&&lost.d)+' (want 10 and n:2)');
  // the upload goes at the next break (sendOk): open the window the way a leg break does
  await ev(()=>{V._qa.scene.remove(__bad);});
  await ev(()=>{S.won=true;endMatch();});
@@ -52,8 +58,9 @@ const {chromium}=require('playwright');const path=require('path');
  await waitFor(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))),15000);
  if(!(await ev(()=>TOPS_LOG.events().some(e=>e.k==='health_fail'&&e.d.miss.some(m=>/board missing/.test(m))))))f.push('a removed board does not log health_fail "board missing"');
  await ev(()=>{__bdp.add(__bd);S.won=true;endMatch();});
- const ss=await evs('slow_sum');if(!ss.length)f.push('no slow_sum at match end (SwiftShader frames are slow, so there should be one)');else{const d=ss[0].d;if(!(d.n>0&&'js' in d&&'rnd' in d&&d.dom_max>0&&Array.isArray(d.f)))f.push('slow_sum incomplete: '+JSON.stringify(d).slice(0,300));}
- if(!(await ev(()=>__ins.some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='slow_sum')))))f.push('slow_sum was not uploaded');
+ const ss=await evs('slow_sum');if(!ss.length)f.push('no slow_sum at match end (SwiftShader frames are slow, so there should be one)');else{const d=ss[0].d;if(!(d.n>0&&'js' in d&&'rnd' in d&&d.dom_max>0&&Array.isArray(d.f)))f.push('slow_sum incomplete: '+JSON.stringify(d).slice(0,300));if(Array.isArray(d.f)&&d.f.some(r=>!(r[5]>0)))f.push('slow_sum rows without a DOM count (filled at the next quiet moment): '+JSON.stringify(d.f.slice(0,3)));}
+ await waitFor(()=>__ins.some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='slow_sum')),20000);
+ if(!(await ev(()=>__ins.some(x=>x[0]==='tops_log'&&x[1].events.some(e=>e.k==='slow_sum')))))f.push('slow_sum was not uploaded: '+JSON.stringify(await ev(()=>({ss:TOPS_LOG.events().filter(e=>e.k==='slow_sum').map(e=>e.t),me:TOPS_LOG.events().filter(e=>e.k==='match_end').map(e=>e.t),rows:__ins.filter(x=>x[0]==='tops_log').map(x=>[x[1].reason,x[1].events.length,x[1].trimmed_events||0,x[1].events.slice(-3).map(e=>e.k)])}))));
  // thumbnails within their documented cap (12,000 chars), every other event within 2,600
  const sizes=await ev(()=>TOPS_LOG.events().map(e=>[e.k,JSON.stringify(e.d||'').length]));const th2=sizes.filter(x=>x[0]==='thumb');if(th2.some(x=>x[1]>12200))f.push('thumbnail over its cap: '+JSON.stringify(th2));
  const other=sizes.filter(x=>x[0]!=='thumb'&&x[1]>2700);if(other.length)f.push('events over 2.6 KB: '+JSON.stringify(other.slice(0,3)));
