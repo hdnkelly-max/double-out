@@ -232,3 +232,6 @@ html.rb-on{--base:#121517;--surface:#1a1e21;--raised:#22272b;--divider:#343a3e;-
 html.rb-on .tcpk__btn--go{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important}
 
 #rbApp{.rb-msheet{position:absolute;right:12px;top:calc(56px + env(safe-area-inset-top,0px));z-index:5;display:flex;flex-direction:column;gap:6px;min-width:200px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}.rb-msheet button{min-height:44px;padding:0 14px;border-radius:8px;background:var(--card2);color:var(--ink);text-align:left;font-weight:600}}
+
+/* pull-pad corner brackets: colour only (Overseer 22:08 approved; same 18x2 px geometry as the game's rule) */
+html.rb-on body.lk-phone.lk-match .pa.ready .pa-pad,html.rb-on body.lk-phone.lk-match .pa.pulling .pa-pad{background:linear-gradient(#f3f4f2,#f3f4f2) 0 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 100%/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 100% 0/2px 18px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/18px 2px,linear-gradient(#f3f4f2,#f3f4f2) 0 100%/2px 18px!important;background-repeat:no-repeat!important}
