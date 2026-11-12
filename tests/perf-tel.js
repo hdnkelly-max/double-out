@@ -16,7 +16,7 @@ const {chromium}=require('playwright');const path=require('path');
  const f=[];
  await p.evaluate(()=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};newCareer();const c=career();c.stage=null;c.tier=1;
   window.__rows=[];NET.user={id:'u1'};/* insert-only like the real table (QA 09:03): no upsert; a row whose sample_id is already stored fails the whole batch with 23505 / 409 */
-  window.__stored=new Set();window.__calls=[];NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used: needs SELECT on tops_perf');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};
+  window.__stored=new Set();window.__calls=[];NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint "tops_perf_sample_id_key"',details:'Key (sample_id)=(x) already exists.'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used: needs SELECT on tops_perf');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};
   window.TOPS_PERF_30=3000;beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:3});});
  await p.waitForTimeout(2500);await p.evaluate(()=>{if(S&&S.bull)S.bull=null;S.busy=false;S.cur=0;/* the 'who throws first, tap to continue' card, as a player's tap */});
  // aim input (real pointer events) so the reticle latency has samples
@@ -77,12 +77,20 @@ const {chromium}=require('playwright');const path=require('path');
  if(k.ck||k.q.length!==1||k.q[0][0]!=='zz'||k.q[0][1]!=='interrupted'||k.q[0][2])f.push('killed-while-hidden checkpoint not promoted once with a fresh id: '+JSON.stringify(k));
  
  // the page was reloaded above: put the insert-only stub back, with one row already stored
- await p.evaluate(()=>{window.__stored=new Set(['old-1']);window.__calls=[];window.__rows=[{sample_id:'old-1',phase:'end',ver:'x'}];NET.user={id:'u1'};NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};if(!career())newCareer();const c=career();c.stage=null;c.tier=1;});
+ await p.evaluate(()=>{window.__stored=new Set(['old-1']);window.__calls=[];window.__rows=[{sample_id:'old-1',phase:'end',ver:'x'}];NET.user={id:'u1'};NET.sb={from:t=>({insert:(rows)=>{__calls.push(rows.length);if(rows.some(r=>__stored.has(r.sample_id)))return Promise.resolve({error:{code:'23505',message:'duplicate key value violates unique constraint "tops_perf_sample_id_key"',details:'Key (sample_id)=(x) already exists.'},status:409});rows.forEach(r=>__stored.add(r.sample_id));__rows.push(...JSON.parse(JSON.stringify(rows)));return Promise.resolve({error:null,status:201});},upsert:()=>{throw new Error('upsert used');}}),auth:{getSession:()=>Promise.resolve({data:{}})}};save.authSeen=true;save.lessonDone=true;$('login').hidden=true;V.walkOn=()=>{};if(!career())newCareer();const c=career();c.stage=null;c.tier=1;});
  // QA 09:03 / 11:00 finding 1: a batch with a row already stored (lost response, retry) still clears the queue, row by row
  const dupc=await p.evaluate(async()=>{const old=__rows[0];const fresh=Object.assign({},old,{sample_id:'fresh-'+Date.now()});
   localStorage.setItem('tops_perfq',JSON.stringify([old,fresh]));const before=__rows.length;TOPS_perf.flush&&TOPS_perf.flush();await new Promise(r=>setTimeout(r,800));
   return {q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').length,added:__rows.length-before,freshStored:__stored.has(fresh.sample_id)};});
  if(dupc.q!==0||!dupc.freshStored||dupc.added!==1)f.push('duplicate in a batch: '+JSON.stringify(dupc));
+ // CAR-5 check 1: a foreign-key error (23503, also HTTP 409) keeps the row queued; a unique violation on another constraint keeps it; 23505 on sample_id releases it
+ const fk=await p.evaluate(async()=>{const mk=err=>({from:t=>({insert:(rows)=>Promise.resolve(err?{error:err,status:409}:{error:null,status:201})}),auth:NET.sb.auth});const keep=NET.sb;const row={sample_id:'fk-'+Date.now(),phase:'end',ver:'x'};const out={};
+  const run=async(err)=>{localStorage.setItem('tops_perfq',JSON.stringify([row]));NET.sb=mk(err);TOPS_perf.flush();await new Promise(r=>setTimeout(r,500));return JSON.parse(localStorage.getItem('tops_perfq')||'[]').length;};
+  out.fk=await run({code:'23503',message:'insert or update on table "tops_perf" violates foreign key constraint "tops_perf_user_id_fkey"',details:'Key (user_id)=(x) is not present in table "users".'});
+  out.otherUnique=await run({code:'23505',message:'duplicate key value violates unique constraint "some_other_key"',details:'Key (match_id, phase)=(a, b) already exists.'});
+  out.sample=await run({code:'23505',message:'duplicate key value violates unique constraint "tops_perf_sample_id_key"',details:'Key (sample_id)=(x) already exists.'});
+  NET.sb=keep;localStorage.setItem('tops_perfq','[]');return out;});
+ if(fk.fk!==1||fk.otherUnique!==1||fk.sample!==0)f.push('CAR-5 duplicate rule (want fk kept 1, other unique kept 1, sample_id released 0): '+JSON.stringify(fk));
  // keepalive: plain POST, no on_conflict / resolution
  const ka=await p.evaluate(()=>{const seen=[];const of=window.fetch;window.fetch=(u,o)=>{seen.push({u:String(u),p:o&&o.headers&&o.headers.Prefer});return Promise.resolve({ok:true});};try{TOPS_perf.kaTest&&TOPS_perf.kaTest();}finally{window.fetch=of;}return seen;});
  if(!ka.length)f.push('keepalive not exercised');else if(ka.some(x=>/on_conflict/.test(x.u)||/resolution/.test(x.p||'')))f.push('keepalive still asks for on_conflict/resolution: '+JSON.stringify(ka));
@@ -93,6 +101,13 @@ const {chromium}=require('playwright');const path=require('path');
   S.pulling=false;S.busy=false;await new Promise(r=>setTimeout(r,1500));const afterWindow=__calls.length-n0;/* window over: wait for the next break */
   try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,3000));return {during,afterWindow,sent30:m.sent30,calls:__calls.length-n0};});
  if(midp.err||midp.during!==0||midp.afterWindow!==0||!midp.sent30)f.push('leg break during a pull: '+JSON.stringify(midp));
+ // CAR-5 check 2: after a leg ends, the player aiming (quiet, no who-throws-first card) sends nothing; the card up opens the break and it goes
+ const aim=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'X',oppAvg:60,legs:9});await new Promise(r=>setTimeout(r,800));const m=TOPS_perf.m;if(!m)return {err:'no match'};
+  m.want30=true;m.sent30=false;const n0=__calls.length;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,50));
+  const sv=S;Object.defineProperty(sv,'bull',{configurable:true,get:()=>null,set:()=>{}});/* the player has tapped the card and is aiming: no card, quiet */
+  const stopAt=Date.now()+4000;while(Date.now()<stopAt){S.busy=false;S.pulling=false;await new Promise(r=>setTimeout(r,50));}
+  const during=__calls.length-n0;const sentDuring=m.sent30;delete sv.bull;sv.bull={me:1,op:2};S.busy=false;await new Promise(r=>setTimeout(r,2500));return {during,sentDuring,sent30:m.sent30,calls:__calls.length-n0};});
+ if(aim.err||aim.during!==0||aim.sentDuring||!aim.sent30||aim.calls<1)f.push('CAR-5: send while aiming after a leg end, or not at the break: '+JSON.stringify(aim));
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));await b.close();
  console.log(JSON.stringify({r30:r30&&{fps:r30.fps,p95:r30.p95,frame_n:r30.frame_n,dev:r30.dev,reticle_n:r30.reticle_n},end:re&&{status:re.status,stalls100:re.stalls100,max_ms:re.max_ms,incidents:(re.incidents||[]).slice(0,2),draws_max:re.draws_max,reticle_n:re.reticle_n,reticle_p95:re.reticle_p95,match_index:re.match_index,app_secs:re.app_secs,geometries:re.geometries,textures:re.textures,programs:re.programs,tex_mb:re.tex_mb},cost}));
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log('PASS: 30 s checkpoint + end row (same match), hidden is a pause, stall caught with its phase, quit sends nothing, guest queue bounded, bookkeeping p95 '+cost.p95+' us per frame, single-call max (median of 3) '+cost.call_max+' us');})();
