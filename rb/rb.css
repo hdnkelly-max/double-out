@@ -364,3 +364,7 @@ html.rb-on.rb-preres #result{visibility:hidden!important}
 #rbApp .rbw-pin{display:flex;flex-direction:column;gap:8px;padding:18px 0 4px;background:linear-gradient(180deg,rgba(18,21,23,0),var(--bg) 40%)}
 #rbApp .rbw-go{display:flex;align-items:center;justify-content:center;width:100%;min-height:64px;border:0;cursor:pointer;color:#fff;font:italic 800 34px var(--d);text-transform:uppercase;letter-spacing:.03em;background:linear-gradient(180deg,#ff3a40,#d7232d 45%,#8e0710);clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);filter:drop-shadow(0 0 18px rgba(227,16,27,.45))}
 #rbApp .rbw-go:active{transform:translateY(1px)}
+
+/* EXP-WIN: the game's longer button labels ("Equip new flights") stay on one line instead of wrapping to two (built-sheet review 13 Nov) */
+#rbApp .rbw-go{white-space:nowrap}
+#rbApp .rbw-go.rbw-go-l{font-size:27px;min-height:58px}

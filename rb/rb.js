@@ -259,7 +259,7 @@
     const ach = won && extra ? `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_trophy.jpg)"><div class="rbw-x"><small class="rbw-gk">${extra} achievement${extra > 1 ? 's' : ''} and contracts</small><b>Nice work</b><span>See them in Locker · Trophies</span></div></div>` : '';
     let tbl = '';
     if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
-    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go" type="button" id="rbRGo">${esc(go ? go.textContent : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
     return head + tiles + rw + main + want + ach + tbl + act;
   }
   let resMO = null, bodyMO = null;
