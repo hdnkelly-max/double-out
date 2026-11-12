@@ -3,8 +3,13 @@
 // Rule: the new screens only PRESENT the game. Every action calls the game's own function or button
 // (Walk on → the hub's #c3Go / playNext path, money match → moneyMatch()), so the match lifecycle, money and saves stay the game's.
 (function () {
-  const ON = (() => { try { const q = new URLSearchParams(location.search); if (q.has('rebrand')) localStorage.setItem('tops_rebrand', q.get('rebrand') === '1' ? '1' : '0'); return localStorage.getItem('tops_rebrand') === '1'; } catch (e) { return false; } })();
+  // Launch model (Overseer 22:02, Hayden 21:58): the new look is ON for everyone. RB_KILL = true turns it off for everyone (rollback = a one-line release).
+  // ?rebrand=0 / ?rebrand=1 still set this device for debugging (remembered).
+  const RB_KILL = false;
+  const ON = (() => { if (RB_KILL) return false; try { const q = new URLSearchParams(location.search); if (q.has('rebrand')) localStorage.setItem('tops_rebrand', q.get('rebrand') === '0' ? '0' : '1'); return localStorage.getItem('tops_rebrand') !== '0'; } catch (e) { return true; } })();
   window.TOPS_REBRAND = ON;
+  const setRB = on => { try { localStorage.setItem('tops_rebrand', on ? '1' : '0'); } catch (e) {} try { location.reload(); } catch (e) {} };
+  window.TOPS_RB_SET = setRB;
   if (!ON) return;
   try { document.documentElement.classList.add('rb-on'); } catch (e) {}
   const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
@@ -42,7 +47,8 @@
     document.body.appendChild(el);
     const back = document.createElement('button'); back.id = 'rbBack'; back.type = 'button'; back.hidden = true; back.textContent = 'New look ›'; back.onclick = () => open('tonight'); document.body.appendChild(back);
     el.querySelector('#rbMe').onclick = () => { tab = 'locker'; lk = 'load'; render(); };
-    el.querySelector('#rbMenu').onclick = () => { close(); try { showTitle(); } catch (e) {} };
+    el.querySelector('#rbMenu').onclick = () => { const m = $id('rbMenuSheet'); if (m) { m.remove(); return; } const d = document.createElement('div'); d.id = 'rbMenuSheet'; d.className = 'rb-menu'; d.innerHTML = `<button type="button" data-m="look">Edit look</button><button type="button" data-m="title">Main menu</button>`; el.appendChild(d);
+      d.onclick = e => { const k = e.target.dataset && e.target.dataset.m; if (!k) return; d.remove(); if (k === 'title') { close(); try { showTitle(); } catch (x) {} } else if (k === 'look') { close(); const b = $id('btnLook'); if (b) b.click(); } }; };
     return el;
   }
   function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }

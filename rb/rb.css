@@ -230,3 +230,5 @@ html.rb-on body.lk-phone.lk-match .pl.on{background:linear-gradient(180deg,rgba(
 /* batch 2 · cards system and its sheets (exhibition poster, binder, cabinet, pack opening): the After Hours tokens move to the v9.1 graphite set; the one primary ("Accept invite", "Open my picks") turns red. Colours only. */
 html.rb-on{--base:#121517;--surface:#1a1e21;--raised:#22272b;--divider:#343a3e;--text:#f3f4f2;--muted:#a0a6a3;--lime:#e9ecea}
 html.rb-on .tcpk__btn--go{background:#d7232d!important;color:#fff!important;border-color:#d7232d!important}
+
+#rbApp{.rb-menu{position:absolute;right:12px;top:56px;z-index:5;display:flex;flex-direction:column;gap:6px;min-width:200px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}.rb-menu button{min-height:44px;padding:0 14px;border-radius:8px;background:var(--card2);color:var(--ink);text-align:left;font-weight:600}}
