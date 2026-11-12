@@ -210,16 +210,24 @@
   const WIMG = t => `${IMG}w_win_t${Math.max(0, Math.min(6, t | 0))}.jpg`;
   const shirtCache = {};
   // the generated light-grey shirt, recoloured to the unlocked colour through the mask made from the same image
+  // a shirt reward in its real colour: the generated light-grey shirt recoloured through its mask, once per colour. Returns the image when it's
+  // ready, else '' (the card stays dark) and calls done(url) when it is. Any failure (image, mask, canvas) gives the neutral trophy image, never
+  // a grey or wrong-colour shirt. At most 4 finished colours kept (ChatGPT P2/P1 13 Nov).
   function shirtImg(hex, done) {
-    if (shirtCache[hex]) return shirtCache[hex];
-    { const ks = Object.keys(shirtCache).filter(k => shirtCache[k]); if (ks.length >= 4) delete shirtCache[ks[0]]; }  // keep at most 4 colours (ChatGPT P2: bounded memory)
-    if (shirtCache[hex] === undefined) { shirtCache[hex] = null; const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; try {
-      const w = A.naturalWidth, h = A.naturalHeight, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
+    const e = shirtCache[hex]; if (typeof e === 'string') return e;
+    if (Array.isArray(e)) { if (done) e.push(done); return ''; }
+    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 4) delete shirtCache[ks[0]];
+    const wait = shirtCache[hex] = done ? [done] : [];
+    const finish = url => { if (shirtCache[hex] !== wait) return; shirtCache[hex] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
+    const fail = () => finish(`${IMG}w_rw_trophy.jpg`);
+    const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; let cv = null; try {
+      const w = A.naturalWidth, h = A.naturalHeight; if (!w || !h || !/^#[0-9a-f]{6}$/i.test(hex)) return fail();
+      cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
       const r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
       for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
-      g.putImageData(im, 0, 0); shirtCache[hex] = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; if (done) done(shirtCache[hex]); } catch (e) { shirtCache[hex] = `${IMG}w_rw_trophy.jpg`; } };
-      A.onload = Mk.onload = go; A.onerror = Mk.onerror = () => { shirtCache[hex] = `${IMG}w_rw_trophy.jpg`; }; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`; }
-    return `${IMG}w_rw_shirt.jpg`;
+      g.putImageData(im, 0, 0); const url = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; finish(url); } catch (x) { if (cv) cv.width = cv.height = 0; fail(); } };
+    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`;
+    return '';
   }
   // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
   // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
@@ -244,7 +252,7 @@
     let main = '';
     if (up) { const { rs, pick } = pickUnlock(pre0.lv, v.lv);
       if (pick) { const [L, r] = pick, more = rs.length - 1; const img = r.k === 'shirt' ? shirtImg(r.v, u => { const e = $id('rbRUnl'); if (e) e.style.backgroundImage = `url(${u})`; }) : r.k === 'flight' ? `${IMG}w_rw_darts.jpg` : r.k === 'cash' ? `${IMG}w_rw_cash.jpg` : `${IMG}w_rw_trophy.jpg`;
-        main = `<div class="rbw-uc${won ? ' rbw-lv' : ''}" id="rbRUnl" style="background-image:url(${img})"><div class="rbw-x"><small>Level ${L} unlocked</small><b>${esc(r.n.replace(/^Title: /, ''))}</b><span>${r.k === 'shirt' ? 'Wear it from your next match' : r.k === 'flight' ? 'Fit them in Shop · Setup & gear' : r.k === 'title' ? 'Your new title' : 'Added to your bank'}${more > 0 ? ` · +${more} more` : ''}</span></div></div>`; } }
+        main = `<div class="rbw-uc${won ? ' rbw-lv' : ''}" id="rbRUnl" style="background-image:${img ? `url(${img})` : 'none'}"><div class="rbw-x"><small>Level ${L} unlocked</small><b>${esc(r.n.replace(/^Title: /, ''))}</b><span>${r.k === 'shirt' ? 'Wear it from your next match' : r.k === 'flight' ? 'Fit them in Shop · Setup & gear' : r.k === 'title' ? 'Your new title' : 'Added to your bank'}${more > 0 ? ` · +${more} more` : ''}</span></div></div>`; } }
     let want = '';
     const nb = BARRELS.filter(x => { const d = dState(x); return !d.own && !d.g; }).sort((x, y) => x.price - y.price)[0];
     if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_darts.jpg)"><div class="rbw-x"><small class="rbw-gk">Next dart</small><b>${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))}</b><span>${left ? money(left) + ' to go' : 'You can buy it now'}</span></div></div>`; }
@@ -349,5 +357,5 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg };
 })();
