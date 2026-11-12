@@ -65,7 +65,9 @@
   }
   function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
   function close() { clearInterval(armT); const el = $id('rbApp'); if (el) el.hidden = true; }
-  function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; try { hubTab(OLD[t] || 'play'); } catch (e) { console.warn('rb old tab', e); } }
+  /* live bug (05:45): Setup & gear showed an empty old Store (no dart, no list): switching the hub tab alone doesn't draw it. Press the game's own
+     hub tab button, which switches and draws (Store → showShop, Player → showPlayer, Practice → renderPractice); Setup & gear lands on the Setup tab */
+  function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; const k = OLD[t] || 'play'; try { const bt = document.querySelector(`#hubTabs [data-t="${k}"]`); if (bt) bt.click(); else hubTab(k); if (t === 'kit') showShop('setup', true); } catch (e) { console.warn('rb old tab', e); try { hubTab(k); } catch (e2) {} } }
   function render(keepSheet) {
     if (!keepSheet) { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); }   /* #39: the game's soft portrait refresh keeps an open ☰ sheet */
     const M = model(); if (!M) { close(); return; }
