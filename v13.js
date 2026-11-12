@@ -15,9 +15,13 @@ const bump=(h,ms)=>{h[ms>=200?201:(ms<0?0:ms|0)]++;};
 function pct(h,p){let n=0;for(let i=0;i<NB;i++)n+=h[i];if(!n)return null;const k=Math.max(1,Math.ceil(n*p));let c=0;for(let i=0;i<NB;i++){c+=h[i];if(c>=k)return i>=200?200:i+.5;}return null;}
 function mode(){try{if(!S)return '?';if(S.online)return 'online';if(S.mp)return 'local';if(S.practice)return 'practice';const c=career();if(c&&c.run)return 'run';return 'career';}catch(e){return '?';}}
 function phase(){try{if(!S||S.done)return 'end';if(S.bull)return 'bull';if(S.pulling)return 'pull';if(S.p&&S.p[S.cur]&&S.p[S.cur].ai)return 'opp';if(S.busy)return 'flight';return 'aim';}catch(e){return '?';}}
+// #20: how hard the GPU worked between matches (hub, menus, result screens): frames the game drew per second of visible time since the last
+// match ended (or the app opened), so we can see whether the phone ever gets a rest. Read when the next match starts.
+const IDL={t:performance.now(),n:0,r:0,r0:0};function idleTake(){try{const now=performance.now(),secs=(now-IDL.t)/1000,rc=window.TOPS_RC?TOPS_RC.n:0;const o={secs:Math.round(secs),fps:secs>1?+(IDL.n/secs).toFixed(1):null,renders_ps:secs>1&&window.TOPS_RC?+((rc-IDL.r0)/secs).toFixed(1):null};return o;}catch(e){return null;}}
+function idleReset(){try{IDL.t=performance.now();IDL.n=0;IDL.r0=window.TOPS_RC?TOPS_RC.n:0;}catch(e){}}
 function newM(){return {id:uid(),t0:performance.now(),vis:0,last:0,skip:true,fh:hist(),rh:hist(),ih:hist(),fn:0,c33:0,c50:0,c100:0,max:0,inc:[],
  pend:0,lat:0,iN:0,i50:0,iNeg:0,cpu:0,draws:0,tris:0,infoAt:0,auN:0,auLast:0,auStates:[],drift:0,driftN:0,ltN:0,ltMs:0,
- want30:false,sent30:false,done:false,mode:mode(),tier:(S&&S.tier&&S.tier.n)||'',hid:0,ix:++MATCH_IX,app:Math.round(performance.now()/1000),mem0:mem(),ur0:underruns()};}
+ want30:false,sent30:false,done:false,mode:mode(),tier:(S&&S.tier&&S.tier.n)||'',hid:0,ix:++MATCH_IX,app:Math.round(performance.now()/1000),win:[],w:null,idle:idleTake(),_ll:(window.TOPS_LOCKLAG={n:0,o5:0,max:0,sum:0}),mem0:mem(),ur0:underruns()};}
 // --- the frame hook: wraps V.frame (called once per game frame from tick) ---
 // CAR-6: render time inside each game frame, from a JS wrapper on renderer.render (not a GL call); JS time = frame callback - render
 /* R0 #20: is the time between frames the main thread (style/layout/other JS, GC) or the GPU/compositor? Every 10th frame a MessageChannel
@@ -28,13 +32,30 @@ let RND=0,RW=false;function wrapRender(){try{const R=window.TOPS_R;if(!R)return;
 wrapRender();setTimeout(wrapRender,0);
 const SCR_IDS=['hub','game','tcWalk','c3rw','cardDraft','perkSheet','result','login','tcExh','shop'];
 function openScreens(){const o=[];try{for(const id of SCR_IDS){const e=document.getElementById(id);if(e&&!e.hidden&&e.getClientRects().length)o.push(id);}const cd=document.querySelector('.cd-wrap');if(cd&&cd.getClientRects().length)o.push('cards');}catch(e){}return o.join(',');}
-function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);if(d>33)M.c33++;if(d>50){M.c50++;M.pinc=[d,now];}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
+// #20 (Overseer 20:30): the match in 30 s windows of visible play [secs since match start, fps, p95 ms, stalls >100 ms, p50 ms], so one long match shows
+// whether the frame rate falls with time (heat) or stays flat. Up to 40 windows (20 min); the open window is added when the row is built.
+function winRow(w){const p=pct(w.h,.95);return [Math.round((w.at-M.t0)/1000),w.vis?+(w.n/(w.vis/1000)).toFixed(1):null,p,w.c100,pct(w.h,.5)];}/* + p50: a p50 near 33 ms with fps ~30 means the browser is capping the frame rate, not that a frame got dearer */
+function winAdd(now,d){let w=M.w;if(!w){w=M.w={at:now,vis:0,n:0,c100:0,h:hist()};}w.n++;w.vis+=d;bump(w.h,d);if(d>100)w.c100++;if(w.vis>=30000){if(M.win.length<40)M.win.push(winRow(w));M.w=null;}}
+// #20 (Overseer 20:51): what this match draws and stacks, once per match after ~10 s of visible play (idle callback, quiet moments only),
+// so match 1 and match 2 rows can be compared on the phone: lights by type (visible) and shadow casters, GPU objects, scene objects, canvases in
+// the page, shown layers with backdrop-filter / filter / will-change / blend, shown fixed full-screen layers, running CSS animations.
+function counters(){const o={};try{const R=window.TOPS_R;let root=null;try{root=V._qa.opp();while(root&&root.parent)root=root.parent;}catch(e){}const L={};let objs=0,sh=0;
+ if(root)root.traverse(x=>{objs++;if(x.isLight){let v=true;for(let q=x;q;q=q.parent)if(!q.visible){v=false;break;}if(v){L[x.type]=(L[x.type]||0)+1;if(x.castShadow)sh++;}}});o.lights=L;o.shadow=sh;o.objs=objs;
+ if(R&&R.info)o.gpu=[R.info.memory.geometries,R.info.memory.textures,R.info.programs?R.info.programs.length:null];
+ const W=innerWidth,H=innerHeight,cs=e=>getComputedStyle(e);const shown=e=>{for(let q=e;q&&q.nodeType===1;q=q.parentElement){const c=cs(q);if(c.display==='none'||c.visibility==='hidden'||+c.opacity===0)return false;}return true;};
+ const nm=e=>e.id?'#'+e.id:(e.tagName.toLowerCase()+(typeof e.className==='string'&&e.className.trim()?'.'+e.className.trim().split(/\s+/)[0]:''));
+ o.canv=[...document.querySelectorAll('canvas')].map(c=>nm(c)+(shown(c)?'':'-'));const lay=[];let full=0;
+ document.querySelectorAll('body *').forEach(e=>{const c=cs(e);if(c.display==='none')return;const bf=c.backdropFilter||c.webkitBackdropFilter;const fx=(bf&&bf!=='none')||(c.filter&&c.filter!=='none')||(c.willChange&&c.willChange!=='auto')||(c.mixBlendMode&&c.mixBlendMode!=='normal');
+  let big=false;if(c.position==='fixed'){const r=e.getBoundingClientRect();big=r.width*r.height>=.4*W*H;}if(!(fx||big)||!shown(e))return;if(big)full++;if(fx&&lay.length<12)lay.push(nm(e)+(bf&&bf!=='none'?':bd':'')+(c.filter&&c.filter!=='none'?':f':'')+(c.willChange&&c.willChange!=='auto'?':wc':'')+(c.mixBlendMode&&c.mixBlendMode!=='normal'?':bl':''));});
+ o.full=full;o.fxl=lay;o.css=document.getAnimations().filter(a=>a.playState==='running').length;}catch(e){o.err=String(e.message||e).slice(0,60);}return o;}
+function pre(now){if(!M.skip&&M.last){const d=now-M.last;if(d>0&&d<5000){M.fn++;M.vis+=d;bump(M.fh,d);winAdd(now,d);if(!M.cTry&&M.vis>10000){M.cTry=1;const id=M.id;const go=n=>{try{if(!M||M.id!==id||M.done)return;if(!quiet()){if(n<40)setTimeout(()=>go(n+1),500);return;}M.cnt=counters();}catch(e){}};idle(()=>go(0));}if(d>33)M.c33++;if(d>50){M.c50++;M.pinc=[d,now];}if(d>100)M.c100++;if(d>M.max)M.max=d;}}
  M.skip=false;M.last=now;RND=0;if(!RW)wrapRender();/* installs once the renderer exists */const R=window.TOPS_R;const counting=!!(R&&R.info)&&now-M.infoAt>2000;if(counting){M.infoAt=now;M.ar=R.info.autoReset;R.info.autoReset=false;R.info.reset();}return counting;}
 function post(t0,t1,counting){const pc=M.cpu,pr=M.rnd||0;M.cpu=t1-t0;M.rnd=RND;if(MQ&&!MQt&&(++MQn%10===0)){MQt=performance.now();MQ.port2.postMessage(0);}bump(M.rh,M.cpu);if(M.pinc){incident(M.pinc[0],M.pinc[1],pc,pr);M.pinc=null;}if(counting){try{const R=window.TOPS_R;const c=R.info.render.calls,tr=R.info.render.triangles;R.info.autoReset=M.ar;if(c>M.draws)M.draws=c;if(tr>M.tris)M.tris=tr;}catch(e){}}
  if(M.pend){const lat=t1-M.pend;M.pend=0;if(lat<0)M.iNeg++;else{bump(M.ih,lat);M.iN++;M.lat=lat;if(lat>50)M.i50++;}}
  if(!M.sent30&&!M.want30&&M.vis>=(window.TOPS_PERF_30||30000)){M.want30=true;M.want30At=M.vis;}}
 if(typeof V!=='undefined'&&V&&typeof V.frame==='function'){const vf=V.frame;V.frame=function(now,st){
  let on=false,counting=false,t0=0;try{on=!!(M&&!M.done&&!document.hidden);if(on){counting=pre(now);t0=performance.now();}}catch(e){on=false;}
+ try{if(!on&&!document.hidden){IDL.n++;const rr=window.TOPS_RC;IDL.r=rr?rr.n:IDL.r;}}catch(e){}
  const r=vf.apply(this,arguments);/* the game's frame always runs, outside any telemetry try */
  if(on){try{post(t0,performance.now(),counting);}catch(e){}}return r;};}/* QA 08:23: a telemetry error can't stop or skip a frame */
 // cost bench for tests: the per-frame bookkeeping alone (pre + post), n calls in chunks of 100, per-call microseconds
@@ -59,7 +80,15 @@ let exp=0,tickN=0;setInterval(()=>{const t=performance.now();if(!M||M.done||docu
 // match ending or being left, and the hub (a 15 s timer that only acts when no match is running).
 // a real break: no pull, no busy turn, no dart in the air (QA 09:03 / 11:00 finding 2); otherwise wait for the next break or match end
 function quiet(){try{if(typeof S==='undefined'||!S)return true;if(S.pulling||S.busy)return false;const d=typeof V!=='undefined'&&V&&V._qa&&V._qa.darts?V._qa.darts():null;return !(d&&d.flying);}catch(e){return false;}}
-function legBreak(id,tries){try{if(!M||M.done||M.id!==id)return;if(!quiet()){/* the leg-end banner keeps the game busy for ~0.6-0.9 s: look again, up to 5 s, then wait for the next break */if((tries||0)<20)setTimeout(()=>legBreak(id,(tries||0)+1),250);return;}if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length)idle(()=>send([]));}catch(e){}}
+// CAR-5 (the CAR-2 rules, ChatGPT 8.8): during a match nothing is sent and the queue isn't touched except inside a break window: a leg has
+// ended, the game is quiet AND the who-throws-first card (S.bull) is up (quiet() alone is also true while the player aims). Rechecked where
+// the request starts (send) and where the queue is cleaned (done).
+let brkUntil=0,held=[],relPend=[];function between(){try{return typeof S!=='undefined'&&!!S&&!!S.bull;}catch(e){return false;}}
+function inPlay(){return !!(M&&!M.done);}
+function playOk(){return !inPlay()||(quiet()&&between());}/* the card up + quiet IS the break: the player can't be aiming (rechecked at send time, so an idle callback landing late is safe) */
+let heldT=0;function retryHeld(n){clearTimeout(heldT);if(!held.length&&!relPend.length)return;if(!inPlay()){send([]);return;}if(playOk()){send([]);return;}if((n||0)<240)heldT=setTimeout(()=>retryHeld((n||0)+1),250);}/* look for the next break for up to 60 s; the match end flushes anyway */
+function legBreak(id,tries){try{if(!M||M.done||M.id!==id)return;if(!quiet()||!between()){/* the leg-end banner keeps the game busy first; look again for up to 15 s, else the next break or the match end */if((tries||0)<60)setTimeout(()=>legBreak(id,(tries||0)+1),250);return;}
+ brkUntil=Date.now()+3000;if(M.want30&&!M.sent30){M.sent30=true;M.want30=false;const row=build('30s','partial');idle(()=>send([row]));}else if(qGet().length||held.length||relPend.length)idle(()=>send([]));}catch(e){}}
 if(typeof endLeg==='function'){const el=endLeg;endLeg=function(){const r=el.apply(this,arguments);try{if(M&&!M.done){const id=M.id;setTimeout(()=>legBreak(id,0),600);}/* after the leg's own scoring work */}catch(e){}return r;};}
 setInterval(()=>{try{if((M&&!M.done)||document.hidden)return;if(typeof NET!=='undefined'&&NET.user&&NET.sb){if(!KA)prepKA();if(qGet().length)idle(()=>send([]));}}catch(e){}},15000);
 const idle=f=>{try{if(window.requestIdleCallback)return requestIdleCallback(f,{timeout:3000});}catch(e){}setTimeout(f,1500);};
@@ -84,7 +113,10 @@ function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.f
   refresh_hz:p50?(p50<10?120:p50<13?90:60):null,fps:vs?+(M.fn/vs).toFixed(1):null,p50,p95:pct(fh,.95),p99:pct(fh,.99),pct33:M.fn?+(M.c33/n*100).toFixed(2):null,pct50:M.fn?+(M.c50/n*100).toFixed(2):null,frames_over200:M.fh[201],stalls100:M.c100,max_ms:Math.round(M.max),
   render_p95:pct(M.rh,.95),reticle_p50:pct(M.ih,.5),reticle_p95:pct(M.ih,.95),reticle_max:M.iN?Math.round(Math.max(...Array.from(M.ih).map((v,i)=>v?i:0))):null,reticle_n:M.iN,reticle_slow:M.i50,
   audio_issue_n:M.auN+(M.mediaN||0)+(()=>{const u=underruns();return u!=null&&M.ur0!=null?Math.max(0,u-M.ur0):0;})(),audio:audioInfo(),drift_max:Math.round(M.drift),drift_n:M.driftN,lt_n:M.ltN,lt_ms:Math.round(M.ltMs),draws_max:M.draws||null,tris_max:M.tris||null,
-  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,frame_hist:fbins(fh),standalone:standalone(),app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev())});}
+  heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,frame_hist:fbins(fh),standalone:standalone(),app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev(),t20())});}
+// #20: no new columns (tops_perf is strict), so the extra per-match detail rides in the dev JSON: fps per 30 s window, frames drawn between matches,
+// how far a stale screen would have moved the lock point (TOPS_LOCKLAG), and the bisect switch in use (?q20=)
+function t20(){try{const o={fps_30s:M.win.concat(M.w&&M.w.vis>=5000?[winRow(M.w)]:[]),idle:M.idle};if(M.cnt)o.cnt=M.cnt;const L=window.TOPS_LOCKLAG;if(L&&L.n)o.lock={n:L.n,over5:L.o5,max:+L.max.toFixed(1),mean:+(L.sum/L.n).toFixed(1)};if(window.TOPS_Q20)o.q20=TOPS_Q20;return {t20:o};}catch(e){return {};}}
 // frame-interval histogram in 10 fixed bins (ms): <9, 9-12, 13-17, 18-20, 21-25, 26-33, 34-50, 51-100, 101-199, >=200 (Overseer 10:31: per-match histogram, rows < 5 KB)
 const FEDGE=[9,13,18,21,26,34,51,101,200];function fbins(h){const o=[0,0,0,0,0,0,0,0,0,0];try{for(let i=0;i<h.length;i++){if(!h[i])continue;let b=0;while(b<FEDGE.length&&i>=FEDGE[b])b++;o[b]+=h[i];}}catch(e){}return o;}
 // home-screen web app (iOS navigator.standalone, or display-mode standalone elsewhere); null if unknown
@@ -97,7 +129,8 @@ function qSet(a){const drop=Math.max(0,a.length-Q_MAX);try{if(drop)localStorage.
 function ckSet(row){try{if(row)localStorage.setItem(CK_KEY,JSON.stringify(row));else localStorage.removeItem(CK_KEY);}catch(e){}}
 function ckGet(){try{return JSON.parse(localStorage.getItem(CK_KEY)||'null');}catch(e){return null;}}
 function ckSave(row){try{const q=qGet();q.push(row);qSet(q);}catch(e){}}/* queue only; sent at the next flush point */
-function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
+function send(rows){if(!playOk()){held=held.concat(rows||[]);retryHeld(0);return;}/* during play: kept in memory for the next break or the match end */if(relPend.length){const ids=new Set(relPend.splice(0));try{qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
+ const all=qGet().concat(held.splice(0),rows||[]);if(!all.length)return;
  if(typeof NET==='undefined'||!NET.user||!NET.sb){qSet(all);return;}
  qSet(all);
  // QA 09:03 / 11:00 finding 1: plain INSERT only (the table grants INSERT, not SELECT, so ON CONFLICT (sample_id) is refused).
@@ -106,13 +139,13 @@ function send(rows){const all=qGet().concat(rows||[]);if(!all.length)return;
  try{const ins=r=>NET.sb.from('tops_perf').insert(r);
   ins(all).then(({error,status})=>{if(!error){done(all);return;}if(!dup(error,status)){console.warn('tops_perf',error.message);return;}
    all.reduce((p,r)=>p.then(()=>ins([r]).then(({error,status})=>{if(!error||dup(error,status))done([r]);})),Promise.resolve()).catch(()=>{});}).catch(()=>{});}catch(e){}}
-function dup(e,st){return st===409||(e&&(e.code==='23505'||/duplicate key/i.test(e.message||'')));}
-function done(rows){try{const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
+function dup(e,st){return !!(e&&(e.code==='23505'||/duplicate key value violates unique constraint/i.test(e.message||''))&&(/tops_perf_sample_id_key/.test(e.message||'')||/^Key \(sample_id\)=/.test(e.details||'')));}/* ChatGPT 8.8 P1: the exact constraint, or PostgREST's detail naming sample_id *//* CAR-5: only a unique violation on sample_id means "already stored"; any other 409 (e.g. a foreign-key 23503) keeps the row */
+function done(rows){try{if(!playOk()){relPend=relPend.concat(rows.map(r=>r.sample_id));return;}/* no storage write during play */const ids=new Set(rows.map(r=>r.sample_id));qSet(qGet().filter(r=>!ids.has(r.sample_id)));}catch(e){}}
 // keepalive on page close: needs the URL, key and token prepared before (no async work while closing)
 let KA=null;function prepKA(){try{if(typeof NET==='undefined'||!NET.sb||!NET.user)return;const u=NET.sb.supabaseUrl||(NET.sb.rest&&NET.sb.rest.url&&NET.sb.rest.url.replace(/\/rest\/v1$/,''));const k=NET.sb.supabaseKey;NET.sb.auth.getSession().then(({data})=>{const t=data&&data.session&&data.session.access_token;if(u&&k&&t)KA={u,k,t};}).catch(()=>{});}catch(e){}}
 function keepalive(rows){try{if(!KA||!rows.length)return false;fetch(KA.u+'/rest/v1/tops_perf',{method:'POST',keepalive:true,headers:{apikey:KA.k,Authorization:'Bearer '+KA.t,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(rows)})/* plain insert; rows stay queued, so a duplicate (409) is cleared by the next send() */.catch(()=>{});return true;}catch(e){return false;}}
 // --- lifecycle ---
-function finish(status){if(!M||M.done)return null;M.done=true;ckSet(null);if(M.vis<5000){M=null;return null;}/* QA 08:23: under 5 s of play (an instant quit) sends nothing */const row=build('end',status);M=null;return row;}
+function finish(status){if(!M||M.done)return null;M.done=true;idleReset();ckSet(null);if(M.vis<5000){M=null;return null;}/* QA 08:23: under 5 s of play (an instant quit) sends nothing */const row=build('end',status);M=null;return row;}
 const _bm=beginMatch;beginMatch=function(){let prev=null;try{prev=finish('interrupted');}catch(e){M=null;}const r=_bm.apply(this,arguments);try{M=newM();prepKA();watchAudio();if(prev)ckSave(prev);/* the previous match's row is queued, sent at the next flush point */}catch(e){M=null;}return r;};
 const _em=endMatch;endMatch=function(){let row=null;try{row=finish('complete');}catch(e){M=null;}const r=_em.apply(this,arguments);try{if(row)idle(()=>send([row]));/* the match is over: off the throw path */}catch(e){}return r;};
 {const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>{try{const row=finish('quit');if(row)idle(()=>send([row]));}catch(e){}},true);}
@@ -124,6 +157,6 @@ addEventListener('pagehide',()=>{try{const row=finish('closed');/* finish clears
 // flush when signed in: after load, and every ~10 s while not pulling (catches a sign-in after the match); keepalive credentials refreshed
 setTimeout(()=>idle(()=>{if(qGet().length)send([]);}),8000);
 {const b0=build;build=function(){const r=b0.apply(this,arguments);try{window.TOPS_LOG_PERF&&TOPS_LOG_PERF(r);}catch(e){}return r;};}/* v14 flight recorder keeps a summary of each row */
-window.TOPS_perf={flush(){send([]);},kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
+window.TOPS_perf={flush(){send([]);},_car5:()=>({held:held.length,relPend:relPend.length,brkIn:brkUntil-Date.now(),playOk:playOk()}),kaTest(){const keep=KA;KA={u:'https://example.supabase.co',k:'k',t:'t'};try{keepalive([{sample_id:'ka-test'}]);}finally{KA=keep;}},fitTest(){const inc=[];for(let i=0;i<40;i++)inc.push({s:i,ph:'aim',f:250+i,cpu:12.3,cpu_prev:11.1,lat:40,au:1234,note:'x'.repeat(60)});return fit({ver:VER(),incidents:inc,mem:{now:{geo:1},start:{geo:1}},audio:{log:'y'.repeat(800)}});},get m(){return M;},bench,build:(p,s)=>M&&build(p,s),queue:qGet,send,dev,_hook:typeof V!=='undefined'&&!!V.frame};
 })();
 </script>

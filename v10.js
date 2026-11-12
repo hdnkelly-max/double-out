@@ -290,7 +290,7 @@ body.fx-jolt canvas{animation:fxJolt .45s cubic-bezier(.2,.8,.3,1) both}
  window.TOPS_slam=slam;
  // ---- impacts ----
  function layer(){let l=$('fxLayer');if(!l){l=document.createElement('div');l.id='fxLayer';document.body.appendChild(l);}return l;}
- function add(html,ms){const l=layer();const d=document.createElement('div');d.innerHTML=html;const nodes=[...d.children];nodes.forEach(n=>l.appendChild(n));setTimeout(()=>{nodes.forEach(n=>n.remove());if(!l.children.length)l.remove();/* #20: no empty full-screen layer left over the canvas; layer() makes a new one */},ms||2600);}
+ function add(html,ms){if(window.TOPS_q20has&&TOPS_q20has('nofx'))return;/* #20 test switch */const l=layer();const d=document.createElement('div');d.innerHTML=html;const nodes=[...d.children];nodes.forEach(n=>l.appendChild(n));setTimeout(()=>{nodes.forEach(n=>n.remove());if(!l.children.length)l.remove();/* #20: no empty full-screen layer left over the canvas; layer() makes a new one */},ms||2600);}
  function bodyFx(cls,ms){document.body.classList.remove(cls);void document.body.offsetWidth;document.body.classList.add(cls);setTimeout(()=>document.body.classList.remove(cls),ms);}
  function emojis(list,n){let h='';for(let i=0;i<n;i++){const e=list[i%list.length];h+=`<span class="em" style="left:${8+Math.random()*84}%;bottom:${-4+Math.random()*12}%;--r:${(Math.random()*60-30).toFixed(0)}deg;animation-delay:${(i*.08).toFixed(2)}s">${e}</span>`;}add(h,2600);}
  function impact(id,onTarget){const c=CARD[id];if(!c)return;

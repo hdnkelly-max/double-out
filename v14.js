@@ -46,8 +46,8 @@ if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){tr
  let r;try{r=bm.apply(this,arguments);}catch(err){log('error',errInfo('beginMatch failed: '+(err&&err.message),null,null,err));incident(true);throw err;}
  try{const c=typeof career==='function'?career():null;inMatch=true;visit=null;
   log('match_start',{mode:S&&(S.online?'online':S.mp?'local':S.practice?'practice':(c&&c.run?'run':'career')),tier:S&&S.tier&&S.tier.n,opp:o&&o.oppName,legs:o&&o.legs,n:matchN});res('start');}catch(e){}return r;};}
-if(typeof endMatch==='function'){const em=endMatch;endMatch=function(){let info=null;try{info={won:!!(S&&S.won),legs:S&&S.p?S.p.map(p=>p.legs):null,avg:S&&S.p&&S.p[0]&&S.p[0].darts?+(S.p[0].pts/S.p[0].darts*3).toFixed(1):null};}catch(e){}
- flushVisit();if(inMatch)res('pre_end');/* before the game's own cleanup */const r=em.apply(this,arguments);if(inMatch)res('end');leftMatch('finished',info);return r;};}
+if(typeof endMatch==='function'){const em=endMatch;endMatch=function(){let info=null;try{info={won:null,legs:S&&S.p?S.p.map(p=>p.legs):null,avg:S&&S.p&&S.p[0]&&S.p[0].darts?+(S.p[0].pts/S.p[0].darts*3).toFixed(1):null};}catch(e){}
+ flushVisit();if(inMatch)res('pre_end');/* before the game's own cleanup */const r=em.apply(this,arguments);/* CAR-8: the result is decided inside the game's endMatch (it sets S.won); read it after, never the last match's value */try{if(info)info.won=(S&&typeof S.won==='boolean')?S.won:(info.legs&&info.legs.length>1?info.legs[0]>info.legs[1]:null);}catch(e){}if(inMatch)res('end');leftMatch('finished',info);return r;};}
 {const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>{if(!inMatch)return;flushVisit();res('pre_end');leftMatch('quit');},true);/* capture phase: before the game's quit handler */}
 // darts summarised per visit (one event per visit: who, the three scores, perfects) so a match doesn't flush the ring
 let visit=null;function flushVisit(){if(visit&&visit.s.length){log('visit',{w:visit.w,s:visit.s.join(' '),p:visit.p});}visit=null;}

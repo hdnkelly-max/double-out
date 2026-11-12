@@ -67,6 +67,13 @@ const {chromium}=require('playwright');const path=require('path');
  const rap=await p.evaluate(async()=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,300));S.won=true;endMatch();beginMatch({mode:'career',tier:1,p0:'P',oppName:'B',oppAvg:60,legs:1});await new Promise(r=>setTimeout(r,2000));
    const ev=TOPS_LOG.events();const startB=ev.filter(e=>e.k==='match_start').pop();const afterA=ev.filter(e=>e.k==='res'&&e.d.w==='after'&&e.q>startB.q);return {after:afterA.length};});
  if(rap.after)f.push('a previous match\'s after-cleanup snapshot landed inside the next match');
+ // CAR-8: match_end carries this match's result, decided by the game's own endMatch (not the previous match's S.won)
+ const res8=await p.evaluate(async()=>{const out=[];const end=(me,op,stale)=>{beginMatch({mode:'career',tier:1,p0:'P',oppName:'R'+out.length,oppAvg:60,legs:3});S.p[0].legs=me;S.p[1].legs=op;S.won=stale;endMatch();const e=TOPS_LOG.events().filter(x=>x.k==='match_end').pop();out.push({me,op,won:e&&e.d.won,how:e&&e.d.how,legs:e&&e.d.legs});};
+   end(2,0,false);await new Promise(r=>setTimeout(r,300));end(0,2,true);await new Promise(r=>setTimeout(r,300));end(2,1,false);await new Promise(r=>setTimeout(r,300));end(1,2,true);await new Promise(r=>setTimeout(r,300));
+   // a quit straight after a win: no result carried over
+   beginMatch({mode:'career',tier:1,p0:'P',oppName:'Q',oppAvg:60,legs:3});S.won=true;document.getElementById('btnQuit').click();await new Promise(r=>setTimeout(r,300));const q=TOPS_LOG.events().filter(x=>x.k==='match_end').pop();out.push({quit:1,won:q&&q.d.won,how:q&&q.d.how});return out;});
+ [[0,true],[1,false],[2,true],[3,false]].forEach(([i,w])=>{if(res8[i].won!==w)f.push('match_end won '+JSON.stringify(res8[i].won)+' for legs '+res8[i].me+'-'+res8[i].op+' (want '+w+')');});
+ if(res8[4].how!=='quit'||res8[4].won===true)f.push('a quit after a win logs '+JSON.stringify(res8[4]));
  // sign-out: no keepalive with the old token
  const so=await p.evaluate(async()=>{const n0=__ka.length;NET.user=null;await new Promise(r=>setTimeout(r,100));let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));await new Promise(r=>setTimeout(r,200));hidden=false;document.dispatchEvent(new Event('visibilitychange'));NET.user={id:'u1'};return __ka.length-n0;});
  if(so)f.push('sent with a token after sign-out');
@@ -75,7 +82,7 @@ const {chromium}=require('playwright');const path=require('path');
  if(cap.n!==300)f.push('ring not capped at 300: '+cap.n);if(cap.dropped<100)f.push('dropped count missing: '+cap.dropped);if(cap.bytes>48*1024)f.push('row over 48 KiB: '+cap.bytes);if(cap.q)f.push('a query string was logged');if(!cap.nf)f.push('fetch failure not logged');
  // ChatGPT r4 P0-1/P0-2/P0-3 and P1-4: the send-time guard, rapid match transition and a foreign-key 409
  const r4=await p.evaluate(async()=>{const out={};const sent=[];let mode='ok';
-  NET.sb.from=t=>({insert:(r)=>{sent.push({id:r.upload_id,reason:r.reason,t:Date.now()});if(mode==='fk')return Promise.resolve({error:{code:'23503',message:'insert or update on table violates foreign key constraint'},status:409});return Promise.resolve({error:null,status:201});}});
+  NET.sb.from=t=>({insert:(r)=>{if(t==='tops_log')sent.push({id:r.upload_id,reason:r.reason,t:Date.now()});/* CAR-5: only the recorder's own rows (tops_perf's sends used to be counted here) */if(mode==='fk')return Promise.resolve({error:{code:'23503',message:'insert or update on table violates foreign key constraint'},status:409});return Promise.resolve({error:null,status:201});}});
   localStorage.setItem('tops_logq','[]');
   // rapid transition: match A ends, B starts at once -> A's row is built before B and nothing is sent while B is in play
   beginMatch({mode:'career',tier:1,p0:'P',oppName:'A',oppAvg:60,legs:9});await new Promise(r=>setTimeout(r,600));const midA=TOPS_LOG.events().filter(e=>e.k==='match_start').pop();
@@ -85,7 +92,7 @@ const {chromium}=require('playwright');const path=require('path');
   // quiet window closes: a leg ends while the player is already pulling -> nothing; pull ends but no break -> nothing; next real leg end -> sent
   S.busy=false;S.pulling=true;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,6500));out.sentWhilePulling=sent.length;/* the window has 15 s; the pull is held through the start of it */
   S.pulling=false;await new Promise(r=>setTimeout(r,1000));out.sentAfterPullNoBreak=sent.length;
-  S.busy=false;if(S.bull)S.bull=null;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,6000));out.sentAtBreak=sent.length;out.sentReason=sent.map(x=>x.reason).join(',');
+  S.busy=false;if(S.bull)S.bull=null;try{endLeg();}catch(e){}await new Promise(r=>setTimeout(r,900));if(!S.bull)S.bull={me:1,op:2};/* the next leg's who-throws-first card, as the game shows it after a leg (this harness doesn't) */await new Promise(r=>setTimeout(r,5100));out.sentAtBreak=sent.length;out.sentReason=sent.map(x=>x.reason).join(',');
   // foreign-key 409: not counted as stored; the row stays queued
   S.won=true;endMatch();mode='fk';await new Promise(r=>setTimeout(r,4000));
   out.fkQueued=TOPS_LOG.queue().length;out.fkTried=sent.length;mode='ok';return out;});

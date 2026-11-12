@@ -45,9 +45,9 @@ window.TC_FX = (function () {
       else { cx.globalCompositeOperation = 'source-over'; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot += p.vr * dt); cx.fillStyle = rgba(p.c, a); cx.fillRect(-p.s, -p.s * .4, p.s * 2, p.s * .8); cx.restore(); cx.globalCompositeOperation = 'lighter'; }
     });
     cx.globalCompositeOperation = 'source-over';
-    if (parts.length || beams.length || flashes.length) raf = requestAnimationFrame(loop); else { raf = 0; last = 0; cx.clearRect(0, 0, W, H); }
+    if (parts.length || beams.length || flashes.length) raf = requestAnimationFrame(loop); else { raf = 0; last = 0; cx.clearRect(0, 0, W, H); cv.style.display = 'none'; /* #20: an idle full-screen canvas above the 3D view still costs a compositing pass every frame on iPhone; out of the page until the next effect */ }
   }
-  function kick() { ensure(); if (!raf) raf = requestAnimationFrame(loop); }
+  function kick() { ensure(); cv.style.display = ''; if (!raf) raf = requestAnimationFrame(loop); }
   const HEX = {}; function rgb(h) { if (HEX[h]) return HEX[h]; const n = parseInt(h.slice(1), 16); return HEX[h] = [n >> 16 & 255, n >> 8 & 255, n & 255]; }
   function rgba(h, a) { const c = rgb(h); return `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`; }
   // lightning: wide blue bloom, white-hot core, and two or three forking branches
@@ -105,7 +105,7 @@ window.TC_FX = (function () {
       flashes.push({ kind: 'bolt', x: .3, y: .7, seed: seed(), a: 1, life: .5, age: 0 }, { kind: 'bolt', x: .72, y: .6, seed: seed(), a: 1, life: .5, age: -.25 }, { kind: 'fill', c: '#EEF5FF', a: .62, life: .12, age: 0 }, { kind: 'fill', c: '#DDEBFF', a: .25, life: .3, age: -.05 }, { kind: 'fill', c: '#EEF5FF', a: .5, life: .12, age: -.25 }, { kind: 'bolt', x: .5, y: .45, seed: seed(), a: .8, life: .35, age: -.12 }); thunder(); smoke(cap(10), .98); },
   };
   const MAP = { cel_pyro: 'pyro', cel_nuke: 'nuke', cel_confetti: 'confetti', cel_chant: 'chant', cel_goldflash: 'goldflash', cel_green: 'green', walk_smoke: 'smoke', walk_lasers: 'lasers', walk_power: 'power', cel_cool: 'cool', walk_saltire: 'saltire' };
-  function run(cosId, name) { const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }
+  function run(cosId, name) { if (window.TOPS_q20has && TOPS_q20has('nofx')) return false; /* #20 test switch */ const f = play[MAP[cosId]]; if (!f) return false; try { f(name); kick(); } catch (e) { console.warn('fx', e); } return true; }
 
   // ---------- audio (uses the game's AudioContext when present) ----------
   const hasAU = () => typeof AU !== 'undefined' && AU;
