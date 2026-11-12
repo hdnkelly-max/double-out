@@ -3,3 +3,4 @@
 2026-11-12T02:01:31Z live version=3.00 tag=24db2ce tree=1d057ec commit=77199bd risk=R1 run=manual item=CAR-1+CAR-2+ENG-3+crowd-atlas+F6F7
 2026-11-12T02:22:38Z live version=3.01 tag=rel-3.01 tree=898d12f commit=8bfc1a446321d33979dd37b9d55d0303e2a06738 risk=R2 run=43140854959 item=EXP-6 card welcome never sits over a match
 2026-11-12T03:05:21Z live version=3.02 tag=8db63d2 tree=ac5f516 commit=95dcde6 risk=R0 run=manual item=R0-19 shader programs kept for the session
+2026-11-12T03:21:26Z prepared version=3.03 tag=rel-3.03 tree=20ac033 commit=b339e1d89ae57e01c6388378548476f806706522 risk=R3 run=43147548619 item=ENG-4 double-tap Continue (ROLLBACK TEST)
