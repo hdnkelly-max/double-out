@@ -51,7 +51,7 @@ const {chromium}=require('playwright');const path=require('path');
  eq([r.reg.open,r.reg.why,r.reg.tier],[false,'tier',3],'shut at Regional');eq(r.reg.st,all('tier'),'Regional items blocked by tier');eq(r.reg.lux,false,'reading the shop creates no career.lux');
  if(!r.reg.tierName)f.push('tierName missing');eq(r.poolReg,null,'no pool below DPNZ');eq([r.run.open,r.run.why],[false,'run'],'shut in The Run');
  eq(r.soon.why,null,'open at DPNZ');eq(r.soon.st,all('soon'),'nothing sellable before provide()');eq(r.soon.sellable,[false,false,false,false,false],'sellable flags');
- eq(r.soon.miss,['badge+set:doubles','badge+set:scoring','badge+set:pro','walkon','edition'],'missing effects');eq(r.soonBuy,'soon','buy refused before provide()');eq(r.soonBank,50000,'bank untouched');
+ eq(r.soon.miss,['badge:clinic+set:doubles','badge:camp+set:scoring','badge:pro+set:pro','walkon','edition'],'missing effects');eq(r.soonBuy,'soon','buy refused before provide()');eq(r.soonBank,50000,'bank untouched');
  eq(r.bogus,[],'unknown effect keys ignored');
  eq(r.bank.st,['coach_doubles:soon','coach_scoring:soon','coach_pro:soon','walkon_prod:bank','kit_edition:soon'],'walk-on provided, short of cash');eq(r.bank.short,2000,'shortfall');
  eq(r.buyable,{canBuy:true,block:null,kit:0,confirm:false},'buyable');eq(r.ready,true,'ready after load');eq(r.matchShop,'match','shop() shows the match block');if(!r.kitItem.confirm)f.push('confirm flag with a kit warning');if(!r.kitItem.kit.length||!r.kitItem.canBuy)f.push('kit warning listed on the item: '+JSON.stringify(r.kitItem));
