@@ -83,14 +83,30 @@ const {chromium}=require('playwright');const path=require('path');
   localStorage.setItem('tops_perfq',JSON.stringify([old,fresh]));const before=__rows.length;TOPS_perf.flush&&TOPS_perf.flush();await new Promise(r=>setTimeout(r,800));
   return {q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').length,added:__rows.length-before,freshStored:__stored.has(fresh.sample_id)};});
  if(dupc.q!==0||!dupc.freshStored||dupc.added!==1)f.push('duplicate in a batch: '+JSON.stringify(dupc));
- // CAR-5 check 1: a foreign-key error (23503, also HTTP 409) keeps the row queued; a unique violation on another constraint keeps it; 23505 on sample_id releases it
- const fk=await p.evaluate(async()=>{const mk=err=>({from:t=>({insert:(rows)=>Promise.resolve(err?{error:err,status:409}:{error:null,status:201})}),auth:NET.sb.auth});const keep=NET.sb;const row={sample_id:'fk-'+Date.now(),phase:'end',ver:'x'};const out={};
-  const run=async(err)=>{localStorage.setItem('tops_perfq',JSON.stringify([row]));NET.sb=mk(err);TOPS_perf.flush();await new Promise(r=>setTimeout(r,500));return JSON.parse(localStorage.getItem('tops_perfq')||'[]').length;};
-  out.fk=await run({code:'23503',message:'insert or update on table "tops_perf" violates foreign key constraint "tops_perf_user_id_fkey"',details:'Key (user_id)=(x) is not present in table "users".'});
-  out.otherUnique=await run({code:'23505',message:'duplicate key value violates unique constraint "some_other_key"',details:'Key (match_id, phase)=(a, b) already exists.'});
-  out.sample=await run({code:'23505',message:'duplicate key value violates unique constraint "tops_perf_sample_id_key"',details:'Key (sample_id)=(x) already exists.'});
+ // CAR-5 / CAR-5b: a 23505 on sample_id = already stored (released, not counted); a row refused for good (FK 23503, another unique
+ // constraint: non-duplicate 4xx) is retried alone once, then dropped and counted; network/5xx/401/429 keep the row queued
+ const fk0=0;const fk=await p.evaluate(async()=>{const keep=NET.sb;const out={};
+  const run=async(err,status)=>{const row={sample_id:'fk-'+Math.random(),phase:'end',ver:'x'};localStorage.setItem('tops_perfq',JSON.stringify([row]));const b0=(TOPS_perf.bad?TOPS_perf.bad():0);
+   NET.sb={from:t=>({insert:(rows)=>Promise.resolve(err?{error:err,status}:{error:null,status:201})}),auth:keep.auth};TOPS_perf.flush();await new Promise(r=>setTimeout(r,600));
+   return [JSON.parse(localStorage.getItem('tops_perfq')||'[]').length,(TOPS_perf.bad?TOPS_perf.bad():0)-b0];};
+  out.fk=await run({code:'23503',message:'insert or update on table "tops_perf" violates foreign key constraint "tops_perf_user_id_fkey"',details:'Key (user_id)=(x) is not present in table "users".'},409);
+  out.otherUnique=await run({code:'23505',message:'duplicate key value violates unique constraint "some_other_key"',details:'Key (match_id, phase)=(a, b) already exists.'},409);
+  out.bad400=await run({code:'22P02',message:'invalid input syntax'},400);
+  out.sample=await run({code:'23505',message:'duplicate key value violates unique constraint "tops_perf_sample_id_key"',details:'Key (sample_id)=(x) already exists.'},409);
+  out.schema=await run({code:'PGRST204',message:"Could not find the 'x' column of 'tops_perf' in the schema cache"},400);out.s500=await run({code:'XX000',message:'server'},500);out.s401=await run({code:'PGRST301',message:'JWT expired'},401);out.s429=await run({message:'slow down'},429);out.net=await run({message:'Failed to fetch'},0);
+  // a batch of three where the middle row is refused for good: the two good rows are stored, the bad one dropped and counted, queue empty
+  {const rows=['ok-a','bad-b','ok-c'].map(id=>({sample_id:id+Math.random(),phase:'end',ver:'x'}));localStorage.setItem('tops_perfq',JSON.stringify(rows));const b0=(TOPS_perf.bad?TOPS_perf.bad():0);const stored=[];
+   NET.sb={from:t=>({insert:(rs)=>Promise.resolve(rs.some(r=>/^bad/.test(r.sample_id))?{error:{code:'23503',message:'fk'},status:409}:(stored.push(...rs.map(r=>r.sample_id.slice(0,4))),{error:null,status:201}))}),auth:keep.auth};
+   TOPS_perf.flush();await new Promise(r=>setTimeout(r,800));out.mixed=[JSON.parse(localStorage.getItem('tops_perfq')||'[]').length,(TOPS_perf.bad?TOPS_perf.bad():0)-b0,stored.join(',')];}
   NET.sb=keep;localStorage.setItem('tops_perfq','[]');return out;});
- if(fk.fk!==1||fk.otherUnique!==1||fk.sample!==0)f.push('CAR-5 duplicate rule (want fk kept 1, other unique kept 1, sample_id released 0): '+JSON.stringify(fk));
+ const want={fk:[0,1],otherUnique:[0,1],bad400:[0,1],sample:[0,0],schema:[1,0],s500:[1,0],s401:[1,0],s429:[1,0],net:[1,0],mixed:[0,1,'ok-a,ok-c']};
+ if(JSON.stringify(fk)!==JSON.stringify(want))f.push('CAR-5b batch rules: '+JSON.stringify(fk)+' want '+JSON.stringify(want));
+ // CAR-5b (A): on pagehide the keepalive carries rows held in memory during play, not only the stored queue
+ const ph=await p.evaluate(()=>{const bodies=[];const of=window.fetch;window.fetch=(u,o)=>{if(String(u).includes('tops_perf'))bodies.push(String(o&&o.body||''));return Promise.resolve({ok:true});};
+  const ka=TOPS_perf.kaTest;let r;try{localStorage.setItem('tops_perfq',JSON.stringify([{sample_id:'q-1',phase:'end'}]));if(TOPS_perf._hold)TOPS_perf._hold([{sample_id:'held-30s',phase:'30s'}]);
+   const keepKA=window.__KA_SET;dispatchEvent(new Event('pagehide'));r={bodies,q:JSON.parse(localStorage.getItem('tops_perfq')||'[]').map(x=>x.sample_id)};}finally{window.fetch=of;}return r;});
+ if(!ph.q.includes('held-30s')||!ph.q.includes('q-1'))f.push('pagehide drops held rows (queue after pagehide): '+JSON.stringify(ph));
+ if(ph.bodies.length&&!ph.bodies.some(b=>b.includes('held-30s')))f.push('pagehide keepalive body has no held row: '+JSON.stringify(ph.bodies).slice(0,200));
  // keepalive: plain POST, no on_conflict / resolution
  const ka=await p.evaluate(()=>{const seen=[];const of=window.fetch;window.fetch=(u,o)=>{seen.push({u:String(u),p:o&&o.headers&&o.headers.Prefer});return Promise.resolve({ok:true});};try{TOPS_perf.kaTest&&TOPS_perf.kaTest();}finally{window.fetch=of;}return seen;});
  if(!ka.length)f.push('keepalive not exercised');else if(ka.some(x=>/on_conflict/.test(x.u)||/resolution/.test(x.p||'')))f.push('keepalive still asks for on_conflict/resolution: '+JSON.stringify(ka));
