@@ -44,7 +44,7 @@
     el.querySelector('#rbMenu').onclick = () => { close(); try { showTitle(); } catch (e) {} };
     return el;
   }
-  function open(t) { const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
+  function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
   function close() { const el = $id('rbApp'); if (el) el.hidden = true; }
   function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; try { hubTab(OLD[t] || 'play'); } catch (e) { console.warn('rb old tab', e); } }
   function render() {
@@ -176,6 +176,43 @@
     const more = `<div class="rb-g2"><button class="rb-row" type="button" id="rbBinder" style="min-height:56px"><span class="rb-tx"><span class="rb-t2">Binder</span><small>Sets · trades</small></span><span class="rb-chev">›</span></button><button class="rb-row" type="button" id="rbLoad" style="min-height:56px"><span class="rb-tx"><span class="rb-t2">Loadout</span><small>What you wear</small></span><span class="rb-chev">›</span></button></div>`;
     return pack + more + chips + grid;
   }
+
+  /* ---------- Result (presentation only). The game's reward overlay (career3 showReward) still runs and pays everything;
+     this screen sits over it, reads the match and the save, and its buttons press the overlay's own buttons, so the after-match chain is unchanged. ---------- */
+  let pre0 = null, resOn = false;
+  const xpTotal = v => { let t = v.xp; for (let L = 1; L < v.lv; L++) t += C3.lvNeed(L); return t; };
+  function result(M) {
+    const { c, v } = M, me = S.p[0], op = S.p[1] || {}, won = !!S.won, money0 = !!(S.local || S.after === 'money' || S.intro), avg = x => x && x.darts ? +(x.pts / x.darts * 3).toFixed(1) : 0;
+    const a = avg(me), b = avg(op), cash = pre0 ? Math.max(0, c.bank - pre0.bank) : 0, xp = pre0 ? Math.max(0, xpTotal(v) - pre0.xp) : 0, up = pre0 && v.lv > pre0.lv;
+    const ov = $id('c3rw'), unl = ov && ov.querySelector('#c3rwUnl b'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
+    const head = `<div class="rb-hero" style="height:250px"><div class="rb-im" style="background-image:url(${IMG}result_${won ? 'win' : 'loss'}.jpg);background-position:22% 30%"></div><div class="rb-sh2" style="background:linear-gradient(270deg,rgba(10,12,14,.92) 0,rgba(10,12,14,.4) 45%,rgba(10,12,14,0) 70%)"></div><div class="rb-lockup"><small style="color:${won ? 'var(--ink)' : 'var(--ink2)'}">${won ? 'Won' : 'Lost'}</small><b class="rb-num">${me.legs || 0}–${op.legs || 0}</b><span>vs ${esc(op.disp || op.name || '')}</span></div></div>`;
+    const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
+    const opPt = (pre0 && pre0.opPt) || (() => { try { return op.look ? V.portrait(op.look, op.name, c.tier, 0) : ''; } catch (e) { return ''; } })();
+    const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) + '%' : '–';
+    const h2h = `<div class="rb-card" style="gap:8px"><div class="rb-h2h"><span class="rb-face" style="${mePt ? `background-image:url(${mePt})` : 'background:#2b3135'}"></span><div class="rb-vs2"><div class="rb-nums"><b class="rb-num">${a || '–'}</b><span>Match average</span><b class="rb-num">${b || '–'}</b></div><div class="rb-tug"><i class="rb-a" style="width:${a + b ? a / (a + b) * 100 : 50}%"></i><i class="rb-b" style="width:${a + b ? b / (a + b) * 100 : 50}%"></i></div></div><span class="rb-face" style="${opPt ? `background-image:url(${opPt})` : 'background:#2b3135'}"></span></div><div class="rb-chips" style="justify-content:center">${chip('Checkout ' + co, 'l')}${chip(me.t180 ? me.t180 + ' × 180' : 'Best visit ' + (me.bestVisit || '–'), 'l')}${me.hf ? chip('High out ' + me.hf, 'l') : ''}</div></div>`;
+    const rw = `<div class="rb-card">${sh(won ? 'Rewards' : 'Match summary')}<div style="display:flex;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="rb-big rb-num" id="rbRCash" style="font-size:32px;color:${cash ? 'var(--good)' : 'var(--ink3)'}">+${money(cash)}</span><span class="rb-t2 rb-num" id="rbRXp">+${xp} XP</span></div><span class="rb-sub">${up ? `<b style="color:var(--good)">Level up · ${v.lv}</b>${unl ? ' · ' + esc(unl.textContent) + ' unlocked' : ''} · ` : ''}${M.need - v.xp} XP to level ${v.lv + 1}</span>${extra ? `<div class="rb-chips">${chip('+' + extra + ' achievement' + (extra > 1 ? 's' : '') + ' and contracts', 'g')}</div>` : ''}</div></div></div>`;
+    let want = '';
+    const nb = BARRELS.filter(x => { const d = dState(x); return !d.own && !d.g; }).sort((x, y) => x.price - y.price)[0];
+    if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rb-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default"><span style="display:flex;align-items:center;gap:12px"><div class="rb-slot rb-dart rb-r8" style="width:110px;flex:0 0 110px"><div class="rb-im" style="background-image:url(${dartImg(nb, 'ds')})"></div></div><span class="rb-tx"><small>Next dart</small><span class="rb-t2">${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))} · ${left ? money(left) + ' to go' : 'you can buy it'}</span></span></span><div class="rb-bar"><i style="width:${Math.min(100, c.bank / cost * 100)}%"></i></div></div>`; }
+    let tbl = '';
+    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rb-row" style="cursor:default"><span class="rb-tx"><small>Season</small><span class="rb-t2">Now ${ord(M.yi + 1)}${M.yi <= 1 ? ' · top two go up' : ' · ' + (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</span></span></div>`;
+    const act = `<div class="rb-pin" style="display:flex;flex-direction:column;gap:8px;padding-bottom:4px"><button class="rb-primary" type="button" id="rbRGo"><b>${esc(go ? go.textContent : 'Continue')}</b></button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}<button class="rb-link" type="button" id="rbRDet" style="align-self:center;color:var(--ink2)">Full match stats ›</button></div>`;
+    return head + h2h + rw + want + tbl + act;
+  }
+  function showResult() {
+    const el = ensure(); resOn = true; el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
+    const M = model(); if (!M || !S || !S.p) { endResult(); return; }
+    $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
+    let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); endResult(); return; }
+    $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`;
+    const press = id => { const b = $id(id); endResult(); if (b) b.click(); };
+    $id('rbRGo').onclick = () => press('c3rwGo');
+    const k = $id('rbRKeep'); if (k) k.onclick = () => press('c3rwKeep');
+    $id('rbRDet').onclick = () => press('c3rwDet');
+    // if the game closes its overlay by any other route, this screen goes with it
+    const ov = $id('c3rw'); if (ov) { const mo = new MutationObserver(() => { if (ov.hidden && resOn) { mo.disconnect(); endResult(); } }); mo.observe(ov, { attributes: true, attributeFilter: ['hidden'] }); }
+  }
+  function endResult() { resOn = false; const el = $id('rbApp'); if (el) { el.classList.remove('rb-resmode'); el.hidden = true; } }
   function wire(M) {
     const go = $id('rbGo'); if (go) go.onclick = () => {
       const g = $id('c3Go'); if (!g) { try { playNext(); } catch (e) {} return; }
@@ -206,7 +243,8 @@
     try { const c = career(); if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
     return r;
   };
-  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
+  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
   const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
-  window.TOPS_RB = { open, close, render, model };
+  const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
+  window.TOPS_RB = { open, close, render, model, showResult };
 })();

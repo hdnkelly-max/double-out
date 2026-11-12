@@ -5,7 +5,7 @@
 #rbApp[hidden]{display:none!important}
 #rbApp{
 /* the game's global classes (.rb-big, .rb-card, .rb-chip, .rb-ghost, .rb-bank…) must not reach in: everything inside starts from the browser's defaults */
-& *:not(svg,svg *){all:revert}
+& *:not(svg,svg *){all:revert;box-sizing:border-box}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
@@ -196,3 +196,6 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 #rbBack[hidden]{display:none}
 
 #rbApp{.rb-key{display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px}.rb-kf{background:var(--good)}.rb-kg{background:repeating-linear-gradient(135deg,#7fd19a 0 3px,#2f5a3e 3px 6px)}}
+
+#rbApp.rb-resmode{z-index:95}
+#rbApp.rb-resmode .rb-tabs{display:none}

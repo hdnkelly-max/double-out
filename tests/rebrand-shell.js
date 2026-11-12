@@ -60,6 +60,17 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
       await p.screenshot({ path: path.join(dir, `tests/rb_cards_${W}.png`) });
       await p.click('#rbOpen'); await p.waitForTimeout(1500);
       r.cards.pack = await p.evaluate(() => { const els = [...document.querySelectorAll('body > *')].filter(e => e.id !== 'rbApp' && getComputedStyle(e).position === 'fixed' && +getComputedStyle(e).zIndex >= 50 && e.offsetWidth > 200 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden'); return els.map(e => (e.id || e.className).toString().slice(0, 30)); });
+      // Result: start a real match (beginMatch records bank/XP), fake the end state, then fire the game's own reward overlay
+      await p.evaluate(() => { document.querySelectorAll('.tcpk').forEach(e => e.remove()); const c = career(); c.next = null; c.bank = 200; persist(); showHub('play'); });
+      await p.waitForTimeout(800); await p.evaluate(() => { const g = document.getElementById('rbGo'); if (g) g.click(); });
+      await p.waitForFunction(() => typeof S !== 'undefined' && S && S.p && S.p[1], null, { timeout: 60000 });
+      r.result = await p.evaluate(() => { const c = career(), v = C3.V3(); S.won = true; S.p[0].legs = 2; S.p[1].legs = 1; S.p[0].pts = 900; S.p[0].darts = 54; S.p[1].pts = 700; S.p[1].darts = 54; S.after = 'next';
+        c.bank += 55; const lv0 = v.lv; C3.gainLevels(v, C3.lvNeed(v.lv) + 20);
+        C3.showRewardTest({ m: { won: true }, L: [['Win', 120]], ups: [], done: [], before: { lv: lv0, xp: 0, bank: c.bank - 55, fame: 0 }, after: {}, xp: 120, cash: 55, ranked: true });
+        const app = document.getElementById('rbApp'); return { on: !app.hidden && app.classList.contains('rb-resmode'), z: getComputedStyle(app).zIndex, cash: (document.getElementById('rbRCash') || {}).textContent, lock: (document.querySelector('#rbApp .rb-lockup b') || {}).textContent, lvup: /Level up/.test(document.getElementById('rbMain').textContent), tabs: getComputedStyle(document.getElementById('rbTabs')).display }; });
+      await p.waitForTimeout(1500); await p.screenshot({ path: path.join(dir, `tests/rb_result_${W}.png`) });
+      await p.click('#rbRGo'); await p.waitForTimeout(1200);
+      r.result.after = await p.evaluate(() => ({ ovHidden: document.getElementById('c3rw').hidden, resmode: document.getElementById('rbApp').classList.contains('rb-resmode') }));
       r.hscroll = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     }
     r.errors = pe.slice(0, 3); out[mode] = r; await p.close();
@@ -72,6 +83,7 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   const L = out['1'].locker || {}; if (L.stats !== 5 || L.plus < 1 || L.kit !== 2 || !L.ring || !L.after || L.after.sc <= L.sc0 || L.after.bank !== L.bank0 - 1) fails.push('Locker: stats/spend/kit wrong');
   const SH = out['1'].shop || {}; if (!SH.visible || SH.thumbs !== SH.n || !/level 15/i.test(SH.razor || '') || !/sponsor/i.test(SH.littler || '') || !SH.buy || SH.buy.bank !== 595 || !SH.buy.owned || SH.buy.eq !== 'neutron' || !SH.buy.visible || !SH.back || SH.back.eq !== 'assassin' || SH.back.bank !== 595) fails.push('Shop: gates/buy/equip wrong');
   const CD = out['1'].cards || {}; if (CD.owned !== 2 || CD.total < 20 || !CD.open || !/picks? waiting/.test(CD.title || '') || !(CD.pack || []).length) fails.push('Cards: grid/open wrong');
+  const RS = out['1'].result || {}; if (!RS.on || RS.z !== '95' || RS.cash !== '+$55' || RS.lock !== '2–1' || !RS.lvup || RS.tabs !== 'none' || !RS.after || !RS.after.ovHidden || RS.after.resmode) fails.push('Result: screen/continue wrong');
   const T = out['1'].stats || {}; if (T.tiles !== 4 || T.pts !== 4 || T.avg !== '48.0') fails.push('Stats: tiles/form wrong');
   if (!out['1'].season || out['1'].season.rows < 4 || !out['1'].season.me || out['1'].season.road !== 7) fails.push('Season: table/you/road missing');
   if (out['0'].errors.length || out['1'].errors.length) fails.push('page errors');
