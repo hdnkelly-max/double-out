@@ -267,11 +267,36 @@ function luxSt(){const c=career();if(!c||c.run)return null;if(!c.lux)c.lux={owne
 function kitAtRisk(cost){const c=career();const G=window.TOPS_GATE;if(!c||!G||typeof BARRELS==='undefined')return [];const bank=c.bank||0;
  return BARRELS.filter(b=>(G.LV[b.id]||1)>1&&!save.owned.includes(b.id)&&!G.gateBarrel(b)).filter(b=>{const p=price(b.price);return p<=bank&&bank-cost<p;}).map(b=>({id:b.id,n:b.n,price:price(b.price)}));}/* names and costs for the confirm (S3 calls buy(id,true) only after an explicit second tap) */
 function luxBuy(id,force){const c=career(),L=luxSt();const it=LUX.find(x=>x.id===id);if(!it||!L)return {err:'item'};if(!luxOpen())return {err:'tier'};
- if(L.owned.includes(id))return {err:'owned'};if((c.bank||0)<it.price)return {err:'bank'};const risk=kitAtRisk(it.price);if(risk.length&&!force)return {err:'kit',kit:risk};
- c.bank-=it.price;L.owned.push(id);L.at[id]=Date.now();if(it.k==='edition')L.edition=save.barrel;try{persist();}catch(e){}return {ok:1,item:it};}
+ if(typeof S!=='undefined'&&S&&!S.done)return {err:'match'};/* S3: the shop is a hub screen; never a save write during play */
+ if(L.owned.includes(id))return {err:'owned'};if(luxMissing(id).length)return {err:'soon'};/* S3: nothing is sold before the game delivers it */
+ if((c.bank||0)<it.price)return {err:'bank'};const risk=kitAtRisk(it.price);if(risk.length&&!force){luxLog('lux_kit_warn',{id,kit:risk.map(k=>k.id)});return {err:'kit',kit:risk};}
+ c.bank-=it.price;L.owned.push(id);L.at[id]=Date.now();if(it.k==='edition')L.edition=save.barrel;try{persist();}catch(e){}
+ luxLog('lux_buy',{id,price:it.price,bank:c.bank,tier:c.tier,forced:!!(force&&risk.length)});try{window.dispatchEvent(new CustomEvent('tops:lux',{detail:{id,bank:c.bank}}));}catch(e){}return {ok:1,item:it};}
+// ----- ECON-M2 S3: data for Experience's DPNZ+ shop screens (no screens here) -----
+// Each item names the effects it promises. The code that delivers one (the walk-on, the challenge screen, the badge strip, the barrel label)
+// calls TOPS_LUX.provide(key) once when it loads. An item is sellable only when every effect it promises is provided, so a screen can't
+// advertise or sell a benefit nothing uses yet (Q&D 00:09); unsellable items read block 'soon'.
+const LUX_FX={coach_doubles:['badge','set:doubles'],coach_scoring:['badge','set:scoring'],coach_pro:['badge','set:pro'],walkon_prod:['walkon'],kit_edition:['edition']};
+const LUX_LIVE=new Set();
+function luxMissing(id){return (LUX_FX[id]||[]).filter(k=>!LUX_LIVE.has(k));}
+function luxLog(k,d){try{window.TOPS_LOG&&TOPS_LOG.log(k,d);}catch(e){}}
+function luxShop(){const c=career();const L=(c&&!c.run&&c.lux)||null;/* read only: never creates career.lux */const open=luxOpen();const bank=c?(c.bank||0):0;
+ const why=!c?'career':c.run?'run':!open?'tier':(typeof S!=='undefined'&&S&&!S.done)?'match':null;let tn='';try{tn=TIERS[LUX_T].n;}catch(e){}
+ const owns=id=>!!(L&&L.owned.includes(id));const ed=L&&L.edition||null;let edn=null;try{const b=ed&&BARRELS.find(x=>x.id===ed);edn=b?b.n:null;}catch(e){}
+ return {open,why,ready:document.readyState==='complete',/* every script has run, so provide() calls are in: 'soon' is final. Assumes providers register synchronously at script load (the build inlines every script); a module loaded later must call provide() before its item is shown */tier:LUX_T,tierName:tn,bank,
+  items:LUX.map(x=>{const owned=owns(x.id),missing=luxMissing(x.id),block=owned?'owned':why?why:missing.length?'soon':bank<x.price?'bank':null;
+   return {id:x.id,kind:x.k,name:x.n,price:x.price,blurb:x.s,badge:x.badge||null,set:x.set||null,owned,boughtAt:(L&&L.at[x.id])||null,
+    sellable:!missing.length,missing,block,canBuy:!block,short:block==='bank'?x.price-bank:0,kitRisk:block?[]:kitAtRisk(x.price)};}).map(x=>Object.assign(x,{confirm:x.kitRisk.length>0})),/* confirm: buy(id) answers err 'kit' first; buy(id,true) after the player's second tap */
+  badges:LUX.filter(x=>x.badge&&owns(x.id)).map(x=>x.badge),sets:LUX.filter(x=>x.set&&owns(x.id)).map(x=>x.set),edition:ed?{id:ed,name:edn}:null};}
+// the contract pool for the Season/Tonight screens: null below DPNZ (the drip contracts stay on C3.conList)
+function poolInfo(){const c=career(),v=V3();if(!c||!v||!poolLive())return null;const P=v.cpool,sn=c.season||{};const half=Math.ceil((sn.len||0)/2);
+ return {tier:P.tier,week:sn.week||0,len:sn.len||0,midWeek:half+1,next:!P.mid?'mid':!P.end?'end':null,
+  items:P.items.map(k=>({grade:k.g,text:k.t,cash:k.cash,from:k.from,st:k.st})),total:P.items.reduce((a,k)=>a+k.cash,0),paid:P.items.filter(k=>k.st==='paid').reduce((a,k)=>a+k.cash,0),
+  waiting:P.items.filter(k=>k.st==='met').reduce((a,k)=>a+k.cash,0)};}
 window.TOPS_LUX={items:()=>{const L=luxSt();return LUX.map(x=>Object.assign({},x,{owned:!!(L&&L.owned.includes(x.id))}));},open:luxOpen,buy:luxBuy,
  owns:id=>{const L=luxSt();return !!(L&&L.owned.includes(id));},badges:()=>{const L=luxSt();return L?LUX.filter(x=>x.badge&&L.owned.includes(x.id)).map(x=>x.badge):[];},
- sets:()=>{const L=luxSt();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxSt();return L&&L.edition||null;},kitAtRisk};
+ sets:()=>{const L=luxSt();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxSt();return L&&L.edition||null;},kitAtRisk,
+ shop:luxShop,provide:k=>{if(Object.values(LUX_FX).some(a=>a.includes(k)))LUX_LIVE.add(k);},effects:()=>JSON.parse(JSON.stringify(LUX_FX)),live:()=>[...LUX_LIVE],pool:poolInfo};
 window.C3={conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
