@@ -203,7 +203,7 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 /* ===== EXP-REBRAND batch 1 · match view (colours and type only; nothing moved or resized; the pull pad and reticle are not touched) =====
    The match HUD is built on --match-* tokens; the rebrand swaps them for the v9.1 set (graphite cards, white text, one red accent)
    and replaces the hard-coded lime accents. Active only with ?rebrand=1 (html.rb-on). */
-html.rb-on body.lk-match{--match-bg:#121517;--match-surface:#1a1e21;--match-raised:#22272b;--match-line:#343a3e;--match-text:#f3f4f2;--match-muted:#a0a6a3;--match-focus:#f3f4f2;--match-red:#d7232d;--match-oxblood:#3a1b1d}
+html.rb-on body.lk-match{--acc:#d7232d;--acc2:#e5484f;--match-bg:#121517;--match-surface:#1a1e21;--match-raised:#22272b;--match-line:#343a3e;--match-text:#f3f4f2;--match-muted:#a0a6a3;--match-focus:#f3f4f2;--match-red:#d7232d;--match-oxblood:#3a1b1d}
 html.rb-on body.lk-match #hud .top{background:#121517!important;border-bottom:1px solid #343a3e!important}
 html.rb-on body.lk-phone.lk-match .sb{background:rgba(26,30,33,.96)!important;border-color:#343a3e!important}
 html.rb-on body.lk-phone.lk-match .pl.on .nm{color:#f3f4f2}
@@ -213,3 +213,6 @@ html.rb-on body.lk-phone.lk-match #sbMid em.a{background:#f3f4f2}
 html.rb-on body.lk-phone.lk-match .chip.last::after{background:#d7232d}
 html.rb-on body.lk-match #btnSettle,html.rb-on body.lk-match .hr .settle{border-color:#7fd19a!important;color:#7fd19a!important}
 html.rb-on body.lk-match .hr .settle.breathing{background:rgba(127,209,154,.14)}
+html.rb-on body.lk-match .intro{background:rgba(26,30,33,.97)!important;border-color:#343a3e!important}
+html.rb-on body.lk-match .lk-menu{border-radius:12px!important;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+html.rb-on body.lk-match .lk-menu .ghost{border-radius:8px!important;min-height:44px!important}
