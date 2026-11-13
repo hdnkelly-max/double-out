@@ -152,7 +152,23 @@ jobs:
           mkdir -p ../out/next ../out/assets/ui ../out/assets/voice ../out/img
           cp double-out-standalone.html ../out/index.html
           python3 -c "import sys;s=open(sys.argv[1],encoding='utf-8').read().replace('<meta charset=\"utf-8\">','<meta charset=\"utf-8\"><base href=\"../\">',1);open(sys.argv[2],'w',encoding='utf-8').write(s)" double-out-standalone.html ../out/next/index.html
-          echo "{\"v\":\"$V\"}" > ../out/version.json
+          # version.json: since ENG-RIGCACHE build.js writes it ({v, build, rig}); the page's update check compares "build" with its TOPS_BUILD,
+          # and v09's in-game gate reads "v". Ship the build's file once it proves it belongs to this page; an older build writes none ({v} as before).
+          if [ -f version.json ]; then
+            python3 - "$V" ../out/index.html version.json <<'PY'
+          import json, re, sys
+          v, page, vj = sys.argv[1], open(sys.argv[2], encoding='utf-8').read(), json.load(open(sys.argv[3]))
+          b = re.search(r'TOPS_BUILD="(\d+)"', page); r = re.search(r'window\.RIG_URL="([^"]+)"', page)
+          bad = [m for m, ok in [(f"v {vj.get('v')!r} is not {v}", vj.get('v') == v),
+                                 (f"build {vj.get('build')!r} is not the page's TOPS_BUILD {b and b.group(1)}", bool(b) and str(vj.get('build')) == b.group(1)),
+                                 (f"rig {vj.get('rig')!r} is not the page's RIG_URL {r and r.group(1)}", 'rig' not in vj or (bool(r) and vj['rig'] == r.group(1)))] if not ok]
+          if bad: print('::error::BUILD: version.json does not match the page: ' + '; '.join(bad)); sys.exit(1)
+          PY
+            cp version.json ../out/version.json
+            echo "version.json from build: $(cat version.json)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "{\"v\":\"$V\"}" > ../out/version.json
+          fi
           cp assets/ui/* ../out/assets/ui/ 2>/dev/null || true
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
@@ -219,6 +235,8 @@ jobs:
           U="${{ steps.deploy.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
+          WB=$( { grep -o '"build":"[0-9]*"' out/version.json || true; } )
+          if [ -n "$WB" ]; then LB=$( { curl -fsS "${U}version.json?cb=b$RANDOM" | grep -o '"build":"[0-9]*"' || true; } ); [ "$LB" = "$WB" ] || { echo "::error::LIVE: version.json build is '$LB', expected $WB (the page's update check needs it)"; exit 1; }; fi
           RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' out/index.html || true; } | sort -u)
           if [ -n "$RIG" ]; then
             curl -fsS -o live_rig.glb "${U}${RIG}" || { echo "::error::LIVE: ${U}${RIG} did not download"; exit 1; }
