@@ -368,3 +368,9 @@ html.rb-on.rb-preres #result{visibility:hidden!important}
 /* EXP-WIN: the game's longer button labels ("Equip new flights") stay on one line instead of wrapping to two (built-sheet review 13 Nov) */
 #rbApp .rbw-go{white-space:nowrap}
 #rbApp .rbw-go.rbw-go-l{font-size:27px;min-height:58px}
+
+/* Roll-outs 3 + 4: the old reward card's shirt tile, the first-level-up poster and the card's top figure as generated photos */
+html.rb-on .ri.rb-ri-photo{background:#000;border-radius:10px;overflow:hidden;transform:none!important;rotate:none!important;animation:none!important}
+html.rb-on .ri.rb-ri-photo img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:84% 48%!important;filter:none!important;max-width:none!important}
+html.rb-on #lvFirst .ri.rb-lv-photo{width:200px!important;height:200px!important;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.55),0 0 0 1px rgba(214,178,94,.35)}
+html.rb-on img.rwhero.rb-rwphoto{height:200px!important;width:300px!important;object-fit:cover;object-position:80% 30%;border-radius:14px 14px 0 0;right:0!important;filter:brightness(.8)!important;-webkit-mask-image:linear-gradient(90deg,transparent,#000 45%);mask-image:linear-gradient(90deg,transparent,#000 45%)}

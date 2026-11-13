@@ -372,5 +372,21 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
+  // Roll-outs 3 + 4 (Hayden 09:05): the game's old reward card and its first-level-up poster drew the unlocked shirt as a 3D render of the
+  // player (in a shirt that often didn't match). They now show the generated shirt photo in the unlocked colour (the same recolour as the new
+  // Result), and the card's top figure becomes the player's Locker photo in his own shirt. Only the reward overlay and the poster are watched
+  // (a body childList observer, no subtree), so nothing runs during play.
+  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb) return; const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; if (!r || r.k !== 'shirt') return;
+    ri.dataset.rb = 1; const img = ri.querySelector('img'); if (!img) return; img.style.visibility = 'hidden';
+    const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); img.removeAttribute('style'); };
+    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); };
+  const fixReward = () => { try {
+    const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
+      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
+        const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, '', put); if (u) put(u); else h.style.visibility = 'hidden'; } }
+    const lf = $id('lvFirst'); if (lf) { const n = lf.querySelector('.n'); const ri = lf.querySelector('.ri'); if (ri && n) { if (ri.classList.contains('ri-hero') || ri.classList.contains('rb-ri-photo')) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.classList.add('ri-hero'); swapShirt(ri, +n.textContent); ri.classList.add('rb-lv-photo'); } } }
+  } catch (e) {} };
+  { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
+      if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
   window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
 })();
