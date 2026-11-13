@@ -1,0 +1,14 @@
+// ENG-FLASH: the loading bar moves with the real load (Hayden: not 0 % then a jump): on a cold load the % shown climbs through several parse steps
+// before the page is parsed, is at 58 %+ once the page is parsed (parse 50 + parsed 8, plus whatever of the player model has downloaded alongside), and ends at 100 % before the screen goes; never backwards.
+// usage: node tests/ld-progress.js [dir]   (needs a local http server for the model's download progress: SERVE=http://localhost:8812/)
+const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
+(async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+  await p.route(/jsdelivr|supabase\.co/, r => r.abort());
+  await p.addInitScript(() => { const log = window.__pl = []; let last = ''; const f = () => { const e = document.getElementById('ldPct'), L = document.getElementById('loading'); if (e) { const v = e.textContent + '|' + ((document.getElementById('ldTip') || {}).textContent || ''); if (v !== last) { last = v; log.push({ t: Math.round(performance.now()), pct: parseInt(e.textContent, 10), tip: v.split('|')[1], dcl: document.readyState !== 'loading', gone: !!(L && L.classList.contains('gone')) }); } } if (log.length < 500 && performance.now() < 30000) requestAnimationFrame(f); }; requestAnimationFrame(f);
+    const mo = new MutationObserver(() => { const e = document.getElementById('ldPct'); if (e) { new MutationObserver(() => { log.push({ t: Math.round(performance.now()), pct: parseInt(e.textContent, 10), dcl: document.readyState !== 'loading', mo: 1 }); }).observe(e, { childList: true, characterData: true, subtree: true }); mo.disconnect(); } }); mo.observe(document, { childList: true, subtree: true }); });
+  await p.goto((process.env.SERVE || 'file://' + dir + '/') + 'index.html'); await p.waitForTimeout(15000);
+  const log = await p.evaluate(() => window.__pl); const pcts = log.map(x => x.pct).filter(x => !isNaN(x)); const pre = [...new Set(log.filter(x => !x.dcl).map(x => x.pct))];
+  const fail = []; for (let i = 1; i < pcts.length; i++) if (pcts[i] < pcts[i - 1]) { fail.push('went backwards ' + pcts[i - 1] + '→' + pcts[i]); break; }
+  if (pre.length < 4) fail.push('only ' + pre.length + ' distinct steps before the page was parsed: ' + pre.join(','));
+  if (!log.some(x => x.dcl && x.pct >= 58)) fail.push('not at 58 %+ once the page is parsed'); if (Math.max(...pcts) !== 100) fail.push('never reached 100 %');
+  console.log(JSON.stringify({ steps: [...new Set(pcts)], pre })); console.log(fail.length ? 'ld-progress FAIL: ' + fail.join('; ') : 'ld-progress PASS'); await b.close(); process.exit(fail.length ? 1 : 0); })();
