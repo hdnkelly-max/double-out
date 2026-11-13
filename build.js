@@ -2,7 +2,11 @@ const fs=require('fs');
 const eng=fs.readFileSync('engine.js','utf8'),g=fs.readFileSync('game4.js','utf8').replace('ENGINE',()=>eng);
 const head=fs.readFileSync('head3.html','utf8'),body=fs.readFileSync('body4.html','utf8');
 const BUILD=String(Date.now());
-const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;var q=new URLSearchParams(location.search);fetch(location.pathname+'?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){var m=t.match(/TOPS_BUILD="(\\d+)"/);if(!m||m[1]===window.TOPS_BUILD||+m[1]<+window.TOPS_BUILD)return;var k='tops-upd-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');if(window.S&&S&&!S.done)return;q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}})();</script>\n`;
+// ENG-RIGCACHE (Engine 19:40 + Experience): the update check used to re-download the whole page (6.5 MB, no-store) on every load and every
+// between-match reset. It now reads version.json (a few bytes, written by this build, so it always matches TOPS_BUILD), 3 s after the page
+// has loaded (never competing with the player model download), never on a between-match reset page (v16 sets TOPS_RESETTING), never mid-match,
+// once per build per session; offline or missing = silent.
+const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');if(window.S&&S&&!S.done)return;q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>\n`;
 const NM='node_modules/three/examples/js/';
 const exr=fs.readFileSync(NM+'libs/fflate.min.js','utf8')+';\n'+fs.readFileSync(NM+'loaders/EXRLoader.js','utf8');
 const envB64=n=>fs.readFileSync('env/'+n+'.exr.js','utf8').split('base64,')[1].split("'")[0];
@@ -50,8 +54,18 @@ const finish=(p0,rig)=>{let p=p0.replace(RIGMARK,()=>rig||'');const L=p.indexOf(
 const page=finish(page0,'');
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
 fs.writeFileSync('double-out.html','<meta charset="utf-8">\n'+finish(page0,'<script>window.RIG_B64_URL="remy.b64.txt"</script>'));
-const b64=fs.readFileSync('remy.b64.txt','utf8').trim(),N=10,cs=Math.ceil(b64.length/N);let rig='';
-for(let i=0;i<N;i++)rig+=`<script>(window.RIG_P=window.RIG_P||[]).push("${b64.slice(i*cs,(i+1)*cs)}")</script>\n`;
-rig+='<script>window.RIG_URL="data:model/gltf-binary;base64,"+window.RIG_P.join("");window.RIG_P=null</script>\n';
-fs.writeFileSync('double-out-standalone.html','<meta charset="utf-8">\n'+finish(page0,rig));
+// ENG-RIGCACHE: the player model is its own file, named by its contents (rig/remy-<sha8>.glb), so the browser and Engine's Cache Storage keep it
+// across loads and between-match resets; a new model = a new name. The shipped page only carries its name and size, at <!--TOPS_RIG--> (after the loader).
+const crypto=require('crypto');const glb=Buffer.from(fs.readFileSync('remy.b64.txt','utf8').trim(),'base64');const sha=crypto.createHash('sha256').update(glb).digest('hex').slice(0,8);
+fs.mkdirSync('rig',{recursive:true});for(const f of fs.readdirSync('rig'))if(/^remy-[0-9a-f]{8}\.glb$/.test(f)&&f!==`remy-${sha}.glb`)fs.unlinkSync('rig/'+f);
+const RIGF=`rig/remy-${sha}.glb`;fs.writeFileSync(RIGF,glb);
+const rig=`<script>window.RIG_URL="${RIGF}";window.RIG_BYTES=${glb.length}</script>\n`;
+const ship=finish(page0,rig);
+// build guards: no inline model left in the page, the model file it names exists with that size, version.json matches the page
+if(/data:model\/gltf-binary|RIG_P\b/.test(ship))throw new Error('build: the shipped page still inlines the player model');
+const nm=ship.match(/window\.RIG_URL="([^"]+)";window\.RIG_BYTES=(\d+)/);if(!nm||!fs.existsSync(nm[1])||fs.statSync(nm[1]).size!==+nm[2])throw new Error('build: RIG_URL/RIG_BYTES do not match a model file');
+fs.writeFileSync('double-out-standalone.html','<meta charset="utf-8">\n'+ship);
+// version.json is also read by v09's in-game update gate ({v}); keep its field and add ours, so release can copy this file as is
+const VER=((fs.readFileSync('v051.js','utf8').match(/TOPS_VER='([^']+)'/)||[])[1])||'';if(!VER)throw new Error('build: no TOPS_VER in v051.js');
+fs.writeFileSync('version.json',JSON.stringify({v:VER,build:BUILD,rig:RIGF})+'\n');
 console.log('built',page.length);
