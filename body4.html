@@ -7,8 +7,29 @@
 #loading i{position:relative;width:160px!important;background:rgba(198,243,107,.14)!important}
 @keyframes ldpan{to{transform:scale(1.0)}}@keyframes ldin{from{opacity:0;transform:translateY(8px) scale(.96)}}
 @media (prefers-reduced-motion:reduce){#loading .ld-bg,#loading .ld-logo{animation:none}}
-</style><div id="loading"><div class="ld-bg" aria-hidden="true"></div><img class="ld-logo" src="assets/ui/logo_tops.webp" alt="TOPS" onerror="this.style.display='none'"><small id="ldTip">Setting up the oche</small><i></i></div>
-<script>(function(){try{var k=+(localStorage.getItem('tops_menuart')||0)||0;var bg=document.querySelector('#loading .ld-bg');if(bg)bg.style.backgroundImage='url(img/menu_'+Math.max(0,Math.min(3,k))+'.jpg)';var T=['Setting up the oche','Chalking the board','Pouring the first round','Warming up the arm','Hanging the flights'];var n=0;var el=document.getElementById('ldTip');var iv=setInterval(function(){var L=document.getElementById('loading');if(!L||L.classList.contains('gone')){clearInterval(iv);return;}n=(n+1)%T.length;if(el)el.textContent=T[n];},1400);}catch(e){}})();</script>
+</style><div id="loading" role="progressbar" aria-label="Loading TOPS" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="ld-bg" aria-hidden="true"></div><div class="ld-streak" aria-hidden="true"></div>
+<div class="ld-mid"><img class="ld-logo" src="assets/rb/t_logo.webp" alt="TOPS" onerror="this.style.display='none'"><div class="ld-next" id="ldNext" hidden><small id="ldNextK">Next up</small><b id="ldNextT"></b><span id="ldNextS"></span></div></div>
+<div class="ld-foot"><div class="ld-row"><small id="ldTip">Setting up the oche&hellip;</small><em id="ldPct">0%</em></div><div class="ld-bar"><b id="ldBar"></b></div></div><i></i></div>
+<script>/* ENG-RESET loading screen (Experience, Overseer 14:18; Hayden 14:14: "a small load so long as we have a loading bar/screen").
+ API for Engine, safe to call from the first script on:
+   TOPS_LOAD.set(p, label?)  p = 0..1 real progress (never goes backwards); label = one short line (optional)
+   TOPS_LOAD.next({k, t, s})  optional "Next up" card, e.g. {k:'Next up', t:'vs Tama Rewiri', s:'Club singles · week 2 of 8'}
+   TOPS_LOAD.done()           fills the bar, then fades the screen (the game's own #loading.gone still works too)
+ Before a between-matches reload, Engine can write sessionStorage 'tops_reset' = JSON {k,t,s}: the card shows from the first frame.
+ Never looks frozen: between real updates the bar creeps toward the next step (at most +12 %, never past 96 %) and its fill shimmers. */
+(function(){try{var L=document.getElementById('loading'),bar=document.getElementById('ldBar'),pct=document.getElementById('ldPct'),tip=document.getElementById('ldTip');
+ var real=0,shown=0,fin=false,t0=Date.now();
+ function paint(){if(!L)return;var v=Math.max(0,Math.min(1,shown));bar.style.width=(v*100).toFixed(1)+'%';var n=Math.round(v*100);pct.textContent=n+'%';L.setAttribute('aria-valuenow',n);}
+ function tick(){if(!L||L.classList.contains('gone')){clearInterval(iv);return;}if(fin)return;var cap=Math.min(.96,real+.12);if(shown<cap)shown+=Math.max(.002,(cap-shown)*.06);if(shown<real)shown=real;paint();}
+ var iv=setInterval(tick,100);
+ function next(o){try{if(!o||!o.t)return;document.getElementById('ldNextK').textContent=o.k||'Next up';document.getElementById('ldNextT').textContent=o.t;document.getElementById('ldNextS').textContent=o.s||'';document.getElementById('ldNext').hidden=false;}catch(e){}}
+ window.TOPS_LOAD={set:function(p,label){if(fin)return;p=+p;if(p>real)real=Math.min(1,p);if(shown<real)shown=real;if(label)tip.textContent=label;paint();},
+  next:next,
+  done:function(){if(fin||!L)return;fin=true;real=shown=1;paint();L.classList.add('ld-done');setTimeout(function(){L.classList.add('gone');},260);}};
+ try{var r=sessionStorage.getItem('tops_reset');if(r){sessionStorage.removeItem('tops_reset');next(JSON.parse(r));}}catch(e){}
+ /* the game marks #loading.gone when it is ready: fill the bar first so it never vanishes half-way */
+ if(window.MutationObserver)new MutationObserver(function(){if(L.classList.contains('gone')&&!fin){fin=true;real=shown=1;paint();}}).observe(L,{attributes:true,attributeFilter:['class']});
+}catch(e){}})();</script>
 <canvas id="scene" aria-label="View of the oche. Drag on the board to aim. Hold the pull pad (or Space) to pull back, release to throw."></canvas>
 <div id="grade"></div><div id="grain"></div>
 <div id="nerve"></div>
