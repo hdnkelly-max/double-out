@@ -157,6 +157,16 @@ jobs:
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
           grep -q "TOPS_VER='$V'" ../out/index.html || { echo "::error::BUILD: index.html does not carry $V"; exit 1; }
+          # ENG-RIGCACHE: the page loads its rig from rig/remy-<sha8>.glb (immutable, hashed name). Publish it and prove the page's name is the file.
+          RIG=$(grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' ../out/index.html | sort -u)
+          [ -n "$RIG" ] || ! ls rig/remy-*.glb >/dev/null 2>&1 || { echo "::error::BUILD: build.js wrote $(ls rig/remy-*.glb | tr '\n' ' ')but the page names no rig/remy-<sha8>.glb (it must carry the literal name)"; exit 1; }
+          if [ -n "$RIG" ]; then
+            [ "$(echo "$RIG" | wc -l)" = 1 ] || { echo "::error::BUILD: the page names more than one rig file: $RIG"; exit 1; }
+            [ -s "$RIG" ] || { echo "::error::BUILD: the page loads $RIG but build.js did not write it"; exit 1; }
+            H=$(sha256sum "$RIG" | cut -c1-8); [ "rig/remy-$H.glb" = "$RIG" ] || { echo "::error::BUILD: $RIG content hash is $H (stale or edited rig file)"; exit 1; }
+            mkdir -p ../out/rig && cp "$RIG" ../out/rig/
+            echo "rig: $RIG $(wc -c < "$RIG") bytes" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "built index.html $(wc -c < ../out/index.html) bytes, sha256 $(sha256sum ../out/index.html | cut -c1-16)" >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
         if: steps.gate.outputs.mode == 'new'
@@ -190,7 +200,7 @@ jobs:
           git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
           cp -r ../out/. .
           echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
-          git add -A index.html version.json next assets img RELEASES.log
+          git add -A index.html version.json next assets img rig RELEASES.log   # rig/: hashed rig files, only ever added (a rollback keeps them)
           git commit -qm "v$V: $ITEM (release run ${{ github.run_id }}, prepared)"
           git tag -a "$TAG" -m "v$V $ITEM tree $QTREE"
           git push -q origin HEAD:main "$TAG" || { echo "::error::SYNC: push to main failed; nothing deployed"; exit 1; }
@@ -205,6 +215,8 @@ jobs:
           U="${{ steps.deploy.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
+          RIG=$(grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' out/index.html | sort -u)
+          if [ -n "$RIG" ]; then n=$(curl -fsS "${U}${RIG}" | wc -c); [ "$n" = "$(wc -c < "out/$RIG")" ] || { echo "::error::LIVE: ${U}${RIG} served $n bytes, expected $(wc -c < "out/$RIG")"; exit 1; }; echo "LIVE: $RIG served in full ($n bytes)" >> $GITHUB_STEP_SUMMARY; fi
           npm i --no-save playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
           node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});const e=[];p.on('pageerror',x=>e.push(x.message));await p.goto('${U}?cb='+Date.now());await p.waitForTimeout(8000);const v=await p.evaluate(()=>window.TOPS_VER);await b.close();console.log('TOPS_VER',v,'errors',e.length);if(v!=='$V'||e.length){console.error(e.join('\n'));process.exit(1)}})()"
           echo "LIVE: $U shows $V, no page errors" >> $GITHUB_STEP_SUMMARY
