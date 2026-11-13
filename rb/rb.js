@@ -380,7 +380,7 @@
     const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
     const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
     const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); return true; };
-  let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); if (lvEl) delete lvEl.dataset.rbw; lvMO = null; lvEl = null; };
+  let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
       const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
@@ -388,10 +388,10 @@
         const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
     // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
     const lf = $id('lvFirst'); if (lf) { const n = lf.querySelector('.n'), ri = lf.querySelector('.ri'), L = n ? +n.textContent : 0;
-      let done = false; if (ri && L) { if (ri.dataset.rblv != L) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.dataset.rblv = L; delete lf.dataset.rbw; } done = swapShirt(ri, L); if (ri.classList.contains('rb-ri-photo')) ri.classList.add('rb-lv-photo'); }
-      // a poster re-used for a new level re-arms its watcher: the flag is cleared whenever the watcher stops or the level changes (ChatGPT P1)
-      if (!done && !lf.dataset.rbw) { lvStop(); lf.dataset.rbw = 1; lvEl = lf; lvMO = new MutationObserver(() => { if (!document.body.contains(lf)) { lvStop(); return; } fixReward(); }); lvMO.observe(lf, { childList: true, subtree: true }); }
-      if (done && lvEl === lf) lvStop(); }
+      if (ri && L) { if (ri.dataset.rblv != L) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.dataset.rblv = L; } swapShirt(ri, L); if (ri.classList.contains('rb-ri-photo')) ri.classList.add('rb-lv-photo'); }
+      // the poster is watched for as long as it is on the page (not only until its first photo), so a poster filled late, or the same poster
+      // re-used for another level, is always caught (ChatGPT P1); a finished tile returns at once, and the watcher goes when the poster does
+      if (lvEl !== lf) { lvStop(); lvEl = lf; lvMO = new MutationObserver(() => { if (!document.body.contains(lf)) { lvStop(); return; } fixReward(); }); lvMO.observe(lf, { childList: true, subtree: true, characterData: true }); } }
   } catch (e) {} };
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
