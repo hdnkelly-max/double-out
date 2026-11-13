@@ -37,7 +37,11 @@ const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+
 // the game's own #loading.gone → 100 %.
 const page=(()=>{const L=page0.indexOf('id="loading"');if(L<0)return page0;let out='',from=0;for(let k=1;k<=9;k++){const at=Math.max(L,Math.floor(page0.length*k/10));
   const e=page0.indexOf('</script>',at);if(e<0||e<from)continue;const cut=e+9;out+=page0.slice(from,cut)+`<script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',${k/10})</script>`;from=cut;}
-  return out+page0.slice(from);})();
+  out+=page0.slice(from);
+  // ChatGPT P2: markers must come after the loader, in order, each value once
+  const ks=[...out.matchAll(/TOPS_LOAD\.part\('parse',([0-9.]+)\)<\/script>/g)].map(m=>[m.index,+m[1]]);
+  if(ks.length<3||ks.some((m,i)=>m[0]<L||(i&&m[1]<=ks[i-1][1])))throw new Error('build: load-progress markers out of order '+JSON.stringify(ks.map(m=>m[1])));
+  return out;})();
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
 fs.writeFileSync('double-out.html','<meta charset="utf-8">\n<script>window.RIG_B64_URL="remy.b64.txt"</script>\n'+page);
 const b64=fs.readFileSync('remy.b64.txt','utf8').trim();

@@ -81,7 +81,7 @@ html.tops-pre #loading.gone{opacity:1!important;visibility:visible!important}
   next:next,
   done:function(){if(fin||!L)return;fin=true;real=shown=1;paint();L.classList.add('ld-done');setTimeout(function(){L.classList.add('gone');},260);}};
  /* page parsed: every script is in (ENG-FLASH progress step) */
- document.addEventListener('DOMContentLoaded',function(){part('parse',1);part('dom',1,'Getting the players ready\u2026');});
+ document.addEventListener('DOMContentLoaded',function(){var T=window.TOPS_LOAD;T.part('parse',1);T.part('dom',1,'Getting the players ready\u2026');});
  try{var r=sessionStorage.getItem('tops_reset');if(r){sessionStorage.removeItem('tops_reset');next(JSON.parse(r));}}catch(e){}
  /* the game marks #loading.gone when it is ready: fill the bar first so it never vanishes half-way */
  if(window.MutationObserver)new MutationObserver(function(){if(L.classList.contains('gone')&&!fin){fin=true;real=shown=1;paint();}}).observe(L,{attributes:true,attributeFilter:['class']});
