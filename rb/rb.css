@@ -311,3 +311,60 @@ html.rb-on body .st2bar .kb{background:repeating-linear-gradient(135deg,#9cc6f5 
 html.rb-on body .st2bar .gain{background:rgba(127,209,154,.45)!important;outline:1px dashed #7fd19a!important}
 html.rb-on body .c3-bar i{background:#4a8fe0!important}
 html.rb-on body #c3rwXp{color:#7fd19a!important}
+/* Q&D R1-1 / Director 05 #8: the old Match result stays hidden (and untappable) in the moment before the new Result covers it */
+html.rb-on.rb-preres #result{visibility:hidden!important}
+/* ---------- EXP-WIN (Hayden 08:38 / 09:05): the Result in the approved r2 design. Generated scenes, broadcast type; no 3D models ---------- */
+#rbApp .rbw-hero{position:relative;height:300px;flex:0 0 auto;border-radius:14px;overflow:hidden;background:#000}
+#rbApp .rbw-hero .rb-im{position:absolute;inset:0;background-size:cover;background-position:72% 50%}
+#rbApp .rbw-hero.rbw-dim .rb-im{filter:grayscale(.55) brightness(.62) contrast(1.05)}
+#rbApp .rbw-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,9,11,.92) 0,rgba(8,9,11,.55) 48%,rgba(8,9,11,0) 75%),linear-gradient(0deg,rgba(8,9,11,.9) 0,rgba(8,9,11,0) 45%)}
+#rbApp .rbw-lt{position:absolute;z-index:1;left:18px;right:18px;bottom:18px;display:flex;flex-direction:column;gap:2px}
+#rbApp .rbw-kick{font:700 12px var(--b);letter-spacing:.16em;text-transform:uppercase;color:#f0a3a7}
+#rbApp .rbw-lost .rbw-kick{color:var(--ink3)}
+#rbApp .rbw-res{font:italic 800 74px/.82 var(--d);letter-spacing:.01em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 28px rgba(215,35,45,.55),0 2px 0 rgba(0,0,0,.4)}
+#rbApp .rbw-lost .rbw-res{color:#d6dadc;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+#rbApp .rbw-score{display:flex;align-items:center;gap:12px;margin-top:6px}
+#rbApp .rbw-score b{font:800 46px/.9 var(--d);padding:2px 12px 0;color:#fff;background:var(--red);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+#rbApp .rbw-lost .rbw-score b{background:#3a4044}
+#rbApp .rbw-score span{font:600 15px/1.25 var(--b);color:var(--ink2);min-width:0}
+#rbApp .rbw-score em{display:block;font-style:normal;color:var(--ink);font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rbApp .rbw-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#rbApp .rbw-t{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+#rbApp .rbw-t small{font:700 11px var(--b);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+#rbApp .rbw-t b{font:800 32px/.95 var(--d);color:var(--ink)}
+#rbApp .rbw-best{border-color:#6b5a2c;background:linear-gradient(180deg,#2a2416,var(--card) 70%)}
+#rbApp .rbw-best i{display:inline-block;vertical-align:1px;margin-left:2px;font:800 10px var(--b);letter-spacing:.1em;color:#1a1408;background:#e7b65a;padding:2px 6px;border-radius:9px;font-style:normal}
+#rbApp .rbw-rw{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:1fr 1.25fr;gap:14px;align-items:center}
+#rbApp .rbw-rw.rbw-gold{background:linear-gradient(90deg,rgba(26,30,33,.55),var(--card) 55%),url(assets/rb/w_rw_cash.jpg) 0% 60%/cover}
+#rbApp .rbw-rw small{display:block;font:700 11px var(--b);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+#rbApp .rbw-cash b{display:block;font:800 46px/.95 var(--d);color:#d6dadc}
+#rbApp .rbw-gold .rbw-cash b{background:linear-gradient(180deg,#ffe6a8,#e7b65a 55%,#b9852f);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px rgba(231,182,90,.35))}
+#rbApp .rbw-xp{border-left:1px solid var(--line);padding-left:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+#rbApp .rbw-xp b{font:800 28px/1 var(--d);color:var(--good)}
+#rbApp .rbw-bar{display:flex;align-items:center;gap:8px}
+#rbApp .rbw-bar span{font:800 13px var(--d);letter-spacing:.04em;padding:2px 6px;border-radius:6px;background:#2b3135;color:var(--ink);white-space:nowrap}
+#rbApp .rbw-bar span.rbw-nx{background:none;color:var(--ink3)}
+#rbApp .rbw-bar i{flex:1;height:8px;border-radius:4px;background:#2b3135;overflow:hidden;position:relative}
+#rbApp .rbw-bar i em{position:absolute;top:0;bottom:0;left:0;background:#4a8fe0}
+#rbApp .rbw-bar i em.rbw-gain{background:var(--good);opacity:.9}
+#rbApp .rbw-uc{position:relative;height:132px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000 center/cover no-repeat}
+#rbApp .rbw-uc::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,9,11,.94) 0,rgba(8,9,11,.7) 45%,rgba(8,9,11,.1) 80%)}
+#rbApp .rbw-uc.rbw-lv{border-color:#6a2226}
+#rbApp .rbw-x{position:absolute;left:16px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:4px;max-width:62%}
+#rbApp .rbw-x small{font:700 11px var(--b);letter-spacing:.14em;text-transform:uppercase;color:#f0a3a7}
+#rbApp .rbw-x small.rbw-gk{color:#e7b65a}
+#rbApp .rbw-x b{font:italic 800 30px/.92 var(--d);text-transform:uppercase;color:var(--ink)}
+#rbApp .rbw-x span{font:500 13px var(--b);color:var(--ink2)}
+#rbApp .rbw-sec{height:84px}
+#rbApp .rbw-sec::before{background:linear-gradient(90deg,rgba(8,9,11,.96) 0,rgba(8,9,11,.82) 50%,rgba(8,9,11,.35) 85%)}
+#rbApp .rbw-sec .rbw-x{gap:2px}
+#rbApp .rbw-sec .rbw-x b{font-size:22px}
+#rbApp .rbw-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 14px;min-height:52px;font:600 15px var(--b);color:var(--ink)}
+#rbApp .rbw-row em{font-style:normal;color:var(--good);font-weight:700}
+#rbApp .rbw-pin{display:flex;flex-direction:column;gap:8px;padding:18px 0 4px;background:linear-gradient(180deg,rgba(18,21,23,0),var(--bg) 40%)}
+#rbApp .rbw-go{display:flex;align-items:center;justify-content:center;width:100%;min-height:64px;border:0;cursor:pointer;color:#fff;font:italic 800 34px var(--d);text-transform:uppercase;letter-spacing:.03em;background:linear-gradient(180deg,#ff3a40,#d7232d 45%,#8e0710);clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);filter:drop-shadow(0 0 18px rgba(227,16,27,.45))}
+#rbApp .rbw-go:active{transform:translateY(1px)}
+
+/* EXP-WIN: the game's longer button labels ("Equip new flights") stay on one line instead of wrapping to two (built-sheet review 13 Nov) */
+#rbApp .rbw-go{white-space:nowrap}
+#rbApp .rbw-go.rbw-go-l{font-size:27px;min-height:58px}
