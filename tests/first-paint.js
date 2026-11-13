@@ -47,6 +47,8 @@ const run=async(prof,mode)=>{const tag=prof+' '+mode;const ctx=await b.newContex
  if(mode!=='cold'){await p.goto(URL0);await p.waitForFunction(()=>typeof S!=='undefined'&&window.TOPS_RESET&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:300000});
   await p.evaluate(()=>{save.authSeen=true;save.name='Hayden';save.lessonDone=true;if(!career())newCareer();save.tcIntro=1;save.tcWelcomed=1;persist();try{localStorage.setItem('__cloud',JSON.stringify(save));}catch(e){}});}
  const cdp=await ctx.newCDPSession(p);const frames=[];let tNav=0,tCommit=0;p.on('framenavigated',f=>{if(f===p.mainFrame()&&/index\.html/.test(f.url()))tCommit=Date.now()-tNav;});cdp.on('Page.screencastFrame',f=>{frames.push({t:Date.now()-tNav,data:f.data});cdp.send('Page.screencastFrameAck',{sessionId:f.sessionId}).catch(()=>{});});
+ /* THROTTLE=kbps: a phone-like download (default off), so a page that draws nothing until megabytes have arrived shows its white frames */
+ if(process.env.THROTTLE){const kb=+process.env.THROTTLE;await cdp.send('Network.enable');await cdp.send('Network.emulateNetworkConditions',{offline:false,latency:120,downloadThroughput:kb*1024/8,uploadThroughput:kb*1024/8});}
  await cdp.send('Page.startScreencast',{format:'jpeg',quality:50,maxWidth:390,everyNthFrame:1});
  tNav=Date.now();
  if(mode==='reset'){/* the fresh start as v16 does it: the flag, then a reload */await p.evaluate(()=>{const c=career();sessionStorage.setItem('tops_reset_go',JSON.stringify({t:Date.now(),saveMs:1,run:false,tab:null,why:'test',sv:save.sv||0}));sessionStorage.setItem('tops_reset',JSON.stringify({k:'Next up',t:'vs Test',s:'Pub'}));location.reload();});}
