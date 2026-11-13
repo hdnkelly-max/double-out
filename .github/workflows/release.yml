@@ -161,7 +161,7 @@ jobs:
           b = re.search(r'TOPS_BUILD="(\d+)"', page); r = re.search(r'window\.RIG_URL="([^"]+)"', page)
           bad = [m for m, ok in [(f"v {vj.get('v')!r} is not {v}", vj.get('v') == v),
                                  (f"build {vj.get('build')!r} is not the page's TOPS_BUILD {b and b.group(1)}", bool(b) and str(vj.get('build')) == b.group(1)),
-                                 (f"rig {vj.get('rig')!r} is not the page's RIG_URL {r and r.group(1)}", 'rig' not in vj or (bool(r) and vj['rig'] == r.group(1)))] if not ok]
+                                 (f"rig {vj.get('rig')!r} is not the page's RIG_URL {r and r.group(1)}", vj.get('rig') == (r.group(1) if r else vj.get('rig')))] if not ok]
           if bad: print('::error::BUILD: version.json does not match the page: ' + '; '.join(bad)); sys.exit(1)
           PY
             cp version.json ../out/version.json
@@ -235,8 +235,9 @@ jobs:
           U="${{ steps.deploy.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
-          WB=$( { grep -o '"build":"[0-9]*"' out/version.json || true; } )
-          if [ -n "$WB" ]; then LB=$( { curl -fsS "${U}version.json?cb=b$RANDOM" | grep -o '"build":"[0-9]*"' || true; } ); [ "$LB" = "$WB" ] || { echo "::error::LIVE: version.json build is '$LB', expected $WB (the page's update check needs it)"; exit 1; }; fi
+          # R-1: the live version.json must be the released one (its "build" is what the page's update check compares); parsed, not grepped
+          curl -fsS -o live_version.json "${U}version.json?cb=b$RANDOM" || { echo "::error::LIVE: version.json did not download"; exit 1; }
+          python3 -c "import json,sys;w=json.load(open('out/version.json'));l=json.load(open('live_version.json'));sys.exit(0 if all(l.get(k)==w[k] for k in w) else print('::error::LIVE: version.json is',l,'expected',w) or 1)"
           RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' out/index.html || true; } | sort -u)
           if [ -n "$RIG" ]; then
             curl -fsS -o live_rig.glb "${U}${RIG}" || { echo "::error::LIVE: ${U}${RIG} did not download"; exit 1; }
