@@ -23,8 +23,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.goto('file://' + dir + '/index.html'); await p.waitForTimeout(16000);
     const log = await p.evaluate(() => window.__bp); const old = log.filter(x => (!x.cover && x.scr.length && !x.rb) || /Chalking|Pouring|Warming|Hanging/.test(x.tip));
     const first = log[0] || {}; const m = (first.bg || '').match(/\d+/g) || [255, 255, 255]; const lum = (+m[0] + +m[1] + +m[2]) / 3;
+    out[who + 'Why'] = await p.evaluate(() => window.TOPS_PRE && TOPS_PRE.why); if (out[who + 'Why'] !== 'rb-ready') fail.push(who + ': released for ' + out[who + 'Why']);
     const shown = log.find(x => !x.cover && x.scr.length); out[who] = { frames: log.length, firstAt: first.t, firstBg: first.bg, firstCover: first.cover, oldFrames: old.length, firstOld: old[0], screenAt: shown && shown.t, screens: shown && shown.scr, rbAtScreen: shown && shown.rb, released: log.length && !log[log.length - 1].pre };
     if (lum > 40) fail.push(who + ': first frame background ' + first.bg); if (!first.cover) fail.push(who + ': loader not on the first frame'); if (old.length) fail.push(who + ': ' + old.length + ' old-look frames, first ' + JSON.stringify(old[0]));
     if (!shown) fail.push(who + ': no screen after the loader'); if (!out[who].released) fail.push(who + ': pre-paint hold never released'); if (pe.length) fail.push(who + ': page errors ' + pe.join('; ').slice(0, 120));
     await ctx.close(); }
+  // ChatGPT P1: release only when the new look said it is ready; rebrand off releases to the old look; a crashed rb.js still releases (game usable)
+  for (const [k, q, init] of [['off', '?rebrand=0', null], ['crash', '?rebrand=1', () => { Object.defineProperty(window, 'TOPS_RB', { set() { throw new Error('test: rb crash'); }, configurable: true }); }]]) {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); const p = await ctx.newPage(); await p.route(/jsdelivr|supabase\.co/, r => r.abort()); if (init) await p.addInitScript(init);
+    await p.goto('file://' + dir + '/index.html' + q); await p.waitForTimeout(6000); out[k] = await p.evaluate(() => ({ why: window.TOPS_PRE && TOPS_PRE.why, pre: document.documentElement.classList.contains('tops-pre') }));
+    const want = k === 'off' ? 'rb-off' : 'rb-failed'; if (out[k].why !== want || out[k].pre) fail.push(k + ': ' + JSON.stringify(out[k]) + ' want ' + want); await ctx.close(); }
   console.log(JSON.stringify(out)); console.log(fail.length ? 'boot-paint FAIL: ' + fail.join('; ') : 'boot-paint PASS (returning + new player)'); await b.close(); process.exit(fail.length ? 1 : 0); })();
