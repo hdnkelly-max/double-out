@@ -800,7 +800,20 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const rest={};root.traverse(o=>{if(o.isBone){o.updateWorldMatrix(true,false);const q=o.getWorldQuaternion(new T.Quaternion());const p=o.getWorldPosition(new T.Vector3());rest[o.name]={q,p,lq:o.quaternion.clone()};}});
    root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;if(o.material&&o.material.map&&/Top/i.test(o.material.name||o.name))RIG.shirtImg=o.material.map.image;if(o.material&&/Hair|Eyelash/i.test(o.material.name)){o.material.transparent=true;o.material.alphaTest=.4;o.material.side=T.DoubleSide;}}});
    keepAssets(root);RIG.base=root;RIG.rest=rest;RIG.ready=true;RIG.waiting.forEach(f=>f());RIG.waiting.length=0;};const fail=e=>console.warn('rig load failed',e);
-  if(window.RIG_B64_URL){fetch(window.RIG_B64_URL).then(r=>r.text()).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));L.parse(bin.buffer,'',onLoaded,fail);}).catch(fail);}else L.load(window.RIG_URL||'remy.glb',onLoaded,e=>{try{if(window.TOPS_LOAD&&e&&e.total)TOPS_LOAD.part('rig',e.loaded/e.total);}catch(x){}},fail);}
+  if(window.RIG_B64_URL){fetch(window.RIG_B64_URL).then(r=>r.text()).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));L.parse(bin.buffer,'',onLoaded,fail);}).catch(fail);}else if(window.RIG_URL&&!/^data:/.test(window.RIG_URL))rigFetch(window.RIG_URL).then(buf=>L.parse(buf,'',onLoaded,fail)).catch(fail);else L.load(window.RIG_URL||'remy.glb',onLoaded,e=>{try{if(window.TOPS_LOAD&&e&&e.total)TOPS_LOAD.part('rig',e.loaded/e.total);}catch(x){}},fail);}
+ /* ENG-RIGCACHE: the player model is its own file named by its content (rig/remy-<hash>.glb). Kept in Cache Storage: a relaunch or the fresh
+    start between matches reads it from there with no download; the first download shows its progress on the loader; two retries on a bad
+    network; models from older builds are dropped from the cache once the new one is in. Without Cache Storage (or if it fails) it downloads. */
+ function rigFetch(url){const abs=new URL(url,location.href).href;const prog=f=>{try{if(window.TOPS_LOAD&&TOPS_LOAD.part)TOPS_LOAD.part('rig',f);}catch(x){}};
+  const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error('rig '+r.status);const tot=+r.headers.get('content-length')||0;if(!r.body||!r.body.getReader||!tot)return r.arrayBuffer().then(b=>{prog(1);return b;});
+   const rd=r.body.getReader(),parts=[];let got=0;const pump=()=>rd.read().then(x=>{if(x.done){const out=new Uint8Array(got);let o=0;for(const q of parts){out.set(q,o);o+=q.length;}prog(1);return out.buffer;}parts.push(x.value);got+=x.value.length;prog(Math.min(.99,got/tot));return pump();});return pump();});
+  const tryNet=n=>net().catch(e=>n>0?new Promise(z=>setTimeout(z,800)).then(()=>tryNet(n-1)):Promise.reject(e));
+  const ok=b=>{const u=new Uint8Array(b,0,4);if(b.byteLength<1000||String.fromCharCode(u[0],u[1],u[2],u[3])!=='glTF')throw new Error('rig: not a GLB');return b;};
+  let tried=false;if(!window.caches||!caches.open){window.TOPS_RIGSRC='net';return tryNet(2).then(ok);}
+  return caches.open('tops-rig').then(c=>c.match(abs).then(hit=>hit?hit.arrayBuffer().then(ok).then(b=>{window.TOPS_RIGSRC='cache';prog(1);return b;}):null)
+   .catch(()=>null).then(b=>b||(tried=true,tryNet(2)).then(ok).then(b=>{window.TOPS_RIGSRC='net';
+    c.put(abs,new Response(b.slice(0),{headers:{'content-type':'model/gltf-binary'}})).then(()=>c.keys()).then(ks=>ks.forEach(k=>{if(k.url!==abs)c.delete(k);})).catch(()=>{});return b;})))
+   .catch(e=>{if(tried)throw e;/* Cache Storage itself failed (private mode, quota): download */window.TOPS_RIGSRC='net';return tryNet(2).then(ok);});}
  function onRig(f){if(RIG.ready)f();else RIG.waiting.push(f);}
  function shirtCanvas(look,name,tier){const img=RIG.shirtImg;const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');if(img)x.drawImage(img,0,0,1024,1024);else{x.fillStyle='#666';x.fillRect(0,0,1024,1024);}
   const col=new T.Color(look.shirt);const light=look.shirt==='#e0e0e0';const im=x.getImageData(0,0,1024,1024),d=im.data;const _hx=col.getHex(),cr=_hx>>16&255,cg=_hx>>8&255,cb=_hx&255;

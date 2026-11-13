@@ -2,7 +2,11 @@ const fs=require('fs');
 const eng=fs.readFileSync('engine.js','utf8'),g=fs.readFileSync('game4.js','utf8').replace('ENGINE',()=>eng);
 const head=fs.readFileSync('head3.html','utf8'),body=fs.readFileSync('body4.html','utf8');
 const BUILD=String(Date.now());
-const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;var q=new URLSearchParams(location.search);fetch(location.pathname+'?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){var m=t.match(/TOPS_BUILD="(\\d+)"/);if(!m||m[1]===window.TOPS_BUILD||+m[1]<+window.TOPS_BUILD)return;var k='tops-upd-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');if(window.S&&S&&!S.done)return;q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}})();</script>\n`;
+/* update check (ENG-RIGCACHE): it used to download the whole page (6.5 MB, no-store) on every launch and every fresh start between matches,
+   just to read TOPS_BUILD. It now reads the release's version.json (a few bytes) and compares it with TOPS_VER; newer -> reload once. */
+const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;var q=new URLSearchParams(location.search);
+function n(v){return String(v||'').split('.').map(function(x){return +x||0;});}function newer(a,b){a=n(a);b=n(b);for(var i=0;i<Math.max(a.length,b.length);i++){if((a[i]||0)!==(b[i]||0))return (a[i]||0)>(b[i]||0);}return false;}
+fetch('version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&j.v,cur=window.TOPS_VER;if(!v||!cur||!newer(v,cur))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');if(window.S&&S&&!S.done)return;q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}})();</script>\n`;
 const NM='node_modules/three/examples/js/';
 const exr=fs.readFileSync(NM+'libs/fflate.min.js','utf8')+';\n'+fs.readFileSync(NM+'loaders/EXRLoader.js','utf8');
 const envB64=n=>fs.readFileSync('env/'+n+'.exr.js','utf8').split('base64,')[1].split("'")[0];
@@ -50,8 +54,14 @@ const finish=(p0,rig)=>{let p=p0.replace(RIGMARK,()=>rig||'');const L=p.indexOf(
 const page=finish(page0,'');
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
 fs.writeFileSync('double-out.html','<meta charset="utf-8">\n'+finish(page0,'<script>window.RIG_B64_URL="remy.b64.txt"</script>'));
-const b64=fs.readFileSync('remy.b64.txt','utf8').trim(),N=10,cs=Math.ceil(b64.length/N);let rig='';
-for(let i=0;i<N;i++)rig+=`<script>(window.RIG_P=window.RIG_P||[]).push("${b64.slice(i*cs,(i+1)*cs)}")</script>\n`;
-rig+='<script>window.RIG_URL="data:model/gltf-binary;base64,"+window.RIG_P.join("");window.RIG_P=null</script>\n';
+/* ENG-RIGCACHE (Engine, Overseer 19:32; build.js is Experience's, change agreed on the tracker): the shipped page no longer carries the
+   3.2 MB player model. It ships once as its own file, named by its content (rig/remy-<hash>.glb, so a cached copy is never stale), which the
+   game keeps in Cache Storage: a fresh start between matches or a relaunch reads it with no download and no 3.2 MB of text to parse.
+   The release copies rig/ next to index.html (release.yml). */
+const b64=fs.readFileSync('remy.b64.txt','utf8').trim();const rigBin=Buffer.from(b64,'base64');
+const rigHash=require('crypto').createHash('sha256').update(rigBin).digest('hex').slice(0,12),rigFile=`rig/remy-${rigHash}.glb`;
+fs.mkdirSync('rig',{recursive:true});for(const f of fs.readdirSync('rig'))if(/^remy-.*\.glb$/.test(f)&&'rig/'+f!==rigFile)fs.unlinkSync('rig/'+f);fs.writeFileSync(rigFile,rigBin);
+if(rigBin.slice(0,4).toString()!=='glTF')throw new Error('build: remy.b64.txt is not a GLB');
+const rig=`<script>window.RIG_URL="${rigFile}"</script>\n`;
 fs.writeFileSync('double-out-standalone.html','<meta charset="utf-8">\n'+finish(page0,rig));
 console.log('built',page.length);
