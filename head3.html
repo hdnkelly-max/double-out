@@ -81,11 +81,12 @@ html.tops-pre #loading.gone{opacity:1!important;visibility:visible!important}
   next:next,
   done:function(){if(fin||!L)return;fin=true;real=shown=1;paint();L.classList.add('ld-done');setTimeout(function(){L.classList.add('gone');},260);}};
  /* page parsed: every script is in (ENG-FLASH progress step) */
- document.addEventListener('DOMContentLoaded',function(){part('parse',1);part('dom',1,'Getting the players ready\u2026');});
+ document.addEventListener('DOMContentLoaded',function(){var T=window.TOPS_LOAD;T.part('parse',1);T.part('dom',1,'Getting the players ready\u2026');});
  try{var r=sessionStorage.getItem('tops_reset');if(r){sessionStorage.removeItem('tops_reset');next(JSON.parse(r));}}catch(e){}
  /* the game marks #loading.gone when it is ready: fill the bar first so it never vanishes half-way */
  if(window.MutationObserver)new MutationObserver(function(){if(L.classList.contains('gone')&&!fin){fin=true;real=shown=1;paint();}}).observe(L,{attributes:true,attributeFilter:['class']});
 }catch(e){}})();</script>
+<!--TOPS_RIG: build.js puts the standalone build's player model here, after the loader, so the loader is the first paint (Q&D 18:23)-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Manrope:wght@500;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

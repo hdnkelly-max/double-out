@@ -8,6 +8,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.route(/jsdelivr|supabase\.co/, r => r.abort());
     // the game hides the screen as soon as it is ready (fast here); hold that until the test lets it go, so the bar can be watched
     await p.addInitScript(() => { const add = DOMTokenList.prototype.add; DOMTokenList.prototype.add = function (...c) { try { if (!window.__letGo && c.includes('gone') && document.getElementById('loading') && this === document.getElementById('loading').classList) { window.__goneAsked = 1; return; } } catch (e) {} return add.apply(this, c); }; });
+    await p.addInitScript(() => { let tl; Object.defineProperty(window, 'TOPS_LOAD', { configurable: true, get() { return tl; }, set(v) { if (v && v.part) v.part = function () {}; tl = v; } }); });   // the page's own progress steps (ENG-FLASH) are switched off here so the API itself can be checked from 0; tests/ld-progress.js covers them
     await p.addInitScript(() => { try { sessionStorage.setItem('tops_reset', JSON.stringify({ k: 'Next up', t: 'vs Tama Rewiri', s: 'Club singles · week 2 of 8' })); } catch (e) {} });
     await p.goto('file://' + dir + '/index.html', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => window.TOPS_LOAD, null, { timeout: 30000 });
     const w = () => p.evaluate(() => parseFloat(document.getElementById('ldBar').style.width) || 0);
@@ -30,6 +31,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     r.pctReal = r.pct; out[W] = r; await p.close();
     const q = await b.newPage({ viewport: { width: W, height: H } }); await q.route(/jsdelivr|supabase\.co/, x => x.abort());
     await q.addInitScript(() => { const add = DOMTokenList.prototype.add; DOMTokenList.prototype.add = function (...c) { try { if (!window.__letGo && c.includes('gone') && this === document.getElementById('loading').classList) return; } catch (e) {} return add.apply(this, c); }; });
+    await q.addInitScript(() => { let tl; Object.defineProperty(window, 'TOPS_LOAD', { configurable: true, get() { return tl; }, set(v) { if (v && v.part) v.part = function () {}; tl = v; } }); });   // the page's own progress steps (ENG-FLASH) are switched off here so the API itself can be checked from 0; tests/ld-progress.js covers them
     await q.goto('file://' + dir + '/index.html', { waitUntil: 'domcontentloaded' }); await q.waitForFunction(() => window.TOPS_LOAD);
     const g = await q.evaluate(async () => { TOPS_LOAD.set(.4); await new Promise(r => setTimeout(r, 900)); const pctMid = document.getElementById('ldPct').textContent, barMid = parseFloat(document.getElementById('ldBar').style.width);
       window.__letGo = 1; document.getElementById('loading').classList.add('gone'); await new Promise(r => setTimeout(r, 30)); return { pctMid, barMid, bar: document.getElementById('ldBar').style.width, pct: document.getElementById('ldPct').textContent }; });
