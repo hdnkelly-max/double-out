@@ -74,9 +74,14 @@ html.tops-pre #loading.gone{opacity:1!important;visibility:visible!important}
  function tick(){if(!L||L.classList.contains('gone')){clearInterval(iv);return;}if(fin)return;var cap=Math.min(.96,real+.12);if(shown<cap)shown+=Math.max(.002,(cap-shown)*.06);if(shown<real)shown=real;paint();}
  var iv=setInterval(tick,100);
  function next(o){try{if(!o||!o.t)return;document.getElementById('ldNextK').textContent=o.k||'Next up';document.getElementById('ldNextT').textContent=o.t;document.getElementById('ldNextS').textContent=o.s||'';document.getElementById('ldNext').hidden=false;}catch(e){}}
- window.TOPS_LOAD={set:function(p,label){if(fin)return;p=+p;if(p>real)real=Math.min(1,p);if(shown<real)shown=real;if(label)tip.textContent=label;paint();},
+ /* parts load at the same time (the page parses while the player model downloads), so the bar is their weighted sum, each part only ever rising */
+ var W={parse:.5,dom:.08,rig:.32},PT={};
+ function part(k,f,label){f=Math.max(0,Math.min(1,+f||0));if(!(k in W)||f<=(PT[k]||0))return;PT[k]=f;var s=0;for(var q in W)s+=W[q]*(PT[q]||0);window.TOPS_LOAD.set(Math.min(.98,s),label);}
+ window.TOPS_LOAD={part:part,set:function(p,label){if(fin)return;p=+p;if(p>real)real=Math.min(1,p);if(shown<real)shown=real;if(label)tip.textContent=label;paint();},
   next:next,
   done:function(){if(fin||!L)return;fin=true;real=shown=1;paint();L.classList.add('ld-done');setTimeout(function(){L.classList.add('gone');},260);}};
+ /* page parsed: every script is in (ENG-FLASH progress step) */
+ document.addEventListener('DOMContentLoaded',function(){part('parse',1);part('dom',1,'Getting the players ready\u2026');});
  try{var r=sessionStorage.getItem('tops_reset');if(r){sessionStorage.removeItem('tops_reset');next(JSON.parse(r));}}catch(e){}
  /* the game marks #loading.gone when it is ready: fill the bar first so it never vanishes half-way */
  if(window.MutationObserver)new MutationObserver(function(){if(L.classList.contains('gone')&&!fin){fin=true;real=shown=1;paint();}}).observe(L,{attributes:true,attributeFilter:['class']});
