@@ -16,10 +16,11 @@
    TOPS_LOAD.next({k, t, s})  optional "Next up" card, e.g. {k:'Next up', t:'vs Tama Rewiri', s:'Club singles · week 2 of 8'}
    TOPS_LOAD.done()           fills the bar, then fades the screen (the game's own #loading.gone still works too)
  Before a between-matches reload, Engine can write sessionStorage 'tops_reset' = JSON {k,t,s}: the card shows from the first frame.
- Never looks frozen: between real updates the bar creeps toward the next step (at most +12 %, never past 96 %) and its fill shimmers. */
+ Never looks frozen: between real updates the bar creeps toward the next step (at most +12 %, never past 96 %) and its fill shimmers;
+ the % figure always shows the real progress Engine reported (ChatGPT P2: the creep is only in the bar). */
 (function(){try{var L=document.getElementById('loading'),bar=document.getElementById('ldBar'),pct=document.getElementById('ldPct'),tip=document.getElementById('ldTip');
  var real=0,shown=0,fin=false,t0=Date.now();
- function paint(){if(!L)return;var v=Math.max(0,Math.min(1,shown));bar.style.width=(v*100).toFixed(1)+'%';var n=Math.round(v*100);pct.textContent=n+'%';L.setAttribute('aria-valuenow',n);}
+ function paint(){if(!L)return;var v=Math.max(0,Math.min(1,shown));bar.style.width=(v*100).toFixed(1)+'%';var n=Math.round(Math.max(0,Math.min(1,fin?1:real))*100);pct.textContent=n+'%';L.setAttribute('aria-valuenow',n);}
  function tick(){if(!L||L.classList.contains('gone')){clearInterval(iv);return;}if(fin)return;var cap=Math.min(.96,real+.12);if(shown<cap)shown+=Math.max(.002,(cap-shown)*.06);if(shown<real)shown=real;paint();}
  var iv=setInterval(tick,100);
  function next(o){try{if(!o||!o.t)return;document.getElementById('ldNextK').textContent=o.k||'Next up';document.getElementById('ldNextT').textContent=o.t;document.getElementById('ldNextS').textContent=o.s||'';document.getElementById('ldNext').hidden=false;}catch(e){}}

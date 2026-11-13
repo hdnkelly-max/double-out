@@ -22,8 +22,17 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.evaluate(() => { window.__letGo = 1; TOPS_LOAD.done(); }); await p.waitForTimeout(60); r.full = await w(); await p.waitForTimeout(500); r.gone = await p.evaluate(() => document.getElementById('loading').classList.contains('gone'));
     if (!r.card || !r.cardOnce) fail.push(`${W}: Next up card not shown once`); if (!(a1 > a0 && a1 <= 32.5)) fail.push(`${W}: creep ${a0}→${a1} (must move, ≤ step + 12 %)`);
     if (r.label !== 'Loading the venue…') fail.push(`${W}: label ${r.label}`); if (!r.noBack) fail.push(`${W}: bar went backwards`);
-    if (!(r.jump >= 60 && r.capped <= 72.5 && r.capped > r.jump)) fail.push(`${W}: after 60 %: ${r.jump} → ${r.capped}`); if (r.full !== 100 || !r.gone) fail.push(`${W}: done() ${r.full}% gone ${r.gone}`);
+    if (r.pct !== '60%') fail.push(`${W}: % shows ${r.pct}, real is 60`); if (!(r.jump >= 60 && r.capped <= 72.5 && r.capped > r.jump)) fail.push(`${W}: after 60 %: ${r.jump} → ${r.capped}`); if (r.full !== 100 || !r.gone) fail.push(`${W}: done() ${r.full}% gone ${r.gone}`);
     if (r.safe.footBottom > r.safe.H - 20 || r.safe.logoTop < 40 || r.safe.side < 16) fail.push(`${W}: layout ${JSON.stringify(r.safe)}`); if (pe.length) fail.push(`${W}: page errors ${pe.join('; ').slice(0, 120)}`);
     // the game's own .gone (old path) fills the bar first
-    out[W] = r; await p.close(); }
+    // the game's own path: #loading.gone without done() still shows a full bar while it fades (ChatGPT P2); the % shows real progress, not the creep
+    await p.evaluate(() => { const L = document.getElementById('loading'); L.classList.remove('gone', 'ld-done'); });
+    r.pctReal = r.pct; out[W] = r; await p.close();
+    const q = await b.newPage({ viewport: { width: W, height: H } }); await q.route(/jsdelivr|supabase\.co/, x => x.abort());
+    await q.addInitScript(() => { const add = DOMTokenList.prototype.add; DOMTokenList.prototype.add = function (...c) { try { if (!window.__letGo && c.includes('gone') && this === document.getElementById('loading').classList) return; } catch (e) {} return add.apply(this, c); }; });
+    await q.goto('file://' + dir + '/index.html', { waitUntil: 'domcontentloaded' }); await q.waitForFunction(() => window.TOPS_LOAD);
+    const g = await q.evaluate(async () => { TOPS_LOAD.set(.4); await new Promise(r => setTimeout(r, 900)); const pctMid = document.getElementById('ldPct').textContent, barMid = parseFloat(document.getElementById('ldBar').style.width);
+      window.__letGo = 1; document.getElementById('loading').classList.add('gone'); await new Promise(r => setTimeout(r, 30)); return { pctMid, barMid, bar: document.getElementById('ldBar').style.width, pct: document.getElementById('ldPct').textContent }; });
+    if (g.pctMid !== '40%' || !(g.barMid > 40)) fail.push(`${W}: % should show real 40 while the bar creeps: ${JSON.stringify(g)}`); if (g.bar !== '100%' || g.pct !== '100%') fail.push(`${W}: game .gone path did not fill: ${JSON.stringify(g)}`);
+    out[W].gonePath = g; await q.close(); }
   console.log(JSON.stringify(out)); console.log(fail.length ? 'ld-screen FAIL: ' + fail.join('; ') : 'ld-screen PASS (390 + 360)'); await b.close(); process.exit(fail.length ? 1 : 0); })();
