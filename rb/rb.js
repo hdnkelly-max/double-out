@@ -376,17 +376,23 @@
   // player (in a shirt that often didn't match). They now show the generated shirt photo in the unlocked colour (the same recolour as the new
   // Result), and the card's top figure becomes the player's Locker photo in his own shirt. Only the reward overlay and the poster are watched
   // (a body childList observer, no subtree), so nothing runs during play.
-  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb) return; const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; if (!r || r.k !== 'shirt') return;
-    ri.dataset.rb = 1; const img = ri.querySelector('img'); if (!img) return; img.style.visibility = 'hidden';
-    const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); img.removeAttribute('style'); };
-    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); };
+  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
+    const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
+    const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
+    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); return true; };
+  let lvMO = null;
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
       const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
-        const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, '', put); if (u) put(u); else h.style.visibility = 'hidden'; } }
-    const lf = $id('lvFirst'); if (lf) { const n = lf.querySelector('.n'); const ri = lf.querySelector('.ri'); if (ri && n) { if (ri.classList.contains('ri-hero') || ri.classList.contains('rb-ri-photo')) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.classList.add('ri-hero'); swapShirt(ri, +n.textContent); ri.classList.add('rb-lv-photo'); } } }
+        const fb = (() => { try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } })();   // ChatGPT P2: the venue, never an empty top
+        const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
+    // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
+    const lf = $id('lvFirst'); if (lf) { const n = lf.querySelector('.n'), ri = lf.querySelector('.ri'), L = n ? +n.textContent : 0;
+      let done = false; if (ri && L) { if (ri.dataset.rblv != L) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.dataset.rblv = L; } done = swapShirt(ri, L); if (ri.classList.contains('rb-ri-photo')) ri.classList.add('rb-lv-photo'); }
+      if (!done && !lf.dataset.rbw) { lf.dataset.rbw = 1; if (lvMO) lvMO.disconnect(); lvMO = new MutationObserver(() => { if (!document.body.contains(lf)) { lvMO.disconnect(); return; } fixReward(); }); lvMO.observe(lf, { childList: true, subtree: true }); }
+      if (done && lvMO) { lvMO.disconnect(); lvMO = null; } }
   } catch (e) {} };
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward };
 })();
