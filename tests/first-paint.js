@@ -20,7 +20,7 @@ const SAMPLER=()=>{const L=window.__fp=[];const t0=performance.now();
  const chain=e=>{const ids=[];for(let c=e,i=0;c&&i<12;i++,c=c.parentElement){if(c.id)ids.push(c.id);}return ids;};
  const snap=why=>{try{if(!document.body)return;const W=innerWidth,H=innerHeight;const pts=[[W/2,H/2],[W/2,H*.15],[W/2,H*.85],[W*.15,H/2],[W*.85,H/2]];
   const top=pts.map(([x,y])=>chain(document.elementFromPoint(x,y)));const ld=document.getElementById('loading');
-  L.push({t:Math.round(performance.now()-t0),why,top,ld:ld?ld.className:null,pre:document.documentElement.className});if(L.length>4000)L.splice(0,1000);}catch(e){}};
+  const pc=document.getElementById('ldPct');L.push({t:Math.round(performance.now()-t0),why,top,ld:ld?ld.className:null,pre:document.documentElement.className,pct:pc?parseInt(pc.textContent)||0:null});if(L.length>4000)L.splice(0,1000);}catch(e){}};
  const f=()=>{snap('raf');requestAnimationFrame(f);};requestAnimationFrame(f);setInterval(()=>snap('iv'),40);
  addEventListener('beforeunload',()=>{try{sessionStorage.setItem('__fpPrev',JSON.stringify(L.slice(-50)));}catch(e){}});};
 /* under the cover ('tops-pre' on <html>) only the loading screen may be on top; once it lifts, the screen it lifted onto must still be the
@@ -30,6 +30,10 @@ const judge=(tag,L)=>{let bad=null,lift=null;for(const s of L){const pre=/tops-p
   if(!lift&&!pre&&gone){lift=s;}/* both holds off: the page's pre-paint class (Experience) and the loading screen (Engine, at the boot's end) */
   if(!lift){for(const ch of s.top){if(!ch.includes('loading')){bad={t:s.t,why:'under the cover, on top: '+ch.join('<')};break;}}if(bad)break;}}
  const settle=L.filter(s=>lift&&s.t>=lift.t+600);const first=settle.length?settle[0].top.map(SCR).join(','):null;const last=settle.length?settle[settle.length-1].top.map(SCR).join(','):null;
+ /* the bar shows real steps (Hayden 17:57): before it lifts, at least 3 different % values, the last one at 50 % or more; never sitting at 0 % for over 3 s */
+ const before=L.filter(s=>lift&&s.t<lift.t&&s.pct!=null);const vals=[...new Set(before.map(s=>s.pct))];const lastPct=before.length?before[before.length-1].pct:null;
+ let zero=0;{let z0=null;for(const s of before){if(s.pct===0){if(z0==null)z0=s.t;zero=Math.max(zero,s.t-z0);}else z0=null;}}
+ O({tag,bar:{values:vals.slice(0,12),last:lastPct,zeroMs:zero}});if(lift&&lift.t>1500){if(vals.length<3)F(tag,'the bar showed only '+JSON.stringify(vals)+' % before the lift');if(!(lastPct>=50))F(tag,'the bar was at '+lastPct+' % just before the lift');if(zero>3000)F(tag,'the bar sat at 0 % for '+zero+' ms');}
  if(!lift)F(tag,'the cover never lifted');if(bad)F(tag,'+'+bad.t+' ms '+bad.why);if(first&&last&&first!==last)F(tag,'the screen changed after the cover lifted: '+first+' -> '+last);
  return {liftAt:lift&&lift.t,first,last,bad};};
 const white=async(tag,frames)=>{if(!sharp){O({tag,note:'sharp missing: no pixel check'});return;}let worst=0,at=null,first=null;for(const fr of frames){const st=await sharp(Buffer.from(fr.data,'base64')).stats();const m=(st.channels[0].mean+st.channels[1].mean+st.channels[2].mean)/3;if(first==null)first=Math.round(m);if(m>worst){worst=m;at=fr.t;}}
@@ -48,7 +52,7 @@ const run=async(prof,mode)=>{const tag=prof+' '+mode;const ctx=await b.newContex
  if(mode==='reset'){/* the fresh start as v16 does it: the flag, then a reload */await p.evaluate(()=>{const c=career();sessionStorage.setItem('tops_reset_go',JSON.stringify({t:Date.now(),saveMs:1,run:false,tab:null,why:'test',sv:save.sv||0}));sessionStorage.setItem('tops_reset',JSON.stringify({k:'Next up',t:'vs Test',s:'Pub'}));location.reload();});}
  else await p.goto(URL0);
  /* settled: the new screen is up and the loading screen gone */
- let settled=null;const tS=Date.now();for(let i=0;i<300;i++){const s=await p.evaluate(()=>{const l=document.getElementById('loading');const gone=(!l||l.classList.contains('gone'))&&!document.documentElement.classList.contains('tops-pre');const a=document.getElementById('rbApp');const rb=!!(a&&!a.hidden&&a.getClientRects().length);const t=document.getElementById('title');const tl=!!(t&&!t.hidden&&t.getClientRects().length);const lg=document.getElementById('login');const lo=!!(lg&&!lg.hidden&&lg.getClientRects().length);return {gone,rb,tl,lo,pre:document.documentElement.className};}).catch(()=>null);if(s&&s.gone&&(s.rb||s.tl||s.lo)){settled=s;break;}await p.waitForTimeout(100);}
+ let settled=null;const tS=Date.now();for(let i=0;i<600;i++){const s=await p.evaluate(()=>{const l=document.getElementById('loading');const gone=(!l||l.classList.contains('gone'))&&!document.documentElement.classList.contains('tops-pre');const a=document.getElementById('rbApp');const rb=!!(a&&!a.hidden&&a.getClientRects().length);const t=document.getElementById('title');const tl=!!(t&&!t.hidden&&t.getClientRects().length);const lg=document.getElementById('login');const lo=!!(lg&&!lg.hidden&&lg.getClientRects().length);return {gone,rb,tl,lo,pre:document.documentElement.className};}).catch(()=>null);if(s&&s.gone&&(s.rb||s.tl||s.lo)){settled=s;break;}await p.waitForTimeout(100);}
  await p.waitForTimeout(2500);/* and 2.5 s after: what Hayden saw was the old title for ~2.5 s, then a change */
  await cdp.send('Page.stopScreencast').catch(()=>{});
  const bt=await p.evaluate(()=>{const t0=Date.now()-performance.now();return {bootEnd:window.TOPS_BOOTEND?Math.round(TOPS_BOOTEND-t0):null,bootMs:window.TOPS_BOOT_MS||null,rig:!!(V&&V._qa&&V._qa.rigReady&&V._qa.rigReady()),pre:window.TOPS_PRE&&TOPS_PRE.why};}).catch(e=>({err:e.message}));O({tag,boot:bt});
