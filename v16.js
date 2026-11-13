@@ -18,7 +18,7 @@ const ld=()=>document.getElementById('loading');
    screen has already finished once (boot), so the old page paints the bar itself while it saves. */
 const paintOld=(p,tip)=>{const l=ld();if(!l)return;l.classList.remove('gone','ld-done');const b=document.getElementById('ldBar'),pc=document.getElementById('ldPct'),t=document.getElementById('ldTip');const v=Math.max(0,Math.min(1,p));
  if(b)b.style.width=(v*100).toFixed(1)+'%';if(pc)pc.textContent=Math.round(v*100)+'%';if(t&&tip)t.textContent=tip;l.setAttribute('aria-valuenow',String(Math.round(v*100)));};
-const bar=(p,tip)=>{if(window.TOPS_RESETTING&&window.TOPS_LOAD)TOPS_LOAD.set(p,tip);else paintOld(p,tip);};
+const bar=(p,tip)=>{if(window.TOPS_LOAD&&(window.TOPS_RESETTING||document.documentElement.classList.contains('tops-pre')))TOPS_LOAD.set(p,tip);else paintOld(p,tip);};
 /* requests to the game's server, so a reset waits for them and knows if one failed */
 const NQ={n:0,fail:0};
 if(window.fetch&&!window.fetch.__rs){const F=window.fetch;window.fetch=function(u){let url='';try{url=String((u&&u.url)||u);}catch(e){}if(!/supabase\.co/.test(url))return F.apply(this,arguments);NQ.n++;
@@ -68,6 +68,10 @@ async function go(why){if(busy)return;if(off()||lastOnline||window.__noGL||(wind
  setTimeout(()=>{try{location.reload();}catch(e){}},30);}
 RS.go=go;
 
+/* ---- the cover (Overseer 16:44): the page starts with the loading screen on top and everything else hidden ('tops-pre', built into the
+   head); it lifts only when the screen the boot lands on is up, two frames after, so the old title / splash never paint ---- */
+const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;const go=()=>{d.classList.remove('tops-pre');try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{const l=ld();if(l)l.classList.add('gone');}}catch(e){}};
+ try{requestAnimationFrame(()=>requestAnimationFrame(go));setTimeout(()=>{if(d.classList.contains('tops-pre'))go();},300);/* hidden tab: no frames */}catch(e){go();}};
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
 if(flag&&Date.now()-flag.t<120000){
@@ -76,7 +80,7 @@ if(flag&&Date.now()-flag.t<120000){
     keeps following the real steps instead of jumping to 100 % */
  let done=false;window.TOPS_LDHOLD=true;/* game4 skips its own #loading.gone while this is set (rig in, 9 s fallback) */
  const finish=(why)=>{if(done)return;done=true;window.TOPS_LDHOLD=false;const ms=Date.now()-flag.t;window.TOPS_RESET_MS=ms;window.TOPS_RESET_N=+sessionStorage.getItem(NK)||1;RS.last={ms,why,saveMs:flag.saveMs};
-  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{const l=ld();if(l)l.classList.add('gone');}}catch(e){}};
+  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}lift();};
  let hubAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
   try{showHub();}catch(e){}try{if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}bar(.8,'Opening the hub…');return true;};
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
@@ -93,6 +97,17 @@ if(flag&&Date.now()-flag.t<120000){
  if(typeof netAdopt==='function'){const na=netAdopt;netAdopt=function(cloud){try{if(Date.now()-tb<60000&&cloud&&(cloud.sv||0)<(flag.sv||0)){try{window.TOPS_LOG&&TOPS_LOG.log('reset_keep_local',{cloud:cloud.sv||0,local:flag.sv||0});}catch(e){}RS.keptLocal=(RS.keptLocal|0)+1;try{cloudPush(true);}catch(e){}return;}}catch(e){}return na.apply(this,arguments);};}
  /* sound: the reload drops the audio unlock; the first tap on the hub brings it back, as Continue on the title does */
  const un=()=>{try{audioInit();}catch(e){}['pointerup','touchend','keydown'].forEach(t=>document.removeEventListener(t,un,true));};['pointerup','touchend','keydown'].forEach(t=>document.addEventListener(t,un,true));
+}else if(document.documentElement.classList.contains('tops-pre')){
+ /* a launch (cold, or a normal reload): the boot ends on login (no session / no network) or on the title after the cloud pull (signed in).
+    Hold the loading screen until that call has run and the rig is in (the game's own rule), so the player never sees the title drawn
+    before the cloud save landed or the old layout under the new one. 9 s without the rig still lifts on the boot's end (as the game's own
+    fallback did); 15 s lifts regardless (in the head). */
+ const t0=window.TOPS_PRE_T||Date.now();let end=0;const mark=()=>{if(!end)end=Date.now();};
+ const st=showTitle;showTitle=function(){mark();return st.apply(this,arguments);};const sl=showLogin;showLogin=function(){mark();return sl.apply(this,arguments);};
+ bar(.3,'Setting up the oche…');
+ const tick=setInterval(()=>{try{const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();bar(end?(rig?.9:.75):(rig?.6:.4));
+   if(!document.documentElement.classList.contains('tops-pre')){clearInterval(tick);return;}/* the 15 s cap already lifted it */
+   if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }
 })();
 </script>
