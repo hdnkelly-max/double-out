@@ -3213,7 +3213,7 @@ window.TOPS_matchTeardown=matchTeardown;
  {const bm=beginMatch;beginMatch=function(){const r=bm.apply(this,arguments);try{sync();}catch(e){}return r;};const sh=showHub;showHub=function(){const r=sh.apply(this,arguments);try{sync();menu();}catch(e){}return r;};}
  /* ENG-10 (Overseer 06:27): the same three toggles in whichever hub menu is showing: the old #hubPop (rebrand off) and the rebrand's sheet
     (#rbMenuSheet, made on each tap of its Menu button). Same localStorage key, nothing cleared automatically (the switches are #20 data). */
- const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)'],['mute','Test: no game audio (next match)']];
+ const Q20B=[['nowalk','Test: no walk-on'],['nofx','Test: no effects'],['split','Test: frame split (from next launch)'],['mute','Test: no game audio (next match)'],['noreset','Test: no fresh start between matches']];
  const rows=(host,rb)=>{if(!host)return;if(rb&&!host.querySelector('.q20-sep')){const sp=document.createElement('div');sp.className='q20-sep';sp.setAttribute('aria-hidden','true');sp.style.cssText='height:1px;margin:2px 4px;background:var(--line,#343a3e)';host.appendChild(sp);}
   Q20B.forEach(([k,n])=>{let b=host.querySelector('[data-q20="'+k+'"]');
    if(!b){b=document.createElement('button');b.type='button';b.setAttribute('data-q20',k);if(!rb)b.id='q20b_'+k;if(rb)b.style.cssText='min-height:44px;font-size:13px;font-weight:600;color:var(--ink3,#a0a6a3);justify-content:flex-start;text-align:left';

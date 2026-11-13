@@ -54,10 +54,11 @@ setInterval(()=>{if(S&&S.crownUntil&&performance.now()<S.crownUntil&&S.hr>80)S.h
 let relOff=false;const LOGGED=new WeakSet();
 function mdLog(row,rel){try{if(!window.TOPS_LOG)return;TOPS_LOG.log('match_dart',{lg:row.leg,d:row.dart,sb:row.score_before,pf:row.perfect?1:0,gp:rel.gp,gr:rel.gr,gpl:rel.gpl,pm:rel.pm,ra:rel.ra,lag:rel.lag,a:[row.aim_x,row.aim_y],k:[row.lock_x,row.lock_y],l:[row.land_x,row.land_y],s:[rel.sx,rel.sy],g:[rel.gx,rel.gy],r:[rel.rx,rel.ry]});LOGGED.add(row);}catch(e){}}/* x,y pairs: the recorder keeps at most 20 keys per event */const relMissing=e=>!!e&&(e.code==='PGRST204'||e.code==='42703')&&/\brel\b/.test(String(e.message||''));
 window.TOPS_DARTS_REL=window.TOPS_DARTS_REL!==false;
-function flush(){if(!Q.length||!window.NET||!NET.user||!NET.sb)return;const rows=Q.splice(0,Q.length);NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(!error)return;
+function flush(){if(!Q.length||!window.NET||!NET.user||!NET.sb)return Promise.resolve(true);const rows=Q.splice(0,Q.length);return NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(!error)return true;
  if(relMissing(error)&&rows.some(r=>r.rel)){relOff=true;try{window.TOPS_LOG&&TOPS_LOG.log('dart_rel_off',{code:error.code||null,n:rows.length});}catch(x){}
-  rows.forEach(r=>{if(r.rel&&!LOGGED.has(r))mdLog(r,r.rel);delete r.rel;});/* darts that skipped the recorder because the row would carry them */NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(error)console.warn('dartlog',error.message);});return;}
- console.warn('dartlog',error.message);});}
+  rows.forEach(r=>{if(r.rel&&!LOGGED.has(r))mdLog(r,r.rel);delete r.rel;});/* darts that skipped the recorder because the row would carry them */return NET.sb.from('tops_darts').insert(rows).then(({error})=>{if(error)console.warn('dartlog',error.message);return !error;});}
+ console.warn('dartlog',error.message);return false;},()=>false);}
+/* ENG-RESET: send what's queued now and say whether it landed */window.TOPS_DARTS_FLUSH=()=>{clearTimeout(t);try{return flush();}catch(e){return Promise.resolve(false);}};
 const _lf=landFrom;landFrom=function(lock,tp,dt){const l=_lf.apply(this,arguments);try{if(S&&!S.done&&S.cur===0&&!S.p[0].ai&&window.NET&&NET.user){const h=scoreAt(l.x,l.y);const sh=window.TOPS_SW?TOPS_SW.curSway():null;
  Q.push({ver:window.TOPS_BUILD||'',mode:S.online?'online':(S.practice?'practice':(isRun&&isRun()?'run':ui.mode)),tier:ui.tier|0,opp:(S.p[1]&&S.p[1].name)||null,leg:(function(){try{return legsPlayed();}catch(e){return null;}})(),dart:S.dart,score_before:S.p[0].score,
   aim_x:+S.aim.x.toFixed(1),aim_y:+S.aim.y.toFixed(1),lock_x:+lock.x.toFixed(1),lock_y:+lock.y.toFixed(1),land_x:+l.x.toFixed(1),land_y:+l.y.toFixed(1),dt_ms:+dt.toFixed(1),perfect:Math.abs(dt)<=tp.P,ring_mm:+ringR(dt,tp).toFixed(1),s0:+tp.s0.toFixed(2),sway_mm:+tp.A.toFixed(1),window_ms:+tp.P.toFixed(1),
