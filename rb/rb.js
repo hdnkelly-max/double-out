@@ -29,17 +29,15 @@
   // Tonight hero (roll-out 1, Hayden 09:05): the tier's generated scene, the opponent seen from behind (no face, so it fits any named
   // opponent), a woman's version for women opponents. The 3D figure stays for the walk-on and the match.
   const FEM_NAMES = ['lisa tane', 'pania walters', 'maia tuhoe', 'ngaire pou'];   // women's names the game draws on men's models (game4 NAMED_VAR noBeard)
-  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; const L = oppLookFor(n); if (L && L.sex) return L.sex === 'f';
-    if (typeof CHAR_F !== 'undefined' && typeof charKey === 'function') return !!CHAR_F[charKey(L, nm)];
-    return /^(Shazza|Bev|Kiri|Mere|Aroha|Fallon|Tash|Jess|Sharon|Kim|Tina|Deb|Marg|Liz|Megan)/i.test(nm); } catch (e) { return false; } };   // same name rule as game4 charKey()
+  const FEM_MODELS = ['megan', 'elizabeth'];   // game4 CHAR_F: the women's character models
+  const isFemModel = (L, nm) => { try { return !!(typeof V !== 'undefined' && V.charKey && FEM_MODELS.includes(V.charKey(L, nm))); } catch (e) { return false; } };   // the game's own charKey(), not a copy of its rule
+  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; return isFemModel(oppLookFor(n), nm); } catch (e) { return false; } };
   const oppHeroBg = (n, tier) => { const t = Math.max(0, Math.min(6, +tier || 0)), scene = `url(${IMG}venue_t${t}.jpg) 60% 40%/cover no-repeat`;
     return `url(${IMG}tn_t${t}${n && oppFem(n) ? 'f' : ''}.jpg) 74% 38%/cover no-repeat,${scene}`; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
-  const meHero = tier => { try { return V.heroShot && V.heroShot(save.look, save.name || 'You', tier, save.flight); } catch (e) { return ''; } };
   const sceneImg = tier => `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`;
-  const heroBg = (tier, pos) => { const h = meHero(tier); return h ? `url(${h}) ${pos || '82% 100%'}/auto 100% no-repeat,url(${sceneImg(tier)}) 50% 40%/cover no-repeat` : `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; };
   /* ---------- components (same as the v9.1 prototype) ---------- */
   const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
   const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
@@ -126,6 +124,13 @@
   const DART_PHOTO = { assassin: 1, supergrip: 1, razor: 1, vapor8: 1, zen: 1, asp: 1, littler: 1 };   // generated product shots; the other darts use the game's own render
   function dartImg(b, kind) { if (DART_PHOTO[b.id]) return `${IMG}${kind}_${b.id}.jpg`; try { return V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { return ''; } }
   function nextDart(lv) { const G = window.TOPS_GATE; if (!G) return null; let best = null; BARRELS.forEach(b => { const n = G.LV[b.id]; if (n && !G.EXCL[b.id] && n > lv && !(save.owned || []).includes(b.id) && !(save.v12ent || []).includes(b.id) && (!best || n < best.lv)) best = { lv: n, b }; }); return best; }
+  // Locker hero (roll-out 2, Hayden 09:05): a generated locker room with the player from behind, wearing his real shirt colour (recoloured in
+  // code), so it always matches the Wearing tile; a woman's version when the player's character is a woman. Not a portrait: the face and hair
+  // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
+  const meFem = () => isFemModel(save.look || {}, save.name || '');
+  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
     const seg = `<div class="rb-seg" role="tablist">${[['load', 'Loadout'], ['stats', 'Stats'], ['cards', 'Cards'], ['troph', 'Trophies']].map(([a, b]) => `<button type="button" role="tab" aria-selected="${lk === a}" data-lk="${a}">${b}</button>`).join('')}</div>`;
@@ -133,7 +138,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') return seg + trophies(M);
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" style="background:${heroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -216,26 +221,29 @@
   /* ---------- Result (EXP-WIN, Hayden 08:38 + 09:05: generated scenes instead of our 3D models, broadcast type) ---------- */
   const WIMG = t => `${IMG}w_win_t${Math.max(0, Math.min(6, t | 0))}.jpg`;
   const shirtCache = {};
-  // the generated light-grey shirt, recoloured to the unlocked colour through the mask made from the same image
-  // a shirt reward in its real colour: the generated light-grey shirt recoloured through its mask, once per colour. Returns the image when it's
-  // ready, else '' (the card stays dark) and calls done(url) when it is. Any failure (image, mask, canvas) gives the neutral trophy image, never
-  // a grey or wrong-colour shirt. At most 4 finished colours kept (ChatGPT P2/P1 13 Nov).
-  function shirtImg(hex, done) {
-    const e = shirtCache[hex]; if (typeof e === 'string') return e;
+  // a generated image with a light-grey shirt, recoloured to a shirt colour through the alpha mask cut from the same image (base.jpg +
+  // base_mask.png), once per base + colour. Returns the image when it's ready, else '' and calls done(url) when it is. Any failure (image,
+  // mask, canvas, bad colour) gives `fallback` through the same callback, never a grey or wrong-colour shirt. At most 6 finished images kept.
+  // Very dark and very light colours are clamped so the fabric keeps its folds (ChatGPT P2, Locker review 13 Nov).
+  function recolour(base, hex, fallback, done) {
+    const key = base + hex, e = shirtCache[key]; if (typeof e === 'string') return e;
     if (Array.isArray(e)) { if (done) e.push(done); return ''; }
-    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 4) delete shirtCache[ks[0]];
-    const wait = shirtCache[hex] = done ? [done] : [];
-    const finish = url => { if (shirtCache[hex] !== wait) return; shirtCache[hex] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
-    const fail = () => finish(`${IMG}w_rw_trophy.jpg`);
+    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 6) delete shirtCache[ks[0]];
+    const wait = shirtCache[key] = done ? [done] : [];
+    const finish = url => { if (shirtCache[key] !== wait) return; shirtCache[key] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
+    const fail = () => finish(fallback);
     const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; let cv = null; try {
       const w = A.naturalWidth, h = A.naturalHeight; if (!w || !h || !/^#[0-9a-f]{6}$/i.test(hex)) return fail();
       cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
-      const r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      let r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      { const tl = 0.3 * r0 + 0.59 * g0 + 0.11 * b0; if (tl < 44) { const k = 44 - tl; r0 += k; g0 += k; b0 += k; } else if (tl > 205) { const k = 205 / tl; r0 *= k; g0 *= k; b0 *= k; } }
       for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
       g.putImageData(im, 0, 0); const url = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; finish(url); } catch (x) { if (cv) cv.width = cv.height = 0; fail(); } };
-    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`;
+    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}${base}.jpg`; Mk.src = `${IMG}${base}_mask.png`;
     return '';
   }
+  // a shirt reward in its real colour (EXP-WIN): pending = '' (the card stays dark), failure = the neutral trophy image
+  const shirtImg = (hex, done) => recolour('w_rw_shirt', hex, `${IMG}w_rw_trophy.jpg`, done);
   // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
   // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
   function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
@@ -364,5 +372,5 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
 })();
