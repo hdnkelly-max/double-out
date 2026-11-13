@@ -20,13 +20,24 @@
     up: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l6 8H6z"/></svg>'
   };
   // opponents with a generated photo (one consistent set); everyone else gets the tier's empty venue and their face in the head-to-head
-  const OPP_PHOTO = { 'Big Mal': 'opp_bigmal.jpg' };
+  /* Director #41: the generated Big Mal photo was a different man from the 3D Big Mal he plays; no opponent photos now. The Tonight hero is the opponent's own
+     render (V.heroShot of his look: named build + beard come with his name) over the tier's empty venue, and his face is his own portrait. A render that
+     needs the hair library waits for it (never a beardless Big Mal); until then, the empty venue. */
+  const OPP_PHOTO = {};
+  const hairReady = () => { try { return Array.isArray(((V._qa && V._qa.gfx && V._qa.gfx()) || {}).hair); } catch (e) { return false; } };
+  const oppLookRb = n => { const L = oppLookFor(n); try { if (V.hairFor && V.hairFor(L, n.oppName)) { if (hairReady()) return Object.assign({}, L, { _rbHair: 1 }); window.__avPending = 1; return null; } } catch (e) {} return L; };   // the game caches renders by look, not by whether the hair library was in: a look that needs it gets its own key once it's in (null = not yet)
+  // Tonight hero (roll-out 1, Hayden 09:05): the tier's generated scene, the opponent seen from behind (no face, so it fits any named
+  // opponent), a woman's version for women opponents. The 3D figure stays for the walk-on and the match.
+  const FEM_NAMES = ['lisa tane', 'pania walters', 'maia tuhoe', 'ngaire pou'];   // women's names the game draws on men's models (game4 NAMED_VAR noBeard)
+  const FEM_MODELS = ['megan', 'elizabeth'];   // game4 CHAR_F: the women's character models
+  const isFemModel = (L, nm) => { try { return !!(typeof V !== 'undefined' && V.charKey && FEM_MODELS.includes(V.charKey(L, nm))); } catch (e) { return false; } };   // the game's own charKey(), not a copy of its rule
+  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; return isFemModel(oppLookFor(n), nm); } catch (e) { return false; } };
+  const oppHeroBg = (n, tier) => { const t = Math.max(0, Math.min(6, +tier || 0)), scene = `url(${IMG}venue_t${t}.jpg) 60% 40%/cover no-repeat`;
+    return `url(${IMG}tn_t${t}${n && oppFem(n) ? 'f' : ''}.jpg) 74% 38%/cover no-repeat,${scene}`; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
-  const meHero = tier => { try { return V.heroShot && V.heroShot(save.look, save.name || 'You', tier, save.flight); } catch (e) { return ''; } };
   const sceneImg = tier => `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`;
-  const heroBg = (tier, pos) => { const h = meHero(tier); return h ? `url(${h}) ${pos || '82% 100%'}/auto 100% no-repeat,url(${sceneImg(tier)}) 50% 40%/cover no-repeat` : `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; };
   /* ---------- components (same as the v9.1 prototype) ---------- */
   const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
   const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
@@ -61,9 +72,11 @@
   }
   function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
   function close() { clearInterval(armT); const el = $id('rbApp'); if (el) el.hidden = true; }
-  function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; try { hubTab(OLD[t] || 'play'); } catch (e) { console.warn('rb old tab', e); } }
-  function render() {
-    { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); }
+  /* live bug (05:45): Setup & gear showed an empty old Store (no dart, no list): switching the hub tab alone doesn't draw it. Press the game's own
+     hub tab button, which switches and draws (Store → showShop, Player → showPlayer, Practice → renderPractice); Setup & gear lands on the Setup tab */
+  function toOld(t) { close(); const b = $id('rbBack'); if (b) b.hidden = false; const k = OLD[t] || 'play'; try { const bt = document.querySelector(`#hubTabs [data-t="${k}"]`); if (bt) bt.click(); else hubTab(k); if (t === 'kit') showShop('setup', true); } catch (e) { console.warn('rb old tab', e); try { hubTab(k); } catch (e2) {} } }
+  function render(keepSheet) {
+    if (!keepSheet) { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); }   /* #39: the game's soft portrait refresh keeps an open ☰ sheet */
     const M = model(); if (!M) { close(); return; }
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
@@ -75,14 +88,14 @@
   /* ---------- Tonight (live data) ---------- */
   function tonight(M) {
     const { c, t, sn, n, rows, yi } = M;
-    const oppPt = (() => { try { return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })();
+    const oppPt = (() => { try { const L = n.oppName2 ? oppLookFor(n) : oppLookRb(n); return L ? V.portrait(L, n.oppName2 || n.oppName, c.tier, 0) : ''; } catch (e) { return ''; } })();
     const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
     const wk = sn ? Math.min(sn.week, sn.len) : 1, kick = sn && !sn.ko ? `${t.n} · week ${wk} of ${sn.len}` : sn && sn.ko ? `${t.n} · round ${wk} of ${sn.len}` : t.n;
     const cost = (c.run || n.intro) ? { fee: 0, trav: 0 } : { fee: FIXPAY[c.tier][2], trav: c.travelCredit > 0 ? 0 : ((typeof TRAVEL !== 'undefined' && TRAVEL[c.tier]) || 0) },   /* same as career3 fixtureCost */ tot = cost.fee + cost.trav, short = tot > c.bank;
     const fp = FIXPAY[c.tier], winTxt = n.intro ? 'a place in the team' : sn && sn.ko ? 'the next round' : `+2 pts · ${money(fp[0] + fp[3])}`;
-    const hero = `<div class="rb-hero" style="height:262px"><div class="rb-im" style="background-image:${OPP_PHOTO[n.oppName] ? `url(${IMG}${OPP_PHOTO[n.oppName]})` : `url(${IMG}venue_t${c.tier}.jpg)`};background-position:${OPP_PHOTO[n.oppName] ? '72% 28%' : '60% 40%'}"></div><div class="rb-sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 36%,rgba(10,12,14,.7) 64%,rgba(10,12,14,.96) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0,rgba(10,12,14,0) 48%)"></div><div class="rb-tx"><span class="rb-kick">${esc(kick)}</span><span class="rb-big" style="font-size:40px">vs ${esc(n.oppName)}</span><span class="rb-win">Win: ${esc(winTxt)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:262px"><div class="rb-im" style="background:${oppHeroBg(n, c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 36%,rgba(10,12,14,.7) 64%,rgba(10,12,14,.96) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0,rgba(10,12,14,0) 48%)"></div><div class="rb-tx"><span class="rb-kick">${esc(kick)}</span><span class="rb-big" style="font-size:40px">vs ${esc(n.oppName)}</span><span class="rb-win">Win: ${esc(winTxt)}</span></div></div>`;
     const me = M.form, op = n.oppAvg, tot2 = (me || op) + op;
-    const h2h = `<div class="rb-line">${me != null ? `You ${me} (last ${(c.tierAvgs || []).length})` : (n.intro ? 'Your fill-in night' : 'Your first average comes tonight')} · Him ${op} · Best of ${n.legs}</div>`;
+    const h2h = `<div class="rb-line">${me != null ? `You ${me} (last ${(c.tierAvgs || []).length})` : (n.intro ? 'Your fill-in night' : 'Your first average comes tonight')} · <span style="white-space:nowrap">${n.oppName2 ? 'Them' : esc(String(n.oppName || '').split(' ')[0])} · avg ${op}</span> · Best of ${n.legs}</div>`;
     const cta = short
       ? `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.cash}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${money(tot - c.bank)} short of the ${money(tot)} entry</span><div class="rb-chips">${chip('Entry ' + money(tot))}${chip('You have ' + money(c.bank), 'l')}</div></div></div><div class="rb-bar"><i style="width:${Math.min(100, c.bank / tot * 100)}%"></i></div></div><button class="rb-primary" type="button" id="rbMoney"><b>Play the money match</b><small>Back room · best of 1</small></button>`
       : `<button class="rb-primary" type="button" id="rbGo"><b>Walk on</b><small>${tot ? `Entry ${money(tot)} · leaves ${money(c.bank - tot)}` : 'Free entry'}</small></button>`;
@@ -111,6 +124,13 @@
   const DART_PHOTO = { assassin: 1, supergrip: 1, razor: 1, vapor8: 1, zen: 1, asp: 1, littler: 1 };   // generated product shots; the other darts use the game's own render
   function dartImg(b, kind) { if (DART_PHOTO[b.id]) return `${IMG}${kind}_${b.id}.jpg`; try { return V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { return ''; } }
   function nextDart(lv) { const G = window.TOPS_GATE; if (!G) return null; let best = null; BARRELS.forEach(b => { const n = G.LV[b.id]; if (n && !G.EXCL[b.id] && n > lv && !(save.owned || []).includes(b.id) && !(save.v12ent || []).includes(b.id) && (!best || n < best.lv)) best = { lv: n, b }; }); return best; }
+  // Locker hero (roll-out 2, Hayden 09:05): a generated locker room with the player from behind, wearing his real shirt colour (recoloured in
+  // code), so it always matches the Wearing tile; a woman's version when the player's character is a woman. Not a portrait: the face and hair
+  // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
+  const meFem = () => isFemModel(save.look || {}, save.name || '');
+  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
     const seg = `<div class="rb-seg" role="tablist">${[['load', 'Loadout'], ['stats', 'Stats'], ['cards', 'Cards'], ['troph', 'Trophies']].map(([a, b]) => `<button type="button" role="tab" aria-selected="${lk === a}" data-lk="${a}">${b}</button>`).join('')}</div>`;
@@ -118,7 +138,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') return seg + trophies(M);
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" style="background:${heroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -198,47 +218,90 @@
      this screen sits over it, reads the match and the save, and its buttons press the overlay's own buttons, so the after-match chain is unchanged. ---------- */
   let pre0 = null, resOn = false;
   const xpTotal = v => { let t = v.xp; for (let L = 1; L < v.lv; L++) t += C3.lvNeed(L); return t; };
+  /* ---------- Result (EXP-WIN, Hayden 08:38 + 09:05: generated scenes instead of our 3D models, broadcast type) ---------- */
+  const WIMG = t => `${IMG}w_win_t${Math.max(0, Math.min(6, t | 0))}.jpg`;
+  const shirtCache = {};
+  // a generated image with a light-grey shirt, recoloured to a shirt colour through the alpha mask cut from the same image (base.jpg +
+  // base_mask.png), once per base + colour. Returns the image when it's ready, else '' and calls done(url) when it is. Any failure (image,
+  // mask, canvas, bad colour) gives `fallback` through the same callback, never a grey or wrong-colour shirt. At most 6 finished images kept.
+  // Very dark and very light colours are clamped so the fabric keeps its folds (ChatGPT P2, Locker review 13 Nov).
+  function recolour(base, hex, fallback, done) {
+    const key = base + hex, e = shirtCache[key]; if (typeof e === 'string') return e;
+    if (Array.isArray(e)) { if (done) e.push(done); return ''; }
+    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 6) delete shirtCache[ks[0]];
+    const wait = shirtCache[key] = done ? [done] : [];
+    const finish = url => { if (shirtCache[key] !== wait) return; shirtCache[key] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
+    const fail = () => finish(fallback);
+    const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; let cv = null; try {
+      const w = A.naturalWidth, h = A.naturalHeight; if (!w || !h || !/^#[0-9a-f]{6}$/i.test(hex)) return fail();
+      cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
+      let r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      { const tl = 0.3 * r0 + 0.59 * g0 + 0.11 * b0; if (tl < 44) { const k = 44 - tl; r0 += k; g0 += k; b0 += k; } else if (tl > 205) { const k = 205 / tl; r0 *= k; g0 *= k; b0 *= k; } }
+      for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
+      g.putImageData(im, 0, 0); const url = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; finish(url); } catch (x) { if (cv) cv.width = cv.height = 0; fail(); } };
+    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}${base}.jpg`; Mk.src = `${IMG}${base}_mask.png`;
+    return '';
+  }
+  // a shirt reward in its real colour (EXP-WIN): pending = '' (the card stays dark), failure = the neutral trophy image
+  const shirtImg = (hex, done) => recolour('w_rw_shirt', hex, `${IMG}w_rw_trophy.jpg`, done);
+  // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
+  // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
+  function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
+    return { rs, pick: rs.filter(x => x[1].k === 'shirt').pop() || rs.filter(x => x[1].big).pop() || rs[rs.length - 1] || null }; }
   function result(M) {
     const { c, v } = M, me = S.p[0], op = S.p[1] || {}, won = !!S.won, money0 = !!(S.local || S.after === 'money' || S.intro), avg = x => x && x.darts ? +(x.pts / x.darts * 3).toFixed(1) : 0;
     const a = avg(me), b = avg(op), cash = c.bank - pre0.bank, xp = Math.max(0, xpTotal(v) - pre0.xp), up = pre0 && v.lv > pre0.lv;
-    const ov = $id('c3rw'), unl = ov && ov.querySelector('#c3rwUnl b'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
-    const head = `<div class="rb-hero" style="height:250px"><div class="rb-im" style="background:${heroBg(c.tier, '18% 100%')}"></div><div class="rb-sh2" style="background:linear-gradient(270deg,rgba(10,12,14,.92) 0,rgba(10,12,14,.4) 45%,rgba(10,12,14,0) 70%)"></div><div class="rb-lockup"><small style="color:${won ? 'var(--ink)' : 'var(--ink2)'}">${won ? 'Won' : 'Lost'}</small><b class="rb-num">${me.legs || 0}–${op.legs || 0}</b><span>vs ${esc(op.disp || op.name || '')}</span></div></div>`;
-    const mePt = (() => { try { return V.portrait(save.look, save.name, c.tier, 0); } catch (e) { return ''; } })();
-    const opPt = (pre0 && pre0.opPt) || (() => { try { return op.look ? V.portrait(op.look, op.name, c.tier, 0) : ''; } catch (e) { return ''; } })();
-    const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) + '%' : '–';
-    const h2h = `<div class="rb-line">You ${a || '–'} · Him ${b || '–'} · Checkout ${co}${me.t180 ? ' · ' + me.t180 + ' × 180' : ''}${me.hf ? ' · High out ' + me.hf : ''}</div>`;
-    const rw = `<div class="rb-card">${sh(won ? 'Rewards' : 'Match summary')}<div style="display:flex;align-items:center;gap:14px">${up ? '' : `<div class="rb-ring">${ring(M.pct, v.lv)}</div>`}<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="rb-big rb-num" id="rbRCash" style="font-size:32px;color:${cash > 0 ? 'var(--good)' : 'var(--ink3)'}">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</span><span class="rb-t2 rb-num" id="rbRXp">+${xp} XP</span></div><span class="rb-sub">${M.need - v.xp} XP to level ${v.lv + 1}</span>${extra ? `<div class="rb-chips">${chip('+' + extra + ' achievement' + (extra > 1 ? 's' : '') + ' and contracts', 'g')}</div>` : ''}</div></div></div>`;
+    const ov = $id('c3rw'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
+    const t = TIERS[c.tier] || {}, kick = S.intro ? 'Your fill-in night' : money0 ? (S.local ? 'Local night' : 'Money match · back room') : `${t.n || ''}${M.rows && M.yi >= 0 ? ` · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}` : ''}`;
+    const heroIm = !won && c.tier === 1 ? `${IMG}w_loss_t1.jpg` : WIMG(c.tier);
+    const head = `<div class="rbw-hero${won ? '' : ' rbw-lost'}${!won && c.tier !== 1 ? ' rbw-dim' : ''}"><div class="rb-im" style="background-image:url(${heroIm})"></div><div class="rbw-lt"><span class="rbw-kick">${esc(kick)}</span><span class="rbw-res">${won ? 'Won' : 'Lost'}</span><div class="rbw-score"><b class="rb-num rb-lockup-n">${me.legs || 0}–${op.legs || 0}</b><span>vs<em>${esc(op.disp || op.name || '')}</em></span></div></div></div>`;
+    const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) : null;
+    const third = me.hf ? ['High out', me.hf] : me.t180 ? ['180s', me.t180] : ['Best visit', me.bestVisit || '–'];
+    const best = !won ? '' : a && a > b ? 'avg' : co != null && co >= 40 ? 'co' : '';
+    const tile = (k, l, val) => `<div class="rbw-t${best === k ? ' rbw-best' : ''}"><small>${l}${best === k ? ' <i>Best</i>' : ''}</small><b class="rb-num">${val}</b></div>`;
+    const tiles = `<div class="rbw-tiles">${tile('avg', 'Average', a || '–')}${tile('co', 'Checkout', co != null ? co + '%' : '–')}${tile('x', third[0], third[1])}</div>`;
+    const need = M.need, pNow = Math.min(1, v.xp / need), pPrev = up ? 0 : Math.max(0, Math.min(pNow, (v.xp - xp) / need));
+    const cashLab = won || cash <= 0 ? 'Prize' : 'Appearance money';
+    const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
+    // unlock cards: the level reward big (image for its kind), the next dart and achievements quieter
+    let main = '';
+    if (up) { const { rs, pick } = pickUnlock(pre0.lv, v.lv);
+      if (pick) { const [L, r] = pick, more = rs.length - 1; const img = r.k === 'shirt' ? shirtImg(r.v, u => { const e = $id('rbRUnl'); if (e) e.style.backgroundImage = `url(${u})`; }) : r.k === 'flight' ? `${IMG}w_rw_darts.jpg` : r.k === 'cash' ? `${IMG}w_rw_cash.jpg` : `${IMG}w_rw_trophy.jpg`;
+        main = `<div class="rbw-uc${won ? ' rbw-lv' : ''}" id="rbRUnl" style="background-image:${img ? `url(${img})` : 'none'}"><div class="rbw-x"><small>Level ${L} unlocked${more > 0 ? ` · +${more} more` : ''}</small><b>${esc(r.n.replace(/^Title: /, ''))}</b><span>${r.k === 'shirt' ? 'Wear it from your next match' : r.k === 'flight' ? 'Fit them in Shop · Setup & gear' : r.k === 'title' ? 'Your new title' : 'Added to your bank'}</span></div></div>`; } }
     let want = '';
     const nb = BARRELS.filter(x => { const d = dState(x); return !d.own && !d.g; }).sort((x, y) => x.price - y.price)[0];
-    if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rb-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default"><span style="display:flex;align-items:center;gap:12px"><div class="rb-slot rb-dart rb-r8" style="width:110px;flex:0 0 110px"><div class="rb-im" style="background-image:url(${dartImg(nb, 'ds')})"></div></div><span class="rb-tx"><small>Next dart</small><span class="rb-t2">${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))} · ${left ? money(left) + ' to go' : 'you can buy it'}</span></span></span><div class="rb-bar"><i style="width:${Math.min(100, c.bank / cost * 100)}%"></i></div></div>`; }
+    if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_darts.jpg)"><div class="rbw-x"><small class="rbw-gk">Next dart</small><b>${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))}</b><span>${left ? money(left) + ' to go' : 'You can buy it now'}</span></div></div>`; }
+    const ach = won && extra ? `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_trophy.jpg)"><div class="rbw-x"><small class="rbw-gk">${extra} achievement${extra > 1 ? 's' : ''} and contracts</small><b>Nice work</b><span>See them in Locker · Trophies</span></div></div>` : '';
     let tbl = '';
-    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rb-row" style="cursor:default"><span class="rb-tx"><small>Season</small><span class="rb-t2">Now ${ord(M.yi + 1)}${M.yi <= 1 ? ' · top two go up' : ' · ' + (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</span></span></div>`;
-    const act = `<div class="rb-pin" style="display:flex;flex-direction:column;gap:8px;padding-bottom:4px"><button class="rb-primary" type="button" id="rbRGo"><b>${esc(go ? go.textContent : 'Continue')}</b></button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}<button class="rb-link" type="button" id="rbRDet" style="align-self:center;color:var(--ink2)">Full match stats ›</button></div>`;
-    // the milestone moment: a level-up gets its own card above the rewards (v8 note: real milestones get a stronger moment)
-    const lvl = up ? `<div class="rb-card rb-lvup" style="flex-direction:row;align-items:center;gap:16px;border-color:#6a2226;background:linear-gradient(90deg,#2a1416,#1a1e21 70%)"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><small class="rb-kick" style="color:#f0a3a7">Level up</small><span class="rb-big" style="font-size:34px">Level ${v.lv}</span>${unl ? `<span class="rb-sub">${esc(unl.textContent)} unlocked</span>` : ''}</div></div>` : '';
-    return head + lvl + h2h + rw + want + tbl + act;
+    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
+    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    return head + tiles + rw + main + want + ach + tbl + act;
   }
   let resMO = null, bodyMO = null;
   // any game layer showing at or above our level (sheets 55-61, pack opening, messages) other than the reward overlay itself
   function blocker() { for (const n of document.body.children) { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) continue; const cs = getComputedStyle(n); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.pointerEvents !== 'none' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100 && n.offsetHeight > 200) return true; /* a sheet or screen, not a toast or banner */ } return false; }
   function showResult() {
     if (resMO) resMO.disconnect(); if (bodyMO) bodyMO.disconnect(); resMO = bodyMO = null;
+    if (pre0 && S && S.p && $id('c3rw') && blocker()) waitBack();
     if (!pre0 || !S || !S.p || !$id('c3rw') || blocker()) { if (window.TOPS_RB_DEBUG) console.log('rb result skipped', JSON.stringify({ pre0: !!pre0, S: !!(S && S.p), ov: !!$id('c3rw'), bl: blocker() && [...document.body.children].filter(n => { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) return false; const cs = getComputedStyle(n); return cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100; }).map(n => n.id || n.className) })); return; }   // nothing recorded for this match, or a game sheet is up: the game's own overlay stays as it is
     const M = model(); if (!M) return;
     let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); return; }
-    const el = ensure(); resOn = true; el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
+    const el = ensure(); resOn = true; preOff(); el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`;
     // press the overlay's own button; if it isn't there or can't be pressed, step aside and leave the game's overlay in charge
     const press = id => { const b = $id(id); endResult(); if (b && !b.disabled && b.offsetParent !== null) b.click(); };
     $id('rbRGo').onclick = () => press('c3rwGo');
     const k = $id('rbRKeep'); if (k) k.onclick = () => press('c3rwKeep');
-    $id('rbRDet').onclick = () => press('c3rwDet');
+    /* Director 05 #8: no "Full match stats" link: it closed the reward and showed the old Match result screen; the Result already carries the averages, checkout, 180s / best visit and high out */
     const ov = $id('c3rw');
     // one observer each, always disconnected in endResult: the overlay closing by any other route, or anything new opening on top of the page, hands control back to the game
     resMO = new MutationObserver(() => { if (ov.hidden || !document.body.contains(ov)) endResult(); }); resMO.observe(ov, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
-    bodyMO = new MutationObserver(() => { if (blocker()) endResult(); }); bodyMO.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });   // a sheet appended or an existing one shown
+    bodyMO = new MutationObserver(() => { if (blocker()) { const keep = pre0; endResult(); pre0 = keep; waitBack(); } }); bodyMO.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });   // a sheet appended or an existing one shown
   }
+  /* Q&D R1-1: a game sheet (the card pack) opened over the Result; when it closes and the reward overlay is still up, the Result comes back */
+  let backMO = null;
+  function waitBack() { if (backMO) backMO.disconnect(); backMO = new MutationObserver(() => { const ov = $id('c3rw'); if (!ov || ov.hidden || !document.body.contains(ov) || !pre0) { backMO.disconnect(); backMO = null; return; } if (!blocker()) { backMO.disconnect(); backMO = null; showResult(); } }); backMO.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] }); }
   function endResult() { if (window.TOPS_RB_DEBUG && resOn) console.log('rb endResult', new Error().stack.split('\n').slice(2, 5).join(' | ')); if (resMO) { resMO.disconnect(); resMO = null; } if (bodyMO) { bodyMO.disconnect(); bodyMO = null; } const was = resOn; resOn = false; pre0 = was ? null : pre0; const el = $id('rbApp'); if (el && was) { el.classList.remove('rb-resmode'); el.hidden = true; } }
 
   /* ---------- Practice (live data; Start calls the game's own startDrill) ---------- */
@@ -295,16 +358,19 @@
   /* ---------- hooks: show the new look on the career hub, hide it the moment anything else takes the screen ---------- */
   const _sh = window.showHub; window.showHub = showHub = function (t) {
     const r = _sh.apply(this, arguments);
-    try { const c = career(), app = $id('rbApp'); if (window.__hubSoft) { /* the game's portrait refresh (tops-avatars, every 2.5 s while models load) re-runs showHub: keep the player's tab and scroll, and stay out of the way of an old screen */ if (app && !app.hidden && !resOn) { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; } } else if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
+    try { const c = career(), app = $id('rbApp'); if (window.__hubSoft) { /* the game's portrait refresh (tops-avatars, every 2.5 s while models load) re-runs showHub: keep the player's tab and scroll, and stay out of the way of an old screen */ if (app && !app.hidden && !resOn) { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; render(true); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; } } else if (c && !c.run && (!t || t === 'play')) open('tonight'); else close(); } catch (e) { console.warn('rb hub', e); }
     return r;
   };
   // any other game screen (messages, online lobby, title, creator, the Run's screens, perk, results) takes over from the new look
   const _scr = window.showScreen; window.showScreen = showScreen = function (id) { const r = _scr.apply(this, arguments); try { if (id === 'result' && resOn) return r; /* the reward overlay sits on the result screen: our Result stays over both */ if (id !== 'hub') { if (resOn) endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; } } catch (e) { console.warn('rb screen', e); } return r; };
-  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait(oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } clearInterval(armT); endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
+  const _bm = window.beginMatch; window.beginMatch = beginMatch = function () { try { const c = career(), v = C3.V3(); pre0 = c && v && !c.run ? { bank: c.bank, xp: xpTotal(v), lv: v.lv, opPt: (() => { try { const n = c.next || nextOpponent(); return V.portrait((!n.oppName2 && oppLookRb(n)) || oppLookFor(n), n.oppName2 || n.oppName, c.tier, 0); } catch (e) { return ''; } })() } : null; } catch (e) { pre0 = null; } clearInterval(armT); endResult(); close(); const b = $id('rbBack'); if (b) b.hidden = true; return _bm.apply(this, arguments); };
   const _st = window.showTitle; if (_st) window.showTitle = showTitle = function () { close(); const b = $id('rbBack'); if (b) b.hidden = true; return _st.apply(this, arguments); };
+  /* Q&D R1-1 / Director 05 #8: in the 0.85 s between match end and the reward, the old Match result screen showed and its Next fixture could be tapped (the pack then opened first and the player got the old reward card). For a career match the old screen stays hidden until the new Result is up (1.6 s at most) */
+  let preT = 0; const preOff = () => { clearTimeout(preT); document.documentElement.classList.remove('rb-preres'); };
+  if (typeof endMatch === 'function') { const _em = endMatch; window.endMatch = endMatch = function () { const r = _em.apply(this, arguments); try { const c = career(); if (c && !c.run && pre0 && S && !S.practice && !S.local) { document.documentElement.classList.add('rb-preres'); clearTimeout(preT); preT = setTimeout(preOff, 1600); } } catch (e) {} return r; }; }
   const _rw = window.TOPS_REWARD; window.TOPS_REWARD = function (el) { try { if (_rw) _rw(el); } catch (e) {} try { const c = career(); if (c && !c.run) showResult(); } catch (e) { console.warn('rb reward', e); } };
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
 })();
