@@ -27,7 +27,7 @@ const SAMPLER=()=>{const L=window.__fp=[];const t0=performance.now();
    screen 2.5 s later (what Hayden saw: the old title, then 'Continue career', then the new one) */
 const SCR=ch=>ch.find(id=>['title','login','rbApp','hub','loading','friends','creator','skills'].includes(id))||ch[ch.length-1]||'?';
 const judge=(tag,L)=>{let bad=null,lift=null;for(const s of L){const pre=/tops-pre/.test(s.pre||'');const gone=/gone/.test(s.ld||'');
-  if(!lift&&(!pre||gone)){lift=s;}
+  if(!lift&&!pre&&gone){lift=s;}/* both holds off: the page's pre-paint class (Experience) and the loading screen (Engine, at the boot's end) */
   if(!lift){for(const ch of s.top){if(!ch.includes('loading')){bad={t:s.t,why:'under the cover, on top: '+ch.join('<')};break;}}if(bad)break;}}
  const settle=L.filter(s=>lift&&s.t>=lift.t+600);const first=settle.length?settle[0].top.map(SCR).join(','):null;const last=settle.length?settle[settle.length-1].top.map(SCR).join(','):null;
  if(!lift)F(tag,'the cover never lifted');if(bad)F(tag,'+'+bad.t+' ms '+bad.why);if(first&&last&&first!==last)F(tag,'the screen changed after the cover lifted: '+first+' -> '+last);
@@ -42,10 +42,10 @@ const run=async(prof,mode)=>{const tag=prof+' '+mode;const ctx=await b.newContex
   window.supabase={createClient:()=>({auth:{getSession:async()=>{await W(300);return {data:{session:{user}}};},onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>({})},from:()=>q,rpc:async()=>({data:{ok:true},error:null}),channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};});
  if(mode!=='cold'){await p.goto(URL0);await p.waitForFunction(()=>typeof S!=='undefined'&&window.TOPS_RESET&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:300000});
   await p.evaluate(()=>{save.authSeen=true;save.name='Hayden';save.lessonDone=true;if(!career())newCareer();save.tcIntro=1;save.tcWelcomed=1;persist();try{localStorage.setItem('__cloud',JSON.stringify(save));}catch(e){}});}
- const cdp=await ctx.newCDPSession(p);const frames=[];let tNav=0;cdp.on('Page.screencastFrame',f=>{frames.push({t:Date.now()-tNav,data:f.data});cdp.send('Page.screencastFrameAck',{sessionId:f.sessionId}).catch(()=>{});});
+ const cdp=await ctx.newCDPSession(p);const frames=[];let tNav=0,tCommit=0;p.on('framenavigated',f=>{if(f===p.mainFrame()&&/index\.html/.test(f.url()))tCommit=Date.now()-tNav;});cdp.on('Page.screencastFrame',f=>{frames.push({t:Date.now()-tNav,data:f.data});cdp.send('Page.screencastFrameAck',{sessionId:f.sessionId}).catch(()=>{});});
  await cdp.send('Page.startScreencast',{format:'jpeg',quality:50,maxWidth:390,everyNthFrame:1});
  tNav=Date.now();
- if(mode==='reset'){/* the fresh start as v16 does it: the flag, then a reload */await p.evaluate(()=>{const c=career();sessionStorage.setItem('tops_reset_go',JSON.stringify({t:Date.now(),saveMs:1,run:save.slot||'career',tab:null,why:'test',sv:save.sv||0}));sessionStorage.setItem('tops_reset',JSON.stringify({k:'Next up',t:'vs Test',s:'Pub'}));location.reload();});}
+ if(mode==='reset'){/* the fresh start as v16 does it: the flag, then a reload */await p.evaluate(()=>{const c=career();sessionStorage.setItem('tops_reset_go',JSON.stringify({t:Date.now(),saveMs:1,run:false,tab:null,why:'test',sv:save.sv||0}));sessionStorage.setItem('tops_reset',JSON.stringify({k:'Next up',t:'vs Test',s:'Pub'}));location.reload();});}
  else await p.goto(URL0);
  /* settled: the new screen is up and the loading screen gone */
  let settled=null;const tS=Date.now();for(let i=0;i<300;i++){const s=await p.evaluate(()=>{const l=document.getElementById('loading');const gone=(!l||l.classList.contains('gone'))&&!document.documentElement.classList.contains('tops-pre');const a=document.getElementById('rbApp');const rb=!!(a&&!a.hidden&&a.getClientRects().length);const t=document.getElementById('title');const tl=!!(t&&!t.hidden&&t.getClientRects().length);const lg=document.getElementById('login');const lo=!!(lg&&!lg.hidden&&lg.getClientRects().length);return {gone,rb,tl,lo,pre:document.documentElement.className};}).catch(()=>null);if(s&&s.gone&&(s.rb||s.tl||s.lo)){settled=s;break;}await p.waitForTimeout(100);}
@@ -53,7 +53,7 @@ const run=async(prof,mode)=>{const tag=prof+' '+mode;const ctx=await b.newContex
  await cdp.send('Page.stopScreencast').catch(()=>{});
  const L=await p.evaluate(()=>window.__fp||[]).catch(()=>[]);const end=L.length?L[L.length-1].t:0;
  O({tag,settled,settleMs:Date.now()-tS,samples:L.length,lastTop:L.length?L[L.length-1].top.map(c=>c.join('<')).slice(0,2):null});if(!settled)F(tag,'never settled on a screen with the loading screen gone');
- O({tag,judge:judge(tag,L)});await white(tag,frames);
+ O({tag,judge:judge(tag,L)});/* frames before the new document commits are the previous page (or the browser's blank tab), not ours */await white(tag,frames.filter(f=>f.t>=tCommit));
  if(SHOTS){fs.mkdirSync(SHOTS,{recursive:true});frames.forEach((fr,i)=>{if(i%3===0)fs.writeFileSync(path.join(SHOTS,`${prof}_${mode}_${String(fr.t).padStart(5,'0')}.jpg`),Buffer.from(fr.data,'base64'));});}
  if(pe.length)F(tag,'page errors: '+pe.slice(0,2).join(' | '));await ctx.close();};
 for(const prof of ['iphone','desktop'])for(const mode of ['cold','returning','signed','reset'])if(!ONLY||ONLY.split(',').some(x=>(prof+' '+mode).includes(x)))await run(prof,mode);

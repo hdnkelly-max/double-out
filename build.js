@@ -31,24 +31,7 @@ const tcf=n=>fs.existsSync('tc/'+n)?fs.readFileSync('tc/'+n,'utf8'):'';
 const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<script>${tcf('cards.js')}\n${tcf('data.js')}\n${tcf('fx.js')}\n${tcf('core.js')}\n${tcf('venue.js')}\n${tcf('pubfx.js')}\n${tcf('cab3d.js')}</script>\n`:'';
 // rebrand (EXP-REBRAND): new menu set behind ?rebrand=1; installs nothing when off
 const rb=fs.existsSync('rb/rb.js')?`<style>${fs.existsSync('rb/rb-lime.css')?fs.readFileSync('rb/rb-lime.css','utf8'):''}${fs.readFileSync('rb/rb.css','utf8')}</style>\n<script>${fs.readFileSync('rb/rb.js','utf8')}</script>\n`:'';
-/* ENG-RESET (Overseer 16:44, Hayden's cold-launch recording): the approved loading screen is the first thing drawn on every launch and every
-   fresh start, and nothing else paints until the screen the boot lands on is ready (v16 lifts the cover). Built here, not in the source files:
-   - a dark html/body background and the 'tops-pre' cover as the first style in the page (no white frame, no old title/splash underneath);
-   - the loading screen's markup + script moved from body4 to right after the head's meta tags, with a copy of every #loading rule from the
-     head's styles (the originals stay where they are, so the final look is unchanged);
-   - the Google Fonts sheet no longer blocks the first paint (display=swap already). */
-const LDI=body.indexOf('<canvas id="scene"');const ldBlk=LDI>0?body.slice(0,LDI):'';const body2=LDI>0?body.slice(LDI):body;
-function cssRules(src,keep){const out=[];const re=/<style[^>]*>([\s\S]*?)<\/style>/g;let m;while((m=re.exec(src))){const c=m[1];let i=0,d=0,st=0;for(;i<c.length;i++){const ch=c[i];if(ch==='{')d++;else if(ch==='}'){d--;if(d===0){const r=c.slice(st,i+1).trim();if(keep(r))out.push(r.replace(/^\/\*[\s\S]*?\*\/\s*/,''));st=i+1;}}else if(d===0&&ch==='/'&&c[i+1]==='*'){const e=c.indexOf('*/',i+2);if(e<0)break;i=e+1;st=i+1;}}}return out;}
-const ldCss=cssRules(head,r=>/^(\/\*[\s\S]*?\*\/\s*)?(#loading|:root\{|@keyframes ld)/.test(r)).join('\n');
-const PRE=`<style id="topsPre">html,body{margin:0;background:#07100f}html.tops-pre body>*:not(#loading){visibility:hidden!important}</style>
-<script>(function(){var d=document.documentElement;try{if(/[?&]join=/.test(location.search))return;}catch(e){}d.classList.add('tops-pre');window.TOPS_LDHOLD=true;window.TOPS_PRE_T=Date.now();
-setTimeout(function(){if(!d.classList.contains('tops-pre'))return;d.classList.remove('tops-pre');window.TOPS_LDHOLD=false;window.TOPS_PRE_CAP=1;try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{var l=document.getElementById('loading');if(l)l.classList.add('gone');}}catch(e){}},15000);})();</script>
-<style>${ldCss}</style>
-`;
-const AT='<meta name="apple-mobile-web-app-title" content="TOPS">';
-let head2=head;if(ldBlk&&head.includes(AT)){head2=head.replace(AT,()=>AT+'\n'+PRE+ldBlk);}else throw new Error('ENG-RESET: head anchor or loading block missing');
-head2=head2.replace(/<link rel="stylesheet" href="(https:\/\/fonts\.googleapis\.com\/css2[^"]*)">/,(m0,u)=>`<link rel="stylesheet" href="${u}" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="${u}"></noscript>`);
-const page=upd+head2+envs+dg+body2+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+tc+rb+v16;
+const page=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+tc+rb+v16;
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
 fs.writeFileSync('double-out.html','<meta charset="utf-8">\n<script>window.RIG_B64_URL="remy.b64.txt"</script>\n'+page);
 const b64=fs.readFileSync('remy.b64.txt','utf8').trim();

@@ -18,7 +18,7 @@ const ld=()=>document.getElementById('loading');
    screen has already finished once (boot), so the old page paints the bar itself while it saves. */
 const paintOld=(p,tip)=>{const l=ld();if(!l)return;l.classList.remove('gone','ld-done');const b=document.getElementById('ldBar'),pc=document.getElementById('ldPct'),t=document.getElementById('ldTip');const v=Math.max(0,Math.min(1,p));
  if(b)b.style.width=(v*100).toFixed(1)+'%';if(pc)pc.textContent=Math.round(v*100)+'%';if(t&&tip)t.textContent=tip;l.setAttribute('aria-valuenow',String(Math.round(v*100)));};
-const bar=(p,tip)=>{if(window.TOPS_LOAD&&(window.TOPS_RESETTING||document.documentElement.classList.contains('tops-pre')))TOPS_LOAD.set(p,tip);else paintOld(p,tip);};
+const bar=(p,tip)=>{if(window.TOPS_LOAD&&(window.TOPS_RESETTING||window.TOPS_BOOTHOLD))TOPS_LOAD.set(p,tip);else paintOld(p,tip);};
 /* requests to the game's server, so a reset waits for them and knows if one failed */
 const NQ={n:0,fail:0};
 if(window.fetch&&!window.fetch.__rs){const F=window.fetch;window.fetch=function(u){let url='';try{url=String((u&&u.url)||u);}catch(e){}if(!/supabase\.co/.test(url))return F.apply(this,arguments);NQ.n++;
@@ -70,7 +70,7 @@ RS.go=go;
 
 /* ---- the cover (Overseer 16:44): the page starts with the loading screen on top and everything else hidden ('tops-pre', built into the
    head); it lifts only when the screen the boot lands on is up, two frames after, so the old title / splash never paint ---- */
-const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;const go=()=>{d.classList.remove('tops-pre');try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{const l=ld();if(l)l.classList.add('gone');}}catch(e){}};
+const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;window.TOPS_BOOTHOLD=false;const go=()=>{/* the page's own pre-paint hold (Experience's TOPS_PRE, released once the new look is installed) is left to its owner */if(!window.TOPS_PRE)d.classList.remove('tops-pre');try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{const l=ld();if(l)l.classList.add('gone');}}catch(e){}};
  try{requestAnimationFrame(()=>requestAnimationFrame(go));setTimeout(()=>{if(d.classList.contains('tops-pre'))go();},300);/* hidden tab: no frames */}catch(e){go();}};
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
@@ -97,16 +97,16 @@ if(flag&&Date.now()-flag.t<120000){
  if(typeof netAdopt==='function'){const na=netAdopt;netAdopt=function(cloud){try{if(Date.now()-tb<60000&&cloud&&(cloud.sv||0)<(flag.sv||0)){try{window.TOPS_LOG&&TOPS_LOG.log('reset_keep_local',{cloud:cloud.sv||0,local:flag.sv||0});}catch(e){}RS.keptLocal=(RS.keptLocal|0)+1;try{cloudPush(true);}catch(e){}return;}}catch(e){}return na.apply(this,arguments);};}
  /* sound: the reload drops the audio unlock; the first tap on the hub brings it back, as Continue on the title does */
  const un=()=>{try{audioInit();}catch(e){}['pointerup','touchend','keydown'].forEach(t=>document.removeEventListener(t,un,true));};['pointerup','touchend','keydown'].forEach(t=>document.addEventListener(t,un,true));
-}else if(document.documentElement.classList.contains('tops-pre')){
+}else if(window.TOPS_PRE?TOPS_PRE.on():document.documentElement.classList.contains('tops-pre')){
+ window.TOPS_LDHOLD=true;window.TOPS_BOOTHOLD=true;/* game4 skips its own #loading.gone (rig in, 9 s) while this is set */
  /* a launch (cold, or a normal reload): the boot ends on login (no session / no network) or on the title after the cloud pull (signed in).
     Hold the loading screen until that call has run and the rig is in (the game's own rule), so the player never sees the title drawn
     before the cloud save landed or the old layout under the new one. 9 s without the rig still lifts on the boot's end (as the game's own
-    fallback did); 15 s lifts regardless (in the head). */
- const t0=window.TOPS_PRE_T||Date.now();let end=0;const mark=()=>{if(!end)end=Date.now();};
- const st=showTitle;showTitle=function(){mark();return st.apply(this,arguments);};const sl=showLogin;showLogin=function(){mark();return sl.apply(this,arguments);};
+    fallback did); 15 s lifts regardless. */
+ const t0=Date.now()-Math.round(performance.now());/* page start */let end=0;/* the boot's end is marked by netBoot itself (TOPS_BOOTEND), which may come before this script is parsed */
  bar(.3,'Setting up the oche…');
- const tick=setInterval(()=>{try{const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();bar(end?(rig?.9:.75):(rig?.6:.4));
-   if(!document.documentElement.classList.contains('tops-pre')){clearInterval(tick);return;}/* the 15 s cap already lifted it */
+ const tick=setInterval(()=>{try{if(!end&&window.TOPS_BOOTEND)end=TOPS_BOOTEND;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();bar(end?(rig?.9:.75):(rig?.6:.4));
+   if(Date.now()-t0>15000){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,cap:1});}catch(e){}lift();return;}/* never longer than 15 s */
    if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }
 })();
