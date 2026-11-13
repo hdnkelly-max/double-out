@@ -465,3 +465,4 @@
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
   window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward };
 })();
+;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw
