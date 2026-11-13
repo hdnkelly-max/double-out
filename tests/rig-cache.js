@@ -27,7 +27,7 @@ const cached=()=>p.evaluate(async()=>{const c=await caches.open('tops-rig');retu
 // 1
 log=[];await p.goto(URL0);let s=await until(x=>x.ready,120000);const c1=await cached();O({step:'first launch',s,requests:log,cached:c1});
 if(!s||!s.ready)F('1: model not loaded');if(s&&s.src!=='net')F('1: source '+(s&&s.src));if(log.filter(x=>x===RIG).length!==1)F('1: model requests '+log.filter(x=>x===RIG).length);if(!c1.includes(RIG))F('1: not in Cache Storage');
-if(log.some(x=>x==='/index.html?'))F('6: the update check downloaded the page');if(!log.includes('/version.json?'))F('6: the update check did not read version.json');
+if(log.some(x=>x==='/index.html?'))F('6: the update check downloaded the page');/* when and how often version.json is read is Experience's upd-check.js */
 // 2
 await p.waitForTimeout(1500);log=[];await p.reload();s=await until(x=>x.ready,120000);O({step:'relaunch',s,requests:log});
 if(!s||!s.ready)F('2: model not loaded');if(s&&s.src!=='cache')F('2: source '+(s&&s.src));if(log.includes(RIG))F('2: the model was downloaded again');
