@@ -174,10 +174,17 @@
     const fcur = save.flightCustom ? save.flight : null, fs = cur('flight', L.flight);
     const fBody = `<div class="rb-stsub"><small class="rb-kick">Colour</small><div class="rb-sw" role="group" aria-label="Flight colour"><button type="button" class="rb-swb rb-swset" data-fl="set" aria-pressed="${!fcur}" aria-label="The set's own flights">Set</button>${flights.map(c => `<button type="button" class="rb-swb" data-fl="${esc(c)}" aria-pressed="${fcur === c}" aria-label="${esc(c)}" style="background:${esc(c)}"></button>`).join('')}</div></div><div class="rb-stsub"><small class="rb-kick">Shape</small></div>` + L.flight.map(it => opt('flight', it)).join('');
     const fRow = fs ? row('flight', 'Flights', esc(fs.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')) + ' · ' + (fcur ? 'your colour' : 'set colours'), chip(owned('flight', L.flight) + ' owned'), setOpen === 'flight', fBody) : '';
-    const pRow = (key, title) => { const c0 = cur(key, L[key]); return c0 ? row(key, title, esc(c0.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')), chip(owned(key, L[key]) + ' owned'), setOpen === key, L[key].map(it => opt(key, it)).join('')) : ''; };
+    // the approved card's chips (Hayden 14:29 "finish chips first"): a part row says what your part gives (its kit points against the default part,
+    // the game's own kitPts), gear says how many items you can buy now. Read like the game's kitWith(): the setup is swapped and restored in one call.
+    const gives = (key, list, c0) => { try { if (!A || !A.kitPts || !c0) return ''; const def = list.find(x => /default/i.test(x.s || '')) || list[0]; if (!def || def.id === c0.id) return '';
+      const ss = save.setup, now = A.kitPts(); let base; try { save.setup = Object.assign({}, ss || {}, { [key]: def.id }); base = A.kitPts(); } finally { save.setup = ss; }
+      let best = null; A.STATS.forEach(x => { const d = (now[x.id] || 0) - (base[x.id] || 0); if (d && (!best || Math.abs(d) > Math.abs(best.d))) best = { d, n: x.n }; });
+      return best ? chip((best.d > 0 ? '+' : '−') + Math.abs(best.d) + ' ' + best.n.toLowerCase(), best.d > 0 ? 'g' : '') : ''; } catch (e) { return ''; } };
+    const pRow = (key, title) => { const c0 = cur(key, L[key]); return c0 ? row(key, title, esc(c0.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')), gives(key, L[key], c0), setOpen === key, L[key].map(it => opt(key, it)).join('')) : ''; };
     const gear = typeof GEAR !== 'undefined' ? GEAR : [], gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
     const gBody = gear.map(it => { const cnt = gearCount(it.id), max = it.rep || 1, own = cnt >= max, bank = career() ? career().bank : 0, short = !own && bank < it.price ? it.price - bank : 0; const right = own ? chip('Owned') : short ? chip(money(it.price) + ' · ' + money(short) + ' short', 'l') : `<span class="rb-buyp">${money(it.price)}</span>`; return `<button type="button" class="rb-opt" data-gear="${it.id}" aria-pressed="${own}" ${own || short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}${it.rep ? ` <span class="rb-sub">${cnt}/${max}</span>` : ''}</b><small>${esc(it.s || '')}</small></span>${right}</button>`; }).join('');
-    const gRow = row('gear', 'Gear', `${gOwned} of ${gear.length} owned`, '', gOpen, gBody);
+    const gNew = gear.filter(it => gearCount(it.id) < (it.rep || 1) && (career() ? career().bank : 0) >= it.price).length;   // gear you can buy right now
+    const gRow = row('gear', 'Gear', `${gOwned} of ${gear.length} owned`, gNew ? chip(gNew + ' new', 'g') : '', gOpen, gBody);
     return hero + msg + `<div class="rb-card rb-stlist">${fRow}${pRow('shaft', 'Shafts')}${pRow('point', 'Points')}${gRow}</div>`;
   }
   // press the game's own setup control (the off-screen Store's Setup or Gear list), then put the hub back as it was
