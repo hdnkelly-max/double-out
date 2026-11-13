@@ -57,7 +57,7 @@
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
   const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1 };   // until each new screen lands, the tab opens the old one
-  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all';
+  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
     el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
@@ -168,9 +168,69 @@
      so price, level gates, sponsor sets, the bank and the save stay entirely the game's (v12 buyBtn → buyBarrel; owned row → equip). ---------- */
   const bPts = b => { const acc = Math.round((5.6 - b.base) / 1.8 * 7); return { sc: acc, fi: acc, rh: Math.round((b.tol - 1) / .15 * 6), ct: Math.round((1.25 - b.sway) / .6 * 7) }; };   // same formula as the game's v09 barrelPts (display only)
   function dState(b) { const G = window.TOPS_GATE, own = (save.owned || []).includes(b.id), eq = save.barrel === b.id || (!save.barrel && b.id === BARRELS[0].id), g = !own && G ? G.gateBarrel(b) : null; return { own, eq, g, sp: !!(g && g.sp), lockLv: g && g.lv && !g.res ? g.lv : 0, res: !!(g && g.res), cost: price(b.price) }; }
+  /* Round 2 #1 (Hayden 06:05): Setup & gear in the new look, inside Shop (no old Store shell, no second bottom nav). Data is the game's own
+     (SHAFTS, FSHAPES, POINTS, FLIGHTS, GEAR, kit points); every pick or buy presses the game's own control, rendered off-screen by showShop, so
+     prices, the bank, ownership and the save stay the game's. */
+  const shopSeg = () => `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="${shopSub !== 'setup'}" data-sub="darts">Darts</button><button type="button" role="tab" aria-selected="${shopSub === 'setup'}" data-sub="setup">Setup &amp; gear</button></div>`;
+  const SETUP_KEYS = () => [['flight', 'Flight shape', typeof FSHAPES !== 'undefined' ? FSHAPES : []], ['shaft', 'Shaft', typeof SHAFTS !== 'undefined' ? SHAFTS : []], ['point', 'Point', typeof POINTS !== 'undefined' ? POINTS : []]];
+  const partState = (key, it) => { const own = (save.ownedSetup || []).includes(key + ':' + it.id) || it.price === 0, cur = ((save.setup || {})[key] || (key === 'flight' ? 'standard' : key === 'shaft' ? 'med' : 'std')) === it.id, cost = price(it.price), bank = career() ? career().bank : 0; let gate = null; try { gate = !own && window.TOPS_GATE && TOPS_GATE.gatePart ? TOPS_GATE.gatePart(key, it.id) : null; } catch (e) {} return { own, cur, cost, gate, short: !own && !gate && bank < cost ? cost - bank : 0 }; };  // level gate = the game's own (v12 PART_LV)
+  // one purchase per 700 ms across re-renders (ChatGPT P1: the guard must outlive the binding); a refused buy frees it at once
+  let buyAt = 0; const buyOnce = () => { const t = Date.now(); if (t < buyAt) return false; buyAt = t + 700; return true; }, buyFree = () => { buyAt = 0; };
+  function setup(M) {
+    // round 2 #1 as approved (r2 card 1): your setup (dart + the five kit stats as thin bars), then one list (Flights, Shafts, Points, Gear) that opens in place
+    const b = barrel(); let img = ''; try { img = V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { img = dartImg(b, 'ds'); }
+    const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st(); let bars = '';
+    if (A && st && window.TOPS_ST2 && TOPS_ST2()) { const kp = A.kitPts(), cap = Math.min(85, A.capNow()), pc = x => Math.max(0, Math.min(100, x / cap * 100)); bars = `<div class="rb-sbars">${A.STATS.map(x => { const me = st.v[x.id], k = kp[x.id] || 0; return `<div class="rb-sbr"><span>${esc(x.n)}</span><div class="rb-sbar"><i class="rb-f" style="width:${pc(me)}%"></i>${k > 0 ? `<i class="rb-gh" style="width:${pc(me + k) - pc(me)}%"></i>` : ''}</div><b class="rb-num">${me + k}</b></div>`; }).join('')}</div>`; }
+    const hero = `<div class="rb-card">${sh('Your setup · ' + esc(b.n))}<div class="rb-slot rb-dart rb-r8" style="aspect-ratio:3.2/1;background:var(--dartbg)"><div class="rb-im" style="background-image:url(${img});background-size:92% auto"></div></div>${bars}</div>`;
+    const msg = shopMsg ? `<div class="rb-card" role="status" style="padding:10px 14px"><span class="rb-sub">${esc(shopMsg)}</span></div>` : ''; shopMsg = '';
+    const thumb = `<span class="rb-slot rb-dart rb-r8 rb-sth" style="background:var(--dartbg)"><span class="rb-im" style="background-image:url(${img});background-size:96% auto"></span></span>`;
+    const row = (key, title, sub, right, open, body) => `<div class="rb-strow"><button type="button" class="rb-acc" data-acc="${key}" aria-expanded="${open}">${key === 'gear' ? `<span class="rb-slot rb-r8 rb-sth"><span class="rb-im" style="background-image:url(${IMG}backroom.jpg);background-position:70% 50%"></span></span>` : thumb}<span class="rb-optx"><b>${title}</b><small>${sub}</small></span>${right}<span class="rb-chev" style="transform:rotate(${open ? 90 : 0}deg)">›</span></button>${open ? `<div class="rb-opts">${body}</div>` : ''}</div>`;
+    const opt = (key, it) => { const p = partState(key, it); const right = p.cur ? chip('Using') : p.own ? chip('Owned') : p.gate ? chip(IC.lock + ' Level ' + p.gate.lv + ' · ' + money(p.cost), 'l') : p.short ? chip(money(p.cost) + ' · ' + money(p.short) + ' short', 'l') : `<span class="rb-buyp">${money(p.cost)}</span>`; return `<button type="button" class="rb-opt" data-part="${key}" data-pid="${it.id}" aria-pressed="${p.cur}" ${p.short || p.gate ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}</b><small>${esc(it.s)}</small></span>${right}</button>`; };
+    const owned = (key, list) => list.filter(it => partState(key, it).own || partState(key, it).cur).length;
+    const cur = (key, list) => list.find(it => partState(key, it).cur) || list[0];
+    const L = Object.fromEntries(SETUP_KEYS().map(([k, , l]) => [k, l]));
+    // Flights: colour and shape together
+    const flights = (typeof FLIGHTS !== 'undefined' ? FLIGHTS : []).concat((window.C3 && C3.lvFlights ? C3.lvFlights() : []).filter(c => !FLIGHTS.includes(c)));
+    const fcur = save.flightCustom ? save.flight : null, fs = cur('flight', L.flight);
+    const fBody = `<div class="rb-stsub"><small class="rb-kick">Colour</small><div class="rb-sw" role="group" aria-label="Flight colour"><button type="button" class="rb-swb rb-swset" data-fl="set" aria-pressed="${!fcur}" aria-label="The set's own flights">Set</button>${flights.map(c => `<button type="button" class="rb-swb" data-fl="${esc(c)}" aria-pressed="${fcur === c}" aria-label="${esc(c)}" style="background:${esc(c)}"></button>`).join('')}</div></div><div class="rb-stsub"><small class="rb-kick">Shape</small></div>` + L.flight.map(it => opt('flight', it)).join('');
+    const fRow = fs ? row('flight', 'Flights', esc(fs.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')) + ' · ' + (fcur ? 'your colour' : 'set colours'), chip(owned('flight', L.flight) + ' owned'), setOpen === 'flight', fBody) : '';
+    // the approved card's chips (Hayden 14:29 "finish chips first"): a part row says what your part gives (its kit points against the default part,
+    // the game's own kitPts), gear says how many items you can buy now. Read like the game's kitWith(): the setup is swapped and restored in one call.
+    const gives = (key, list, c0) => { try { if (!A || !A.kitPts || !c0) return ''; const def = list.find(x => /\bthe default\b/i.test(x.s || ''));
+      if (!def || def.id === c0.id) return '';   // no part says it is the default: show nothing rather than guess a baseline (ChatGPT P2)
+      const ss = save.setup, now = A.kitPts(); let base; try { save.setup = Object.assign({}, ss || {}, { [key]: def.id }); base = A.kitPts(); } finally { save.setup = ss; }
+      const ds = A.STATS.map(x => ({ d: (now[x.id] || 0) - (base[x.id] || 0), n: x.n.toLowerCase() })).filter(x => x.d).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+      const up = ds.find(x => x.d > 0), dn = ds.find(x => x.d < 0), txt = x => (x.d > 0 ? '+' : '\u2212') + Math.abs(x.d) + ' ' + esc(x.n);
+      // a trade-off shows both sides so the cost is never hidden (ChatGPT 14:40): "+3 rhythm · −1 control"; all-positive green, all-negative plain
+      if (up && dn) return chip(`<span class="rb-up">${txt(up)}</span> · ${txt(dn)}`, 'x');
+      return up ? chip(txt(up), 'g') : dn ? chip(txt(dn)) : ''; } catch (e) { return ''; } };
+    const pRow = (key, title) => { const c0 = cur(key, L[key]); return c0 ? row(key, title, esc(c0.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')), gives(key, L[key], c0), setOpen === key, L[key].map(it => opt(key, it)).join('')) : ''; };
+    const gear = typeof GEAR !== 'undefined' ? GEAR : [], gBank = career() ? career().bank : 0,
+      gCan = it => !!career() && gearCount(it.id) < (it.rep || 1) && gBank >= it.price,   // the game's own buy test (showShop gearList onclick): not maxed, career, bank >= price; no level gate or discount on gear
+      gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
+    // the rows use the same gCan as the chip, so a row's buy price and the "N new" chip can never disagree (ChatGPT P2)
+    const gBody = gear.map(it => { const cnt = gearCount(it.id), max = it.rep || 1, own = cnt >= max, short = !own && !gCan(it) ? Math.max(0, it.price - gBank) : 0; const right = own ? chip('Owned') : short ? chip(money(it.price) + ' · ' + money(short) + ' short', 'l') : `<span class="rb-buyp">${money(it.price)}</span>`; return `<button type="button" class="rb-opt" data-gear="${it.id}" aria-pressed="${own}" ${own || short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}${it.rep ? ` <span class="rb-sub">${cnt}/${max}</span>` : ''}</b><small>${esc(it.s || '')}</small></span>${right}</button>`; }).join('');
+    const gNew = gear.filter(gCan).length;   // gear you can buy right now, by the same test as the rows' buy price
+    const gRow = row('gear', 'Gear', `${gOwned} of ${gear.length} owned`, gNew ? chip(gNew + ' new', 'g') : '', gOpen, gBody);
+    return hero + msg + `<div class="rb-card rb-stlist">${fRow}${pRow('shaft', 'Shafts')}${pRow('point', 'Points')}${gRow}</div>`;
+  }
+  // press the game's own setup control (the off-screen Store's Setup or Gear list), then put the hub back as it was
+  function gameSetup(kind, a, b) {
+    const before = JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]), prevTab = (typeof hubTab !== 'undefined' && hubTab.cur) || null;
+    try { showShop(kind === 'gear' ? 'gear' : 'setup', true); } catch (e) { console.warn('rb setup', e); }
+    try {
+      if (kind === 'flight') { const w = $id('swFlight2'); const bt = w && (a === 'set' ? w.querySelector('.setfl') : [...w.querySelectorAll('.sw')].find(x => x.getAttribute('aria-label') === a)); if (bt) bt.click(); }
+      else if (kind === 'gear') { const i = GEAR.findIndex(x => x.id === a); const row = $id('gearList') && $id('gearList').querySelectorAll(':scope > .opt')[i]; if (row) { const was = JSON.stringify([save.gear, career() && career().bank]); row.click(); if (JSON.stringify([save.gear, career() && career().bank]) === was) { const nx = row.nextElementSibling, go = nx && nx.classList.contains('st2x') && nx.querySelector('.st2go'); if (go) go.click(); } } }
+      else { const lists = { shaft: SHAFTS, flight: FSHAPES, point: POINTS }, it = lists[a].find(x => x.id === b);
+        // find the game's row by its own name (the list order and length can differ from the data arrays)
+        const row = it && $id('setupList') && [...$id('setupList').querySelectorAll('.opt')].find(r => { const t = r.querySelector('.t'); return t && t.textContent.trim() === it.n; }); if (row) { const was = JSON.stringify([save.setup, save.ownedSetup]); row.click(); if (JSON.stringify([save.setup, save.ownedSetup]) === was) { const go = row.nextElementSibling && row.nextElementSibling.querySelector('.st2go'); if (go) go.click(); } } }
+    } catch (e) { console.warn('rb setup press', e); }
+    try { if (prevTab && hubTab.cur !== prevTab) hubTab(prevTab); } catch (e) {}
+    return JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]) !== before;
+  }
   function shop(M) {
     const c = M.c, mine = barrel(); if (!sel) sel = mine.id; const b = BARRELS.find(x => x.id === sel) || mine, st = dState(b);
-    const seg = `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="true">Darts</button><button type="button" role="tab" aria-selected="false" data-go="kit">Setup &amp; gear</button></div>`;
+    const seg = shopSeg(); if (shopSub === 'setup') return seg + setup(M);
     const wt = (b.n.match(/(\d+)g$/) || [])[1], name = b.n.replace(/ \d+g$/, '').replace(new RegExp('^' + b.brand + ' '), '');
     const badge = st.eq ? chip('Equipped') : st.sp ? chip('Sponsor set', 'w') : st.own ? chip('Owned') : st.lockLv ? chip(IC.lock + ' Level ' + st.lockLv, 'l') : '';
     const photo = DART_PHOTO[b.id] ? `${IMG}d_${b.id}.jpg` : dartImg(b, 'ds');
@@ -343,6 +403,13 @@
     qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
+    qa('#rbApp [data-sub]').forEach(b => b.onclick = () => { shopSub = b.dataset.sub; setOpen = ''; render(); });
+    qa('#rbApp [data-acc]').forEach(b => b.onclick = () => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; setOpen = setOpen === b.dataset.acc ? '' : b.dataset.acc; render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; });
+    const keepY = f => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; f(); render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; };
+    qa('#rbApp [data-fl]').forEach(b => b.onclick = () => keepY(() => { gameSetup('flight', b.dataset.fl); }));
+    // one purchase per 700 ms: a double tap (or a second event on the same node before the redraw) never reaches the game's buy twice
+    qa('#rbApp [data-part]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true' || b.getAttribute('aria-pressed') === 'true' || !b.isConnected || !buyOnce()) return; keepY(() => { const ok = gameSetup('part', b.dataset.part, b.dataset.pid); if (!ok) buyFree(); shopMsg = ok ? 'Set up. You throw with it from your next match.' : 'The shop said no. Nothing was charged.'; }); });
+    qa('#rbApp [data-gear]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true' || !b.isConnected || !buyOnce()) return; keepY(() => { const ok = gameSetup('gear', b.dataset.gear); if (!ok) buyFree(); shopMsg = ok ? 'Bought. It\'s in your kit.' : 'The shop said no. Nothing was charged.'; }); });
     const bu = $id('rbBuy'); if (bu) bu.onclick = () => { const r = gameShop(sel, 'buy'); shopMsg = r.ok ? 'Bought and equipped.' : 'The shop said no. Nothing was charged.'; render(); };
     const eqb = $id('rbEquip'); if (eqb) eqb.onclick = () => { const r = gameShop(sel, 'equip'); shopMsg = r.ok ? 'Equipped. You throw it from your next match.' : 'Couldn\'t equip it.'; render(); };
     qa('#rbApp [data-cf]').forEach(b => b.onclick = () => { cardF = b.dataset.cf; render(); });
@@ -372,6 +439,30 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
+  // Roll-outs 3 + 4 (Hayden 09:05): the game's old reward card and its first-level-up poster drew the unlocked shirt as a 3D render of the
+  // player (in a shirt that often didn't match). They now show the generated shirt photo in the unlocked colour (the same recolour as the new
+  // Result), and the card's top figure becomes the player's Locker photo in his own shirt. Only the reward overlay and the poster are watched
+  // (a body childList observer, no subtree), so nothing runs during play.
+  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
+    const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
+    const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
+    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); return true; };
+  let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
+  const fixReward = () => { try {
+    const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
+      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
+        const fb = (() => { try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } })();   // ChatGPT P2: the venue, never an empty top
+        const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
+    // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
+    const lf = $id('lvFirst'); if (lf) { const n = lf.querySelector('.n'), ri = lf.querySelector('.ri'), L = n ? +n.textContent : 0;
+      if (ri && L) { if (ri.dataset.rblv != L) { delete ri.dataset.rb; ri.classList.remove('rb-ri-photo'); ri.dataset.rblv = L; } swapShirt(ri, L); if (ri.classList.contains('rb-ri-photo')) ri.classList.add('rb-lv-photo'); }
+      // the poster is watched for as long as it is on the page (not only until its first photo), so a poster filled late, or the same poster
+      // re-used for another level, is always caught (ChatGPT P1); a finished tile returns at once, and the watcher goes when the poster does
+      if (lvEl !== lf) { lvStop(); lvEl = lf; lvMO = new MutationObserver(() => { if (!document.body.contains(lf)) { lvStop(); return; } fixReward(); }); lvMO.observe(lf, { childList: true, subtree: true, characterData: true }); } }
+  } catch (e) {} };
+  { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
+      if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
+      if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw
