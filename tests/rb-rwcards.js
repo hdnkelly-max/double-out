@@ -41,13 +41,17 @@ const dir = process.argv[2] || path.resolve(__dirname, '..');
   chk.late = await p.evaluate(async () => { document.querySelectorAll('#lvFirst').forEach(e => e.remove()); const o = document.createElement('div'); o.id = 'lvFirst'; o.innerHTML = '<div class="n">5</div>'; document.body.appendChild(o);
     await new Promise(r => setTimeout(r, 300)); const ri = document.createElement('span'); ri.className = 'ri ri-hero'; ri.innerHTML = '<img src="assets/rb/w_rw_trophy.jpg">'; o.appendChild(ri);
     for (let i = 0; i < 50 && !ri.classList.contains('rb-lv-photo'); i++) await new Promise(r => setTimeout(r, 100));
-    const src1 = ri.querySelector('img').src; TOPS_RB.fixReward(); TOPS_RB.fixReward(); const same = ri.querySelector('img').src === src1 && ri.classList.contains('rb-lv-photo');
+    const src1 = ri.querySelector('img').src, late1 = ri.classList.contains('rb-lv-photo') && /^data:image/.test(src1); TOPS_RB.fixReward(); TOPS_RB.fixReward(); const same = ri.querySelector('img').src === src1 && ri.classList.contains('rb-lv-photo');
+    // ChatGPT P1 (re-review): the SAME poster element re-used for another shirt level, its tile filled late again, still gets the photo
+    const L2 = (() => { for (let l = 6; l < 60; l++) { try { const r = C3.rewardAt(l); if (r && r.k === 'shirt') return l; } catch (e) {} } return 0; })();
+    let reuse = null; if (L2) { ri.remove(); o.querySelector('.n').textContent = L2; await new Promise(r => setTimeout(r, 300)); const ri2 = document.createElement('span'); ri2.className = 'ri ri-hero'; ri2.innerHTML = '<img src="assets/rb/w_rw_trophy.jpg">'; o.appendChild(ri2);
+      for (let i = 0; i < 50 && !ri2.classList.contains('rb-lv-photo'); i++) await new Promise(r => setTimeout(r, 100)); reuse = ri2.classList.contains('rb-lv-photo') && /^data:image/.test(ri2.querySelector('img').src); }
     o.remove(); const o2 = document.createElement('div'); o2.id = 'lvFirst'; o2.innerHTML = '<div class="n">3</div><span class="ri ri-dart"><img src="assets/rb/w_rw_darts.jpg"></span>'; document.body.appendChild(o2); await new Promise(r => setTimeout(r, 300));
     const dartKept = !o2.querySelector('.ri').classList.contains('rb-ri-photo') && /w_rw_darts/.test(o2.querySelector('img').src); o2.remove();
-    return { late: ri.classList.contains('rb-lv-photo') && /^data:image/.test(src1), same, dartKept }; });
+    return { late: late1, same, dartKept, L2, reuse }; });
   const f = []; if (!rwShot) f.push('old reward card never shown'); if (!lvShot) f.push('level-up poster never shown');
   if (chk.lv && !(chk.lv.photo && chk.lv.data && chk.lv.w >= 1000)) f.push('poster shirt not the photo ' + JSON.stringify(chk.lv)); if (chk.rw && !/shirt/i.test(chk.rw.unlock)) f.push('first unlock not a shirt: ' + chk.rw.unlock.slice(0, 60));
-  if (chk.rw && !chk.rw.tile) f.push('reward tile not the shirt photo'); if (chk.rw && !chk.rw.top) f.push('card top figure not the Locker photo'); if (!chk.late.late) f.push('poster filled late never got the photo'); if (!chk.late.same) f.push('fixer redid a finished poster'); if (!chk.late.dartKept) f.push('a non-shirt poster lost its render');
+  if (chk.rw && !chk.rw.tile) f.push('reward tile not the shirt photo'); if (chk.rw && !chk.rw.top) f.push('card top figure not the Locker photo'); if (!chk.late.late) f.push('poster filled late never got the photo'); if (!chk.late.same) f.push('fixer redid a finished poster'); if (!chk.late.dartKept) f.push('a non-shirt poster lost its render'); if (!chk.late.L2 || !chk.late.reuse) f.push('re-used poster for level ' + chk.late.L2 + ' never got the photo');
   if (pe.length) f.push('page errors ' + pe.join('; ').slice(0, 150));
   console.log(JSON.stringify(chk)); console.log(f.length ? 'rb-rwcards FAIL: ' + f.join('; ') : 'rb-rwcards PASS'); await b.close(); process.exit(f.length ? 1 : 0);
 })();
