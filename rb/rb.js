@@ -29,17 +29,15 @@
   // Tonight hero (roll-out 1, Hayden 09:05): the tier's generated scene, the opponent seen from behind (no face, so it fits any named
   // opponent), a woman's version for women opponents. The 3D figure stays for the walk-on and the match.
   const FEM_NAMES = ['lisa tane', 'pania walters', 'maia tuhoe', 'ngaire pou'];   // women's names the game draws on men's models (game4 NAMED_VAR noBeard)
-  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; const L = oppLookFor(n); if (L && L.sex) return L.sex === 'f';
-    if (typeof CHAR_F !== 'undefined' && typeof charKey === 'function') return !!CHAR_F[charKey(L, nm)];
-    return /^(Shazza|Bev|Kiri|Mere|Aroha|Fallon|Tash|Jess|Sharon|Kim|Tina|Deb|Marg|Liz|Megan)/i.test(nm); } catch (e) { return false; } };   // same name rule as game4 charKey()
+  const FEM_MODELS = ['megan', 'elizabeth'];   // game4 CHAR_F: the women's character models
+  const isFemModel = (L, nm) => { try { return !!(typeof V !== 'undefined' && V.charKey && FEM_MODELS.includes(V.charKey(L, nm))); } catch (e) { return false; } };   // the game's own charKey(), not a copy of its rule
+  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; return isFemModel(oppLookFor(n), nm); } catch (e) { return false; } };
   const oppHeroBg = (n, tier) => { const t = Math.max(0, Math.min(6, +tier || 0)), scene = `url(${IMG}venue_t${t}.jpg) 60% 40%/cover no-repeat`;
     return `url(${IMG}tn_t${t}${n && oppFem(n) ? 'f' : ''}.jpg) 74% 38%/cover no-repeat,${scene}`; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
-  const meHero = tier => { try { return V.heroShot && V.heroShot(save.look, save.name || 'You', tier, save.flight); } catch (e) { return ''; } };
   const sceneImg = tier => `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`;
-  const heroBg = (tier, pos) => { const h = meHero(tier); return h ? `url(${h}) ${pos || '82% 100%'}/auto 100% no-repeat,url(${sceneImg(tier)}) 50% 40%/cover no-repeat` : `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; };
   /* ---------- components (same as the v9.1 prototype) ---------- */
   const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
   const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
@@ -59,7 +57,7 @@
   const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
   const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1 };   // until each new screen lands, the tab opens the old one
-  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all';
+  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
     el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
@@ -126,6 +124,13 @@
   const DART_PHOTO = { assassin: 1, supergrip: 1, razor: 1, vapor8: 1, zen: 1, asp: 1, littler: 1 };   // generated product shots; the other darts use the game's own render
   function dartImg(b, kind) { if (DART_PHOTO[b.id]) return `${IMG}${kind}_${b.id}.jpg`; try { return V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { return ''; } }
   function nextDart(lv) { const G = window.TOPS_GATE; if (!G) return null; let best = null; BARRELS.forEach(b => { const n = G.LV[b.id]; if (n && !G.EXCL[b.id] && n > lv && !(save.owned || []).includes(b.id) && !(save.v12ent || []).includes(b.id) && (!best || n < best.lv)) best = { lv: n, b }; }); return best; }
+  // Locker hero (roll-out 2, Hayden 09:05): a generated locker room with the player from behind, wearing his real shirt colour (recoloured in
+  // code), so it always matches the Wearing tile; a woman's version when the player's character is a woman. Not a portrait: the face and hair
+  // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
+  const meFem = () => isFemModel(save.look || {}, save.name || '');
+  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
     const seg = `<div class="rb-seg" role="tablist">${[['load', 'Loadout'], ['stats', 'Stats'], ['cards', 'Cards'], ['troph', 'Trophies']].map(([a, b]) => `<button type="button" role="tab" aria-selected="${lk === a}" data-lk="${a}">${b}</button>`).join('')}</div>`;
@@ -133,7 +138,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') return seg + trophies(M);
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" style="background:${heroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -163,9 +168,69 @@
      so price, level gates, sponsor sets, the bank and the save stay entirely the game's (v12 buyBtn → buyBarrel; owned row → equip). ---------- */
   const bPts = b => { const acc = Math.round((5.6 - b.base) / 1.8 * 7); return { sc: acc, fi: acc, rh: Math.round((b.tol - 1) / .15 * 6), ct: Math.round((1.25 - b.sway) / .6 * 7) }; };   // same formula as the game's v09 barrelPts (display only)
   function dState(b) { const G = window.TOPS_GATE, own = (save.owned || []).includes(b.id), eq = save.barrel === b.id || (!save.barrel && b.id === BARRELS[0].id), g = !own && G ? G.gateBarrel(b) : null; return { own, eq, g, sp: !!(g && g.sp), lockLv: g && g.lv && !g.res ? g.lv : 0, res: !!(g && g.res), cost: price(b.price) }; }
+  /* Round 2 #1 (Hayden 06:05): Setup & gear in the new look, inside Shop (no old Store shell, no second bottom nav). Data is the game's own
+     (SHAFTS, FSHAPES, POINTS, FLIGHTS, GEAR, kit points); every pick or buy presses the game's own control, rendered off-screen by showShop, so
+     prices, the bank, ownership and the save stay the game's. */
+  const shopSeg = () => `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="${shopSub !== 'setup'}" data-sub="darts">Darts</button><button type="button" role="tab" aria-selected="${shopSub === 'setup'}" data-sub="setup">Setup &amp; gear</button></div>`;
+  const SETUP_KEYS = () => [['flight', 'Flight shape', typeof FSHAPES !== 'undefined' ? FSHAPES : []], ['shaft', 'Shaft', typeof SHAFTS !== 'undefined' ? SHAFTS : []], ['point', 'Point', typeof POINTS !== 'undefined' ? POINTS : []]];
+  const partState = (key, it) => { const own = (save.ownedSetup || []).includes(key + ':' + it.id) || it.price === 0, cur = ((save.setup || {})[key] || (key === 'flight' ? 'standard' : key === 'shaft' ? 'med' : 'std')) === it.id, cost = price(it.price), bank = career() ? career().bank : 0; let gate = null; try { gate = !own && window.TOPS_GATE && TOPS_GATE.gatePart ? TOPS_GATE.gatePart(key, it.id) : null; } catch (e) {} return { own, cur, cost, gate, short: !own && !gate && bank < cost ? cost - bank : 0 }; };  // level gate = the game's own (v12 PART_LV)
+  // one purchase per 700 ms across re-renders (ChatGPT P1: the guard must outlive the binding); a refused buy frees it at once
+  let buyAt = 0; const buyOnce = () => { const t = Date.now(); if (t < buyAt) return false; buyAt = t + 700; return true; }, buyFree = () => { buyAt = 0; };
+  function setup(M) {
+    // round 2 #1 as approved (r2 card 1): your setup (dart + the five kit stats as thin bars), then one list (Flights, Shafts, Points, Gear) that opens in place
+    const b = barrel(); let img = ''; try { img = V.dartShot(save.flight, Object.assign({ barrel: b }, setupParts())); } catch (e) { img = dartImg(b, 'ds'); }
+    const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st(); let bars = '';
+    if (A && st && window.TOPS_ST2 && TOPS_ST2()) { const kp = A.kitPts(), cap = Math.min(85, A.capNow()), pc = x => Math.max(0, Math.min(100, x / cap * 100)); bars = `<div class="rb-sbars">${A.STATS.map(x => { const me = st.v[x.id], k = kp[x.id] || 0; return `<div class="rb-sbr"><span>${esc(x.n)}</span><div class="rb-sbar"><i class="rb-f" style="width:${pc(me)}%"></i>${k > 0 ? `<i class="rb-gh" style="width:${pc(me + k) - pc(me)}%"></i>` : ''}</div><b class="rb-num">${me + k}</b></div>`; }).join('')}</div>`; }
+    const hero = `<div class="rb-card">${sh('Your setup · ' + esc(b.n))}<div class="rb-slot rb-dart rb-r8" style="aspect-ratio:3.2/1;background:var(--dartbg)"><div class="rb-im" style="background-image:url(${img});background-size:92% auto"></div></div>${bars}</div>`;
+    const msg = shopMsg ? `<div class="rb-card" role="status" style="padding:10px 14px"><span class="rb-sub">${esc(shopMsg)}</span></div>` : ''; shopMsg = '';
+    const thumb = `<span class="rb-slot rb-dart rb-r8 rb-sth" style="background:var(--dartbg)"><span class="rb-im" style="background-image:url(${img});background-size:96% auto"></span></span>`;
+    const row = (key, title, sub, right, open, body) => `<div class="rb-strow"><button type="button" class="rb-acc" data-acc="${key}" aria-expanded="${open}">${key === 'gear' ? `<span class="rb-slot rb-r8 rb-sth"><span class="rb-im" style="background-image:url(${IMG}backroom.jpg);background-position:70% 50%"></span></span>` : thumb}<span class="rb-optx"><b>${title}</b><small>${sub}</small></span>${right}<span class="rb-chev" style="transform:rotate(${open ? 90 : 0}deg)">›</span></button>${open ? `<div class="rb-opts">${body}</div>` : ''}</div>`;
+    const opt = (key, it) => { const p = partState(key, it); const right = p.cur ? chip('Using') : p.own ? chip('Owned') : p.gate ? chip(IC.lock + ' Level ' + p.gate.lv + ' · ' + money(p.cost), 'l') : p.short ? chip(money(p.cost) + ' · ' + money(p.short) + ' short', 'l') : `<span class="rb-buyp">${money(p.cost)}</span>`; return `<button type="button" class="rb-opt" data-part="${key}" data-pid="${it.id}" aria-pressed="${p.cur}" ${p.short || p.gate ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}</b><small>${esc(it.s)}</small></span>${right}</button>`; };
+    const owned = (key, list) => list.filter(it => partState(key, it).own || partState(key, it).cur).length;
+    const cur = (key, list) => list.find(it => partState(key, it).cur) || list[0];
+    const L = Object.fromEntries(SETUP_KEYS().map(([k, , l]) => [k, l]));
+    // Flights: colour and shape together
+    const flights = (typeof FLIGHTS !== 'undefined' ? FLIGHTS : []).concat((window.C3 && C3.lvFlights ? C3.lvFlights() : []).filter(c => !FLIGHTS.includes(c)));
+    const fcur = save.flightCustom ? save.flight : null, fs = cur('flight', L.flight);
+    const fBody = `<div class="rb-stsub"><small class="rb-kick">Colour</small><div class="rb-sw" role="group" aria-label="Flight colour"><button type="button" class="rb-swb rb-swset" data-fl="set" aria-pressed="${!fcur}" aria-label="The set's own flights">Set</button>${flights.map(c => `<button type="button" class="rb-swb" data-fl="${esc(c)}" aria-pressed="${fcur === c}" aria-label="${esc(c)}" style="background:${esc(c)}"></button>`).join('')}</div></div><div class="rb-stsub"><small class="rb-kick">Shape</small></div>` + L.flight.map(it => opt('flight', it)).join('');
+    const fRow = fs ? row('flight', 'Flights', esc(fs.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')) + ' · ' + (fcur ? 'your colour' : 'set colours'), chip(owned('flight', L.flight) + ' owned'), setOpen === 'flight', fBody) : '';
+    // the approved card's chips (Hayden 14:29 "finish chips first"): a part row says what your part gives (its kit points against the default part,
+    // the game's own kitPts), gear says how many items you can buy now. Read like the game's kitWith(): the setup is swapped and restored in one call.
+    const gives = (key, list, c0) => { try { if (!A || !A.kitPts || !c0) return ''; const def = list.find(x => /\bthe default\b/i.test(x.s || ''));
+      if (!def || def.id === c0.id) return '';   // no part says it is the default: show nothing rather than guess a baseline (ChatGPT P2)
+      const ss = save.setup, now = A.kitPts(); let base; try { save.setup = Object.assign({}, ss || {}, { [key]: def.id }); base = A.kitPts(); } finally { save.setup = ss; }
+      const ds = A.STATS.map(x => ({ d: (now[x.id] || 0) - (base[x.id] || 0), n: x.n.toLowerCase() })).filter(x => x.d).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+      const up = ds.find(x => x.d > 0), dn = ds.find(x => x.d < 0), txt = x => (x.d > 0 ? '+' : '\u2212') + Math.abs(x.d) + ' ' + esc(x.n);
+      // a trade-off shows both sides so the cost is never hidden (ChatGPT 14:40): "+3 rhythm · −1 control"; all-positive green, all-negative plain
+      if (up && dn) return chip(`<span class="rb-up">${txt(up)}</span> · ${txt(dn)}`, 'x');
+      return up ? chip(txt(up), 'g') : dn ? chip(txt(dn)) : ''; } catch (e) { return ''; } };
+    const pRow = (key, title) => { const c0 = cur(key, L[key]); return c0 ? row(key, title, esc(c0.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')), gives(key, L[key], c0), setOpen === key, L[key].map(it => opt(key, it)).join('')) : ''; };
+    const gear = typeof GEAR !== 'undefined' ? GEAR : [], gBank = career() ? career().bank : 0,
+      gCan = it => !!career() && gearCount(it.id) < (it.rep || 1) && gBank >= it.price,   // the game's own buy test (showShop gearList onclick): not maxed, career, bank >= price; no level gate or discount on gear
+      gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
+    // the rows use the same gCan as the chip, so a row's buy price and the "N new" chip can never disagree (ChatGPT P2)
+    const gBody = gear.map(it => { const cnt = gearCount(it.id), max = it.rep || 1, own = cnt >= max, short = !own && !gCan(it) ? Math.max(0, it.price - gBank) : 0; const right = own ? chip('Owned') : short ? chip(money(it.price) + ' · ' + money(short) + ' short', 'l') : `<span class="rb-buyp">${money(it.price)}</span>`; return `<button type="button" class="rb-opt" data-gear="${it.id}" aria-pressed="${own}" ${own || short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}${it.rep ? ` <span class="rb-sub">${cnt}/${max}</span>` : ''}</b><small>${esc(it.s || '')}</small></span>${right}</button>`; }).join('');
+    const gNew = gear.filter(gCan).length;   // gear you can buy right now, by the same test as the rows' buy price
+    const gRow = row('gear', 'Gear', `${gOwned} of ${gear.length} owned`, gNew ? chip(gNew + ' new', 'g') : '', gOpen, gBody);
+    return hero + msg + `<div class="rb-card rb-stlist">${fRow}${pRow('shaft', 'Shafts')}${pRow('point', 'Points')}${gRow}</div>`;
+  }
+  // press the game's own setup control (the off-screen Store's Setup or Gear list), then put the hub back as it was
+  function gameSetup(kind, a, b) {
+    const before = JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]), prevTab = (typeof hubTab !== 'undefined' && hubTab.cur) || null;
+    try { showShop(kind === 'gear' ? 'gear' : 'setup', true); } catch (e) { console.warn('rb setup', e); }
+    try {
+      if (kind === 'flight') { const w = $id('swFlight2'); const bt = w && (a === 'set' ? w.querySelector('.setfl') : [...w.querySelectorAll('.sw')].find(x => x.getAttribute('aria-label') === a)); if (bt) bt.click(); }
+      else if (kind === 'gear') { const i = GEAR.findIndex(x => x.id === a); const row = $id('gearList') && $id('gearList').querySelectorAll(':scope > .opt')[i]; if (row) { const was = JSON.stringify([save.gear, career() && career().bank]); row.click(); if (JSON.stringify([save.gear, career() && career().bank]) === was) { const nx = row.nextElementSibling, go = nx && nx.classList.contains('st2x') && nx.querySelector('.st2go'); if (go) go.click(); } } }
+      else { const lists = { shaft: SHAFTS, flight: FSHAPES, point: POINTS }, it = lists[a].find(x => x.id === b);
+        // find the game's row by its own name (the list order and length can differ from the data arrays)
+        const row = it && $id('setupList') && [...$id('setupList').querySelectorAll('.opt')].find(r => { const t = r.querySelector('.t'); return t && t.textContent.trim() === it.n; }); if (row) { const was = JSON.stringify([save.setup, save.ownedSetup]); row.click(); if (JSON.stringify([save.setup, save.ownedSetup]) === was) { const go = row.nextElementSibling && row.nextElementSibling.querySelector('.st2go'); if (go) go.click(); } } }
+    } catch (e) { console.warn('rb setup press', e); }
+    try { if (prevTab && hubTab.cur !== prevTab) hubTab(prevTab); } catch (e) {}
+    return JSON.stringify([save.setup, save.ownedSetup, save.gear, save.flight, save.flightCustom, career() && career().bank]) !== before;
+  }
   function shop(M) {
     const c = M.c, mine = barrel(); if (!sel) sel = mine.id; const b = BARRELS.find(x => x.id === sel) || mine, st = dState(b);
-    const seg = `<div class="rb-seg" role="tablist"><button type="button" role="tab" aria-selected="true">Darts</button><button type="button" role="tab" aria-selected="false" data-go="kit">Setup &amp; gear</button></div>`;
+    const seg = shopSeg(); if (shopSub === 'setup') return seg + setup(M);
     const wt = (b.n.match(/(\d+)g$/) || [])[1], name = b.n.replace(/ \d+g$/, '').replace(new RegExp('^' + b.brand + ' '), '');
     const badge = st.eq ? chip('Equipped') : st.sp ? chip('Sponsor set', 'w') : st.own ? chip('Owned') : st.lockLv ? chip(IC.lock + ' Level ' + st.lockLv, 'l') : '';
     const photo = DART_PHOTO[b.id] ? `${IMG}d_${b.id}.jpg` : dartImg(b, 'ds');
@@ -216,26 +281,29 @@
   /* ---------- Result (EXP-WIN, Hayden 08:38 + 09:05: generated scenes instead of our 3D models, broadcast type) ---------- */
   const WIMG = t => `${IMG}w_win_t${Math.max(0, Math.min(6, t | 0))}.jpg`;
   const shirtCache = {};
-  // the generated light-grey shirt, recoloured to the unlocked colour through the mask made from the same image
-  // a shirt reward in its real colour: the generated light-grey shirt recoloured through its mask, once per colour. Returns the image when it's
-  // ready, else '' (the card stays dark) and calls done(url) when it is. Any failure (image, mask, canvas) gives the neutral trophy image, never
-  // a grey or wrong-colour shirt. At most 4 finished colours kept (ChatGPT P2/P1 13 Nov).
-  function shirtImg(hex, done) {
-    const e = shirtCache[hex]; if (typeof e === 'string') return e;
+  // a generated image with a light-grey shirt, recoloured to a shirt colour through the alpha mask cut from the same image (base.jpg +
+  // base_mask.png), once per base + colour. Returns the image when it's ready, else '' and calls done(url) when it is. Any failure (image,
+  // mask, canvas, bad colour) gives `fallback` through the same callback, never a grey or wrong-colour shirt. At most 6 finished images kept.
+  // Very dark and very light colours are clamped so the fabric keeps its folds (ChatGPT P2, Locker review 13 Nov).
+  function recolour(base, hex, fallback, done) {
+    const key = base + hex, e = shirtCache[key]; if (typeof e === 'string') return e;
     if (Array.isArray(e)) { if (done) e.push(done); return ''; }
-    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 4) delete shirtCache[ks[0]];
-    const wait = shirtCache[hex] = done ? [done] : [];
-    const finish = url => { if (shirtCache[hex] !== wait) return; shirtCache[hex] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
-    const fail = () => finish(`${IMG}w_rw_trophy.jpg`);
+    const ks = Object.keys(shirtCache).filter(k => typeof shirtCache[k] === 'string'); if (ks.length >= 6) delete shirtCache[ks[0]];
+    const wait = shirtCache[key] = done ? [done] : [];
+    const finish = url => { if (shirtCache[key] !== wait) return; shirtCache[key] = url; wait.forEach(f => { try { f(url); } catch (x) {} }); };
+    const fail = () => finish(fallback);
     const A = new Image(), Mk = new Image(); let n = 0; const go = () => { if (++n < 2) return; let cv = null; try {
       const w = A.naturalWidth, h = A.naturalHeight; if (!w || !h || !/^#[0-9a-f]{6}$/i.test(hex)) return fail();
       cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); g.drawImage(Mk, 0, 0, w, h); const m = g.getImageData(0, 0, w, h).data; g.drawImage(A, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
-      const r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      let r0 = parseInt(hex.slice(1, 3), 16), g0 = parseInt(hex.slice(3, 5), 16), b0 = parseInt(hex.slice(5, 7), 16);
+      { const tl = 0.3 * r0 + 0.59 * g0 + 0.11 * b0; if (tl < 44) { const k = 44 - tl; r0 += k; g0 += k; b0 += k; } else if (tl > 205) { const k = 205 / tl; r0 *= k; g0 *= k; b0 *= k; } }
       for (let i = 0; i < d.length; i += 4) { const al = m[i + 3] / 255; if (!al) continue; const lum = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255 * 1.45; d[i] += (Math.min(255, r0 * lum) - d[i]) * al; d[i + 1] += (Math.min(255, g0 * lum) - d[i + 1]) * al; d[i + 2] += (Math.min(255, b0 * lum) - d[i + 2]) * al; }
       g.putImageData(im, 0, 0); const url = cv.toDataURL('image/jpeg', .86); cv.width = cv.height = 0; finish(url); } catch (x) { if (cv) cv.width = cv.height = 0; fail(); } };
-    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}w_rw_shirt.jpg`; Mk.src = `${IMG}w_rw_shirt_mask.png`;
+    A.onload = Mk.onload = go; A.onerror = Mk.onerror = fail; A.src = `${IMG}${base}.jpg`; Mk.src = `${IMG}${base}_mask.png`;
     return '';
   }
+  // a shirt reward in its real colour (EXP-WIN): pending = '' (the card stays dark), failure = the neutral trophy image
+  const shirtImg = (hex, done) => recolour('w_rw_shirt', hex, `${IMG}w_rw_trophy.jpg`, done);
   // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
   // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
   function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
@@ -335,6 +403,13 @@
     qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
+    qa('#rbApp [data-sub]').forEach(b => b.onclick = () => { shopSub = b.dataset.sub; setOpen = ''; render(); });
+    qa('#rbApp [data-acc]').forEach(b => b.onclick = () => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; setOpen = setOpen === b.dataset.acc ? '' : b.dataset.acc; render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; });
+    const keepY = f => { const sc = document.querySelector('#rbMain .rb-scr'), y = sc ? sc.scrollTop : 0; f(); render(); const s2 = document.querySelector('#rbMain .rb-scr'); if (s2) s2.scrollTop = y; };
+    qa('#rbApp [data-fl]').forEach(b => b.onclick = () => keepY(() => { gameSetup('flight', b.dataset.fl); }));
+    // one purchase per 700 ms: a double tap (or a second event on the same node before the redraw) never reaches the game's buy twice
+    qa('#rbApp [data-part]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true' || b.getAttribute('aria-pressed') === 'true' || !b.isConnected || !buyOnce()) return; keepY(() => { const ok = gameSetup('part', b.dataset.part, b.dataset.pid); if (!ok) buyFree(); shopMsg = ok ? 'Set up. You throw with it from your next match.' : 'The shop said no. Nothing was charged.'; }); });
+    qa('#rbApp [data-gear]').forEach(b => b.onclick = () => { if (b.getAttribute('aria-disabled') === 'true' || !b.isConnected || !buyOnce()) return; keepY(() => { const ok = gameSetup('gear', b.dataset.gear); if (!ok) buyFree(); shopMsg = ok ? 'Bought. It\'s in your kit.' : 'The shop said no. Nothing was charged.'; }); });
     const bu = $id('rbBuy'); if (bu) bu.onclick = () => { const r = gameShop(sel, 'buy'); shopMsg = r.ok ? 'Bought and equipped.' : 'The shop said no. Nothing was charged.'; render(); };
     const eqb = $id('rbEquip'); if (eqb) eqb.onclick = () => { const r = gameShop(sel, 'equip'); shopMsg = r.ok ? 'Equipped. You throw it from your next match.' : 'Couldn\'t equip it.'; render(); };
     qa('#rbApp [data-cf]').forEach(b => b.onclick = () => { cardF = b.dataset.cf; render(); });
@@ -364,5 +439,5 @@
   addEventListener('keydown', e => { if (e.key === 'Escape') { const ms = $id('rbMenuSheet'); if (ms) ms.remove(); } });
   // #22: the match header never says the same word twice ("PRACTICE / PRACTICE" in the lesson)
   try { const et = $id('eventTier'), en = $id('eventName'), lg = $id('lkLeg'); if (et && en) { const tx = e => e && getComputedStyle(e).display !== 'none' ? e.textContent.trim().toLowerCase() : ''; const dd = () => { const t = et.textContent.trim().toLowerCase(); const sameN = !!t && t === en.textContent.trim().toLowerCase(); if (et.hidden !== sameN) et.hidden = sameN; if (lg) { const sameL = !!lg.textContent.trim() && lg.textContent.trim().toLowerCase() === (sameN ? tx(en) : t); if (lg.hidden !== sameL) lg.hidden = sameL; } }; [et, en, lg].forEach(e => e && new MutationObserver(dd).observe(e, { childList: true, characterData: true, subtree: true })); } } catch (e) {}   /* #22: header text only: the lesson's 'PRACTICE / PRACTICE' (tier line and leg line) shows once */
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour };
 })();
