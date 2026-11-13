@@ -176,14 +176,20 @@
     const fRow = fs ? row('flight', 'Flights', esc(fs.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')) + ' · ' + (fcur ? 'your colour' : 'set colours'), chip(owned('flight', L.flight) + ' owned'), setOpen === 'flight', fBody) : '';
     // the approved card's chips (Hayden 14:29 "finish chips first"): a part row says what your part gives (its kit points against the default part,
     // the game's own kitPts), gear says how many items you can buy now. Read like the game's kitWith(): the setup is swapped and restored in one call.
-    const gives = (key, list, c0) => { try { if (!A || !A.kitPts || !c0) return ''; const def = list.find(x => /default/i.test(x.s || '')) || list[0]; if (!def || def.id === c0.id) return '';
+    const gives = (key, list, c0) => { try { if (!A || !A.kitPts || !c0) return ''; const def = list.find(x => /\bthe default\b/i.test(x.s || ''));
+      if (!def || def.id === c0.id) return '';   // no part says it is the default: show nothing rather than guess a baseline (ChatGPT P2)
       const ss = save.setup, now = A.kitPts(); let base; try { save.setup = Object.assign({}, ss || {}, { [key]: def.id }); base = A.kitPts(); } finally { save.setup = ss; }
-      let best = null; A.STATS.forEach(x => { const d = (now[x.id] || 0) - (base[x.id] || 0); if (d && (!best || Math.abs(d) > Math.abs(best.d))) best = { d, n: x.n }; });
-      return best ? chip((best.d > 0 ? '+' : '−') + Math.abs(best.d) + ' ' + best.n.toLowerCase(), best.d > 0 ? 'g' : '') : ''; } catch (e) { return ''; } };
+      const ds = A.STATS.map(x => ({ d: (now[x.id] || 0) - (base[x.id] || 0), n: x.n.toLowerCase() })).filter(x => x.d).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+      const up = ds.find(x => x.d > 0), dn = ds.find(x => x.d < 0), txt = x => (x.d > 0 ? '+' : '\u2212') + Math.abs(x.d) + ' ' + esc(x.n);
+      // a trade-off shows both sides so the cost is never hidden (ChatGPT 14:40): "+3 rhythm · −1 control"; all-positive green, all-negative plain
+      if (up && dn) return chip(`<span class="rb-up">${txt(up)}</span> · ${txt(dn)}`, 'x');
+      return up ? chip(txt(up), 'g') : dn ? chip(txt(dn)) : ''; } catch (e) { return ''; } };
     const pRow = (key, title) => { const c0 = cur(key, L[key]); return c0 ? row(key, title, esc(c0.n.replace(/^(Target|Harrows|Winmau|Red Dragon|Unicorn|Shot|L-Style) /, '')), gives(key, L[key], c0), setOpen === key, L[key].map(it => opt(key, it)).join('')) : ''; };
-    const gear = typeof GEAR !== 'undefined' ? GEAR : [], gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
+    const gear = typeof GEAR !== 'undefined' ? GEAR : [], gBank = career() ? career().bank : 0,
+      gCan = it => !!career() && gearCount(it.id) < (it.rep || 1) && gBank >= it.price,   // the game's own buy test (showShop gearList onclick): not maxed, career, bank >= price; no level gate or discount on gear
+      gOpen = setOpen === 'gear', gOwned = gear.filter(it => gearCount(it.id) >= (it.rep || 1)).length;
     const gBody = gear.map(it => { const cnt = gearCount(it.id), max = it.rep || 1, own = cnt >= max, bank = career() ? career().bank : 0, short = !own && bank < it.price ? it.price - bank : 0; const right = own ? chip('Owned') : short ? chip(money(it.price) + ' · ' + money(short) + ' short', 'l') : `<span class="rb-buyp">${money(it.price)}</span>`; return `<button type="button" class="rb-opt" data-gear="${it.id}" aria-pressed="${own}" ${own || short ? 'aria-disabled="true"' : ''}><span class="rb-optx"><b>${esc(it.n)}${it.rep ? ` <span class="rb-sub">${cnt}/${max}</span>` : ''}</b><small>${esc(it.s || '')}</small></span>${right}</button>`; }).join('');
-    const gNew = gear.filter(it => gearCount(it.id) < (it.rep || 1) && (career() ? career().bank : 0) >= it.price).length;   // gear you can buy right now
+    const gNew = gear.filter(gCan).length;   // gear you can buy right now, by the same test as the rows' buy price
     const gRow = row('gear', 'Gear', `${gOwned} of ${gear.length} owned`, gNew ? chip(gNew + ' new', 'g') : '', gOpen, gBody);
     return hero + msg + `<div class="rb-card rb-stlist">${fRow}${pRow('shaft', 'Shafts')}${pRow('point', 'Points')}${gRow}</div>`;
   }

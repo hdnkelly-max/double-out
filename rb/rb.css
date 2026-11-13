@@ -62,6 +62,7 @@ button.rb-card:active,.rb-row:active{background:var(--card2)}
 .rb-chip.rb-g{color:var(--good);border-color:#2e5a3d;background:#16261c}
 .rb-chip.rb-w{color:var(--warn);border-color:#5b4a26;background:#2a2316}
 .rb-chip.rb-l{color:var(--ink2)}
+.rb-chip.rb-x{color:var(--ink2)}.rb-chip .rb-up{color:var(--good)}
 .rb-chip svg{width:13px;height:13px}
 /* meter: segmented bar; .rb-f fill, .rb-gh ghost (kit effect / reward to come), .rb-tg target tick */
 .rb-meter{position:relative;height:10px;display:flex;gap:2px}
