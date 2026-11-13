@@ -26,7 +26,14 @@
   const OPP_PHOTO = {};
   const hairReady = () => { try { return Array.isArray(((V._qa && V._qa.gfx && V._qa.gfx()) || {}).hair); } catch (e) { return false; } };
   const oppLookRb = n => { const L = oppLookFor(n); try { if (V.hairFor && V.hairFor(L, n.oppName)) { if (hairReady()) return Object.assign({}, L, { _rbHair: 1 }); window.__avPending = 1; return null; } } catch (e) {} return L; };   // the game caches renders by look, not by whether the hair library was in: a look that needs it gets its own key once it's in (null = not yet)
-  const oppHeroBg = (n, tier) => { const scene = `url(${IMG}venue_t${tier}.jpg) 60% 40%/cover no-repeat`; try { if (!V.heroShot || !n || n.oppName2) return scene; const L = oppLookRb(n); if (!L) return scene; const h = V.heroShot(L, n.oppName, tier, 0); return h ? `url(${h}) 86% 100%/auto 100% no-repeat,${scene}` : scene; } catch (e) { return scene; } };
+  // Tonight hero (roll-out 1, Hayden 09:05): the tier's generated scene, the opponent seen from behind (no face, so it fits any named
+  // opponent), a woman's version for women opponents. The 3D figure stays for the walk-on and the match.
+  const FEM_NAMES = ['lisa tane', 'pania walters', 'maia tuhoe', 'ngaire pou'];   // women's names the game draws on men's models (game4 NAMED_VAR noBeard)
+  const oppFem = n => { try { const nm = String(n.oppName || ''); if (FEM_NAMES.includes(nm.toLowerCase())) return true; const L = oppLookFor(n); if (L && L.sex) return L.sex === 'f';
+    if (typeof CHAR_F !== 'undefined' && typeof charKey === 'function') return !!CHAR_F[charKey(L, nm)];
+    return /^(Shazza|Bev|Kiri|Mere|Aroha|Fallon|Tash|Jess|Sharon|Kim|Tina|Deb|Marg|Liz|Megan)/i.test(nm); } catch (e) { return false; } };   // same name rule as game4 charKey()
+  const oppHeroBg = (n, tier) => { const t = Math.max(0, Math.min(6, +tier || 0)), scene = `url(${IMG}venue_t${t}.jpg) 60% 40%/cover no-repeat`;
+    return `url(${IMG}tn_t${t}${n && oppFem(n) ? 'f' : ''}.jpg) 74% 38%/cover no-repeat,${scene}`; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
@@ -90,7 +97,7 @@
     const fp = FIXPAY[c.tier], winTxt = n.intro ? 'a place in the team' : sn && sn.ko ? 'the next round' : `+2 pts · ${money(fp[0] + fp[3])}`;
     const hero = `<div class="rb-hero" style="height:262px"><div class="rb-im" style="background:${oppHeroBg(n, c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(180deg,rgba(10,12,14,0) 36%,rgba(10,12,14,.7) 64%,rgba(10,12,14,.96) 100%),linear-gradient(90deg,rgba(10,12,14,.55) 0,rgba(10,12,14,0) 48%)"></div><div class="rb-tx"><span class="rb-kick">${esc(kick)}</span><span class="rb-big" style="font-size:40px">vs ${esc(n.oppName)}</span><span class="rb-win">Win: ${esc(winTxt)}</span></div></div>`;
     const me = M.form, op = n.oppAvg, tot2 = (me || op) + op;
-    const h2h = `<div class="rb-line">${me != null ? `You ${me} (last ${(c.tierAvgs || []).length})` : (n.intro ? 'Your fill-in night' : 'Your first average comes tonight')} · Him ${op} · Best of ${n.legs}</div>`;
+    const h2h = `<div class="rb-line">${me != null ? `You ${me} (last ${(c.tierAvgs || []).length})` : (n.intro ? 'Your fill-in night' : 'Your first average comes tonight')} · <span style="white-space:nowrap">${n.oppName2 ? 'Them' : esc(String(n.oppName || '').split(' ')[0])} · avg ${op}</span> · Best of ${n.legs}</div>`;
     const cta = short
       ? `<div class="rb-card"><div class="rb-lock"><span class="rb-ic">${IC.cash}</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${money(tot - c.bank)} short of the ${money(tot)} entry</span><div class="rb-chips">${chip('Entry ' + money(tot))}${chip('You have ' + money(c.bank), 'l')}</div></div></div><div class="rb-bar"><i style="width:${Math.min(100, c.bank / tot * 100)}%"></i></div></div><button class="rb-primary" type="button" id="rbMoney"><b>Play the money match</b><small>Back room · best of 1</small></button>`
       : `<button class="rb-primary" type="button" id="rbGo"><b>Walk on</b><small>${tot ? `Entry ${money(tot)} · leaves ${money(c.bank - tot)}` : 'Free entry'}</small></button>`;
