@@ -24,26 +24,34 @@ const v12=fs.existsSync('v12.js')?fs.readFileSync('v12.js','utf8'):'';
 const v13=fs.existsSync('v13.js')?fs.readFileSync('v13.js','utf8'):'';
 const v14=fs.existsSync('v14.js')?fs.readFileSync('v14.js','utf8'):'';
 const v15=fs.existsSync('v15.js')?fs.readFileSync('v15.js','utf8'):'';/* CAR-S career backup + confirm */
+const v16=fs.existsSync('v16.js')?fs.readFileSync('v16.js','utf8'):'';/* ENG-RESET fresh page between matches */
 const dg=fs.existsSync('dartgeo.json')?`<script>window.TOPS_DG_RAW=${fs.readFileSync('dartgeo.json','utf8')}</script>\n`:'';
 // collectibles (cards, packs, cabinet, exhibitions): tc/
 const tcf=n=>fs.existsSync('tc/'+n)?fs.readFileSync('tc/'+n,'utf8'):'';
 const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<script>${tcf('cards.js')}\n${tcf('data.js')}\n${tcf('fx.js')}\n${tcf('core.js')}\n${tcf('venue.js')}\n${tcf('pubfx.js')}\n${tcf('cab3d.js')}</script>\n`:'';
 // rebrand (EXP-REBRAND): new menu set behind ?rebrand=1; installs nothing when off
 const rb=fs.existsSync('rb/rb.js')?`<style>${fs.existsSync('rb/rb-lime.css')?fs.readFileSync('rb/rb-lime.css','utf8'):''}${fs.readFileSync('rb/rb.css','utf8')}</style>\n<script>${fs.readFileSync('rb/rb.js','utf8')}</script>\n`:'';
-const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+tc+rb;
-// ENG-FLASH real progress (Experience, Overseer 17:58): the page is one 3 MB file the phone parses top to bottom, so how far the parser has got IS
-// the load progress. After the loader, a tiny TOPS_LOAD.set() goes in after the first </script> past every 10 % of the page (always top level:
-// the HTML parser ends a script at </script>), weighted with the rest in TOPS_LOAD.part: page parsed 50 %, DOMContentLoaded 8 %, the player model download 32 % (game4.js) (they overlap),
-// the game's own #loading.gone → 100 %.
-const page=(()=>{const L=page0.indexOf('id="loading"');if(L<0)return page0;let out='',from=0;for(let k=1;k<=9;k++){const at=Math.max(L,Math.floor(page0.length*k/10));
-  const e=page0.indexOf('</script>',at);if(e<0||e<from)continue;const cut=e+9;out+=page0.slice(from,cut)+`<script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',${k/10})</script>`;from=cut;}
-  out+=page0.slice(from);
-  // ChatGPT P2: markers must come after the loader, in order, each value once
+const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+tc+rb+v16;
+// ENG-FLASH real progress (Experience, Overseer 17:58) + Q&D 18:23: every shipped file is parsed top to bottom, so how far the parser has got IS the
+// load progress. After the loader, a tiny TOPS_LOAD.part('parse', f) goes in after the first </script> past every 10 % of THAT file (always top
+// level: the HTML parser ends a script at </script>), f = the real fraction at that point; weighted in TOPS_LOAD.part with the page parsed (8 %) and
+// the player model (32 %); the game's own #loading.gone → 100 %. Q&D 18:23: the standalone file (what ships) had its 3.2 MB player model BEFORE the
+// loader (first paint 15 s on iOS). The model now goes at <!--TOPS_RIG-->, right after the loader, in ten chunks, so the bar moves while it loads.
+const RIGMARK=/<!--TOPS_RIG:[^>]*-->/;
+const finish=(p0,rig)=>{let p=p0.replace(RIGMARK,()=>rig||'');const L=p.indexOf('id="loading"');if(L<0)throw new Error('build: no loader');let out='',from=0,last=0;
+  for(let k=1;k<=12;k++){const at=Math.max(L,Math.floor(p.length*k/13));const e=p.indexOf('</script>',at);if(e<0||e<from)continue;const cut=e+9,f=+(cut/p.length).toFixed(2);if(f<=last)continue;last=f;
+    out+=p.slice(from,cut)+`<script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',${f})</script>`;from=cut;}
+  out+=p.slice(from);
+  // ChatGPT P2: markers after the loader, in order, each value once; the loader comes before the model and before any external CSS/JS
   const ks=[...out.matchAll(/TOPS_LOAD\.part\('parse',([0-9.]+)\)<\/script>/g)].map(m=>[m.index,+m[1]]);
   if(ks.length<3||ks.some((m,i)=>m[0]<L||(i&&m[1]<=ks[i-1][1])))throw new Error('build: load-progress markers out of order '+JSON.stringify(ks.map(m=>m[1])));
-  return out;})();
+  const ld=out.indexOf('id="loading"');for(const s of ['RIG_URL=','RIG_P','<script src=','fonts.googleapis.com/css2'])if(out.indexOf(s)>=0&&out.indexOf(s)<ld)throw new Error('build: '+s+' before the loader');
+  return out;};
+const page=finish(page0,'');
 fs.writeFileSync('index.html',page.replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','node_modules/three/build/three.min.js'));
-fs.writeFileSync('double-out.html','<meta charset="utf-8">\n<script>window.RIG_B64_URL="remy.b64.txt"</script>\n'+page);
-const b64=fs.readFileSync('remy.b64.txt','utf8').trim();
-fs.writeFileSync('double-out-standalone.html','<meta charset="utf-8">\n<script>window.RIG_URL="data:model/gltf-binary;base64,'+b64+'"</script>\n'+page);
+fs.writeFileSync('double-out.html','<meta charset="utf-8">\n'+finish(page0,'<script>window.RIG_B64_URL="remy.b64.txt"</script>'));
+const b64=fs.readFileSync('remy.b64.txt','utf8').trim(),N=10,cs=Math.ceil(b64.length/N);let rig='';
+for(let i=0;i<N;i++)rig+=`<script>(window.RIG_P=window.RIG_P||[]).push("${b64.slice(i*cs,(i+1)*cs)}")</script>\n`;
+rig+='<script>window.RIG_URL="data:model/gltf-binary;base64,"+window.RIG_P.join("");window.RIG_P=null</script>\n';
+fs.writeFileSync('double-out-standalone.html','<meta charset="utf-8">\n'+finish(page0,rig));
 console.log('built',page.length);

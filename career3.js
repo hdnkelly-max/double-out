@@ -303,6 +303,6 @@ window.TOPS_LUX={items:()=>{const L=luxRead();return LUX.map(x=>Object.assign({}
  owns:id=>{const L=luxRead();return !!(L&&L.owned.includes(id));},badges:()=>{const L=luxRead();return L?LUX.filter(x=>x.badge&&L.owned.includes(x.id)).map(x=>x.badge):[];},
  sets:()=>{const L=luxRead();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxRead();return L&&L.edition||null;},kitAtRisk,
  shop:luxShop,provide:k=>{if(Object.values(LUX_FX).some(a=>a.includes(k)))LUX_LIVE.add(k);},effects:()=>JSON.parse(JSON.stringify(LUX_FX)),live:()=>[...LUX_LIVE],pool:poolInfo};
-window.C3={conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
+window.C3={pending:()=>!!pre,/* ENG-RESET: a reward card still to show (its achievement payout runs when it opens) */conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
