@@ -15,9 +15,17 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       return { t, nm, img: m ? m[0] : null, line: (document.querySelector('#rbApp .rb-line') || {}).textContent || '' }; }, [t, nm]);
     cases.push(r); if (shots && nm !== 'Lisa Tane') { await p.waitForTimeout(700); await p.screenshot({ path: path.join(shots, `tonight_t${t}_${nm.split(' ')[0].toLowerCase()}.png`), clip: { x: 0, y: 0, width: 390, height: 640 } }); }
   }
+  // ChatGPT P2: pairs read "Them", and a long first name at 360 px never pushes the page sideways
+  await p.setViewportSize({ width: 360, height: 640 });
+  const edge = await p.evaluate(() => { const c = career(); c.tier = 2; const n0 = nextOpponent(); const out = {};
+    c.next = Object.assign({}, n0, { oppName: 'Kev Marsh', oppName2: 'Kev Marsh & Shane Bell' }); TOPS_RB.render(); out.pair = (document.querySelector('#rbApp .rb-line') || {}).textContent || '';
+    c.next = Object.assign({}, n0, { oppName: 'Bartholomew-Alexander Smith', oppName2: null, oppAvg: 100.5 }); TOPS_RB.render(); const l = document.querySelector('#rbApp .rb-line');
+    out.long = l ? l.textContent : ''; out.overflow = document.documentElement.scrollWidth > innerWidth || (l && l.scrollWidth > l.clientWidth + 1); return out; });
+  await p.setViewportSize({ width: 390, height: 844 });
   const loaded = await p.evaluate(async () => { const out = {}; for (let t = 0; t <= 6; t++) for (const f of ['', 'f']) { const u = `assets/rb/tn_t${t}${f}.jpg`; out[u] = await new Promise(res => { const i = new Image(); i.onload = () => res(i.naturalWidth); i.onerror = () => res(0); i.src = u; }); } return out; });
   const fail = [];
   for (const c of cases) { const f = c.nm !== 'Tama Rewiri'; if (c.img !== `tn_t${c.t}${f ? 'f' : ''}.jpg`) fail.push(`tier ${c.t} ${c.nm}: ${c.img}`); if (/\bHim\b/.test(c.line) || !c.line.includes(c.nm.split(' ')[0] + ' · avg ')) fail.push(`line "${c.line}"`); }
   for (const [u, w] of Object.entries(loaded)) if (w !== 1200) fail.push(`${u} did not load (${w})`);
+  if (!/Them · avg /.test(edge.pair) || /\bHim\b/.test(edge.pair)) fail.push('pair line "' + edge.pair + '"'); if (edge.overflow) fail.push('long name overflows at 360: "' + edge.long + '"');
   if (bad.length) fail.push('failed requests ' + bad.join(', ')); if (pe.length) fail.push('page errors ' + pe.join('; ').slice(0, 150));
-  console.log(JSON.stringify(cases.slice(0, 3))); console.log(fail.length ? 'rb-tonight FAIL: ' + fail.slice(0, 6).join('; ') : 'rb-tonight PASS (21 cases, 14 images)'); await b.close(); process.exit(fail.length ? 1 : 0); })();
+  console.log(JSON.stringify(cases.slice(0, 3))); console.log(fail.length ? 'rb-tonight FAIL: ' + fail.slice(0, 6).join('; ') : 'rb-tonight PASS (21 cases + pair + long name at 360, 14 images)'); await b.close(); process.exit(fail.length ? 1 : 0); })();
