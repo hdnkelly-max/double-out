@@ -68,6 +68,10 @@ async function go(why){if(busy)return;if(off()||lastOnline||window.__noGL||(wind
  setTimeout(()=>{try{location.reload();}catch(e){}},30);}
 RS.go=go;
 
+/* ---- the cover (Overseer 16:44): the page starts with the loading screen on top and everything else hidden ('tops-pre', built into the
+   head); it lifts only when the screen the boot lands on is up, two frames after, so the old title / splash never paint ---- */
+const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;window.TOPS_BOOTHOLD=false;const go=()=>{/* the page's own pre-paint hold (Experience's TOPS_PRE, released once the new look is installed) is left to its owner */if(!window.TOPS_PRE)d.classList.remove('tops-pre');/* the game's own way out (#loading.gone): the loader fills its bar and fades on that (Experience's observer) */try{const l=ld();if(l)l.classList.add('gone');}catch(e){}};
+ try{requestAnimationFrame(()=>requestAnimationFrame(go));setTimeout(()=>{if(d.classList.contains('tops-pre'))go();},300);/* hidden tab: no frames */}catch(e){go();}};
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
 if(flag&&Date.now()-flag.t<120000){
@@ -76,7 +80,7 @@ if(flag&&Date.now()-flag.t<120000){
     keeps following the real steps instead of jumping to 100 % */
  let done=false;window.TOPS_LDHOLD=true;/* game4 skips its own #loading.gone while this is set (rig in, 9 s fallback) */
  const finish=(why)=>{if(done)return;done=true;window.TOPS_LDHOLD=false;const ms=Date.now()-flag.t;window.TOPS_RESET_MS=ms;window.TOPS_RESET_N=+sessionStorage.getItem(NK)||1;RS.last={ms,why,saveMs:flag.saveMs};
-  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}try{if(window.TOPS_LOAD)TOPS_LOAD.done();else{const l=ld();if(l)l.classList.add('gone');}}catch(e){}};
+  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}lift();};
  let hubAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
   try{showHub();}catch(e){}try{if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}bar(.8,'Opening the hub…');return true;};
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
@@ -93,6 +97,17 @@ if(flag&&Date.now()-flag.t<120000){
  if(typeof netAdopt==='function'){const na=netAdopt;netAdopt=function(cloud){try{if(Date.now()-tb<60000&&cloud&&(cloud.sv||0)<(flag.sv||0)){try{window.TOPS_LOG&&TOPS_LOG.log('reset_keep_local',{cloud:cloud.sv||0,local:flag.sv||0});}catch(e){}RS.keptLocal=(RS.keptLocal|0)+1;try{cloudPush(true);}catch(e){}return;}}catch(e){}return na.apply(this,arguments);};}
  /* sound: the reload drops the audio unlock; the first tap on the hub brings it back, as Continue on the title does */
  const un=()=>{try{audioInit();}catch(e){}['pointerup','touchend','keydown'].forEach(t=>document.removeEventListener(t,un,true));};['pointerup','touchend','keydown'].forEach(t=>document.addEventListener(t,un,true));
+}else if(window.TOPS_PRE?TOPS_PRE.on():document.documentElement.classList.contains('tops-pre')){
+ window.TOPS_LDHOLD=true;window.TOPS_BOOTHOLD=true;/* game4 skips its own #loading.gone (rig in, 9 s) while this is set */
+ /* a launch (cold, or a normal reload): the boot ends on login (no session / no network) or on the title after the cloud pull (signed in).
+    Hold the loading screen until that call has run and the rig is in (the game's own rule), so the player never sees the title drawn
+    before the cloud save landed or the old layout under the new one. 9 s without the rig still lifts on the boot's end (as the game's own
+    fallback did); 15 s lifts regardless. */
+ const t0=Date.now()-Math.round(performance.now());/* page start */let end=0;/* the boot's end is marked by netBoot itself (TOPS_BOOTEND), which may come before this script is parsed */
+ /* the bar on a launch is the loader's own (Experience); Engine only holds and lifts it */
+ const tick=setInterval(()=>{try{if(!end&&window.TOPS_BOOTEND)end=TOPS_BOOTEND;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();
+   if(Date.now()-t0>15000){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,cap:1});}catch(e){}lift();return;}/* never longer than 15 s */
+   if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }
 })();
 </script>
