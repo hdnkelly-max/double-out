@@ -7,6 +7,8 @@ const dir = process.argv[2] || path.resolve(__dirname, '..'), W = +(process.argv
   const out = {}, fails = [];
   for (const mode of ['0', '1']) {
     const p = await b.newPage({ viewport: { width: W, height: H } }); const pe = []; p.on('pageerror', e => pe.push(e.message));
+    // ENG-RESET (3.48) reloads the page when a match ends and the hub opens; this test ends matches by hand, so it uses the game's own test switch
+    await p.addInitScript(() => { try { localStorage.setItem('tops_q20_app', 'noreset'); } catch (e) {} });
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
     await p.goto('file://' + dir + '/index.html?rebrand=' + mode); await p.waitForFunction(() => window.TC_API && typeof S !== 'undefined' && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(1500);
     await p.evaluate(() => { save.authSeen = true; save.name = 'Hayden'; save.matches = 30; $('login').hidden = true; newCareer(); const c = career(); c.tier = 1; c.bank = 640; persist(); showHub('play'); });
