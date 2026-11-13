@@ -104,12 +104,8 @@ if(flag&&Date.now()-flag.t<120000){
     before the cloud save landed or the old layout under the new one. 9 s without the rig still lifts on the boot's end (as the game's own
     fallback did); 15 s lifts regardless. */
  const t0=Date.now()-Math.round(performance.now());/* page start */let end=0;/* the boot's end is marked by netBoot itself (TOPS_BOOTEND), which may come before this script is parsed */
- /* real progress on a launch (Hayden 17:57: no sitting at 0 % then jumping to 100 %): page parsed, the cloud client loaded, the player model
-    in, the boot's screen drawn; the loader creeps between these and fills to 100 % when it lifts. A page that drives TOPS_LOAD itself (a test of
-    the loader) sets TOPS_LOAD_MANUAL and the steps stay out of its way. */
- const step=p=>{try{if(!window.TOPS_LOAD_MANUAL&&window.TOPS_LOAD)TOPS_LOAD.set(p);}catch(e){}};step(.4);
+ /* the bar on a launch is the loader's own (Experience); Engine only holds and lifts it */
  const tick=setInterval(()=>{try{if(!end&&window.TOPS_BOOTEND)end=TOPS_BOOTEND;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();
-   step(.4+(typeof NET!=='undefined'&&NET.sb?.1:0)+(rig?.25:0)+(end?.15:0));/* the page itself is 2-38 % (build.js) */
    if(Date.now()-t0>15000){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,cap:1});}catch(e){}lift();return;}/* never longer than 15 s */
    if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }
