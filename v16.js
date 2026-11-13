@@ -118,6 +118,7 @@ if(flag&&Date.now()-flag.t<120000){
    const el=Date.now()-t0;
    if(!end&&el>15000&&!slow){slow=1;try{TOPS_LOAD.set(0,'Slow connection · still loading…');}catch(e){}try{window.TOPS_LOG&&TOPS_LOG.log('boot_slow',{ms:el,rig:!!rig});}catch(e){}}
    if(!end&&el>45000){clearInterval(tick);window.TOPS_BOOT_MS=el;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:el,cap:'offline'});}catch(e){}
+    try{NET.bootGen=(NET.bootGen||0)+1;/* cancels the unfinished boot (game4 netBoot) */NET.user=null;/* a half-done sign-in pushes nothing; the player signs in again from here */}catch(e){}
     try{showLogin();const st=$('loginStatus');if(st)st.textContent='Can’t reach the server. Check your connection and try again.';}catch(e){}lift();return;}
    if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }

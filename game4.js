@@ -812,7 +812,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   let tried=false;if(!window.caches||!caches.open){window.TOPS_RIGSRC='net';return tryNet(2).then(ok);}
   return caches.open('tops-rig').then(c=>c.match(abs).then(hit=>hit?hit.arrayBuffer().then(ok).then(b=>{window.TOPS_RIGSRC='cache';prog(1);return b;}):null)
    .catch(()=>null).then(b=>b||(tried=true,tryNet(2)).then(ok).then(b=>{window.TOPS_RIGSRC='net';
-    c.put(abs,new Response(b.slice(0),{headers:{'content-type':'model/gltf-binary'}})).then(()=>c.keys()).then(ks=>ks.forEach(k=>{if(k.url!==abs)c.delete(k);})).catch(()=>{});return b;})))
+    try{c.put(abs,new Response(b.slice(0),{headers:{'content-type':'model/gltf-binary'}})).then(()=>c.keys()).then(ks=>ks.forEach(k=>{if(k.url!==abs)c.delete(k);})).catch(()=>{});}catch(x){}/* best effort: a failed cache write never loses the download */return b;})))
    .catch(e=>{if(tried)throw e;/* Cache Storage itself failed (private mode, quota): download */window.TOPS_RIGSRC='net';return tryNet(2).then(ok);});}
  function onRig(f){if(RIG.ready)f();else RIG.waiting.push(f);}
  function shirtCanvas(look,name,tier){const img=RIG.shirtImg;const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');if(img)x.drawImage(img,0,0,1024,1024);else{x.fillStyle='#666';x.fillRect(0,0,1024,1024);}
@@ -2611,19 +2611,22 @@ function showLogin(){const el=$('login');if(!el)return showTitle();el.hidden=fal
  $('btnGoogle').onclick=async()=>{st.textContent='Opening Google…';try{const sb=await netLoad();save.authSeen=true;persist();const redirectTo=location.origin+location.pathname;const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo}});if(error)throw error;}catch(e){st.textContent='Sign-in didn’t work. Try again in a minute.';console.warn(e);}};
  $('btnGuest').onclick=()=>{save.authSeen=true;persist();el.hidden=true;showTitle();};}
 /* ENG-FLASH: TOPS_BOOTEND marks the screen the boot lands on (title after the cloud pull, or login): the loading screen is held until then (v16) */
-async function netBoot(){const hashAuth=/access_token=|refresh_token=|code=/.test(location.hash+location.search);
- try{const sb=await netLoad();const {data}=await sb.auth.getSession();if(data&&data.session){await netSignedIn(data.session.user);window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();if(hashAuth)history.replaceState(null,'',location.pathname);}else{showLogin();window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();}
+/* ENG-RIGCACHE (ChatGPT P1): a boot the loader gave up on (v16, 45 s, the player is on the offline login) is cancelled by bumping NET.bootGen:
+   its late answers neither sign in, adopt a save nor change the screen. A sign-in the player starts afterwards is a new path (no generation). */
+async function netBoot(){const hashAuth=/access_token=|refresh_token=|code=/.test(location.hash+location.search);const g=NET.bootGen=(NET.bootGen||0)+1;
+ try{const sb=await netLoad();const {data}=await sb.auth.getSession();if(NET.bootGen!==g)return;if(data&&data.session){await netSignedIn(data.session.user,g);if(NET.bootGen!==g)return;window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();if(hashAuth)history.replaceState(null,'',location.pathname);}else{showLogin();window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();}
   sb.auth.onAuthStateChange((ev,sess)=>{if(ev==='SIGNED_IN'&&sess&&(!NET.user||NET.user.id!==sess.user.id))netSignedIn(sess.user);if(ev==='SIGNED_OUT'){NET.user=null;save.cloudUser=null;persist();showLogin();}});
- }catch(e){console.warn('net boot',e);showLogin();const st=$('loginStatus');if(st)st.textContent='Can’t reach the server. Check your connection and try again.';window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();}}
-async function netSignedIn(user){NET.user=user;save.cloudUser={id:user.id,name:netUserName()};persist();const el=$('login');if(el)el.hidden=true;
+ }catch(e){console.warn('net boot',e);if(NET.bootGen!==g)return;showLogin();const st=$('loginStatus');if(st)st.textContent='Can’t reach the server. Check your connection and try again.';window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();}}
+async function netSignedIn(user,g){const stale=()=>g!=null&&NET.bootGen!==g;if(stale())return;NET.user=user;save.cloudUser={id:user.id,name:netUserName()};persist();const el=$('login');if(el)el.hidden=true;
  // pull cloud save
  try{const sb=NET.sb;const {data,error}=await sb.from('tops_saves').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw error;
   const cloud=data&&data.data;const localMatches=(save.matches||0);const cloudMatches=cloud?(cloud.matches||0):0;
   // cloud only: when signed in, the cloud save always wins; the device copy is never offered
+  if(stale())return;/* given up on: no adopt, no push, no screen change */
   if(cloud&&(cloudMatches>0||cloud.career)){netAdopt(cloud);}
   else cloudPush(true);
  }catch(e){console.warn('cloud pull',e);}
- showTitle();}
+ if(stale())return;showTitle();}
 function netAdopt(cloud){if(!cloud||cloud.season!==SEASON){cloudPush(true);return;}const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);if(!save.lb&&cloud.lb)save.lb=cloud.lb;/* #12: a cloud save written by v1.75 carries the old inflated opponents; migrate it too (idempotent) */try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}persist();}
 function cloudPush(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const row={user_id:NET.user.id,data:save,updated_at:new Date().toISOString()};const {error}=await NET.sb.from('tops_saves').upsert(row,{onConflict:'user_id'});if(error)throw error;NET.cloudAt=Date.now();}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);}
 async function netSignOut(){try{if(NET.sb)await NET.sb.auth.signOut();}catch(e){}NET.user=null;save.cloudUser=null;persist();showTitle();}

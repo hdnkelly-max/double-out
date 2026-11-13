@@ -15,13 +15,13 @@ const run=async(mode)=>{const ctx=await b.newContext({viewport:{width:390,height
  await p.addInitScript(mode=>{try{localStorage.setItem('tops_rebrand','1');}catch(e){}const iv=setInterval(()=>{try{if(V&&V._qa&&V._qa.renderer){V._qa.renderer.render=function(){};clearInterval(iv);}}catch(e){}},50);
   const W=ms=>new Promise(z=>setTimeout(z,ms));const user={id:'u-cap',email:'c@c',user_metadata:{full_name:'Cap Test'}};const T0=performance.now();
   const cloud={matches:12,name:'CloudName',authSeen:true,lessonDone:true,sv:5,tcIntro:1,tcWelcomed:1};
-  const q={select(){return q;},eq(){return q;},maybeSingle:async()=>{await W(Math.max(0,(mode==='late'?20000:1000)-(performance.now()-T0)));let c=cloud;try{/* a whole save (the device's fresh one) with the cloud's marks, of this season (the game adopts only those) */c=Object.assign(JSON.parse(JSON.stringify(save)),cloud,{season:SEASON});}catch(e){}return {data:{data:c,updated_at:new Date().toISOString()},error:null};},insert:async()=>({error:null}),upsert:async()=>({error:null})};
+  const q={select(){return q;},eq(){return q;},maybeSingle:async()=>{await W(Math.max(0,(mode==='late'?20000:mode==='giveup'?48000:1000)-(performance.now()-T0)));let c=cloud;try{/* a whole save (the device's fresh one) with the cloud's marks, of this season (the game adopts only those) */c=Object.assign(JSON.parse(JSON.stringify(save)),cloud,{season:SEASON});}catch(e){}return {data:{data:c,updated_at:new Date().toISOString()},error:null};},insert:async()=>({error:null}),upsert:async()=>({error:null})};
   window.supabase={createClient:()=>({auth:{getSession:()=>mode==='hang'?new Promise(()=>{}):Promise.resolve({data:{session:{user}}}),onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>({})},from:()=>q,rpc:async()=>({data:{ok:true},error:null}),channel:()=>({on(){return this;},subscribe(){return this;}}),removeChannel(){}})};
   /* what is on top, every 100 ms, from the first script on */
   window.__cap=[];setInterval(()=>{try{if(!document.body)return;const ch=[];for(let c=document.elementFromPoint(innerWidth/2,innerHeight/2),i=0;c&&i<12;i++,c=c.parentElement)if(c.id)ch.push(c.id);
    const ld=document.getElementById('loading');const t=document.getElementById('title');
    __cap.push({t:Math.round(performance.now()),top:ch.join('<'),gone:!!(ld&&ld.classList.contains('gone')),tip:(document.getElementById('ldTip')||{}).textContent||'',name:t&&!t.hidden?((typeof save!=='undefined'&&save&&save.matches===12)?'cloud':'other'):null,/* the title on screen, drawn with the cloud save (12 matches) or without it */end:!!window.TOPS_BOOTEND});}catch(e){}},100);},mode);
- await p.goto(URL0);const dur=mode==='hang'?50000:mode==='late'?26000:14000;await p.waitForTimeout(dur);
+ await p.goto(URL0);const dur=mode==='hang'?50000:mode==='giveup'?54000:mode==='late'?26000:14000;await p.waitForTimeout(dur);
  const L=await p.evaluate(()=>__cap);const lift=L.find(s=>s.gone);const before=lift?L.filter(s=>s.t<lift.t):L;
  const game=before.filter(s=>!/loading/.test(s.top)&&/title|login|hub|rbApp/.test(s.top));const slow=L.find(s=>/slow/i.test(s.tip));const after=lift?L.filter(s=>s.t>=lift.t+300):[];
  O({mode,liftAt:lift&&lift.t,slowAt:slow&&slow.t,topAtLift:after[0]&&after[0].top,titleAfter:after.length?after[after.length-1].name:null,gameUnderCover:game.length,samples:L.length});
@@ -29,7 +29,11 @@ const run=async(mode)=>{const ctx=await b.newContext({viewport:{width:390,height
  if(mode==='hang'){if(!slow||slow.t<14500)F(mode,'no slow-connection line after 15 s');if(!lift||lift.t<44500)F(mode,'lifted at '+(lift&&lift.t)+' ms with the boot unfinished');if(!after.length||!/login/.test(after[after.length-1].top))F(mode,'not on the login screen after 45 s: '+(after.length&&after[after.length-1].top));
   const ls=await p.evaluate(()=>(document.getElementById('loginStatus')||{}).textContent||'');if(!/reach the server/.test(ls))F(mode,'login line: '+ls);}
  if(mode==='late'){if(!lift||lift.t<19500)F(mode,'lifted at '+(lift&&lift.t)+' ms, before the cloud save landed');if(after.some(s=>s.name==='other'))F(mode,'a title without the cloud save was shown');if(!after.some(s=>s.name==='cloud'))F(mode,'the title with the cloud save never showed');}
+ /* 'giveup': signed in, the cloud read answers at 48 s, after the loader gave up (45 s): the late answer is ignored; the player stays on the
+    login screen, the device save is not replaced, nothing is signed in behind their back */
+ if(mode==='giveup'){const g=await p.evaluate(()=>({login:!document.getElementById('login').hidden,m:save.matches||0,user:!!(NET&&NET.user),title:!document.getElementById('title').hidden}));O({mode,after:g});
+  if(!lift||lift.t<44500)F(mode,'lifted at '+(lift&&lift.t));if(!g.login||g.title)F(mode,'not left on the login screen: '+JSON.stringify(g));if(g.m===12)F(mode,'the late cloud save was adopted');if(g.user)F(mode,'signed in by the late answer');}
  if(mode==='quick'){if(!lift||lift.t>12000)F(mode,'lifted at '+(lift&&lift.t)+' ms');}
  if(pe.length)F(mode,'page errors: '+pe.slice(0,2).join(' | '));await ctx.close();};
-for(const m of ['quick','late','hang'])if(!ONLY||ONLY.includes(m))await run(m);
+for(const m of ['quick','late','hang','giveup'])if(!ONLY||ONLY.includes(m))await run(m);
 await b.close();srv.close();console.log(fails.length?'BOOT-CAP FAIL':'BOOT-CAP PASS');process.exit(fails.length?1:0);})();
