@@ -6,7 +6,7 @@ const BUILD=String(Date.now());
 // between-match reset. It now reads version.json (a few bytes, written by this build, so it always matches TOPS_BUILD), 3 s after the page
 // has loaded (never competing with the player model download), never on a between-match reset page (v16 sets TOPS_RESETTING), never mid-match,
 // once per build per session; offline or missing = silent.
-const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');if(window.S&&S&&!S.done)return;q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>\n`;
+const upd=`<script>window.TOPS_BUILD="${BUILD}";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>\n`;
 const NM='node_modules/three/examples/js/';
 const exr=fs.readFileSync(NM+'libs/fflate.min.js','utf8')+';\n'+fs.readFileSync(NM+'loaders/EXRLoader.js','utf8');
 const envB64=n=>fs.readFileSync('env/'+n+'.exr.js','utf8').split('base64,')[1].split("'")[0];
@@ -57,7 +57,7 @@ fs.writeFileSync('double-out.html','<meta charset="utf-8">\n'+finish(page0,'<scr
 // ENG-RIGCACHE: the player model is its own file, named by its contents (rig/remy-<sha8>.glb), so the browser and Engine's Cache Storage keep it
 // across loads and between-match resets; a new model = a new name. The shipped page only carries its name and size, at <!--TOPS_RIG--> (after the loader).
 const crypto=require('crypto');const glb=Buffer.from(fs.readFileSync('remy.b64.txt','utf8').trim(),'base64');const sha=crypto.createHash('sha256').update(glb).digest('hex').slice(0,8);
-fs.mkdirSync('rig',{recursive:true});for(const f of fs.readdirSync('rig'))if(/^remy-[0-9a-f]{8}\.glb$/.test(f)&&f!==`remy-${sha}.glb`)fs.unlinkSync('rig/'+f);
+fs.mkdirSync('rig',{recursive:true});   /* older remy-*.glb are never deleted here (ChatGPT P1): a page still cached on a phone may name one; release keeps them on the site too */
 const RIGF=`rig/remy-${sha}.glb`;fs.writeFileSync(RIGF,glb);
 const rig=`<script>window.RIG_URL="${RIGF}";window.RIG_BYTES=${glb.length}</script>\n`;
 const ship=finish(page0,rig);
