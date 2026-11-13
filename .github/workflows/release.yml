@@ -157,16 +157,16 @@ jobs:
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
           grep -q "TOPS_VER='$V'" ../out/index.html || { echo "::error::BUILD: index.html does not carry $V"; exit 1; }
-          # ENG-RIGCACHE: the page loads its rig from rig/remy-<sha8>.glb (immutable; <sha8> = first 8 hex of the file's sha256).
+          # ENG-RIGCACHE: the page loads its rig from rig/remy-<hash>.glb (immutable; <hash> = the first 8-64 hex of the file's sha256 (Engine's build uses 12)).
           # Publish exactly the file the page names, and prove name = content. No-op while the page names no rig. (run shell is bash -eo pipefail)
-          RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' ../out/index.html || true; } | sort -u)
+          RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8,64\}\.glb' ../out/index.html || true; } | sort -u)
           WROTE=$( { find rig -maxdepth 1 -name 'remy-*.glb' 2>/dev/null || true; } | sort | tr '\n' ' ')
           if [ -z "$RIG" ]; then
-            [ -z "$WROTE" ] || { echo "::error::BUILD: build.js wrote $WROTE but the page names no rig/remy-<sha8>.glb (the page must carry the literal name)"; exit 1; }
+            [ -z "$WROTE" ] || { echo "::error::BUILD: build.js wrote $WROTE but the page names no rig/remy-<hash>.glb (the page must carry the literal name)"; exit 1; }
           else
             [ "$(echo "$RIG" | wc -l)" = 1 ] || { echo "::error::BUILD: the page names more than one rig file: $RIG"; exit 1; }
             [ -s "$RIG" ] || { echo "::error::BUILD: the page loads $RIG but build.js did not write it"; exit 1; }
-            H=$(sha256sum "$RIG" | cut -c1-8); [ "rig/remy-$H.glb" = "$RIG" ] || { echo "::error::BUILD: $RIG has content hash $H (stale or edited rig file)"; exit 1; }
+            N=${RIG#rig/remy-}; N=${N%.glb}; H=$(sha256sum "$RIG" | cut -c1-${#N}); [ "$H" = "$N" ] || { echo "::error::BUILD: $RIG has content hash $H (stale or edited rig file)"; exit 1; }
             mkdir -p ../out/rig && cp "$RIG" ../out/rig/
             echo "rig: $RIG $(wc -c < "$RIG") bytes" >> $GITHUB_STEP_SUMMARY
           fi
@@ -219,7 +219,7 @@ jobs:
           U="${{ steps.deploy.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
-          RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' out/index.html || true; } | sort -u)
+          RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8,64\}\.glb' out/index.html || true; } | sort -u)
           if [ -n "$RIG" ]; then
             curl -fsS -o live_rig.glb "${U}${RIG}" || { echo "::error::LIVE: ${U}${RIG} did not download"; exit 1; }
             [ "$(sha256sum < live_rig.glb)" = "$(sha256sum < "out/$RIG")" ] || { echo "::error::LIVE: ${U}${RIG} is not the released rig ($(wc -c < live_rig.glb) bytes)"; exit 1; }
