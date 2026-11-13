@@ -127,7 +127,7 @@ function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.f
   heap_mb:performance.memory?+(performance.memory.usedJSHeapSize/1e6).toFixed(1):null,match_index:M.ix,frame_hist:fbins(fh),standalone:standalone(),app_secs:M.app,...(m=>({geometries:m.geo,textures:m.tex,programs:m.prog,tex_mb:m.tex_mb,mem:{now:m,start:M.mem0}}))(mem()),incidents:M.inc.slice().sort((a,b)=>b.f-a.f),q_dropped:(()=>{try{return +localStorage.getItem(DROP_KEY)||0;}catch(e){return null;}})(),dev:Object.assign({rpr:rpr()},dev(),t20())});}
 // #20: no new columns (tops_perf is strict), so the extra per-match detail rides in the dev JSON: fps per 30 s window, frames drawn between matches,
 // how far a stale screen would have moved the lock point (TOPS_LOCKLAG), and the bisect switch in use (?q20=)
-function t20(){try{const o={fps_30s:M.win.concat(M.w&&M.w.vis>=5000?[winRow(M.w)]:[]),idle:M.idle};if(M.cnt)o.cnt=M.cnt;
+function t20(){try{const o={};/* ENG-RESET: each part on its own, so one bad part can't drop the rest of t20 (reset_ms, q20) */try{o.fps_30s=M.win.concat(M.w&&M.w.vis>=5000?[winRow(M.w)]:[]);}catch(e){o.fps_err=String(e&&e.message||e).slice(0,80);}try{o.idle=M.idle;if(M.cnt)o.cnt=M.cnt;}catch(e){}
  /* Overseer 21:37: render passes per frame in this match by scene|camera|target (main|p21|screen = the board view, main|p7… = the room view, arm = first-person
     arm pass, other = portraits/hero/dart renders), and the 3D canvas as it is now: [width, height, CSS width, CSS height, drawing buffer w, h, renderer pixel ratio, devicePixelRatio] */
  try{const K=window.TOPS_RC&&TOPS_RC.k,n=M.fn||1;if(K){const rk={};Object.keys(K).sort((a,b)=>K[b]-K[a]).slice(0,8).forEach(k=>rk[k]=+(K[k]/n).toFixed(2));o.rpf=rk;}}catch(e){}
