@@ -2,7 +2,9 @@
 /* S3 (Season 3, Hayden 07:45): one flag for the whole Season 3 build. ?s3=1 turns it on and sticks (the home-screen app can't pass a URL flag;
    the Menu switch writes the same key), ?s3=0 turns it off. Season 3 has its own save slot on the device and in the cloud, so Season 2 saves
    are never written by a Season 3 game and rolling back to 3.55 gives them back exactly. */
-window.TOPS_S3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1')localStorage.setItem('tops_s3','1');if(q==='0')localStorage.removeItem('tops_s3');return localStorage.getItem('tops_s3')==='1';}catch(e){return false;}})();
+/* release = flip S3_DEFAULT to true (one line). Rollback without a new build: ?s3=0 or the Menu switch stores '0' and the game is 3.55 again on the Season 2 save */
+const S3_DEFAULT=false;
+window.TOPS_S3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1'||q==='0')localStorage.setItem('tops_s3',q);const v=localStorage.getItem('tops_s3');return v==='1'||(v!=='0'&&S3_DEFAULT);}catch(e){return S3_DEFAULT;}})();
 window.TOPS_SAVE_NS=TOPS_S3FLAG?{key:'doubleout_s3',table:'tops_saves_s3',rpc:'tops_save3_put',bak:'tops_career_bak_s3',lb:'tops_players_s3',lbRpc:'tops_upsert3',season:3}:{key:'doubleout2',table:'tops_saves',rpc:'tops_save_put',bak:'tops_career_bak',lb:'tops_players',lbRpc:'tops_upsert',season:2};
 ENGINE
 // ===== DATA =====
