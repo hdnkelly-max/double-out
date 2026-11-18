@@ -171,12 +171,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // Bands are Hayden's drafts; tests/sim-ai.js gates them.
  const BAND=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
  // target that makes the simulated match average land mid-band: pub and club AIs finish less efficiently, and stage pressure widens the spread at higher tiers, so each centre sits above its band middle by the measured gap
- const CEN0=[58,63,69,76,84,91,97];
- // CAR-TUNE (Hayden 18:53, "slightly harder at the top and slightly easier at the bottom"): a few points on each field's centre, fields
- // only (the throw is untouched; opponents stay fixed per tier and opponent, never off the player's own average). Middle tiers unchanged.
- // The band clamp moves with the centre, so the field keeps its spread. Applied on the next match: queued opponents re-derive from oppRaw.
- const TUNE=[-3,-4,0,0,0,6,8];
- const CEN=CEN0.map((v,i)=>v+TUNE[i]);window.TOPS_FIELD_TUNE=TUNE.slice();
+ const CEN=[58,63,69,76,84,91,97];
  // Competitive headroom over the Club top per tier: Trans-Tasman and Pro Tour fields have the widest spread (stage pressure), so their toughest opponents run hottest; less headroom there keeps them inside the +5 hard cap with margin (sim-ai 200 legs, 20:47)
  const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
