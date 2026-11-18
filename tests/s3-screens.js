@@ -4,7 +4,7 @@
 // usage: node tests/s3-screens.js [dir]   (SHOTS=1 writes tests/s3_*.png at 390)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const p = await ctx.newPage();
+  const ctx = await b.newContext({ viewport: { width: +(process.env.VW || 390), height: +(process.env.VH || 844) }, hasTouch: true, isMobile: true }); const p = await ctx.newPage();
   const pe = []; p.on('pageerror', e => pe.push(e.message)); await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
   const fail = [], out = {}; const shot = async n => { if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_' + n + '.png') }); };
   const boot = async (qs) => { await p.goto('file://' + dir + '/index.html' + qs, { timeout: 180000 }); await p.waitForFunction(() => window.TC_API && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(800);
@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await boot('?s3=1'); await p.evaluate(() => { localStorage.removeItem('tops_s3_seen'); newCareer(); const c = career(); c.stage = 'circuit'; persist(); }); await reload();
   out.on = await look(); await shot('1_circuit');
   if (out.on.tabs.join() !== 'circuit,money,shop,locker,practice') fail.push('flag on: tabs ' + out.on.tabs); if (out.on.sel !== 'circuit') fail.push('flag on: opens on ' + out.on.sel);
-  if (!/pub/i.test(out.on.lvn)) fail.push('not at the Pub: ' + out.on.lvn); if (out.on.posters < 1 || out.on.book < 1) fail.push('no event posters / Book it'); if (out.on.wide) fail.push('page scrolls sideways at 390');
+  if (!/pub/i.test(out.on.lvn)) fail.push('not at the Pub: ' + out.on.lvn); if (out.on.posters < 1 || out.on.book < 1) fail.push('no event posters / Book it'); if (out.on.wide) fail.push('page scrolls sideways');
   // 3 book → live view; reload mid-booking keeps the live view, no result shown
   await tap('#rbApp [data-s3book]'); out.booked = await look(); if (!out.booked.live) fail.push('booking did not open the live view');
   await reload(); out.bookedR = await look(); await shot('2_live'); if (!out.bookedR.live || !out.bookedR.go) fail.push('after reload mid-booking: no live view / Walk on'); if (out.bookedR.sheet) fail.push('a result showed after booking: ' + out.bookedR.sheet);
