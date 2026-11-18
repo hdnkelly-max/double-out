@@ -4,7 +4,7 @@
 // --- 1. A perfect release lands tight (Hayden: "the dopamine of doing it correctly"); window 15% smaller to hold averages ---
 const _tp=throwParams;throwParams=function(){const tp=_tp.apply(this,arguments);tp.P*=.85;return tp;};
 const _lf=landFrom;landFrom=function(lock,tp,dt){const perfect=Math.abs(dt)<=tp.P;if(!perfect)return _lf.apply(this,arguments);
- let k=THROW_TUNE.perfK;/* CAR-TOP: was .6 */try{if(S&&S.fx&&S.fx.some(f=>f.mods&&f.mods.tight))k*=.75;}catch(e){}const sg=tp.s0*k;
+ let k=.6;try{if(S&&S.fx&&S.fx.some(f=>f.mods&&f.mods.tight))k*=.75;}catch(e){}const sg=tp.s0*k;
  try{if(S&&S.aim&&Math.hypot(lock.x-S.aim.x,lock.y-S.aim.y)>14)S.lockedOff=performance.now();}catch(e){}
  return {x:lock.x+gauss()*sg*.95,y:lock.y+gauss()*sg*.85,e:0};};
 setInterval(()=>{if(S&&S.lockedOff&&performance.now()-S.lockedOff<300){const v=$('paVerdict');if(v&&/perfect/i.test(v.textContent)&&!/locked/i.test(v.textContent))v.textContent='Perfect · locked off target';}},60);
