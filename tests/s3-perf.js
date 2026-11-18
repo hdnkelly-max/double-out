@@ -20,5 +20,5 @@ for(const on of [false,true]){const cx=await b.newContext({...devices['iPhone 13
   const a=await win(0),sd=await win(1);await p.evaluate(()=>{try{S.done=true;}catch(e){}});return {aim:a,side:sd};};
  bytes=0;got=[];const t1=Date.now();await p.goto(URL0+'?s3='+(on?1:0));const l1=await ready();const r1={loadMs:Date.now()-t1,mb:+(bytes/1e6).toFixed(2),files:got.slice(0,14)};r1.m=await match();
  bytes=0;got=[];const t2=Date.now();await p.reload();await ready();const r2={loadMs:Date.now()-t2,mb:+(bytes/1e6).toFixed(2),files:got.slice(0,12)};r2.m=await match();
- out[on?'s3':'off']={match1:r1,match2:r2,flag:await p.evaluate(()=>!!window.TOPS_S3FLAG),errors:pe.slice(0,3)};await cx.close();}
+ out[on?'s3':'off']={match1:r1,match2:r2,lateFiles:got.slice(0,10),flag:await p.evaluate(()=>!!window.TOPS_S3FLAG),errors:pe.slice(0,3)};await cx.close();}
 console.log(JSON.stringify(out,null,1));await b.close();srv.close();})();

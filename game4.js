@@ -1090,10 +1090,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     return net().then(b=>{if(okGlb(b)){try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}}return {b};});});})
    .catch(()=>net().then(b=>({b})))
    .then(r=>parse(r.b,r.hit?(()=>{const c=r.c;Promise.resolve().then(()=>c.delete(abs)).catch(()=>{}).then(()=>net()).then(b=>{if(okGlb(b)){try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}}parse(b);},onErr);}):null),onErr);}
- window.TOPS_GLBLOAD=glbLoad;window.TOPS_CHARKEY=(l,n)=>window.TOPS_S3FLAG?S3_RIG:charKey(l,n);window.TOPS_LOADCHAR=k=>{if(k&&k!=='remy')loadChar(k);};window.TOPS_LOADHAIR=()=>{try{loadHair();}catch(e){}};
+ window.TOPS_GLBLOAD=glbLoad;window.TOPS_CHARKEY=(l,n)=>window.TOPS_S3FLAG?S3_RIG:charKey(l,n);window.TOPS_LOADCHAR=k=>{if(k&&k!=='remy')loadChar(k);};window.TOPS_LOADHAIR=()=>{try{if(window.TOPS_S3FLAG)return;/* S3 figures grow their own hair */loadHair();}catch(e){}};
  /* the player's and the next opponent's character files are requested as soon as a page is up (the hub), so the figures a match builds are
     real ones, not the stand-in (a file that lands once the match is live waits for the hub, ENG-7) */
- window.TOPS_PRELOAD=list=>{try{if(window.TOPS_S3FLAG&&!RIGS[S3_RIG])loadChar(S3_RIG);(list||[]).forEach(([look,name])=>{const ck=charKey(look,name);if(ck&&ck!=='remy'&&!RIGS[ck])loadChar(ck);});}catch(e){}};
+ window.TOPS_PRELOAD=list=>{try{if(window.TOPS_S3FLAG){if(!RIGS[S3_RIG])loadChar(S3_RIG);return;}/* S3: every figure is built on the one S3 rig; the 3.55 character files are never used */(list||[]).forEach(([look,name])=>{const ck=charKey(look,name);if(ck&&ck!=='remy'&&!RIGS[ck])loadChar(ck);});}catch(e){}};
  function rigFetch(url){const abs=new URL(url,location.href).href;const prog=f=>{try{if(window.TOPS_LOAD&&TOPS_LOAD.part)TOPS_LOAD.part('rig',f);}catch(x){}};
   const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error('rig '+r.status);const tot=+r.headers.get('content-length')||0;if(!r.body||!r.body.getReader||!tot)return r.arrayBuffer().then(b=>{prog(1);return b;});
    const rd=r.body.getReader(),parts=[];let got=0;const pump=()=>rd.read().then(x=>{if(x.done){const out=new Uint8Array(got);let o=0;for(const q of parts){out.set(q,o);o+=q.length;}prog(1);return out.buffer;}parts.push(x.value);got+=x.value.length;prog(Math.min(.99,got/tot));return pump();});return pump();});
