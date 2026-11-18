@@ -86,11 +86,12 @@ if(flag&&Date.now()-flag.t<120000){
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
     boot's own end (showTitle after the cloud pull when signed in, showLogin when the network or the session isn't there) is turned into a
     hub refresh for the next 30 s, so the player stays on the hub; a signed-in boot still adopts the cloud copy (the same save) as usual. */
- const tb=Date.now();/* BUG-MENU (David, Android, 17 Nov): this guard turned the PLAYER's own "Main menu" (☰ sheet, in-match Quit) into a hub refresh for 30 s
-     after every between-match reset, so Main menu did nothing right after a match. It is meant for the boot's own calls only: a showTitle or
-     showLogin that comes from a real tap or key (within 1 s of a trusted click/keydown) goes through. */
-  let userAt=0;const mark=e=>{if(e&&e.isTrusted)userAt=Date.now();};addEventListener('click',mark,true);addEventListener('keydown',mark,true);
-  const boot=()=>Date.now()-tb<30000&&Date.now()-userAt>1000;
+ const tb=Date.now();/* BUG-MENU (David, Android, 17 Nov): this guard turned the PLAYER's own "Main menu" into a hub refresh for 30 s after every
+     between-match reset, so Main menu did nothing right after a match. It is for the boot's own calls only; a menu the player taps says so with
+     TOPS_USERNAV(fn) (explicit, ChatGPT P1: never "any tap in the last second"), and that call goes through. */
+  let userNav=0,userDone=0;window.TOPS_USERNAV=fn=>{userNav++;userDone=1;try{return fn();}finally{userNav--;}};
+  /* once the player has picked a screen himself, the guard is over: a late boot call must not pull him back to the hub */
+  const boot=()=>Date.now()-tb<30000&&!userNav&&!userDone;
   const st=showTitle;showTitle=function(){if(boot()){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
  const sl=showLogin;showLogin=function(){if(boot()){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
