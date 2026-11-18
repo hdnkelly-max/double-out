@@ -1650,7 +1650,10 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
      ex   = cone shape (1 = straight line; above 1 = gentle for the first few ms, then faster; never a cliff)
    The near-miss cone starts exactly at the perfect scatter, so 1 ms outside the window costs a little (no cliff).
    Opponents are not touched. The pull length (time to the tightest ring, tp.D) is not touched. Off-career play uses TT. */
-const THROW_TUNE={perfK:.36,topS0:6.4,stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]]};
+/* ramp (Season 3, Overseer 08:28 for Hayden): the climb comes from timing, not scatter. On starter Rhythm the perfect window and the near-miss
+   cone are scaled by ramp.win / ramp.cone, rising in a straight line to x1 at max Rhythm (kit counts). Perfects still land where you aimed. Season 3 only. */
+const THROW_TUNE={perfK:.36,topS0:6.4,ramp:{win:.5,cone:.8},stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]]};
+function rampAt(L){const r=THROW_TUNE.ramp;if(!r||!window.TOPS_S3FLAG)return {win:1,cone:1};L=Math.max(0,Math.min(1,+L||0));return {win:r.win+(1-r.win)*L,cone:r.cone+(1-r.cone)*L};}
 function stageTune(t){const s=THROW_TUNE.stage,r=s[Math.max(0,Math.min(s.length-1,t|0))];return {win:r[0],cone:r[1],ex:r[2]};}
 const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,THROW_TUNE.topS0,30,560,48]]; /* CAR-TOP: top scatter from THROW_TUNE.topS0; 7th column = ms to the tightest ring (pull length), also the miss cone off-career */
 /* #20e: ttAt runs several times a frame (throwParams + v09's per-skill levels, 4 levels a frame); the last 8 results are reused by level (frozen: callers only read them) */const _ttL=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN],_ttV=[null,null,null,null,null,null,null,null];let _ttI=0;function ttAt(L){L=Math.max(0,Math.min(1,L));for(let i=0;i<8;i++)if(_ttL[i]===L)return _ttV[i];const v=Object.freeze(_ttAt(L));_ttL[_ttI]=L;_ttV[_ttI]=v;_ttI=(_ttI+1)&7;return v;}

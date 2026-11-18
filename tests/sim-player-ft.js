@@ -21,7 +21,7 @@ const JD=JSON.parse(fs.readFileSync(process.env.JDFILE||path.resolve(__dirname,'
 const PROF=JSON.parse(fs.readFileSync(process.env.PROFILES||path.resolve(__dirname,'sim-player-profiles.json'),'utf8')); // PROFILES=file: alternative profiles (e.g. one tester at different stats/kit)
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
- await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
+ await p.goto('file://'+path.resolve(__dirname,'../index.html')+(process.env.S3?'?s3=1':''));/* S3=1: Season 3 (the throw ramp) */await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
  const res=await p.evaluate(({FT,LEGS,K,PROF,STARTER,REC,LAND,JOINT,JD,DIFF,OPPADJ,CAL,TIERS_})=>{save.authSeen=true;$('login').hidden=true;V.walkOn=()=>{};if(CAL){if(CAL.sig!=null)window.TOPS_PERFSIG=CAL.sig;if(CAL.edge!=null)window.TOPS_EDGE=CAL.edge;window.TOPS_CAL_W=Object.assign({},window.TOPS_CAL_W,Object.fromEntries(['p0','pk','e','k'].filter(x=>CAL[x]!=null).map(x=>[x,CAL[x]])));}delete save.diff;if(DIFF)save.diff={lv:DIFF,darts:0,pts:0,place:0};
   const smp=q=>{const u=Math.random()*(q.length-1);const i=Math.floor(u);return q[i]+(q[i+1]-q[i])*(u-i);};
   // the field at tier t (default setting), through the game's own opponent pipeline
