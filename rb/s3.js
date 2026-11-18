@@ -346,7 +346,8 @@
 
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
-  if (typeof showCreator === 'function') {
+  /* Engine now builds its own Season 3 creator (s3Creator: Player heads, skin tone, build, hair…); this row only runs without it */
+  if (typeof showCreator === 'function' && typeof s3Creator !== 'function') {
     const _sc = showCreator;
     showCreator = function (editing) {
       const B = window.TOPS_S3_BASES;
