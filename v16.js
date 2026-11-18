@@ -40,7 +40,8 @@ function watch(){if(watchT)clearInterval(watchT);const t0=Date.now();let clearSi
 const hubClear=()=>{try{if(document.visibilityState!=='visible')return false;const rbOn=!!document.getElementById('rbApp')&&!document.getElementById('rbApp').hidden;if(!rbOn&&$('hub').hidden)return false;
   if(document.getElementById('rbMenuSheet'))return false;if(document.querySelector('#result:not([hidden]),#perk:not([hidden]),#msg:not([hidden]),#lvFirst,.tcpk,.tc-sheet,#c3rw:not([hidden]),#rbApp.rb-resmode'))return false;/* the reward card, and the rebrand's Result screen drawn inside #rbApp over it */const hp=document.getElementById('hubPop');if(hp&&!hp.hidden&&hp.getClientRects().length)return false;
   const W=innerWidth,H=innerHeight;return [[W/2,H/2],[W/2,H*.25],[W/2,H*.8]].every(([x,y])=>{const e=document.elementFromPoint(x,y);return !!(e&&(e.closest('#rbApp')||e.closest('#hub')));});}catch(e){return false;}};
-async function go(why){if(busy)return;if(off()||lastOnline||window.__noGL||(window.NET&&NET.room)){played=false;return;}/* never online or in a room: the reload would drop it */if(live())return;
+async function go(why,launch){const here=()=>{if(launch)runLaunch(launch);};/* ENG-RESET-ALL: a start that can't take the fresh start still starts, here */
+ if(busy)return;if(off()||lastOnline||window.__noGL||(window.NET&&NET.room)){played=false;here();return;}/* never online or in a room: the reload would drop it */if(live())return;
  busy=true;const t0=Date.now();const log=(k,d)=>{try{window.TOPS_LOG&&TOPS_LOG.log(k,d);}catch(e){}};
  bar(.08,'Saving your match');
  let ok=true,why2='';
@@ -59,14 +60,38 @@ async function go(why){if(busy)return;if(off()||lastOnline||window.__noGL||(wind
    RS.sv=sv;}
   else if(ok){/* guest: the save is local; perf rows wait in local storage; let any request in flight finish */const until=Date.now()+3000;while(NQ.n>0&&Date.now()<until)await sleep(60);}
  }catch(e){ok=false;why2='error';}
- if(!ok||live()){log('reset_skip',{why:why2||'live',ms:Date.now()-t0});RS.last={skipped:why2||'live'};const l=ld();if(l)l.classList.add('gone');busy=false;played=false;return;}
+ if(!ok||live()){log('reset_skip',{why:why2||'live',ms:Date.now()-t0,start:launch?launch.fn:null});RS.last={skipped:why2||'live'};const l=ld();if(l)l.classList.add('gone');busy=false;played=false;here();return;}
  const n=(+sessionStorage.getItem(NK)||0)+1;
- try{sessionStorage.setItem(NK,String(n));sessionStorage.setItem(FK,JSON.stringify({t:t0,saveMs:Date.now()-t0,run:!!(window.isRun&&isRun()),tab:(window.hubTab&&hubTab.cur)||null,why,sv:save.sv||0}));}catch(e){busy=false;played=false;return;}
+ try{sessionStorage.setItem(NK,String(n));sessionStorage.setItem(FK,JSON.stringify({t:t0,saveMs:Date.now()-t0,run:!!(window.isRun&&isRun()),tab:(window.hubTab&&hubTab.cur)||null,why,sv:save.sv||0,launch:launch||null}));}catch(e){busy=false;played=false;here();return;}
  /* the Next up card on the new page's loading screen, from its first frame (exp-load reads sessionStorage 'tops_reset') */
  try{const c=career();if(c&&window.nextOpponent&&!(window.isRun&&isRun()&&c.lives===0)){const no=nextOpponent();const T=TIERS[c.tier]||{};if(no&&no.oppName)sessionStorage.setItem('tops_reset',JSON.stringify({k:'Next up',t:'vs '+no.oppName,s:T.name||''}));}}catch(e){}
- log('reset_go',{n,save_ms:Date.now()-t0});bar(.3,'Setting up the oche…');
+ log('reset_go',{n,save_ms:Date.now()-t0,start:launch?launch.fn:null});bar(.3,'Setting up the oche…');
  setTimeout(()=>{try{location.reload();}catch(e){}},30);}
 RS.go=go;
+
+/* ---- ENG-RESET-ALL (Overseer 18:55, 18 Nov): every match starts on a fresh page ----
+   The hub-idle trigger above misses any path that starts the next match without 2.5 s on the hub (result -> message -> Drill, a quick tap on
+   the Practice tab). So each way of starting a match is gated too: if this page has already played a match, the start is held, the saves are
+   confirmed exactly as above, and the page reloads with that start in the flag; the new page opens the hub and makes the same start, so the
+   launcher's own work (fees, the next fixture, a new Run) happens once, on the fresh page. The launcher's mode flags (S_money, S_adv,
+   S_lightXP, S_hard: set by the caller just before) travel with it. Online and room matches never reset (as above). A start that comes in any
+   other way plays on this page and is logged (reset_untagged) so it can be added. If the saves can't be confirmed, the start runs here. */
+const LAUNCHERS=['playNext','playPractice','startDrill','playLocal','moneyMatch','playRevenge'];const ORIG={};let launching=false;
+const flagsNow=()=>{const f={};try{f.S_money=S_money;f.S_adv=S_adv;f.S_lightXP=S_lightXP;}catch(e){}try{f.S_hard=S_hard;}catch(e){}return f;};
+const flagsSet=f=>{if(!f)return;try{if('S_money' in f)S_money=f.S_money;if('S_adv' in f)S_adv=f.S_adv;if('S_lightXP' in f)S_lightXP=f.S_lightXP;}catch(e){}try{if('S_hard' in f)S_hard=f.S_hard;}catch(e){}};
+const needFresh=()=>played&&!live()&&!busy&&!lastOnline&&!off()&&!window.__noGL&&!(window.NET&&NET.room)&&!(window.C3&&C3.pending&&C3.pending());/* a reward card still to show keeps its payout in memory: never reload over it */
+function runLaunch(L){try{flagsSet(L.flags);launching=true;if(L.bm){beginMatch(L.bm);}else{const f=ORIG[L.fn]||window[L.fn];if(typeof f==='function')f.apply(window,L.args||[]);}}catch(e){try{console.warn('reset_start_fail',L&&L.fn,String(e&&e.message||e));window.TOPS_LOG&&TOPS_LOG.log('reset_start_fail',{fn:L&&L.fn,e:String(e&&e.message||e).slice(0,80)});}catch(x){}}finally{launching=false;}}
+const jsonOk=a=>{try{return JSON.stringify(a)!==undefined&&JSON.parse(JSON.stringify(a))!=null;}catch(e){return false;}};
+LAUNCHERS.forEach(n=>{try{const f=window[n];if(typeof f!=='function')return;ORIG[n]=f;const w=function(){const args=[].slice.call(arguments);
+  if(!launching&&busy)return;/* ChatGPT P1: a fresh start is already under way: this tap is dropped (the first one starts its match on the new page, or here if the saves fail) */
+  if(!launching&&needFresh()&&jsonOk(args)){go('start',{fn:n,args,flags:flagsNow()});return;}launching=true;try{return f.apply(this,arguments);}finally{launching=false;}};w.__rsw=f;window[n]=w;}catch(e){}});
+/* buttons bound to a launcher itself before this file ran (btn.onclick = playNext) are pointed at the gated one */
+try{document.querySelectorAll('button,[onclick],a,div').forEach(el=>{const h=el.onclick;if(typeof h==='function'){for(const n of LAUNCHERS){if(ORIG[n]&&h===ORIG[n]){el.onclick=window[n];break;}}}});}catch(e){}
+/* the exhibition invite starts its match directly (tc/core.js): its options are plain data and nothing runs before them, so the start itself
+   travels; any other direct start is logged */
+{const bm2=beginMatch;beginMatch=function(o){if(!launching&&busy&&!(o&&o.online))return;if(!launching&&needFresh()&&!(o&&o.online)){if(o&&o.tcExh&&jsonOk(o)){go('start',{fn:'beginMatch',bm:o,flags:flagsNow()});return;}
+  let who='';try{const st=String(new Error().stack||'');const m=st.match(/at ([A-Za-z_$][\w$]*)/g)||st.match(/^([A-Za-z_$][\w$]*)@/mg)||[];who=m.slice(1,4).join(' ').slice(0,80);}catch(e){}try{window.TOPS_LOG&&TOPS_LOG.log('reset_untagged',{mode:o&&o.mode,practice:!!(o&&o.practice),who});}catch(e){}}
+ return bm2.apply(this,arguments);};}
 
 /* ---- the cover (Overseer 16:44): the page starts with the loading screen on top and everything else hidden ('tops-pre', built into the
    head); it lifts only when the screen the boot lands on is up, two frames after, so the old title / splash never paint ---- */
@@ -89,14 +114,21 @@ if(flag&&Date.now()-flag.t<120000){
   let parts=null;try{const t0=Math.round(performance.timeOrigin||(Date.now()-performance.now()));const nv=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];
    parts={nav:t0-flag.t,dcl:nv?Math.round(t0+nv.domContentLoadedEventEnd-flag.t):null,rig:rigAt?rigAt-flag.t:null,hub:hubAt?hubAt-flag.t:null,done:ms,src:window.TOPS_RIGSRC||null};}catch(e){}
   window.TOPS_RESET_PARTS=parts;RS.last={ms,why,saveMs:flag.saveMs,parts};
-  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}lift();};
+  try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why,start:flag.launch?flag.launch.fn:null});}catch(e){}lift();
+  /* ENG-RESET-ALL: the start the old page held, made here once the hub is up */if(flag.launch&&hubAt){const L=flag.launch;setTimeout(()=>runLaunch(L),60);}};
  let hubAt=0,rigAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
   try{showHub();}catch(e){}try{if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}bar(.8,'Opening the hub…');return true;};
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
     boot's own end (showTitle after the cloud pull when signed in, showLogin when the network or the session isn't there) is turned into a
     hub refresh for the next 30 s, so the player stays on the hub; a signed-in boot still adopts the cloud copy (the same save) as usual. */
- const tb=Date.now();const st=showTitle;showTitle=function(){if(Date.now()-tb<30000){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
- const sl=showLogin;showLogin=function(){if(Date.now()-tb<30000){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
+ const tb=Date.now();/* BUG-MENU (David, Android, 17 Nov): this guard turned the PLAYER's own "Main menu" into a hub refresh for 30 s after every
+     between-match reset, so Main menu did nothing right after a match. It is for the boot's own calls only; a menu the player taps says so with
+     TOPS_USERNAV(fn) (explicit, ChatGPT P1: never "any tap in the last second"), and that call goes through. */
+  let userNav=0,userDone=0;window.TOPS_USERNAV=fn=>{userNav++;userDone=1;try{return fn();}finally{userNav--;}};
+  /* once the player has picked a screen himself, the guard is over: a late boot call must not pull him back to the hub */
+  const boot=()=>Date.now()-tb<30000&&!userNav&&!userDone;
+  const st=showTitle;showTitle=function(){if(boot()){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
+ const sl=showLogin;showLogin=function(){if(boot()){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
  const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!rigAt)rigAt=Date.now();if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
    if(hubAt&&rig){clearInterval(tick);finish(settled?'ready':'hub');return;}/* ENG-RIGCACHE: the hub draws no 3D, so the opponents' character files keep loading behind it instead of holding the loader (up to 1.5 s more) *//* a character file still loading lands on the hub as usual */bar(p);
