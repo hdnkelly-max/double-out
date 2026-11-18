@@ -170,8 +170,10 @@ jobs:
             echo "{\"v\":\"$V\"}" > ../out/version.json
           fi
           # Delivery QA (Season 3): every file the page names must exist in what we publish (main's files + this build's own).
-          # Missing art fails the release here instead of showing a broken image on phones. No-op until src has the test.
-          if [ -f tests/asset-refs.js ]; then node tests/asset-refs.js double-out-standalone.html ../site . | tee -a $GITHUB_STEP_SUMMARY; fi
+          # Missing art fails the release here instead of showing a broken image on phones. The test lives in src (qa-s3-gates);
+          # a src without it fails too, so deleting the test can't make a release pass.
+          [ -f tests/asset-refs.js ] || { echo "::error::BUILD: tests/asset-refs.js is missing from src (the asset gate)"; exit 1; }
+          node tests/asset-refs.js double-out-standalone.html ../site . | tee -a $GITHUB_STEP_SUMMARY
           cp assets/ui/* ../out/assets/ui/ 2>/dev/null || true
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
