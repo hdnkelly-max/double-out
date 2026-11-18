@@ -1,0 +1,19 @@
+{
+ "about": "Every Season 3 file the game can ask for. tests/asset-refs.js checks each listed file exists, every literal s3/ path in the page is listed, and every file shipped under s3/ is listed. Add each new s3/ file here in the same commit.",
+ "files": [
+  "s3/plates/club_oche.webp",
+  "s3/plates/club_walk.webp",
+  "s3/plates/dpnz_oche.webp",
+  "s3/plates/dpnz_walk.webp",
+  "s3/plates/opens_oche.webp",
+  "s3/plates/opens_walk.webp",
+  "s3/plates/palace_oche.webp",
+  "s3/plates/palace_walk.webp",
+  "s3/plates/pub_oche.webp",
+  "s3/plates/pub_walk.webp",
+  "s3/plates/tc_oche.webp",
+  "s3/plates/tc_walk.webp",
+  "s3/plates/tt_oche.webp",
+  "s3/plates/tt_walk.webp"
+ ]
+}
