@@ -15,14 +15,19 @@
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]||path.join(__dirname,'..'));const ONLY=process.env.ONLY||'';
 const types={'.html':'text/html','.js':'text/javascript','.glb':'model/gltf-binary','.json':'application/json','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.mp3':'audio/mpeg','.css':'text/css'};
-const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);const f=path.join(dir,u==='/'?'index.html':u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(d);});}).listen(0);
+const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);const f=path.join(dir,u==='/'?'index.html':u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}/* PAGES=1: GitHub Pages' caching (max-age=600 + ETag, 304 on a match), so a reload behaves like the live site */
+ const h={'content-type':types[path.extname(f)]||'application/octet-stream'};if(process.env.PAGES){const et='"'+d.length+'-'+fs.statSync(f).mtimeMs+'"';h['cache-control']='max-age=600';h.etag=et;if(q.headers['if-none-match']===et){r.writeHead(304,h);r.end();return;}}
+ srv.bytes=(srv.bytes||0)+d.length;(srv.log=srv.log||[]).push(u+' '+d.length);r.writeHead(200,h);r.end(d);});}).listen(0);
 const URL0=`http://127.0.0.1:${srv.address().port}/index.html`;
-const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--autoplay-policy=no-user-gesture-required']});
+/* PAGES=1 also keeps the browser's HTTP cache on: Playwright's page.route() turns it off, so the outside hosts are made unreachable by DNS instead */
+const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--autoplay-policy=no-user-gesture-required'].concat(process.env.PAGES?['--host-resolver-rules=MAP *.supabase.co 127.0.0.1:9, MAP cdn.jsdelivr.net 127.0.0.1:9, MAP fonts.googleapis.com 127.0.0.1:9, MAP fonts.gstatic.com 127.0.0.1:9, MAP cdnjs.cloudflare.com 127.0.0.1:9']:[])});
 const T00=Date.now();const out=[];out.push=function(o){console.log(Math.round((Date.now()-T00)/1000)+'s '+JSON.stringify(o));return Array.prototype.push.call(this,o);};const fails=[];const F=(tag,m)=>{console.log(Math.round((Date.now()-T00)/1000)+'s FAIL '+tag+': '+m);fails.push(tag+': '+m);};
 const PROF={iphone:{viewport:{width:390,height:844},hasTouch:true,isMobile:true,userAgent:devices['iPhone 13'].userAgent},
  android:{viewport:{width:412,height:915},hasTouch:true,isMobile:true,userAgent:'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'},
  desktop:{viewport:{width:1366,height:768},hasTouch:false,isMobile:false}};
-const page=async(prof)=>{const ctx=await b.newContext(PROF[prof]);const p=await ctx.newPage();await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
+/* big files the server sent since the last call (what a reset downloads) */
+const big=()=>{const l=srv.log||[];srv.log=[];return l.filter(x=>+x.split(' ').pop()>100000).map(x=>x.replace(/^\//,''));};
+const page=async(prof)=>{const ctx=await b.newContext(PROF[prof]);const p=await ctx.newPage();if(process.env.THROTTLE){const c=await ctx.newCDPSession(p);await c.send('Network.enable');const kb=+process.env.THROTTLE;await c.send('Network.emulateNetworkConditions',{offline:false,latency:120,downloadThroughput:kb*1024/8,uploadThroughput:kb*1024/8});}if(!process.env.PAGES)await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
  const st={loads:0,pe:[]};p.on('pageerror',e=>st.pe.push(e.message));p.on('load',()=>st.loads++);
  await p.addInitScript(()=>{/* speed: no GPU drawing (SwiftShader is CPU) and the game's own timers at 0.2x; the reset's waits run on Date.now, unscaled */
   const iv=setInterval(()=>{try{if(window.V&&V._qa&&V._qa.renderer){V._qa.renderer.render=function(){};clearInterval(iv);}}catch(e){}},50);
@@ -51,7 +56,7 @@ const quit=async(p,touch)=>{await p.waitForTimeout(9000);/* >5 s visible, so the
  const q=await p.evaluate(()=>{const pre=window.C3&&C3.pending();const b=document.getElementById('btnQuit');b.click();const t1=b.textContent;b.click();return {pre,t1,live:typeof S!=='undefined'&&S&&!S.done,pend:C3.pending()};}).catch(e=>({err:e.message}));out.push({tag:'quit',q});if(q.live)F('quit','match still live after Quit, Forfeit');};
 /* through every post-match screen back to the hub, as a player taps; stops when the page reloads */
 const NEXT=['#rbRGo','#rbRKeep','#lvFirst','#tcWelLater','#btnResultNext','#c3rwGo','#c3rwKeep','#btnPerkLater','#tcPLater','.tcpk__later','#msgReplies button','.tc-sheet [data-close]','.tc-sheet .tc-x'];
-const advance=async(p,st,touch,want)=>{const l0=st.loads;let hubSince=0,held=false;const A0=Date.now();for(let i=0;i<400;i++){if(st.loads>l0)return 'reloaded';if(Date.now()-A0>300000)return 'timeout';
+const advance=async(p,st,touch,want)=>{big();const l0=st.loads;let hubSince=0,held=false;const A0=Date.now();for(let i=0;i<400;i++){if(st.loads>l0)return 'reloaded';if(Date.now()-A0>300000)return 'timeout';
   /* the Result screen (the reward) left up for 4 s: it must not be reset away under the player */
   if(!held&&await p.evaluate(()=>!!document.querySelector('#rbApp.rb-resmode,#c3rw:not([hidden])')).catch(()=>false)){held=true;await p.waitForTimeout(4000);if(st.loads>l0){advance.early=true;return 'reloaded on the Result screen';}}for(const s of NEXT){if(st.loads>l0)break;if(await tap(p,s,touch)){advance.log=(advance.log||[]).concat([Math.round((Date.now()-A0)/1000)+':'+s]).slice(-12);await p.waitForTimeout(250);break;}else if(tap.err&&s==='#btnPerkLater'){advance.log=(advance.log||[]).concat(['err '+tap.err.slice(0,80)]).slice(-12);tap.err='';}}await p.waitForTimeout(200);
   if(st.loads>l0)return 'reloaded';const h=await hubShown(p).catch(()=>false);if(h){if(!hubSince)hubSince=Date.now();if(Date.now()-hubSince>15000)return 'hub';}else hubSince=0;}return 'timeout';};
@@ -69,7 +74,7 @@ const twoMatches=async(prof)=>{const touch=prof!=='desktop';const {p,ctx,st}=awa
  if(st.loads>1)F(tag,'TOPS_RESET.go() during a match reloaded the page');if(mid.rs)F(tag,'loading screen shown during a match');
  const w=await win(p);if(w!=='done')F(tag,'match 1: '+w);const loads1=st.loads;const adv=await advance(p,st,touch,'hub');out.push({tag,match1:w,after:adv});
  if(adv!=='reloaded'){await p.waitForTimeout(500);const d=await p.evaluate(()=>{const W=innerWidth,H=innerHeight;return {st:TOPS_RESET.state(),last:TOPS_RESET.last,pts:[[W/2,H/2],[W/2,H*.25],[W/2,H*.8]].map(([x,y])=>{const e=document.elementFromPoint(x,y);let c=e,ch=[];for(let i=0;c&&i<5;i++,c=c.parentElement)ch.push(c.id||c.className||c.tagName);return ch.join('<');}),sheet:!!document.getElementById('rbMenuSheet'),vis:document.visibilityState};}).catch(e=>e.message);F(tag,'no reset after match 1 ('+adv+') '+JSON.stringify(d)+' taps '+JSON.stringify(advance.log||[]));await ctx.close();return;}
- const r1=await afterReload(p,tag+' reset 1');out.push({tag,reset1:{ms:r1.ms,saveMs:r1.last&&r1.last.saveMs,tab:r1.tab}});
+ const r1=await afterReload(p,tag+' reset 1');out.push({tag,reset1:{ms:r1.ms,parts:r1.last&&r1.last.parts,tab:r1.tab,big:big()}});
  if(st.loads!==loads1+1)F(tag,'reloads after match 1: '+(st.loads-loads1));
  // 3. a quit match -> a second reset; its perf row carries reset_ms
  const a2=await toAim(p,touch);if(a2!=='aim'){F(tag,'match 2 aim: '+a2);await ctx.close();return;}await p.waitForTimeout(3000);
@@ -78,7 +83,7 @@ const twoMatches=async(prof)=>{const touch=prof!=='desktop';const {p,ctx,st}=awa
  const row=await p.evaluate(()=>{try{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));const e=JSON.parse(localStorage.getItem('tops_perfck')||'null');delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));
   return e?{os:e.dev&&e.dev.os,reset_ms:e.dev&&e.dev.t20&&e.dev.t20.reset_ms,reset_n:e.dev&&e.dev.t20&&e.dev.t20.reset_n,t20keys:e.dev&&e.dev.t20?Object.keys(e.dev.t20):null}:{none:1};}catch(x){return {err:x.message};}});
  await quit(p,touch);out.push({tag,matchRow:row});if(!row||!(row.reset_ms>0))F(tag,'match 2 perf row (checkpoint) has no reset_ms: '+JSON.stringify(row));
- const adv2=await advance(p,st,touch,'hub');if(adv2!=='reloaded')F(tag,'no reset after the quit ('+adv2+') '+JSON.stringify(await diag(p)));else{const r2=await afterReload(p,tag+' reset 2');out.push({tag,reset2:{ms:r2.ms,n:r2.n}});if(r2.n!==2)F(tag,'reset_n after 2 resets: '+r2.n);}
+ const adv2=await advance(p,st,touch,'hub');if(adv2!=='reloaded')F(tag,'no reset after the quit ('+adv2+') '+JSON.stringify(await diag(p)));else{const r2=await afterReload(p,tag+' reset 2');out.push({tag,reset2:{ms:r2.ms,n:r2.n,parts:r2.last&&r2.last.parts,big:big()}});if(r2.n!==2)F(tag,'reset_n after 2 resets: '+r2.n);}
  if(tap.blocked&&tap.blocked.length){out.push({tag,clickBlocked:tap.blocked.slice(0,4)});tap.blocked=[];}if(st.pe.length)F(tag,'page errors: '+st.pe.slice(0,3).join(' | '));out.push({tag,secs:Math.round((Date.now()-T0)/1000)});await ctx.close();};
 /* signed-in: the cloud client replaced by a stub (rpc/insert answer like the server; 'mode' decides the save push) */
 const signedCase=async(mode)=>{const tag='iphone signed-in '+mode;const {p,ctx,st}=await page('iphone');await fresh(p);

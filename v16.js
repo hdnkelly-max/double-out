@@ -79,9 +79,14 @@ if(flag&&Date.now()-flag.t<120000){
  /* the game hides the loading screen when the rig is in (and at 9 s): hold that until the hub is ready (on this element only), so the bar
     keeps following the real steps instead of jumping to 100 % */
  let done=false;window.TOPS_LDHOLD=true;/* game4 skips its own #loading.gone while this is set (rig in, 9 s fallback) */
- const finish=(why)=>{if(done)return;done=true;window.TOPS_LDHOLD=false;const ms=Date.now()-flag.t;window.TOPS_RESET_MS=ms;window.TOPS_RESET_N=+sessionStorage.getItem(NK)||1;RS.last={ms,why,saveMs:flag.saveMs};
+ const finish=(why)=>{if(done)return;done=true;window.TOPS_LDHOLD=false;const ms=Date.now()-flag.t;window.TOPS_RESET_MS=ms;window.TOPS_RESET_N=+sessionStorage.getItem(NK)||1;
+  /* ENG-RIGCACHE: where the reset's time goes, as ms after the old page asked for the reload: the new page's start, its scripts all read
+     (DOMContentLoaded), the player model in, the hub open, done (also in the perf row as reset_parts) */
+  let parts=null;try{const t0=Math.round(performance.timeOrigin||(Date.now()-performance.now()));const nv=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];
+   parts={nav:t0-flag.t,dcl:nv?Math.round(t0+nv.domContentLoadedEventEnd-flag.t):null,rig:rigAt?rigAt-flag.t:null,hub:hubAt?hubAt-flag.t:null,done:ms,src:window.TOPS_RIGSRC||null};}catch(e){}
+  window.TOPS_RESET_PARTS=parts;RS.last={ms,why,saveMs:flag.saveMs,parts};
   try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why});}catch(e){}lift();};
- let hubAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
+ let hubAt=0,rigAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
   try{showHub();}catch(e){}try{if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}bar(.8,'Opening the hub…');return true;};
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
     boot's own end (showTitle after the cloud pull when signed in, showLogin when the network or the session isn't there) is turned into a
@@ -89,8 +94,8 @@ if(flag&&Date.now()-flag.t<120000){
  const tb=Date.now();const st=showTitle;showTitle=function(){if(Date.now()-tb<30000){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
  const sl=showLogin;showLogin=function(){if(Date.now()-tb<30000){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
- const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
-   if(hubAt&&rig&&(settled||Date.now()-hubAt>1500)){clearInterval(tick);finish(settled?'ready':'hub');return;}/* a character file still loading lands on the hub as usual */bar(p);
+ const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!rigAt)rigAt=Date.now();if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
+   if(hubAt&&rig){clearInterval(tick);finish(settled?'ready':'hub');return;}/* ENG-RIGCACHE: the hub draws no 3D, so the opponents' character files keep loading behind it instead of holding the loader (up to 1.5 s more) *//* a character file still loading lands on the hub as usual */bar(p);
    if(Date.now()-t1>9000){clearInterval(tick);if(!hubAt){/* the boot never reached title or login (e.g. a join link): let it carry on */}finish(hubAt?'cap':'nohub');if(!hubAt){try{st.call(window);}catch(e){}/* never leave an unusable screen: the normal title */}}}catch(e){}},150);
  /* ChatGPT P1: on this page the save just confirmed in the cloud is the floor. A cloud copy older than it (a stale read, a slow replica) is
     never adopted over it for the first 60 s; the local one is pushed again instead. A newer copy (another device) is adopted as before. */
@@ -102,11 +107,19 @@ if(flag&&Date.now()-flag.t<120000){
  /* a launch (cold, or a normal reload): the boot ends on login (no session / no network) or on the title after the cloud pull (signed in).
     Hold the loading screen until that call has run and the rig is in (the game's own rule), so the player never sees the title drawn
     before the cloud save landed or the old layout under the new one. 9 s without the rig still lifts on the boot's end (as the game's own
-    fallback did); 15 s lifts regardless. */
+    fallback did). Never lifted onto an unfinished boot: see below. */
  const t0=Date.now()-Math.round(performance.now());/* page start */let end=0;/* the boot's end is marked by netBoot itself (TOPS_BOOTEND), which may come before this script is parsed */
  /* the bar on a launch is the loader's own (Experience); Engine only holds and lifts it */
+ let slow=0;
  const tick=setInterval(()=>{try{if(!end&&window.TOPS_BOOTEND)end=TOPS_BOOTEND;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();
-   if(Date.now()-t0>15000){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,cap:1});}catch(e){}lift();return;}/* never longer than 15 s */
+   /* ENG-RIGCACHE (Overseer 19:32): the loader never lifts onto a screen the boot hasn't finished. Past 15 s with the boot unfinished (a session
+      or cloud read that hasn't answered) it stays and says so; it lifts when the boot ends, or at 45 s onto the complete offline login screen
+      (the same screen as no network). If the cloud answers later, the boot's own showTitle replaces it with the up-to-date title. */
+   const el=Date.now()-t0;
+   if(!end&&el>15000&&!slow){slow=1;try{TOPS_LOAD.set(0,'Slow connection · still loading…');}catch(e){}try{window.TOPS_LOG&&TOPS_LOG.log('boot_slow',{ms:el,rig:!!rig});}catch(e){}}
+   if(!end&&el>45000){clearInterval(tick);window.TOPS_BOOT_MS=el;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:el,cap:'offline'});}catch(e){}
+    try{NET.bootGen=(NET.bootGen||0)+1;/* cancels the unfinished boot (game4 netBoot) */NET.user=null;/* a half-done sign-in pushes nothing; the player signs in again from here */}catch(e){}
+    try{showLogin();const st=$('loginStatus');if(st)st.textContent='Can’t reach the server. Check your connection and try again.';}catch(e){}lift();return;}
    if(end&&(rig||Date.now()-t0>9000)){clearInterval(tick);window.TOPS_BOOT_MS=Date.now()-t0;try{window.TOPS_LOG&&TOPS_LOG.log('boot_cover',{ms:TOPS_BOOT_MS,rig:!!rig});}catch(e){}lift();}}catch(e){}},100);
 }
 })();
