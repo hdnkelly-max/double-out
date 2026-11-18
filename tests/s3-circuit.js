@@ -3,7 +3,7 @@
 //   2 TOPS_S3.view() has the frozen shape (level, ladder, calendar with prizes/points, live, history, bank, runway)
 //   3 book() takes entry + travel from the one bank; you can't book twice or book what isn't on
 //   4 play() starts a career match against the engine's opponent (avg and legs from the level and round, a name from the level's pool)
-//   5 three wins at a Pub league night: winner's prize paid into the bank (feats may add their own bonus on top), points, week moves on, tops:s3 fires with done/fin/prize
+//   5 three wins at a Pub league night: the bank ends at exactly 60 - $5 entry + the winner's prize (rounds pay nothing, feats pay no cash), points, week moves on, tops:s3 fires with done/fin/prize
 //   5b the win is recorded for the trophy cabinet: titles [{ev,n,level,season,finish,prize,date}] and a dated history row
 //   6 a loss ends the event with that round's finish
 //   7 TOPS_HISTORY.rows() and TOPS_BESTLEG.table()/record() read the views (mocked here) into the frozen shape
@@ -53,7 +53,7 @@ const {chromium}=require('playwright');const path=require('path');
   if(!r.match||r.match.mode!=='career'||!r.match.s3||r.match.s3.id!=='pub_night')f.push('match '+JSON.stringify(r.match));
   const last=r.evs[r.evs.length-1]||{};
   if(r.evs.length!==3||!r.evs[0].next||!last.done||last.fin!=='W'||!(last.prize>0))f.push('events '+JSON.stringify(r.evs));
-  if(r.after.bank<60-5+last.prize||r.after.week!==2||r.after.pts!==50||r.after.hist!==1||r.after.wins!==3)f.push('after the win '+JSON.stringify(r.after)+' prize '+last.prize);
+  if(r.after.bank!==60-5+last.prize||r.after.week!==2||r.after.pts!==50||r.after.hist!==1||r.after.wins!==3)f.push('after the win '+JSON.stringify(r.after)+' prize '+last.prize);
   if(r.titles.length!==1||r.titles[0].ev!=='pub_night'||r.titles[0].finish!=='W'||r.titles[0].season!==3||!r.titles[0].date||!r.h0||!r.h0.date)f.push('trophy records '+JSON.stringify(r.titles)+' '+JSON.stringify(r.h0));
   if(!r.loss||!r.loss.done||r.loss.fin!=='SF')f.push('loss in round 2 '+JSON.stringify(r.loss));
   const lee=(r.hist||[]).find(x=>x.name==='Lee McKenzie');if(!lee||!lee.s1||lee.s1.bestLeg!==14||!lee.s2||lee.s2.furthest.n!=='Regional rep'||lee.s2.bestAvg!==115.6)f.push('history '+JSON.stringify(r.hist));
