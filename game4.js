@@ -1657,7 +1657,7 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
    newcomer to each level at about 50%. Replaces the ramp and the CAR-WIN window table in Season 3 (off Season 3 nothing changes). */
 const THROW_TUNE={perfK:.36,topS0:6.4,ease:[5,5,6,7,7,7,7],span:[1,1,1,1.2,1.5,1.9,2.3],ramp:{win:.8,cone:1},curve:{win:[7,18],sway:[38,15]},stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.45,40,1],[.35,30,1.2]],
   /* s3ease / s3span: Season 3's honest-ring shape per level (CAR-EASE), used with s3stage and the curve */
-  s3ease:[5,5,6,7,7,7,7],s3span:[1,1,1,1.2,1.5,1.9,2.3],
+  s3ease:[5,5,6,7,7,7,7],s3span:[1.03,1.03,1.03,1.2,1.2,1.25,1.7],
   /* s3stage: Season 3's per-level rows (cone steep for big timing errors, ex 1.2), set so a timer halfway between Hayden and Lee enters each
      level at ~50% and leaves at ~65-70% as stats grow; the Worlds ends at ~50% at ~95 vs 95. stage stays as 3.55 for the game off Season 3 */
   s3stage:[[1,100,1.2],[1,115,1.2],[1,100,1.2],[1,75,1.2],[1,75,1.2],[1,75,1.2],[1,58,1.2]]};
