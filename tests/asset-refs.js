@@ -17,7 +17,8 @@
 const fs = require('fs'), path = require('path');
 const [page, ...roots] = process.argv.slice(2);
 if (!page || !roots.length) { console.error('usage: node tests/asset-refs.js <built page> <site root> [more roots]'); process.exit(2); }
-const src = fs.readFileSync(page, 'utf8');
+// block comments are prose, not requests (a path only mentioned in a /* note */ is not shipped); strings keep theirs
+const src = fs.readFileSync(page, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
 const exists = p => roots.some(r => { try { return fs.statSync(path.join(r, p)).isFile(); } catch (e) { return false; } });
 const TOP = '(?:assets|img|rig|s3|ui)';
 // literal paths: inside quotes, backticks or url(...); stop at a quote, paren, space, ? or #
@@ -34,7 +35,10 @@ for (let m; (m = tre.exec(src));) if (!dyn.has(m[1])) dyn.set(m[1], m.index);
 const fre = new RegExp(`['"\`](${TOP}\\/(?:[A-Za-z0-9_\\-.]+\\/)*)['"\`]`, 'g');
 for (let m; (m = fre.exec(src));) if (!dyn.has(m[1])) dyn.set(m[1], m.index);
 const snip = i => src.slice(Math.max(0, i - 60), i + 80).replace(/\s+/g, ' ');
-const missing = [...lit].filter(([p]) => !exists(p));
+// s3/manifest.json "optional": files the code asks for only when the build shipped them (e.g. a TOPS_S3V hash check
+// before the fetch). Absent = fine; present = must also be in "files". Read before the missing-file check.
+let opt0 = []; for (const r of roots) { try { opt0 = JSON.parse(fs.readFileSync(path.join(r, 's3/manifest.json'), 'utf8')).optional || []; break; } catch (e) {} }
+const missing = [...lit].filter(([p]) => !exists(p) && !opt0.includes(p));
 const fails = missing.map(([p, i]) => `missing ${p}   (named at: …${snip(i)}…)`);
 // Season 3 manifest
 const s3lit = [...lit.keys()].filter(p => p.startsWith('s3/')), s3dyn = [...dyn.keys()].filter(p => p.startsWith('s3/'));
@@ -44,8 +48,10 @@ if (s3dyn.length && !manifest) fails.push(`the page builds s3/ paths at run time
 if (manifest) {
   const files = Array.isArray(manifest.files) ? manifest.files : [];
   if (!files.length) fails.push('s3/manifest.json has no "files" list');
+  const optional = Array.isArray(manifest.optional) ? manifest.optional : [];
+  for (const f of optional) if (exists(f) && !files.includes(f)) fails.push(`${f} is shipped (listed as optional) but not listed in "files"`);
   for (const f of files) if (!exists(f)) fails.push(`missing ${f}   (listed in s3/manifest.json)`);
-  for (const p of s3lit) if (!files.includes(p)) fails.push(`${p} is named in the page but not listed in s3/manifest.json`);
+  for (const p of s3lit) if (p !== 's3/manifest.json' && !files.includes(p) && !(optional.includes(p) && !exists(p))) fails.push(`${p} is named in the page but not listed in s3/manifest.json`);
   for (const d of s3dyn) if (!files.some(f => f.startsWith(d))) fails.push(`dynamic prefix ${d} has no file in s3/manifest.json`);
   // the manifest must be complete: every file shipped under s3/ is listed (an art file left out of it is unchecked)
   const walk = (r, d) => { let o = []; try { for (const e of fs.readdirSync(path.join(r, d), { withFileTypes: true })) { const q = d + '/' + e.name; if (e.isDirectory()) o = o.concat(walk(r, q)); else o.push(q); } } catch (e) {} return o; };
