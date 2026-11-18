@@ -47,6 +47,9 @@ if (manifest) {
   for (const f of files) if (!exists(f)) fails.push(`missing ${f}   (listed in s3/manifest.json)`);
   for (const p of s3lit) if (!files.includes(p)) fails.push(`${p} is named in the page but not listed in s3/manifest.json`);
   for (const d of s3dyn) if (!files.some(f => f.startsWith(d))) fails.push(`dynamic prefix ${d} has no file in s3/manifest.json`);
+  // the manifest must be complete: every file shipped under s3/ is listed (an art file left out of it is unchecked)
+  const walk = (r, d) => { let o = []; try { for (const e of fs.readdirSync(path.join(r, d), { withFileTypes: true })) { const q = d + '/' + e.name; if (e.isDirectory()) o = o.concat(walk(r, q)); else o.push(q); } } catch (e) {} return o; };
+  for (const r of roots) for (const f of walk(r, 's3')) if (f !== 's3/manifest.json' && !files.includes(f)) fails.push(`${f} is shipped but not listed in s3/manifest.json`);
 }
 console.log(`asset-refs: ${lit.size} literal paths (${lit.size - missing.length} present), ${dyn.size} run-time prefixes${manifest ? `, s3/manifest.json ${manifest.files.length} files` : ''}`);
 if (dyn.size) console.log('  run-time prefixes (not checkable statically; tests/launch-cost.js catches their 404s at run time): ' + [...dyn.keys()].join(' '));

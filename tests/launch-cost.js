@@ -8,6 +8,9 @@
 //     --page    : serve this file as index.html (a fresh build); default the root's index.html
 //     --overlay : extra dir served first (a build's rig/ and version.json)
 //     --base    : a previous run's --json, printed side by side with a +/- column
+//     --max-growth 0.25 : with --base, FAIL if requests or MB grow more than 25% on install/returning/stale
+// Also FAIL if a served image/model/sound isn't the file type its name says (magic bytes), or art that
+// arrived doesn't draw (<img> with no pixels, CSS background that won't decode). Text is gzipped like Pages.
 //
 // Four launches on an iPhone 13 profile (Playwright device), counted at the server (what really
 // crosses the network), each to the first screen, 10 s on the hub, then audioInit() as the first match
@@ -32,12 +35,17 @@ const resolve = u => {
   for (const r of [overlay, root].filter(Boolean)) { const f = path.join(r, p); if (f.startsWith(path.resolve(r)) || f.startsWith(r)) { try { if (fs.statSync(f).isFile()) return f; } catch (e) {} } }
   return null;
 };
+const zlib = require('zlib'), GZ = /\.(html|js|json|css|svg|webmanifest|txt)$/i, bad = new Set();
+const MAGIC = { '.webp': b => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP', '.jpg': b => b[0] === 0xff && b[1] === 0xd8, '.jpeg': b => b[0] === 0xff && b[1] === 0xd8, '.png': b => b.slice(1, 4).toString() === 'PNG', '.glb': b => b.slice(0, 4).toString() === 'glTF', '.mp3': b => b.slice(0, 3).toString() === 'ID3' || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0) };
 const srv = http.createServer((q, s) => {
   const f = resolve(q.url); if (!f) { hits.push({ url: q.url, st: 404, bytes: 0 }); s.writeHead(404); return s.end('404'); }
   let et = etags.get(f); if (!et) { et = '"' + crypto.createHash('md5').update(fs.readFileSync(f)).digest('hex').slice(0, 16) + '"'; etags.set(f, et); }
   const h = { 'Content-Type': TYPES[path.extname(f).toLowerCase()] || 'application/octet-stream', 'Cache-Control': stale ? 'max-age=0' : 'max-age=600', ETag: et };
   if (q.headers['if-none-match'] === et) { hits.push({ url: q.url, st: 304, bytes: 200 }); s.writeHead(304, h); return s.end(); }
-  const b = fs.readFileSync(f); h['Content-Length'] = b.length; hits.push({ url: q.url, st: 200, bytes: b.length + 300 }); s.writeHead(200, h); s.end(q.method === 'HEAD' ? undefined : b);
+  let b = fs.readFileSync(f); const ext = path.extname(f).toLowerCase();
+  if (MAGIC[ext] && !MAGIC[ext](b)) bad.add(`${q.url} is not a real ${ext} file (first bytes ${b.slice(0, 8).toString('hex')})`);
+  if (GZ.test(f) && /gzip/.test(q.headers['accept-encoding'] || '')) { b = zlib.gzipSync(b, { level: 6 }); h['Content-Encoding'] = 'gzip'; h.Vary = 'Accept-Encoding'; }   // GitHub Pages gzips text
+  h['Content-Length'] = b.length; hits.push({ url: q.url, st: 200, bytes: b.length + 300 }); s.writeHead(200, h); s.end(q.method === 'HEAD' ? undefined : b);
 });
 (async () => {
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); const port = srv.address().port, origin = `http://127.0.0.1:${port}`;
@@ -69,6 +77,12 @@ const srv = http.createServer((q, s) => {
     // the first match start calls audioInit(), which starts the caller's voice preload: count it in the same launch
     if (name !== 'install') await p.evaluate(() => { try { audioInit(); if (window.TOPS_clipLoad) TOPS_clipLoad(); } catch (e) {} }).catch(() => {});
     await p.waitForTimeout(25000);
+    // art that arrived but doesn't draw: <img> finished with no pixels; CSS backgrounds that fail to decode
+    const broken = await p.evaluate(async () => { const out = []; for (const i of document.images) if (i.complete && i.currentSrc && !i.currentSrc.startsWith('data:') && i.naturalWidth === 0) out.push('img ' + i.currentSrc);
+      const urls = new Set(); for (const e of document.querySelectorAll('*')) { const bg = getComputedStyle(e).backgroundImage; for (const m of bg.matchAll(/url\("?([^")]+)"?\)/g)) if (!m[1].startsWith('data:')) urls.add(m[1]); }
+      await Promise.all([...urls].map(u => new Promise(r => { const im = new Image(); im.onload = () => r(); im.onerror = () => { out.push('css ' + u); r(); }; im.src = u; setTimeout(r, 8000); })));
+      return out; }).catch(() => []);
+    for (const x of broken) fails.push(`${name}: does not draw: ${x.replace(origin, '')}`);
     const H = hits.slice(), mb = a => +(a.reduce((x, h) => x + h.bytes, 0) / 1e6).toFixed(2);
     const folder = u => { const q = u.split('?')[0].replace(/^\//, '') || 'index.html'; const seg = q.split('/'); return seg.length > 2 ? seg.slice(0, 2).join('/') : seg.length === 2 ? seg[0] : q; };
     const by = {}; for (const h of H) { const k = folder(h.url); by[k] = by[k] || { n: 0, mb: 0 }; by[k].n++; by[k].mb += h.bytes / 1e6; } for (const v of Object.values(by)) v.mb = +v.mb.toFixed(2);
@@ -90,6 +104,9 @@ const srv = http.createServer((q, s) => {
   console.log(`  ${''.padEnd(18)} ${['install', 'returning', 'warm', 'stale (600 s on)'].map(x => x.padEnd(20)).join('')}`);
   row('requests', L => L.requests); row('MB over the wire', L => L.mb); row('downloads (200)', L => L.downloaded); row('304s', L => L.revalidated_304); row('loader lift (s)', L => L.loader_lift_s);
   for (const n of ['returning', 'stale']) { const top = Object.entries(out.launches[n].by_folder).sort((a, b) => b[1].n - a[1].n).slice(0, 8); console.log(`  ${n}, by folder: ` + top.map(([k, v]) => `${k} ${v.n} req ${v.mb} MB`).join(' · ')); }
+  for (const x of bad) fails.push(x);
+  const grow = opt('max-growth'); if (grow && base) for (const n of ['install', 'returning', 'stale']) { const v = out.launches[n], w = base.launches[n];
+    for (const k of ['mb', 'requests']) if (w[k] > 0 && v[k] > w[k] * (1 + +grow)) fails.push(`${n}: ${k} ${v[k]} is more than ${Math.round(+grow * 100)}% over ${base.label} (${w[k]})`); }
   if (fails.length) { console.log('launch-cost FAIL\n  ' + [...new Set(fails)].slice(0, 40).join('\n  ')); process.exit(1); }
   console.log('launch-cost PASS (no same-origin request failed)');
 })().catch(e => { console.error('launch-cost ERROR', e); process.exit(3); });
