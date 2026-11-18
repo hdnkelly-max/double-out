@@ -6,7 +6,7 @@
 //  2. relaunch (the fresh page): no character, hair or clip file is downloaded again; bryce is in before the hub is up.
 //  3. a new build: the old build's asset cache is dropped, the files are downloaded once into the new one.
 //  4. no Cache Storage (window.caches missing): the files load from the network as before.
-//  5. a broken cache entry (a few bytes): downloaded again, the figure is still bryce.
+//  5. a broken cache entry (a valid GLB header over a body that can't be parsed): deleted, downloaded again, the figure is still bryce.
 //  6. Cache Storage throws on open: the network is used, nothing throws.
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]);const types={'.html':'text/html','.js':'text/javascript','.glb':'model/gltf-binary','.json':'application/json','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.mp3':'audio/mpeg'};
@@ -51,9 +51,9 @@ for(let i=0;i<2;i++){await p.waitForTimeout(1000);log=[];await p.reload();s=awai
 build=String(Date.now());await p.waitForTimeout(1000);log=[];await p.reload();s=await until(p,x=>x.ready&&has(x),120000);await p.waitForTimeout(3000);c=await cached(p);O({step:'new build',build:s&&s.build,requests:log,cached:c});
 const cn3=c&&typeof c==='object'?Object.keys(c):[];if(cn3.length!==1||cn3[0]!=='tops-assets-'+build)F('3: caches after a new build '+JSON.stringify(cn3));if(!has(s))F('3: bryce not loaded on the new build');/* the file itself may come from the browser's HTTP cache (max-age), which is fine */
 // 5 (same context: break the cached entry)
-await p.evaluate(async b=>{const cc=await caches.open('tops-assets-'+b);for(const k of await cc.keys())if(/chars\/bryce\.glb$/.test(k.url))await cc.put(k,new Response(new Uint8Array(10)));},build);
+await p.evaluate(async b=>{const cc=await caches.open('tops-assets-'+b);for(const k of await cc.keys())if(/chars\/bryce\.glb$/.test(k.url)){/* worst case (ChatGPT P1): a GLB header that checks out (magic, length) over a body that can't be parsed */const u=new Uint8Array(5000);for(let i=0;i<u.length;i++)u[i]=(i*37)&255;const v=new DataView(u.buffer);v.setUint32(0,0x46546C67,true);v.setUint32(4,2,true);v.setUint32(8,5000,true);v.setUint32(12,4980,true);v.setUint32(16,0x4E4F534A,true);await cc.put(k,new Response(u));}},build);
 log=[];await p.reload();s=await until(p,x=>x.ready&&has(x),120000);await p.waitForTimeout(2000);O({step:'broken entry',s:{rigs:s&&s.rigs&&s.rigs.ids,me:s&&s.me},requests:log});
-if(!has(s))F('5: bryce not loaded after a broken cache entry');{const sz=await p.evaluate(async b=>{const cc=await caches.open('tops-assets-'+b);for(const k of await cc.keys())if(/chars\/bryce\.glb$/.test(k.url))return (await (await cc.match(k)).arrayBuffer()).byteLength;return -1;},build);O({step:'broken entry repaired',bytes:sz});if(!(sz>100))F('5: the broken cache entry was not replaced ('+sz+' bytes)');}
+if(!has(s))F('5: bryce not loaded after a broken cache entry');{const sz=await p.evaluate(async b=>{const cc=await caches.open('tops-assets-'+b);for(const k of await cc.keys())if(/chars\/bryce\.glb$/.test(k.url))await new Promise(r=>setTimeout(r,1500));const m=await cc.match(k);if(!m)return 0;return (await m.arrayBuffer()).byteLength;return -1;},build);O({step:'broken entry repaired',bytes:sz});if(sz===5000)F('5: the broken cache entry is still there');}
 await cx.close();build=null;
 // 4 and 6 (each a fresh context)
 for(const mode of ['nocaches','throws']){const cy=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,userAgent:devices['iPhone 13'].userAgent});const q=await newPage(cy,mode,mode);

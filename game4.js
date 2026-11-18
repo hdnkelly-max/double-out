@@ -810,13 +810,20 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     file. They now live in Cache Storage per build (tops-assets-<build>: a new release fetches each once, older builds' caches are dropped),
     so a fresh page builds the real figures straight away. Anything that fails falls back to a plain download. */
  var ACN='tops-assets-'+(window.TOPS_BUILD||'dev'),acClean=false;/* var: callable before this line runs */
- function glbLoad(url,onLoad,onErr){const abs=new URL(url,location.href).href;const base=abs.replace(/[^/]*$/,'');
-  const parse=b=>{try{new THREE.GLTFLoader().parse(b,base,onLoad,onErr);}catch(e){onErr&&onErr(e);}};
+ /* ChatGPT P1: a cached copy is used only if it is a whole GLB (magic 'glTF' and the length in its header = its size); a copy that still
+    fails to parse is deleted and the file downloaded once more, so a damaged entry can't repeat the stand-in on every fresh page. Only
+    whole GLBs are stored. */
+ const okGlb=b=>{try{if(!b||b.byteLength<20)return false;const v=new DataView(b);return v.getUint32(0,true)===0x46546C67&&v.getUint32(8,true)===b.byteLength;}catch(e){return false;}};
+ function glbLoad(url,onLoad,onErr){const abs=new URL(url,location.href).href;const base=abs.replace(/[^/]*$/,'');let loaded=false;
+  const ok=g=>{loaded=true;onLoad(g);};
+  const parse=(b,retry)=>{const fail=e=>{if(retry&&!loaded){const r=retry;retry=null;r(e);}else if(onErr)onErr(e);};try{new THREE.GLTFLoader().parse(b,base,ok,fail);}catch(e){fail(e);}};
   const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error(url+' '+r.status);return r.arrayBuffer();});
-  if(!window.caches||!caches.open){net().then(parse,onErr);return;}
+  if(!window.caches||!caches.open){net().then(b=>parse(b),onErr);return;}
   caches.open(ACN).then(c=>{if(!acClean){acClean=true;try{caches.keys().then(ks=>ks.forEach(k=>{if(/^tops-assets-/.test(k)&&k!==ACN)caches.delete(k);})).catch(()=>{});}catch(e){}}
-   return c.match(abs).then(hit=>hit?hit.arrayBuffer():null).catch(()=>null).then(b=>{if(b&&b.byteLength>100)return b;return net().then(b=>{try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}return b;});});})
-   .catch(()=>net()).then(parse,onErr);}
+   return c.match(abs).then(hit=>hit?hit.arrayBuffer():null).catch(()=>null).then(b=>{if(okGlb(b))return {b,c,hit:true};
+    return net().then(b=>{if(okGlb(b)){try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}}return {b};});});})
+   .catch(()=>net().then(b=>({b})))
+   .then(r=>parse(r.b,r.hit?(()=>{try{r.c.delete(abs).catch(()=>{});}catch(e){}net().then(b=>parse(b),onErr);}):null),onErr);}
  window.TOPS_GLBLOAD=glbLoad;
  /* the player's and the next opponent's character files are requested as soon as a page is up (the hub), so the figures a match builds are
     real ones, not the stand-in (a file that lands once the match is live waits for the hub, ENG-7) */
