@@ -169,11 +169,6 @@ jobs:
           else
             echo "{\"v\":\"$V\"}" > ../out/version.json
           fi
-          # Delivery QA (Season 3): every file the page names must exist in what we publish (main's files + this build's own).
-          # Missing art fails the release here instead of showing a broken image on phones. The test lives in src (qa-s3-gates);
-          # a src without it fails too, so deleting the test can't make a release pass.
-          [ -f tests/asset-refs.js ] || { echo "::error::BUILD: tests/asset-refs.js is missing from src (the asset gate)"; exit 1; }
-          node tests/asset-refs.js double-out-standalone.html ../site . | tee -a $GITHUB_STEP_SUMMARY
           cp assets/ui/* ../out/assets/ui/ 2>/dev/null || true
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
@@ -191,6 +186,13 @@ jobs:
             mkdir -p ../out/rig && cp "$RIG" ../out/rig/
             echo "rig: $RIG $(wc -c < "$RIG") bytes" >> $GITHUB_STEP_SUMMARY
           fi
+          # Season 3: src's s3/ folder (plates at s3/plates/, redone art under s3/) is published next to assets/. Whole folder, as is.
+          if [ -d s3 ]; then mkdir -p ../out/s3 && cp -r s3/. ../out/s3/ && echo "s3: $(find ../out/s3 -type f | wc -l) files, $(du -sk ../out/s3 | cut -f1) KB" >> $GITHUB_STEP_SUMMARY; fi
+          # Delivery QA asset gate: every file the page names must exist in what Pages will serve = main's files + what this build
+          # publishes (../out, copied over main in the publish job). Missing art fails here instead of showing broken on phones.
+          # The test lives in src; a src without it fails too, so deleting the test can't make a release pass.
+          [ -f tests/asset-refs.js ] || { echo "::error::BUILD: tests/asset-refs.js is missing from src (the asset gate)"; exit 1; }
+          node tests/asset-refs.js ../out/index.html ../out ../site | tee -a $GITHUB_STEP_SUMMARY
           echo "built index.html $(wc -c < ../out/index.html) bytes, sha256 $(sha256sum ../out/index.html | cut -c1-16)" >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
         if: steps.gate.outputs.mode == 'new'
@@ -226,6 +228,7 @@ jobs:
           echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
           git add -A index.html version.json next assets img RELEASES.log
           if [ -d rig ]; then git add -A rig; fi   # rig/: hashed rig files, only ever added; a rollback leaves them (the previous page keeps its own)
+          if [ -d s3 ]; then git add -A s3; fi     # s3/: Season 3 art; a rollback to an older page leaves it (unused there)
           git commit -qm "v$V: $ITEM (release run ${{ github.run_id }}, prepared)"
           git tag -a "$TAG" -m "v$V $ITEM tree $QTREE"
           git push -q origin HEAD:main "$TAG" || { echo "::error::SYNC: push to main failed; nothing deployed"; exit 1; }
