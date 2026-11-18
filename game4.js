@@ -1634,18 +1634,18 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
 // Release error dt (ms, + late) beyond the perfect band P becomes a readable miss: late lands low, early lands high (kv mm/ms), plus side spread (kh), plus a small floor s0 that never goes away.
 // Release cue (v3): pressing locks the aim and starts a ring shrinking from R0 to its tightest (1.794*s0) at D ms. Inside ±P ms it holds; outside it widens again
 // (sqrt curve, faster when late). The ring at release IS the spread (80th percentile), plus a small early-high / late-low lean. No timing bar.
-const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,6.4,30,560,48]]; /* CAR-TOP: top perfect sigma 7.6 -> 6.4; 7th column = cone ms off-career (career uses STAGE_TUNE) */
-/* CAR-TOP (Hayden 22:21-22:26): ONE table for how hard the throw is on each career stage. Tune David's average here (bottom rows: the starter tiers).
-   Columns, one row per career tier (TIERS order, Pub league .. World Championship):
+/* CAR-TOP (Hayden 22:21-22:26): THE tuning table for how hard the throw is. Tune David's average here and nowhere else.
+   perfK = a perfect release lands where you aimed: scatter = perfK x s0 (.36: ~96% T20 from a dead-centre lock at max level, ~79% at level 0)
+   topS0 = base scatter at max level (TT's last row reads it; 3.52 was 7.6)
+   stage = one row per career tier (TIERS order, Pub league .. World Championship): [win, cone, ex]
      win  = multiplier on the perfect window (the window itself still grows with your Rhythm level, so buying Rhythm always helps)
      cone = ms past the window at which a near-miss reaches the start ring (smaller = steeper)
      ex   = cone shape (1 = straight line; above 1 = gentle for the first few ms, then faster; never a cliff)
-   Opponents are not touched. Off-career play uses the level table TT. */
-const STAGE_TUNE=[[1,300,.7],[1,290,.7],[1,260,.7],[.8,140,1],[.72,85,1.05],[.62,52,1.1],[.6,45,1.2]];
-/* a perfect lands where you aimed: scatter = PERF_K x s0 (about 95% T20 from a dead-centre lock at max level, about 80% at level 0);
-   the near-miss cone starts exactly there, so 1 ms outside the window costs a little (no cliff) */
-const PERF_K=.36;
-function stageTune(t){const r=STAGE_TUNE[Math.max(0,Math.min(STAGE_TUNE.length-1,t|0))];return {win:r[0],D:r[1],ex:r[2]};}
+   The near-miss cone starts exactly at the perfect scatter, so 1 ms outside the window costs a little (no cliff).
+   Opponents are not touched. The pull length (time to the tightest ring, tp.D) is not touched. Off-career play uses TT. */
+const THROW_TUNE={perfK:.36,topS0:6.4,stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]]};
+function stageTune(t){const s=THROW_TUNE.stage,r=s[Math.max(0,Math.min(s.length-1,t|0))];return {win:r[0],cone:r[1],ex:r[2]};}
+const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,THROW_TUNE.topS0,30,560,48]]; /* CAR-TOP: top scatter from THROW_TUNE.topS0; 7th column = ms to the tightest ring (pull length), also the miss cone off-career */
 /* #20e: ttAt runs several times a frame (throwParams + v09's per-skill levels, 4 levels a frame); the last 8 results are reused by level (frozen: callers only read them) */const _ttL=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN],_ttV=[null,null,null,null,null,null,null,null];let _ttI=0;function ttAt(L){L=Math.max(0,Math.min(1,L));for(let i=0;i<8;i++)if(_ttL[i]===L)return _ttV[i];const v=Object.freeze(_ttAt(L));_ttL[_ttI]=L;_ttV[_ttI]=v;_ttI=(_ttI+1)&7;return v;}
 function _ttAt(L){let i=0;while(i<TT.length-2&&TT[i+1][0]<L)i++;const a=TT[i],b=TT[i+1],k=(L-a[0])/(b[0]-a[0]);const m=j=>a[j]+(b[j]-a[j])*k;return {A:m(1),T:m(2),tr:m(3),s0:m(4),P:m(5),D:m(6),R0:m(7)};}
 function throwLevel(){if(!S)return .3;if(typeof LES!=='undefined'&&LES.on)return Math.max(.3,throwLevelRaw());return throwLevelRaw();}
@@ -1667,8 +1667,8 @@ function driftAt(now,p){const dt=TH.last?Math.min(.1,(now-TH.last)/1000):0;TH.la
  let x=p.A*Math.sin(th),y=.55*p.A*Math.sin(2*th);if(p.dl){x+=p.dl*1.2*Math.sin(.37*th+1);y+=p.dl*.9*Math.sin(.29*th+2);}return {x,y};}
 function driftBeat(){}
 // ring radius (mm) for a release dt ms from the tightest moment (+ late)
-/* CAR-TOP: the cone starts where a perfect ends (PERF_K x s0) and grows smoothly with the timing error; STAGE_TUNE sets how fast in career */function ringR(dt,tp){const R0p=PERF_K*1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(10,tp.D-tp.P),tp.ex||.7);return Math.min(70,R0p+Math.max(0,tp.R0-R0p)*k*(dt>0?1.3:1)*(tp.kv||1));}
-function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-PERF_K*1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
+/* CAR-TOP: the cone starts where a perfect ends (THROW_TUNE.perfK x s0) and grows smoothly with the timing error; THROW_TUNE.stage sets how fast in career */function ringR(dt,tp){const R0p=THROW_TUNE.perfK*1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);/* career: the stage cone (tp.cone); off-career: the pull length as before */const k=Math.pow(e/Math.max(10,(tp.cone||tp.D)-tp.P),tp.ex||.7);return Math.min(70,R0p+Math.max(0,tp.R0-R0p)*k*(dt>0?1.3:1)*(tp.kv||1));}
+function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-THROW_TUNE.perfK*1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
 // release error in ms at a pull fraction
 function relErrMs(pull){return (pull-SWEET)*PM();}
