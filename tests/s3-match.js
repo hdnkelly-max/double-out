@@ -22,6 +22,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { S.p[0].score = 40; S.busy = true; land(0, -166); } const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(() => 'nav');
     if (s !== 'play') { out.end = s; break; } await p.waitForTimeout(120); }
   out.won = await p.evaluate(() => !!(S && S.won)).catch(() => null); out.res = await p.evaluate(() => S && S.s3res).catch(() => null);
+  for (let i = 0; i < 60; i++) { if (await p.evaluate(() => !!document.querySelector('#rbApp.rb-resmode')).catch(() => false)) break; await p.waitForTimeout(250); }
+  out.resScreen = await p.evaluate(() => (document.querySelector('#rbApp.rb-resmode #rbMain') || {}).innerText || '').catch(() => '');
+  if (!/league night/i.test(out.resScreen) || !/through/i.test(out.resScreen)) fail.push('result screen does not report the event/round: ' + out.resScreen.slice(0, 200).replace(/\n/g, ' | '));
   const NEXT = ['#rbRGo', '#rbRKeep', '#lvFirst', '#tcWelLater', '#btnResultNext', '#c3rwGo', '#c3rwKeep', '#btnPerkLater', '#tcPLater', '.tcpk__later', '#msgReplies button', '.tc-sheet [data-close]', '.tc-sheet .tc-x'];
   out.seenBefore = await p.evaluate(() => localStorage.getItem('tops_s3_seen'));
   const l0 = loads; for (let i = 0; i < 300 && loads === l0; i++) { for (const s of NEXT) { if (loads > l0) break; if (await tap(s)) { await p.waitForTimeout(300); break; } } await p.waitForTimeout(250); }

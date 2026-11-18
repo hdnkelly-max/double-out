@@ -131,6 +131,7 @@
   // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
   const meFem = () => isFemModel(save.look || {}, save.name || '');
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+    if (window.TOPS_S3FLAG) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: the Vinyl redo has no shirt mask (Director), so no recolour; the s3/ switch picks the redo or the placeholder */
     const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
@@ -315,15 +316,18 @@
     const a = avg(me), b = avg(op), cash = c.bank - pre0.bank, xp = Math.max(0, xpTotal(v) - pre0.xp), up = pre0 && v.lv > pre0.lv;
     const ov = $id('c3rw'), extra = ov ? ov.querySelectorAll('.c3rw-ach, #c3rwCon span').length : 0, keep = ov && ov.querySelector('#c3rwKeep'), go = ov && ov.querySelector('#c3rwGo');
     const t = TIERS[c.tier] || {}, kick = S.intro ? 'Your fill-in night' : money0 ? (S.local ? 'Local night' : 'Money match · back room') : `${t.n || ''}${M.rows && M.yi >= 0 ? ` · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}` : ''}`;
+    /* S3: a Circuit match reports the event and the round (Career's S.s3 / S.s3res), not the old league table */
+    const s3m = S3 && S.s3 && window.TOPS_CIRCUIT ? (() => { const E = TOPS_CIRCUIT, e = E.eventOf(S.s3.id), r = S.s3res || {}, nx = r.next && c.circuit && c.circuit.live ? E.nextOpp(c.circuit) : null;
+      return { kick: `${e ? e.n : ''} · ${E.FIN_NAME[S.s3.round] || 'Group match'}`, done: !!r.done, line: r.done ? `Event over · ${r.finName || ''}` : nx ? `Through · ${nx.round === 'G' ? 'next group match' : E.FIN_NAME[nx.round]} next` : '', sub: r.done ? (r.pts ? '+' + r.pts + ' pts' : '') : nx ? 'Opponent avg ' + nx.avg : '' }; })() : null;
     const heroIm = !won && c.tier === 1 ? `${IMG}w_loss_t1.jpg` : WIMG(c.tier);
-    const head = `<div class="rbw-hero${won ? '' : ' rbw-lost'}${!won && c.tier !== 1 ? ' rbw-dim' : ''}"><div class="rb-im" style="background-image:url(${heroIm})"></div><div class="rbw-lt"><span class="rbw-kick">${esc(kick)}</span><span class="rbw-res">${won ? 'Won' : 'Lost'}</span><div class="rbw-score"><b class="rb-num rb-lockup-n">${me.legs || 0}–${op.legs || 0}</b><span>vs<em>${esc(op.disp || op.name || '')}</em></span></div></div></div>`;
+    const head = `<div class="rbw-hero${won ? '' : ' rbw-lost'}${!won && c.tier !== 1 ? ' rbw-dim' : ''}"><div class="rb-im" style="background-image:url(${heroIm})"></div><div class="rbw-lt"><span class="rbw-kick">${esc(s3m ? s3m.kick : kick)}</span><span class="rbw-res">${won ? 'Won' : 'Lost'}</span><div class="rbw-score"><b class="rb-num rb-lockup-n">${me.legs || 0}–${op.legs || 0}</b><span>vs<em>${esc(op.disp || op.name || '')}</em></span></div></div></div>`;
     const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) : null;
     const third = me.hf ? ['High out', me.hf] : me.t180 ? ['180s', me.t180] : ['Best visit', me.bestVisit || '–'];
     const best = !won ? '' : a && a > b ? 'avg' : co != null && co >= 40 ? 'co' : '';
     const tile = (k, l, val) => `<div class="rbw-t${best === k ? ' rbw-best' : ''}"><small>${l}${best === k ? ' <i>Best</i>' : ''}</small><b class="rb-num">${val}</b></div>`;
     const tiles = `<div class="rbw-tiles">${tile('avg', 'Average', a || '–')}${tile('co', 'Checkout', co != null ? co + '%' : '–')}${tile('x', third[0], third[1])}</div>`;
     const need = M.need, pNow = Math.min(1, v.xp / need), pPrev = up ? 0 : Math.max(0, Math.min(pNow, (v.xp - xp) / need));
-    const cashLab = won || cash <= 0 ? 'Prize' : 'Appearance money';
+    const cashLab = s3m ? (s3m.done ? 'Prize money' : 'Prize money · paid at the end') : won || cash <= 0 ? 'Prize' : 'Appearance money';
     const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
     // unlock cards: the level reward big (image for its kind), the next dart and achievements quieter
     let main = '';
@@ -335,7 +339,8 @@
     if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_darts.jpg)"><div class="rbw-x"><small class="rbw-gk">Next dart</small><b>${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))}</b><span>${left ? money(left) + ' to go' : 'You can buy it now'}</span></div></div>`; }
     const ach = won && extra ? `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_trophy.jpg)"><div class="rbw-x"><small class="rbw-gk">${extra} achievement${extra > 1 ? 's' : ''} and contracts</small><b>Nice work</b><span>See them in Locker · Trophies</span></div></div>` : '';
     let tbl = '';
-    if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
+    if (s3m) tbl = s3m.line ? `<div class="rbw-row"><span>${esc(s3m.line)}</span><em>${esc(s3m.sub)}</em></div>` : '';
+    else if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
     const act = `<div class="rb-pin rbw-pin"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
     return head + tiles + rw + main + want + ach + tbl + act;
   }
