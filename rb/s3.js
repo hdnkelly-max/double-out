@@ -43,7 +43,9 @@
   const HAVE = {}; (window.TOPS_S3_HAVE || []).forEach(p => { HAVE[p] = 1; });
   const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
-  const one = p => HAVE[p] ? 's3/' + p : PEOPLE.test(p) ? PH : null;
+  /* the build's content hash per s3/ file (TOPS_S3V), so a repainted picture under the same name is a new URL for the HTTP cache and Cache Storage (Q&D 12:02) */
+  const s3u = u => { const h = (window.TOPS_S3V || {})[u]; return h ? u + '?v=' + h : u; };
+  const one = p => HAVE[p] ? s3u('s3/' + p) : PEOPLE.test(p) ? PH : null;
   const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
   window.TOPS_S3_IMG = swap;
   {
