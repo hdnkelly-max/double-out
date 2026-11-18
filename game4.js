@@ -824,7 +824,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     return net().then(b=>{if(okGlb(b)){try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}}return {b};});});})
    .catch(()=>net().then(b=>({b})))
    .then(r=>parse(r.b,r.hit?(()=>{const c=r.c;Promise.resolve().then(()=>c.delete(abs)).catch(()=>{}).then(()=>net()).then(b=>{if(okGlb(b)){try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}}parse(b);},onErr);}):null),onErr);}
- window.TOPS_GLBLOAD=glbLoad;window.TOPS_LOADCHAR=k=>{if(k&&k!=='remy')loadChar(k);};window.TOPS_LOADHAIR=()=>{try{loadHair();}catch(e){}};
+ window.TOPS_GLBLOAD=glbLoad;window.TOPS_CHARKEY=(l,n)=>charKey(l,n);window.TOPS_LOADCHAR=k=>{if(k&&k!=='remy')loadChar(k);};window.TOPS_LOADHAIR=()=>{try{loadHair();}catch(e){}};
  /* the player's and the next opponent's character files are requested as soon as a page is up (the hub), so the figures a match builds are
     real ones, not the stand-in (a file that lands once the match is live waits for the hub, ENG-7) */
  window.TOPS_PRELOAD=list=>{try{(list||[]).forEach(([look,name])=>{const ck=charKey(look,name);if(ck&&ck!=='remy'&&!RIGS[ck])loadChar(ck);});}catch(e){}};

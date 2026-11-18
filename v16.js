@@ -102,18 +102,18 @@ const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;window
 const preload=()=>{try{if(!window.TOPS_PRELOAD)return;try{window.TOPS_LOADHAIR&&TOPS_LOADHAIR();}catch(e){}const L=[];try{L.push([save.look||null,save.name||'You']);}catch(e){}try{const c=career();const n=c&&(c.next||(window.nextOpponent&&nextOpponent()));if(n&&n.oppName){let lk=null;try{lk=window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){}L.push([lk,n.oppName]);}}catch(e){}TOPS_PRELOAD(L);}catch(e){}};
 setTimeout(preload,0);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(preload,500);});
 /* ENG-CHARCACHE (Q&D P1 on 3.51): the held start used to run 60 ms after the hub opened, before the character files were parsed, so both
-   figures were the stand-in for the whole match. It now waits for the player's file, the opponent's when the start names it (next
-   fixture, revenge, exhibition) and the hair library, at most 4 s (a dead network still starts). An opponent the launcher picks itself
+   figures were the stand-in for the whole match. It now waits for the player's file and the opponent's when the start names it (practice,
+   next fixture, revenge, exhibition), at most 4 s; the hair library is requested too but not waited for (a dead network still starts). An opponent the launcher picks itself
    is swapped in when its file lands (V.swapOppStand). */
 const figsThen=(L,go)=>{let keys=[],done=false;const t0=Date.now();
  try{const lookOf=n=>{try{return window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){return null;}};
-  keys.push(charKey(save.look||null,save.name||'You'));
+  const CK=window.TOPS_CHARKEY;if(!CK)throw new Error('no charKey');keys.push(CK(save.look||null,save.name||'You'));
   const bm=L.bm;let n=null;if(bm&&bm.oppName)n=bm;else if(L.fn==='playNext'){const c=career();n=c&&(c.next||(window.nextOpponent&&nextOpponent()));}
-  else if(L.fn==='playPractice')n={oppName:'Practice'};else if(L.fn==='playRevenge'){try{const v=window.V3?V3():null,R=v&&v.rev;if(R&&R.name)n={oppName:R.name};}catch(e){}}
-  if(n&&n.oppName){const lk=(L.bm&&L.bm.oppLook)||(L.fn==='playNext'?lookOf(n):(window.lookFor?lookFor(n.oppName):null));keys.push(window.TOPS_OPPKEY?TOPS_OPPKEY(lk,n.oppName):charKey(lk,n.oppName));}}catch(e){}
+  else if(L.fn==='playPractice')n={oppName:'Practice'};else if(L.fn==='startDrill')n={oppName:'Drill'};else if(L.fn==='playRevenge'){try{const v=window.V3?V3():null,R=v&&v.rev;if(R&&R.name)n={oppName:R.name};}catch(e){}}
+  if(n&&n.oppName){const lk=(L.bm&&L.bm.oppLook)||(L.fn==='playNext'?lookOf(n):(window.lookFor?lookFor(n.oppName):null));keys.push(window.TOPS_OPPKEY?TOPS_OPPKEY(lk,n.oppName):CK(lk,n.oppName));}}catch(e){console.warn('reset_figs keys',e&&e.message);}
  keys=keys.filter((k,i,a)=>k&&k!=='remy'&&a.indexOf(k)===i);try{if(window.TOPS_LOADHAIR)TOPS_LOADHAIR();keys.forEach(k=>{const r=TOPS_RIGS();if(!r.ids.includes(k)&&!r.waitIds.includes(k)&&window.TOPS_LOADCHAR)TOPS_LOADCHAR(k);});}catch(e){}
- const ready=()=>{try{const r=TOPS_RIGS();return keys.every(k=>r.ids.includes(k)||!r.waitIds.includes(k))&&!r.hairWait;}catch(e){return true;}};
- const step=()=>{if(done)return;const ok=ready(),ms=Date.now()-t0;if(ok||ms>=4000){done=true;try{window.TOPS_LOG&&TOPS_LOG.log('reset_figs',{ms,ok,keys:keys.join(',')});}catch(e){}go();return;}setTimeout(step,50);};
+ const ready=()=>{try{const r=TOPS_RIGS();return keys.every(k=>r.ids.includes(k)||!r.waitIds.includes(k));}catch(e){return true;}};
+ const step=()=>{if(done)return;const ok=ready(),ms=Date.now()-t0;if(ok||ms>=4000){done=true;try{const d={ms,ok,keys:keys.join(',')};window.TOPS_LOG&&TOPS_LOG.log('reset_figs',d);console.info('reset_figs '+JSON.stringify(d));}catch(e){}go();return;}setTimeout(step,50);};
  setTimeout(step,60);};
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
