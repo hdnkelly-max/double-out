@@ -1,4 +1,8 @@
 <script>
+/* SEASON 3 (Hayden 19 Nov): everything new is behind TOPS_S3. ?s3=1 turns it on and remembers it (the home-screen app can't pass a URL
+   flag, so a Menu switch writes the same key); ?s3=0 turns it off. Off = 3.55 exactly. */
+window.TOPS_S3=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1')localStorage.setItem('tops_s3','1');else if(q==='0')localStorage.removeItem('tops_s3');return localStorage.getItem('tops_s3')==='1';}catch(e){return /[?&]s3=1/.test(location.search);}})();
+window.TOPS_S3_SET=on=>{try{if(on)localStorage.setItem('tops_s3','1');else localStorage.removeItem('tops_s3');}catch(e){}location.reload();};
 ENGINE
 // ===== DATA =====
 const TIERS=[

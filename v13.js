@@ -117,7 +117,7 @@ let DEV=null;function dev(){if(DEV)return DEV;const ua=navigator.userAgent||'';l
  let gpu=null;try{const cv=document.querySelector('canvas');const gl=cv&&(cv.getContext('webgl2')||cv.getContext('webgl'));const x=gl&&gl.getExtension('WEBGL_debug_renderer_info');const r=x?gl.getParameter(x.UNMASKED_RENDERER_WEBGL):null;
   if(r){const g=String(r);gpu=/Apple/i.test(g)?'Apple':/Adreno/i.test(g)?'Adreno':/Mali/i.test(g)?'Mali':/PowerVR/i.test(g)?'PowerVR':/SwiftShader/i.test(g)?'SwiftShader':/Intel/i.test(g)?'Intel':/NVIDIA|GeForce/i.test(g)?'NVIDIA':/AMD|Radeon/i.test(g)?'AMD':'Other';}}catch(e){}
  const sw=Math.round(Math.min(screen.width,screen.height)),sh=Math.round(Math.max(screen.width,screen.height)),dpr=+(window.devicePixelRatio||1).toFixed(2);
- DEV={os,os_major:om,browser:br,browser_major:bm,screen:sw+'x'+sh,dpr,gpu,device_class:`${os}${om||''}-${dpr}x-${sw}`};return DEV;}
+ DEV={s3:!!window.TOPS_S3,os,os_major:om,browser:br,browser_major:bm,screen:sw+'x'+sh,dpr,gpu,device_class:`${os}${om||''}-${dpr}x-${sw}`};return DEV;}
 function rpr(){try{if(window.TOPS_R&&TOPS_R.getPixelRatio)return +TOPS_R.getPixelRatio().toFixed(2);const cv=document.querySelector('canvas');return cv&&cv.clientWidth?+(cv.width/cv.clientWidth).toFixed(2):null;}catch(e){return null;}}
 function build(ph,status){const fh=M.fh,p50=pct(fh,.5),vs=M.vis/1000;const n=M.fn||1;
  return fit({sample_id:uid(),match_id:M.id,ver:VER(),build:BUILD(),schema_ver:SCHEMA,phase:ph,status,mode:M.mode,tier:M.tier,secs:Math.round((performance.now()-M.t0)/1000),visible_secs:+vs.toFixed(1),frame_n:M.fn,
