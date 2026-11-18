@@ -23,15 +23,16 @@ const PROF={iphone:{viewport:{width:390,height:844},hasTouch:true,isMobile:true,
  android:{viewport:{width:412,height:915},hasTouch:true,isMobile:true,userAgent:'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'},
  desktop:{viewport:{width:1366,height:768},hasTouch:false,isMobile:false}};
 const page=async(prof)=>{const ctx=await b.newContext(PROF[prof]);const p=await ctx.newPage();await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
- const st={loads:0,pe:[]};p.on('pageerror',e=>st.pe.push(e.message));p.on('load',()=>st.loads++);
+ const st={loads:0,pe:[]};p.on('pageerror',e=>st.pe.push(e.message));p.on('console',m=>{const t=m.text();if(/reset_|runLaunch|drill/i.test(t))(st.con=st.con||[]).push(t.slice(0,200));});p.on('load',()=>st.loads++);
  await p.addInitScript(()=>{/* speed: no GPU drawing (SwiftShader is CPU) and the game's own timers at 0.2x; the reset's waits run on Date.now, unscaled */
   const iv=setInterval(()=>{try{if(window.V&&V._qa&&V._qa.renderer){V._qa.renderer.render=function(){};clearInterval(iv);}}catch(e){}},50);
-  const st0=window.setTimeout;window.__st0=st0;window.setTimeout=(f,ms,...a)=>st0(f,Math.max(0,(ms||0)*0.2),...a);
+  {const iv0=setInterval(()=>{try{if(window.TOPS_RESET_MS!=null&&window.__dig&&!window.__digHub){window.__digHub=__dig();clearInterval(iv0);}}catch(e){}},5);}/* the state on the new page at the hub, before a held start runs */
+const st0=window.setTimeout;window.__st0=st0;window.setTimeout=(f,ms,...a)=>st0(f,Math.max(0,(ms||0)*0.2),...a);
   try{if(!sessionStorage.getItem('__i')){sessionStorage.setItem('__i','1');localStorage.setItem('tops_rebrand','1');localStorage.setItem('tops_q20_app','nowalk');}}catch(e){}
   /* at unload: was a match live, and the state the next page must show */
   addEventListener('beforeunload',()=>{try{const live=typeof S!=='undefined'&&S&&!S.done;sessionStorage.setItem('__snap',JSON.stringify({live,dig:window.__dig?__dig():null}));}catch(e){}});
   window.__dig=()=>{let tc=null;try{tc=JSON.stringify(save.tc||null);}catch(e){}const c=Object.assign({},career()||{});/* next = the next fixture, worked out when the hub asks for it (null right after a match) */delete c.next;return {career:JSON.stringify(c),slot:save.slot||'career',name:save.name,matches:save.matches||0,look:JSON.stringify(save.look||{}),walkon:save.walkon||null,
-   tc,audio:localStorage.getItem('doubleout_audio'),q20:localStorage.getItem('tops_q20_app'),rb:localStorage.getItem('tops_rebrand'),saveKeys:Object.keys(save).length};};});
+   tc,audio:localStorage.getItem('doubleout_audio'),q20:localStorage.getItem('tops_q20_app'),rb:localStorage.getItem('tops_rebrand'),saveKeys:Object.keys(save).sort().join(' ')};};});
  await p.goto(URL0);return {p,ctx,st};};
 const ready=p=>p.waitForFunction(()=>typeof S!=='undefined'&&typeof beginMatch==='function'&&window.TOPS_RESET&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:300000});
 const hubShown=p=>p.evaluate(()=>{const a=document.getElementById('rbApp');const l=document.getElementById('loading');return !!(a&&!a.hidden&&a.getClientRects().length)&&!!(l&&l.classList.contains('gone'))&&!(typeof S!=='undefined'&&S&&!S.done);});
@@ -110,17 +111,22 @@ const staleCase=async()=>{const tag='iphone stale flag';const {p,ctx,st}=await p
 const startCase=async(prof)=>{const touch=prof!=='desktop';const tag=prof+' start gate';const {p,ctx,st}=await page(prof);await fresh(p);
  const a=await toAim(p,touch);if(a!=='aim'){F(tag,'aim: '+a);await ctx.close();return;}const w=await win(p);if(w!=='done'){F(tag,'match: '+w);await ctx.close();return;}
  for(let i=0;i<40;i++){if(await p.evaluate(()=>!(typeof S!=='undefined'&&S&&!S.done)&&!(window.C3&&C3.pending&&C3.pending())).catch(()=>false))break;await p.waitForTimeout(250);}
- const step=async(label,startJs,check)=>{const l0=st.loads;const t0=Date.now();await p.evaluate(startJs).catch(()=>{});for(let i=0;i<120&&st.loads===l0;i++)await p.waitForTimeout(250);
+ const step=async(label,startJs,check,arg)=>{const l0=st.loads;const t0=Date.now();await p.evaluate(startJs,arg).catch(()=>{});for(let i=0;i<120&&st.loads===l0;i++)await p.waitForTimeout(250);
   if(st.loads===l0){F(tag,label+': no fresh start '+JSON.stringify(await diag(p)));return false;}await ready(p);
   let x=null;for(let i=0;i<120;i++){x=await p.evaluate(check).catch(()=>null);if(x&&x.ok)break;await p.waitForTimeout(250);}
-  const r=await p.evaluate(()=>({last:TOPS_RESET.last,flag:sessionStorage.getItem('tops_reset_go'),snap:JSON.parse(sessionStorage.getItem('__snap')||'null'),dig:__dig()})).catch(()=>({}));
-  out.push({tag,step:label,secs:Math.round((Date.now()-t0)/1000),started:x,last:r.last});if(!x||!x.ok)F(tag,label+': the asked-for match did not start on the new page '+JSON.stringify(x));if(r.flag)F(tag,label+': flag left');
-  if(r.snap&&r.snap.dig&&JSON.stringify(r.snap.dig)!==JSON.stringify(r.dig))F(tag,label+': state changed across the reload');return true;};
+  const r=await p.evaluate(()=>({why:(window.TOPS_RESETTING||{}).why,launch:(window.TOPS_RESETTING||{}).launch,last:TOPS_RESET.last,flag:sessionStorage.getItem('tops_reset_go'),snap:JSON.parse(sessionStorage.getItem('__snap')||'null'),dig:window.__digHub||null})).catch(()=>({}));if(!r.dig)F(tag,label+': no state read at the hub');
+  out.push({tag,step:label,secs:Math.round((Date.now()-t0)/1000),started:x,last:r.last,why:r.why,launch:r.launch});if(!x||!x.ok)F(tag,label+': the asked-for match did not start on the new page '+JSON.stringify(x)+' console '+JSON.stringify((st.con||[]).slice(-5)));if(r.flag)F(tag,label+': flag left');
+  if(r.snap&&r.snap.dig&&r.dig&&JSON.stringify(r.snap.dig)!==JSON.stringify(r.dig)){const A=r.snap.dig,B=r.dig;
+   /* a start made mid result chain skips the hub's first-visit setup on the old page (the card welcome picks, the skill defaults); the new
+      page's boot adds them, as any relaunch would. Additions are fine: nothing the old page had may be lost or changed. */
+   const deepIn=(a,b)=>{if(a===b)return true;if(Array.isArray(a))return Array.isArray(b)&&a.every(x=>b.some(y=>deepIn(x,y)&&deepIn(y,x)));if(a&&typeof a==='object')return !!b&&typeof b==='object'&&Object.keys(a).every(k=>deepIn(a[k],b[k]));return false;};
+   const same=k=>{if(k==='saveKeys'){const o=String(A[k]).split(' '),n=String(B[k]).split(' ');return o.every(x=>n.includes(x));}if(k==='tc'){try{return deepIn(JSON.parse(A[k]),JSON.parse(B[k]));}catch(e){return false;}}return JSON.stringify(A[k])===JSON.stringify(B[k]);};
+   const ks=Object.keys(Object.assign({},A,B)).filter(k=>!same(k));if(ks.length)F(tag,label+': state changed across the reload: '+ks.map(k=>{const a=String(A[k]),b=String(B[k]);let i=0;while(i<a.length&&a[i]===b[i])i++;return k+' @'+i+': '+a.slice(Math.max(0,i-40),i+200)+' -> '+b.slice(Math.max(0,i-40),i+200);}).join(' | '));}return true;};
  const cur=()=>({ok:typeof S!=='undefined'&&!!S&&!S.done,practice:!!(S&&S.practice),opp:S&&S.p&&S.p[1]&&S.p[1].name,exh:!!(S&&S.tcExh)});
  if(!(await step('career result -> Practice',()=>{playPractice();},()=>{const c={ok:typeof S!=='undefined'&&!!S&&!S.done&&!!S.practice,practice:!!(S&&S.practice),opp:S&&S.p&&S.p[1]&&S.p[1].name};return c;}))){await ctx.close();return;}
  await quit(p,touch);
  const did=await p.evaluate(()=>{const d=(typeof DRILLS!=='undefined'?DRILLS:[]).find(d=>!d.soon);return d&&d.id;});
- if(did)await step('practice -> Drill '+did,id=>{startDrill(id);},()=>({ok:typeof S!=='undefined'&&!!S&&!S.done&&S.p&&S.p[1]&&S.p[1].name==='Drill',opp:S&&S.p&&S.p[1]&&S.p[1].name}));else F(tag,'no drill to start');
+ if(did)await step('practice -> Drill '+did,id=>{startDrill(id);},()=>({ok:typeof S!=='undefined'&&!!S&&!S.done&&S.p&&S.p[1]&&S.p[1].name==='Drill',opp:S&&S.p&&S.p[1]&&S.p[1].name,drill:!!(S&&S.drill)}),did);else F(tag,'no drill to start');
  await quit(p,touch);
  await step('drill -> exhibition invite',()=>{const c=career();beginMatch({mode:'career',tier:c.tier,p0:save.name||'You',oppName:'Exhibition Test',oppAvg:60,legs:3,purse:0,local:true,tcExh:'test-exh'});},()=>({ok:typeof S!=='undefined'&&!!S&&!S.done&&S.p&&S.p[1]&&S.p[1].name==='Exhibition Test',opp:S&&S.p&&S.p[1]&&S.p[1].name}));
  if(st.pe.length)F(tag,'page errors: '+st.pe.slice(0,3).join(' | '));await ctx.close();};
