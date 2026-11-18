@@ -806,7 +806,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     one and the player changes skin tone, hair, style and accessories on top; save.look keeps the same fields as today. */
  window.TOPS_S3_BASES=[
   {id:'ray',name:'Ray',tag:'The Veteran',look:{model:'brian',build:2,skinTone:'#e2a17e',hair2:'short',hairCol:'#75706a',beard2:1,beardCol:'#a8a29a',beardSoft:{a:1.2,o:.9,s:.95},glasses:1,shirt:'#7a1f2b',shirtTint:1}},
-  {id:'kai',name:'Kai',tag:'The Young Gun',look:{model:'lewis',build:0,skinTone:'#a8693f',hair2:'own',hairCol:'#141010',beard2:0,glasses:0,shirt:'#0e7c86',shirtTint:1}},
+  {id:'kai',name:'Kai',tag:'The Young Gun',look:{model:'leonard',build:0,skinTone:'#a8693f',hair2:'own',hairCol:'#141010',beard2:0,glasses:0,shirt:'#0e7c86',shirtTint:1}},
   {id:'tama',name:'Tama',tag:'The Bruiser',look:{model:'david',build:2,skinTone:'#7f4d30',hair2:'own',hairCol:'#120d0b',beard2:1,beardCol:'#120d0b',beardSoft:{a:1,o:.85,s:.9},glasses:0,shirt:'#2a2b33',shirtTint:1}},
   {id:'dazza',name:'Dazza',tag:'The Showman',look:{model:'bryce',build:1,skinTone:'#e8b08a',hair2:'shaggy',hairCol:'#8f6326',beard2:1,beardCol:'#8c5f2a',glasses:0,shirt:'#e0a21c',shirtTint:1}},
   {id:'mia',name:'Mia',tag:'The Ace',look:{model:'megan',sex:'f',build:0,skinTone:'#c98e64',hair2:'pony',hairCol:'#3a2416',beard2:0,glasses:0,shirt:'#5b2a86',shirtTint:1}}];
