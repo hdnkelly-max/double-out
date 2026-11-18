@@ -120,7 +120,12 @@ const startCase=async(prof)=>{const touch=prof!=='desktop';const tag=prof+' star
   if(st.loads===l0){F(tag,label+': no fresh start '+JSON.stringify(await diag(p)));return false;}await ready(p);
   let x=null;for(let i=0;i<120;i++){x=await p.evaluate(check).catch(()=>null);if(x&&x.ok)break;await p.waitForTimeout(250);}
   const r=await p.evaluate(()=>({why:(window.TOPS_RESETTING||{}).why,launch:(window.TOPS_RESETTING||{}).launch,last:TOPS_RESET.last,flag:sessionStorage.getItem('tops_reset_go'),snap:JSON.parse(sessionStorage.getItem('__snap')||'null'),dig:window.__digHub||null})).catch(()=>({}));if(!r.dig)F(tag,label+': no state read at the hub');
-  out.push({tag,step:label,secs:Math.round((Date.now()-t0)/1000),started:x,last:r.last,why:r.why,launch:r.launch});if(!x||!x.ok)F(tag,label+': the asked-for match did not start on the new page '+JSON.stringify(x)+' console '+JSON.stringify((st.con||[]).slice(-5)));if(r.flag)F(tag,label+': flag left');
+  /* ENG-CHARCACHE (Q&D P1 on 3.51): the started match's figures are the real characters, not the stand-in: the player's at once (the start
+     waits for its file), the opponent's within 6 s (waited for when the start names it, else swapped in when its file lands) */
+  const figs=()=>p.evaluate(()=>{const f=o=>o&&o.userData?{ck:o.userData.ck,stand:!!o.userData.stand,vis:!!o.visible}:null;return {me:f(V._qa.fp&&V._qa.fp()),opp:f(V._qa.opp&&V._qa.opp()),rigs:TOPS_RIGS().ids};}).catch(()=>null);
+  const fg0=await figs();let fg=fg0;for(let i=0;i<24&&fg&&fg.opp&&fg.opp.stand;i++){await p.waitForTimeout(250);fg=await figs();}
+  if(!fg0||(fg0.me&&fg0.me.stand))F(tag,label+': the player figure is the stand-in '+JSON.stringify(fg0));if(fg&&fg.opp&&fg.opp.stand)F(tag,label+': the opponent is still the stand-in after 6 s '+JSON.stringify(fg));
+  out.push({tag,step:label,secs:Math.round((Date.now()-t0)/1000),started:x,figs:{first:fg0,after:fg},last:r.last,why:r.why,launch:r.launch});if(!x||!x.ok)F(tag,label+': the asked-for match did not start on the new page '+JSON.stringify(x)+' console '+JSON.stringify((st.con||[]).slice(-5)));if(r.flag)F(tag,label+': flag left');
   if(r.snap&&r.snap.dig&&r.dig&&JSON.stringify(r.snap.dig)!==JSON.stringify(r.dig)){const A=r.snap.dig,B=r.dig;
    /* a start made mid result chain skips the hub's first-visit setup on the old page (the card welcome picks, the skill defaults); the new
       page's boot adds them, as any relaunch would. Additions are fine: nothing the old page had may be lost or changed. */

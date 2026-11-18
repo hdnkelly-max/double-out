@@ -99,8 +99,22 @@ const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;window
  try{requestAnimationFrame(()=>requestAnimationFrame(go));setTimeout(()=>{if(d.classList.contains('tops-pre'))go();},300);/* hidden tab: no frames */}catch(e){go();}};
 /* ENG-CHARCACHE: ask for the player's and the next opponent's character files now and after every match, so the next match builds the
    real figures (BUG-AVATAR: the default player; BUG-BEARD: a figure rebuilt around a late file) */
-const preload=()=>{try{if(!window.TOPS_PRELOAD)return;const L=[];try{L.push([save.look||null,save.name||'You']);}catch(e){}try{const c=career();const n=c&&(c.next||(window.nextOpponent&&nextOpponent()));if(n&&n.oppName){let lk=null;try{lk=window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){}L.push([lk,n.oppName]);}}catch(e){}TOPS_PRELOAD(L);}catch(e){}};
+const preload=()=>{try{if(!window.TOPS_PRELOAD)return;try{window.TOPS_LOADHAIR&&TOPS_LOADHAIR();}catch(e){}const L=[];try{L.push([save.look||null,save.name||'You']);}catch(e){}try{const c=career();const n=c&&(c.next||(window.nextOpponent&&nextOpponent()));if(n&&n.oppName){let lk=null;try{lk=window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){}L.push([lk,n.oppName]);}}catch(e){}TOPS_PRELOAD(L);}catch(e){}};
 setTimeout(preload,0);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(preload,500);});
+/* ENG-CHARCACHE (Q&D P1 on 3.51): the held start used to run 60 ms after the hub opened, before the character files were parsed, so both
+   figures were the stand-in for the whole match. It now waits for the player's file, the opponent's when the start names it (next
+   fixture, revenge, exhibition) and the hair library, at most 4 s (a dead network still starts). An opponent the launcher picks itself
+   is swapped in when its file lands (V.swapOppStand). */
+const figsThen=(L,go)=>{let keys=[],done=false;const t0=Date.now();
+ try{const lookOf=n=>{try{return window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){return null;}};
+  keys.push(charKey(save.look||null,save.name||'You'));
+  const bm=L.bm;let n=null;if(bm&&bm.oppName)n=bm;else if(L.fn==='playNext'){const c=career();n=c&&(c.next||(window.nextOpponent&&nextOpponent()));}
+  else if(L.fn==='playPractice')n={oppName:'Practice'};else if(L.fn==='playRevenge'){try{const v=window.V3?V3():null,R=v&&v.rev;if(R&&R.name)n={oppName:R.name};}catch(e){}}
+  if(n&&n.oppName)keys.push(charKey(lookOf(n),n.oppName));}catch(e){}
+ keys=keys.filter((k,i,a)=>k&&k!=='remy'&&a.indexOf(k)===i);try{if(window.TOPS_LOADHAIR)TOPS_LOADHAIR();keys.forEach(k=>{const r=TOPS_RIGS();if(!r.ids.includes(k)&&!r.waitIds.includes(k)&&window.TOPS_LOADCHAR)TOPS_LOADCHAR(k);});}catch(e){}
+ const ready=()=>{try{const r=TOPS_RIGS();return keys.every(k=>r.ids.includes(k)||!r.waitIds.includes(k))&&!r.hairWait;}catch(e){return true;}};
+ const step=()=>{if(done)return;const ok=ready(),ms=Date.now()-t0;if(ok||ms>=4000){done=true;try{window.TOPS_LOG&&TOPS_LOG.log('reset_figs',{ms,ok,keys:keys.join(',')});}catch(e){}go();return;}setTimeout(step,50);};
+ setTimeout(step,60);};
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
 if(flag&&Date.now()-flag.t<120000){
@@ -115,7 +129,7 @@ if(flag&&Date.now()-flag.t<120000){
    parts={nav:t0-flag.t,dcl:nv?Math.round(t0+nv.domContentLoadedEventEnd-flag.t):null,rig:rigAt?rigAt-flag.t:null,hub:hubAt?hubAt-flag.t:null,done:ms,src:window.TOPS_RIGSRC||null};}catch(e){}
   window.TOPS_RESET_PARTS=parts;RS.last={ms,why,saveMs:flag.saveMs,parts};
   try{window.TOPS_LOG&&TOPS_LOG.log('reset_done',{ms,save_ms:flag.saveMs,why,start:flag.launch?flag.launch.fn:null});}catch(e){}lift();
-  /* ENG-RESET-ALL: the start the old page held, made here once the hub is up */if(flag.launch&&hubAt){const L=flag.launch;setTimeout(()=>runLaunch(L),60);}};
+  /* ENG-RESET-ALL: the start the old page held, made here once the hub is up */if(flag.launch&&hubAt){const L=flag.launch;figsThen(L,()=>runLaunch(L));}};
  let hubAt=0,rigAt=0;const toHub=()=>{if(hubAt)return true;hubAt=Date.now();try{const lg=$('login');if(lg)lg.hidden=true;if(flag.run){if(!isRun())switchSlot('run');}else if(isRun())switchSlot('career');}catch(e){}
   try{showHub();}catch(e){}try{if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}bar(.8,'Opening the hub…');return true;};
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
