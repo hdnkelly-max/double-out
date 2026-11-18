@@ -154,14 +154,14 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 // V4-R (Hayden 19:15, data-fitted 12 Nov): perfect window (ms) by Rhythm level, linear between points. Fitted with sim-player.js on the
 // four mates with enough career data so Pub-level timing averages inside the Pub band and a maxed career reaches the high 90s.
 // Was 20 + 14*L (20 ms at L 0 to 34 ms at L 1).
-/* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26). CAR-TOP: the stage scales it (game4 THROW_TUNE.stage) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
+/* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
 function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
 window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;tp.ea=(THROW_TUNE.ease||[])[Math.max(0,Math.min(6,sti))];tp.span=(THROW_TUNE.span||[])[Math.max(0,Math.min(6,sti))]||1;
- const Lr=Lof('rh');tp.P*=winMs(Lr)*st.win/(q0.P*tolMult()*.85);
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
+ const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -211,7 +211,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */const a=winMs(L(v0)),b=winMs(L(v1));/* CAR-TOP: a tougher stage scales the window; show what this stage really gives, and the pub figure */let m=1;try{const c=career();if(c&&!c.run)m=stageTune(c.tier|0).win;}catch(e){}if(m<1){const g=f(a*m)===f(b*m)?(w=>(Math.round(w*100)/100).toFixed(2)):f;return `Perfect window ${g(a*m)} → ${g(b*m)} ms here · ${f(a)} → ${f(b)} ms in the pub`;}return `Perfect window ${f(a)} → ${f(b)} ms`;}
+ if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */return `Perfect window ${f(winMs(L(v0)))} → ${f(winMs(L(v1)))} ms`;}
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';
