@@ -48,7 +48,7 @@
   /* ---------- reads from the real save (no writes here) ---------- */
   function model() {
     const c = career(), v = (window.C3 && C3.V3) ? C3.V3() : null; if (!c || !v) return null;
-    const t = TIERS[c.tier], sn = c.season, n = c.next || nextOpponent();
+    const t = S3 && c.circuit && window.TOPS_CIRCUIT ? Object.assign({}, TIERS[c.tier], { n: TOPS_CIRCUIT.LEVELS[c.circuit.level].n }) : TIERS[c.tier], sn = c.season, n = c.next || nextOpponent();   /* S3: screens name the Circuit level (Pub, Club, Regional Opens…) */
     const rows = sn && !sn.ko ? seasonPos(sn) : null, yi = rows ? rows.findIndex(r => r.you) : -1;
     const need = C3.lvNeed(v.lv), avgs = c.tierAvgs || [], form = avgs.length ? Math.round(avgs.reduce((a, b) => a + b, 0) / avgs.length) : null;
     return { c, v, t, sn, n, rows, yi, need, pct: v.xp / need, form, bank: c.bank, name: save.name || 'You' };
@@ -131,7 +131,7 @@
   // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
   const meFem = () => isFemModel(save.look || {}, save.name || '');
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
-    if (window.TOPS_S3FLAG) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: the Vinyl redo has no shirt mask (Director), so no recolour; the s3/ switch picks the redo or the placeholder */
+    if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
     const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
