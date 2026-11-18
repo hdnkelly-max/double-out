@@ -349,15 +349,19 @@
   function blocker() { for (const n of document.body.children) { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) continue; const cs = getComputedStyle(n); if (cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.pointerEvents !== 'none' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100 && n.offsetHeight > 200) return true; /* a sheet or screen, not a toast or banner */ } return false; }
   function showResult() {
     if (resMO) resMO.disconnect(); if (bodyMO) bodyMO.disconnect(); resMO = bodyMO = null;
-    if (pre0 && S && S.p && $id('c3rw') && blocker()) waitBack();
-    if (!pre0 || !S || !S.p || !$id('c3rw') || blocker()) { if (window.TOPS_RB_DEBUG) console.log('rb result skipped', JSON.stringify({ pre0: !!pre0, S: !!(S && S.p), ov: !!$id('c3rw'), bl: blocker() && [...document.body.children].filter(n => { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) return false; const cs = getComputedStyle(n); return cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100; }).map(n => n.id || n.className) })); return; }   // nothing recorded for this match, or a game sheet is up: the game's own overlay stays as it is
+    /* S3: a Circuit match has no reward overlay (Career's careerAfterMatch skips it); the Result goes over the game's Match result screen and its Continue presses that screen's own Next */
+    const s3r = !!(S3 && S && S.s3 && S.p);
+    if (s3r) { if (!pre0 || blocker()) return; }
+    else if (pre0 && S && S.p && $id('c3rw') && blocker()) waitBack();
+    if (!s3r && (!pre0 || !S || !S.p || !$id('c3rw') || blocker())) { if (window.TOPS_RB_DEBUG) console.log('rb result skipped', JSON.stringify({ pre0: !!pre0, S: !!(S && S.p), ov: !!$id('c3rw'), bl: blocker() && [...document.body.children].filter(n => { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) return false; const cs = getComputedStyle(n); return cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100; }).map(n => n.id || n.className) })); return; }   // nothing recorded for this match, or a game sheet is up: the game's own overlay stays as it is
     const M = model(); if (!M) return;
     let html = ''; try { html = result(M); } catch (e) { console.warn('rb result', e); return; }
     const el = ensure(); resOn = true; preOff(); el.classList.add('rb-resmode'); el.hidden = false; const bk = $id('rbBack'); if (bk) bk.hidden = true;
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`;
     // press the overlay's own button; if it isn't there or can't be pressed, step aside and leave the game's overlay in charge
-    const press = id => { const b = $id(id); endResult(); if (b && !b.disabled && b.offsetParent !== null) b.click(); };
+    const press = id => { const b = $id(id); endResult(); if (b && !b.disabled && (s3r || b.offsetParent !== null)) b.click(); };
+    if (s3r) { $id('rbRGo').onclick = () => press('btnResultNext'); return; }
     $id('rbRGo').onclick = () => press('c3rwGo');
     const k = $id('rbRKeep'); if (k) k.onclick = () => press('c3rwKeep');
     /* Director 05 #8: no "Full match stats" link: it closed the reward and showed the old Match result screen; the Result already carries the averages, checkout, 180s / best visit and high out */
@@ -368,6 +372,7 @@
   }
   /* Q&D R1-1: a game sheet (the card pack) opened over the Result; when it closes and the reward overlay is still up, the Result comes back */
   let backMO = null;
+  window.TOPS_RB_S3RESULT = () => { try { showResult(); } catch (e) { console.warn('rb s3 result', e); } };
   function waitBack() { if (backMO) backMO.disconnect(); backMO = new MutationObserver(() => { const ov = $id('c3rw'); if (!ov || ov.hidden || !document.body.contains(ov) || !pre0) { backMO.disconnect(); backMO = null; return; } if (!blocker()) { backMO.disconnect(); backMO = null; showResult(); } }); backMO.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] }); }
   function endResult() { if (window.TOPS_RB_DEBUG && resOn) console.log('rb endResult', new Error().stack.split('\n').slice(2, 5).join(' | ')); if (resMO) { resMO.disconnect(); resMO = null; } if (bodyMO) { bodyMO.disconnect(); bodyMO = null; } const was = resOn; resOn = false; pre0 = was ? null : pre0; const el = $id('rbApp'); if (el && was) { el.classList.remove('rb-resmode'); el.hidden = true; } }
 

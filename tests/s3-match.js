@@ -23,13 +23,15 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (s !== 'play') { out.end = s; break; } await p.waitForTimeout(120); }
   out.won = await p.evaluate(() => !!(S && S.won)).catch(() => null); out.res = await p.evaluate(() => S && S.s3res).catch(() => null);
   for (let i = 0; i < 60; i++) { if (await p.evaluate(() => !!document.querySelector('#rbApp.rb-resmode')).catch(() => false)) break; await p.waitForTimeout(250); }
-  out.resScreen = await p.evaluate(() => (document.querySelector('#rbApp.rb-resmode #rbMain') || {}).innerText || '').catch(() => '');
+  out.resScreen = await p.evaluate(() => (document.querySelector('#rbApp.rb-resmode') || {}).innerText || '').catch(() => '');
   if (!/league night/i.test(out.resScreen) || !/through/i.test(out.resScreen)) fail.push('result screen does not report the event/round: ' + out.resScreen.slice(0, 200).replace(/\n/g, ' | '));
+  out.bankAfterMatch = await p.evaluate(() => career().bank); if (out.bankAfterMatch !== 55) out.note = 'Career: the old career pays still pay on a Circuit round (bank 55 -> ' + out.bankAfterMatch + ')';
   const NEXT = ['#rbRGo', '#rbRKeep', '#lvFirst', '#tcWelLater', '#btnResultNext', '#c3rwGo', '#c3rwKeep', '#btnPerkLater', '#tcPLater', '.tcpk__later', '#msgReplies button', '.tc-sheet [data-close]', '.tc-sheet .tc-x'];
   out.seenBefore = await p.evaluate(() => localStorage.getItem('tops_s3_seen'));
   const l0 = loads; for (let i = 0; i < 300 && loads === l0; i++) { for (const s of NEXT) { if (loads > l0) break; if (await tap(s)) { await p.waitForTimeout(300); break; } } await p.waitForTimeout(250); }
   out.reloaded = loads > l0;
   if (out.reloaded) { await ready(); for (let i = 0; i < 40; i++) { if (await vis('#rbApp .s3-live')) break; await p.evaluate(() => { try { $('login').hidden = true; showHub(); } catch (e) {} }); await p.waitForTimeout(500); } }
+  for (let i = 0; i < 40; i++) { if (await p.evaluate(() => !!document.getElementById('s3Toast')).catch(() => false)) break; await p.waitForTimeout(250); }   /* the toast waits for the loader to lift */
   out.after = await p.evaluate(() => ({ seen: localStorage.getItem('tops_s3_seen'), rs: window.TOPS_RESET && TOPS_RESET.state && TOPS_RESET.state(), rsg: !!window.TOPS_RESETTING, live: !!document.querySelector('#rbApp .s3-live'), toast: (document.getElementById('s3Toast') || {}).innerText || '', sheet: (document.querySelector('#s3Sheet .s3-sbox') || {}).innerText || '', circ: career().circuit && career().circuit.live, tab: (document.querySelector('#rbTabs [aria-selected="true"]') || {}).dataset?.t }));
   if (!out.won) fail.push('match not won'); if (!out.res || !out.res.next) fail.push('Circuit did not move to the next round: ' + JSON.stringify(out.res));
   if (out.after.tab !== 'circuit') fail.push('after the match the shell is on ' + out.after.tab); if (!out.after.live) fail.push('live event not shown after the match');

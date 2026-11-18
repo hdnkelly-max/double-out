@@ -284,6 +284,11 @@
     sheet(`<span class="rb-kick">${eq ? 'Equals the Season 3 record' : 'New Season 3 record'}</span><span class="s3-fin s3-gold">${d.darts} darts</span><span class="rb-sub">${eq ? `Level with the best leg this season (${d.prev} darts).` : d.prev ? `The best leg this season was ${d.prev} darts.` : 'The first best leg of the season.'} It's on the Circuit table now.</span>`, 'Nice', () => { lsSet('tops_s3_bl', null); blAt = 0; render(); }, 's3-win');
   }
 
+  /* ---------- after a Circuit match: the new-look Result over the game's Match result screen (rb.js TOPS_RB_S3RESULT) ---------- */
+  /* endMatch shows the Match result with $('result').hidden=false then sceneBg('result'): sceneBg is the hook */
+  if (typeof sceneBg === 'function') { const _ss = sceneBg; sceneBg = function (id) { const r = _ss.apply(this, arguments);
+    try { if (id === 'result' && typeof S !== 'undefined' && S && S.s3 && window.TOPS_RB_S3RESULT) setTimeout(() => { if (!$id('result').hidden) TOPS_RB_S3RESULT(); }, 0); } catch (e) {} return r; }; }
+
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
   if (typeof showCreator === 'function') {
