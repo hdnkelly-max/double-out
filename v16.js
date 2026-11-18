@@ -51,7 +51,7 @@ async function go(why,launch){const here=()=>{if(launch)runLaunch(launch);};/* E
   /* ChatGPT P1: the cloud ack must be for this exact save. The game's debounced push is cancelled and this page sends the save itself, and
      only the server's ok for this call counts (the server refuses an older sv, so a slower earlier push can't overwrite it) */
   if(ok&&signed){let snap='';try{clearTimeout(NET.pushT);snap=JSON.stringify(save);}catch(e){ok=false;why2='push';}
-   const sv=save.sv||0;let pok=null;try{NET.sb.rpc('tops_save_put',{p_data:save}).then(r=>{pok=!!(r&&!r.error&&r.data&&r.data.ok);if(pok)NET.cloudAt=Date.now();},()=>{pok=false;});}catch(e){pok=false;}
+   const sv=save.sv||0;let pok=null;try{NET.sb.rpc(TOPS_SAVE_NS.rpc,{p_data:save}).then(r=>{pok=!!(r&&!r.error&&r.data&&r.data.ok);if(pok)NET.cloudAt=Date.now();},()=>{pok=false;});}catch(e){pok=false;}
    const dl=window.TOPS_DARTS_FLUSH?TOPS_DARTS_FLUSH():Promise.resolve(true);
    const until=Date.now()+5000;let dok=null;dl.then(v=>{dok=v!==false;},()=>{dok=false;});
    while(ok&&Date.now()<until){if(pok!==null&&dok!==null&&NQ.n===0)break;if(pok===false)break;await sleep(60);bar(.08+.2*Math.min(1,(Date.now()-t0)/2500));}

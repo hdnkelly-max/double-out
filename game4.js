@@ -1,4 +1,11 @@
 <script>
+/* S3 (Season 3, Hayden 07:45): one flag for the whole Season 3 build. ?s3=1 turns it on and sticks (the home-screen app can't pass a URL flag;
+   the Menu switch writes the same key), ?s3=0 turns it off. Season 3 has its own save slot on the device and in the cloud, so Season 2 saves
+   are never written by a Season 3 game and rolling back to 3.55 gives them back exactly. */
+/* release = flip S3_DEFAULT to true (one line). Rollback without a new build: ?s3=0 or the Menu switch stores '0' and the game is 3.55 again on the Season 2 save */
+const S3_DEFAULT=false;
+window.TOPS_S3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1'||q==='0')localStorage.setItem('tops_s3',q);const v=localStorage.getItem('tops_s3');return v==='1'||(v!=='0'&&S3_DEFAULT);}catch(e){return S3_DEFAULT;}})();
+window.TOPS_SAVE_NS=TOPS_S3FLAG?{key:'doubleout_s3',table:'tops_saves_s3',rpc:'tops_save3_put',bak:'tops_career_bak_s3',lb:'tops_players_s3',lbRpc:'tops_upsert3',season:3}:{key:'doubleout2',table:'tops_saves',rpc:'tops_save_put',bak:'tops_career_bak',lb:'tops_players',lbRpc:'tops_upsert',season:2};
 ENGINE
 // ===== DATA =====
 const TIERS=[
@@ -269,10 +276,10 @@ function lookFor(name){const h=hash(name);return {skin:SKINS[h%SKINS.length],hai
 // ===== PERSISTENCE =====
 let save={composure:0,arm:0,matches:0,darts:0,sp:0,skills:{},career:null,setup:{shaft:'med',flight:'standard',point:'std'},ownedSetup:['shaft:short','shaft:med','flight:standard','point:std'],look:{skin:SKINS[1],hair:HAIRS[0],hairStyle:'short',shirt:SHIRTS[1],beard:0},barrel:'assassin',owned:['assassin'],flight:FLIGHTS[0],name:''};
 const SAVE_FRESH=JSON.stringify(save);const SEASON=1;
-try{const s=JSON.parse(localStorage.getItem('doubleout2')||'{}');if(s&&typeof s.composure==='number')save=Object.assign(save,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)||'{}');if(s&&typeof s.composure==='number')save=Object.assign(save,s);}catch(e){}
 // Season 1 reset (10 Nov 2026): every old device save is wiped once; progress lives in the cloud only
-if(save.season!==SEASON){save=JSON.parse(SAVE_FRESH);save.season=SEASON;try{Object.keys(localStorage).forEach(k=>{if(/^doubleout/.test(k)&&k!=='doubleout_audio')localStorage.removeItem(k);});localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){}}
-function persist(){try{localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){}if(window.NET&&window.NET.user)cloudPush(false);hubBankUpdate();}
+if(save.season!==SEASON){save=JSON.parse(SAVE_FRESH);save.season=SEASON;try{/* S3: a Season 3 game never touches the Season 2 device save */if(!TOPS_S3FLAG)Object.keys(localStorage).forEach(k=>{if(/^doubleout/.test(k)&&k!=='doubleout_audio'&&k!=='doubleout_s3')localStorage.removeItem(k);});localStorage.setItem(TOPS_SAVE_NS.key,JSON.stringify(save));}catch(e){}}
+function persist(){try{localStorage.setItem(TOPS_SAVE_NS.key,JSON.stringify(save));}catch(e){}if(window.NET&&window.NET.user)cloudPush(false);hubBankUpdate();}
 // v1.77 #11: the top-right balance follows every save, so a purchase or cash bonus shows straight away (it only refreshed when the hub redrew)
 function hubBankUpdate(){try{const c=career(),el=$('hubBank');if(!c||!el)return;const run=!!c.run,lb=el.parentNode.querySelector('.label'),lt=run?'Lives':'Bank',t=run?'\u2665'.repeat(c.lives||0)+'\u2661'.repeat(Math.max(0,3-(c.lives||0))):money(c.bank);if(lb&&lb.textContent!==lt)lb.textContent=lt;if(el.textContent!==t)el.textContent=t;el.classList.toggle('neg',!run&&c.bank<0);}catch(e){}}
 (function migrateV4(){if(save.progV4)return;const old=save.perks;if(Array.isArray(old)){const map={grouping:'grp',steady:'std',eye:'eye',hunter:'hunter',groove:'groove',warm:'warm',stage:'stage',cover:'cover',negotiator:'negotiator',grinder:'grinder',iron:'iron',loose:'loose',machine:'machine',clinical:'clinical',ice:'ice',showman:'showman'};const m={};let kept=0;old.forEach(id=>{const nid=map[id]||id;if(!PERKS.find(p=>p.id===nid))return;if(kept>=4)return;m[nid]=1;kept++;});save.perks=m;}else if(!old||typeof old!=='object')save.perks={};save.picks=0;save.progV4=1;persist();})();
@@ -1962,8 +1969,8 @@ function lbId(){if(!save.lb){const u=(crypto.randomUUID?crypto.randomUUID():'xxx
 function lbHeaders(){const l=lbId();return {'apikey':LB.key,'Authorization':'Bearer '+LB.key,'Content-Type':'application/json','x-tops-token':l.token};}
 function lbName(){const u=NET&&NET.user;if(u){const m=u.user_metadata||{};let g=(m.full_name||m.name||'').replace(/\s*[\(\[].*$/,'').replace(/\s+/g,' ').trim();if(g.length>20)g=g.split(' ').slice(0,2).join(' ');if(g)return g.slice(0,20);}return String(save.name||'You').slice(0,16);}
 async function lbPost(){const c=career();if(!c||!save.name)return;try{const l=lbId();const b=c.best||{};const row={id:l.id,token:l.token,name:lbName(),tier:c.tier,matches:c.wins+c.losses,wins:c.wins,avg:+(c.darts?c.pts/c.darts*3:0).toFixed(1),best_avg:+(b.avg||0).toFixed(1),best_leg:b.leg<99?b.leg:null,t180:c.t180||0,hf:b.hf||0,updated_at:new Date().toISOString()};
- const r=await fetch(LB.url+'/rest/v1/rpc/tops_upsert',{method:'POST',headers:lbHeaders(),body:JSON.stringify({p:row})});LB.ok=r.ok;LB.cache=null;}catch(e){LB.ok=false;}}
-async function lbFetch(){if(LB.cache&&Date.now()-LB.at<30000)return LB.cache;try{const r=await fetch(LB.url+'/rest/v1/tops_players?select=id,name,tier,matches,wins,avg,best_avg,best_leg,t180,hf,updated_at&order=avg.desc&limit=30',{headers:lbHeaders()});if(!r.ok)throw 0;LB.cache=await r.json();LB.at=Date.now();return LB.cache;}catch(e){return null;}}
+ const r=await fetch(LB.url+'/rest/v1/rpc/'+TOPS_SAVE_NS.lbRpc,{method:'POST',headers:lbHeaders(),body:JSON.stringify({p:row})});LB.ok=r.ok;LB.cache=null;}catch(e){LB.ok=false;}}
+async function lbFetch(){if(LB.cache&&Date.now()-LB.at<30000)return LB.cache;try{const r=await fetch(LB.url+'/rest/v1/'+TOPS_SAVE_NS.lb+'?select=id,name,tier,matches,wins,avg,best_avg,best_leg,t180,hf,updated_at&order=avg.desc&limit=30',{headers:lbHeaders()});if(!r.ok)throw 0;LB.cache=await r.json();LB.at=Date.now();return LB.cache;}catch(e){return null;}}
 async function renderBoard(){const host=$('hubBoard');if(!host)return;host.innerHTML='<p class="help">Loading…</p>';const rows=await lbFetch();if(!rows){host.innerHTML='<p class="help">Leaderboard unavailable. <button type="button" class="hx-link" onclick="renderBoard()">Retry</button></p>';return;}if(false){host.innerHTML='<p class="help">Leaderboard offline. It comes online once the table exists.</p>';return;}if(!rows.length){host.innerHTML='<p class="help">No one on the board yet. Finish a match and you’re on it.</p>';return;}
  const me=lbId().id;host.innerHTML=`<table class="lbt"><thead><tr><th>#</th><th>Player</th><th>Avg</th><th>Best leg</th><th>180s</th><th>High out</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.id===me?'me':''}"><td>${i+1}</td><td><b>${String(r.name).replace(/</g,'&lt;')}</b><small>${TIERS[Math.min(6,r.tier||0)].n} · ${r.wins}–${(r.matches||0)-(r.wins||0)}</small></td><td>${(+r.avg).toFixed(1)}</td><td>${r.best_leg||'–'}</td><td>${r.t180}</td><td>${r.hf||'–'}</td></tr>`).join('')}</tbody></table>`;}
 function money(n){return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString();}
@@ -2659,7 +2666,7 @@ async function netBoot(){const hashAuth=/access_token=|refresh_token=|code=/.tes
  }catch(e){console.warn('net boot',e);if(NET.bootGen!==g)return;showLogin();const st=$('loginStatus');if(st)st.textContent='Can’t reach the server. Check your connection and try again.';window.TOPS_BOOTEND=window.TOPS_BOOTEND||Date.now();}}
 async function netSignedIn(user,g){const stale=()=>g!=null&&NET.bootGen!==g;if(stale())return;NET.user=user;save.cloudUser={id:user.id,name:netUserName()};persist();const el=$('login');if(el)el.hidden=true;
  // pull cloud save
- try{const sb=NET.sb;const {data,error}=await sb.from('tops_saves').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw error;
+ try{const sb=NET.sb;const {data,error}=await sb.from(TOPS_SAVE_NS.table).select('data,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw error;
   const cloud=data&&data.data;const localMatches=(save.matches||0);const cloudMatches=cloud?(cloud.matches||0):0;
   // cloud only: when signed in, the cloud save always wins; the device copy is never offered
   if(stale())return;/* given up on: no adopt, no push, no screen change */
@@ -2668,7 +2675,7 @@ async function netSignedIn(user,g){const stale=()=>g!=null&&NET.bootGen!==g;if(s
  }catch(e){console.warn('cloud pull',e);}
  if(stale())return;showTitle();}
 function netAdopt(cloud){if(!cloud||cloud.season!==SEASON){cloudPush(true);return;}const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);if(!save.lb&&cloud.lb)save.lb=cloud.lb;/* #12: a cloud save written by v1.75 carries the old inflated opponents; migrate it too (idempotent) */try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}persist();}
-function cloudPush(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const row={user_id:NET.user.id,data:save,updated_at:new Date().toISOString()};const {error}=await NET.sb.from('tops_saves').upsert(row,{onConflict:'user_id'});if(error)throw error;NET.cloudAt=Date.now();}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);}
+function cloudPush(now){if(!NET.user||!NET.sb)return;clearTimeout(NET.pushT);const go=async()=>{try{const row={user_id:NET.user.id,data:save,updated_at:new Date().toISOString()};const {error}=await NET.sb.from(TOPS_SAVE_NS.table).upsert(row,{onConflict:'user_id'});if(error)throw error;NET.cloudAt=Date.now();}catch(e){console.warn('cloud push',e);}};if(now)go();else NET.pushT=setTimeout(go,2500);}
 async function netSignOut(){try{if(NET.sb)await NET.sb.auth.signOut();}catch(e){}NET.user=null;save.cloudUser=null;persist();showTitle();}
 // ----- online match -----
 function roomCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];return c;}

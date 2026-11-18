@@ -103,7 +103,7 @@ function partPts(key,id){const SH={short:{ct:1,rh:-2},long:{ct:-1,rh:3},carbon:{
 function barrelPts(b){const acc=Math.round((5.6-b.base)/1.8*7);return {sc:acc,fi:acc,rh:Math.round((b.tol-1)/.15*6),ct:Math.round((1.25-b.sway)/.6*7)};}
 function ptsTxt(o){const parts=STATS.filter(s=>o[s.id]).map(s=>`<span class="${o[s.id]<0?'neg':''}">${SN(s.id)} ${o[s.id]>0?'+':''}${o[s.id]}</span>`);return parts.length?parts.join(' · '):'No stat change';}
 function eff(id){const s=st();const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(100,s.v[id]+kitPts()[id]+hot));}
-function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}
+function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}window.TOPS_LofT=Lof;/* S3 monitor logs the player's levels */
 function ovr(){let o=0;STATS.forEach(s=>o+=s.w*(st().v[s.id]+kitPts()[s.id]));return Math.round(o);}
 function ident(){const v=st().v;const arr=STATS.map(s=>v[s.id]);if(Math.max(...arr)-Math.min(...arr)<8)return 'All-Rounder';const top=STATS.slice().sort((a,b)=>v[b.id]-v[a.id])[0];return top.t;}
 // ---------- points from levels ----------
