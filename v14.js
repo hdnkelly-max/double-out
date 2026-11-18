@@ -36,7 +36,7 @@ function res(when){try{const o={w:when};const r=window.TOPS_R;if(r&&r.info){o.ge
  const g=window.TOPS_RIGS&&TOPS_RIGS();if(g){o.chars=g.n;o.char_ids=g.ids.join(',');o.loading=g.wait;o.anims=g.anim;if(g.animKeys&&g.animKeys.length){let s='';g.animKeys.forEach(k=>{if(s.length+k.length+1<=120)s+=(s?',':'')+k;});o.anim_keys=s;}/* whole keys only, ≤120 chars (ChatGPT) */}lastRes=o;log('res',o);}catch(e){}}
 // ---- what we record ----
 function devInfo(){try{const d=window.TOPS_perf&&TOPS_perf.dev?TOPS_perf.dev():{};return Object.assign({standalone:!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches))},d);}catch(e){return {};}}
-log('boot',{v:VER(),build:window.TOPS_BUILD||'',os:devInfo().os,osv:devInfo().os_major,br:devInfo().browser,brv:devInfo().browser_major,scr:devInfo().screen,dpr:devInfo().dpr,gpu:devInfo().gpu,sa:devInfo().standalone,page:PAGE});
+log('boot',{v:VER(),build:window.TOPS_BUILD||'',os:devInfo().os,osv:devInfo().os_major,br:devInfo().browser,brv:devInfo().browser_major,scr:devInfo().screen,dpr:devInfo().dpr,gpu:devInfo().gpu,sa:devInfo().standalone,s3:!!window.TOPS_S3FLAG,page:PAGE});
 let lastScreen=null;if(typeof showScreen==='function'){const ss=showScreen;showScreen=function(id){if(id!==lastScreen){lastScreen=id;log('screen',String(id));}return ss.apply(this,arguments);};}
 let inMatch=false,matchN=0;
 function leftMatch(how,extra){if(!inMatch)return;try{slowFlush();}catch(e){}inMatch=false;try{if(atBreak.length)idle(flushBreak);}catch(e){}/* anything held during the match goes now */const m=MID;log('match_end',Object.assign({how},extra||{}));
