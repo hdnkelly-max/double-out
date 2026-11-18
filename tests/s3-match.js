@@ -24,6 +24,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   out.won = await p.evaluate(() => !!(S && S.won)).catch(() => null); out.res = await p.evaluate(() => S && S.s3res).catch(() => null);
   for (let i = 0; i < 60; i++) { if (await p.evaluate(() => !!document.querySelector('#rbApp.rb-resmode')).catch(() => false)) break; await p.waitForTimeout(250); }
   out.resScreen = await p.evaluate(() => (document.querySelector('#rbApp.rb-resmode') || {}).innerText || '').catch(() => '');
+  out.oldHidden = await p.evaluate(() => { const r = document.getElementById('result'); return !r || r.hidden || getComputedStyle(r).visibility === 'hidden'; }); if (!out.oldHidden) fail.push('old Match result visible under a Circuit match');
   if (!/league night/i.test(out.resScreen) || !/through/i.test(out.resScreen)) fail.push('result screen does not report the event/round: ' + out.resScreen.slice(0, 200).replace(/\n/g, ' | '));
   out.bankAfterMatch = await p.evaluate(() => career().bank); if (out.bankAfterMatch !== 55) out.note = 'Career: the old career pays still pay on a Circuit round (bank 55 -> ' + out.bankAfterMatch + ')';
   const NEXT = ['#rbRGo', '#rbRKeep', '#lvFirst', '#tcWelLater', '#btnResultNext', '#c3rwGo', '#c3rwKeep', '#btnPerkLater', '#tcPLater', '.tcpk__later', '#msgReplies button', '.tc-sheet [data-close]', '.tc-sheet .tc-x'];

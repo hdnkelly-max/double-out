@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       sheet: (document.querySelector('#s3Sheet .s3-sbox') || {}).innerText || '', toast: (document.getElementById('s3Toast') || {}).innerText || '', lvn: (document.querySelector('#rbApp .s3-lvn') || {}).textContent || '',
       bank: (document.getElementById('rbBank') || {}).textContent, wide: document.documentElement.scrollWidth > innerWidth + 1 }; });
   const tap = async sel => { const pt = await p.evaluate(s => { const e = document.querySelector(s); if (!e) return null; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, sel); if (!pt) return false; await p.touchscreen.tap(pt[0], pt[1]); await p.waitForTimeout(500); return true; };
-  const reload = async () => { await boot('?s3=1'); };
+  const reload = async () => { await boot('?s3=1'); await p.waitForFunction(() => { const l = document.getElementById('loading'); return !l || l.classList.contains('gone') || getComputedStyle(l).display === 'none'; }, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(700); };   /* results wait for the loader to lift */
   // 1 flag off: old tabs, no S3 class
 
   await boot('?s3=0'); out.off = await look(); if (out.off.tabs.includes('circuit') || !out.off.tabs.includes('tonight')) fail.push('flag off: tabs ' + out.off.tabs);
@@ -42,6 +42,11 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await tap('#rbTabs [data-t="money"]'); out.money = await p.evaluate(() => (document.querySelector('#rbApp .s3-bank') || {}).innerText || ''); await shot('6_money'); if (!/tour budget/i.test(out.money)) fail.push('Money tab empty');
   await p.evaluate(() => { const c = career().circuit; c.level = 3; c.live = null; career().bank = 2400; career().tier = 3; persist(); localStorage.setItem('tops_s3_seen', JSON.stringify(TOPS_S3UI._snap(c))); }); await reload();
   await tap('#rbApp [data-s3sub="oom"]'); out.oom = await p.evaluate(() => document.querySelectorAll('#rbApp .s3-tbl li:not(.s3-cut)').length); await shot('7_oom'); if (out.oom !== 13) fail.push('DPNZ OOM rows ' + out.oom);
+  // 7b Best Leg record: Career's tops:bestleg (fired at the leg end) shows a banner that takes no taps, then the big moment on the next screen
+  out.bl = await p.evaluate(() => { window.dispatchEvent(new CustomEvent('tops:bestleg', { detail: { darts: 14, prev: 15, kind: 'new', name: 'Hayden' } })); const b = document.getElementById('s3Rec'); return b ? { t: b.innerText, pe: getComputedStyle(b).pointerEvents } : null; });
+  if (!out.bl || !/14 darts/i.test(out.bl.t) || out.bl.pe !== 'none') fail.push('record banner ' + JSON.stringify(out.bl));
+  await reload(); out.blm = await look(); await shot('7b_record'); if (!/new season 3 record/i.test(out.blm.sheet) || !/14/.test(out.blm.sheet)) fail.push('record moment after reload: ' + out.blm.sheet);
+  await tap('#s3Ok'); await reload(); out.blm2 = await look(); if (/record/i.test(out.blm2.sheet)) fail.push('record moment showed twice');
   // 8 creator: the 5 Vinyl bases replace the Character row (Engine's TOPS_S3_BASES; stubbed here when Engine's code isn't in this build)
   out.cr = await p.evaluate(() => { if (!window.TOPS_S3_BASES) { window.TOPS_S3_BASES = [{ id: 'ray', name: 'Ray', tag: 'The Veteran', look: { model: 'brian', hair2: 'short' } }, { id: 'mia', name: 'Mia', tag: 'The Ace', look: { model: 'megan', sex: 'f', hair2: 'pony' } }]; window.TOPS_S3_LOOK = id => { const b = TOPS_S3_BASES.find(x => x.id === id); return b ? JSON.parse(JSON.stringify(b.look)) : null; }; }
     save.look = {}; showCreator(false); const row = document.getElementById('s3Base'); const ch = document.getElementById('segChar').closest('.field');

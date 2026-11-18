@@ -351,7 +351,8 @@
     if (resMO) resMO.disconnect(); if (bodyMO) bodyMO.disconnect(); resMO = bodyMO = null;
     /* S3: a Circuit match has no reward overlay (Career's careerAfterMatch skips it); the Result goes over the game's Match result screen and its Continue presses that screen's own Next */
     const s3r = !!(S3 && S && S.s3 && S.p);
-    if (s3r) { if (!pre0 || blocker()) return; }
+    if (s3r) { if (blocker()) { clearTimeout(showResult.t); showResult.t = setTimeout(showResult, 500); return; }   /* a game sheet (card pack, message) first; the Result follows */
+      if (!pre0) { try { const c0 = career(), v0 = C3.V3(); pre0 = { bank: c0.bank, xp: xpTotal(v0), lv: v0.lv }; } catch (e) { return; } } }
     else if (pre0 && S && S.p && $id('c3rw') && blocker()) waitBack();
     if (!s3r && (!pre0 || !S || !S.p || !$id('c3rw') || blocker())) { if (window.TOPS_RB_DEBUG) console.log('rb result skipped', JSON.stringify({ pre0: !!pre0, S: !!(S && S.p), ov: !!$id('c3rw'), bl: blocker() && [...document.body.children].filter(n => { if (n.id === 'rbApp' || n.id === 'rbBack' || n.id === 'c3rw' || n.hidden) return false; const cs = getComputedStyle(n); return cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && (+cs.zIndex || 0) >= 50 && n.offsetWidth > 100; }).map(n => n.id || n.className) })); return; }   // nothing recorded for this match, or a game sheet is up: the game's own overlay stays as it is
     const M = model(); if (!M) return;

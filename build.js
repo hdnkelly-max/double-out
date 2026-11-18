@@ -39,7 +39,8 @@ const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<
 // every file under s3/ is a Vinyl redo of the repo path after 's3/' (Director's rule: same name and size); the build lists them so the page
 // knows which old paths have a redo (the release copies s3/ to the site alongside assets/)
 const s3walk=d=>fs.existsSync(d)?fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?s3walk(d+'/'+e.name):[d+'/'+e.name]):[];
-const s3man=s3walk('s3').filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).map(f=>f.slice(3)).sort();
+// assets/ is gitignored here (it lives on main), so the list of redone paths is also kept in s3/have.json (Director/Experience add to it with each batch)
+const s3man=[...new Set(s3walk('s3').filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).map(f=>f.slice(3)).concat(fs.existsSync('s3/have.json')?JSON.parse(fs.readFileSync('s3/have.json','utf8')):[]))].sort();
 const s3=fs.existsSync('rb/s3.js')?`<style>${fs.existsSync('rb/s3.css')?fs.readFileSync('rb/s3.css','utf8'):''}</style>\n<script>window.TOPS_S3_HAVE=${JSON.stringify(s3man)};\n${fs.readFileSync('rb/s3.js','utf8')}</script>\n`:'';
 const rb=s3+(fs.existsSync('rb/rb.js')?`<style>${fs.existsSync('rb/rb-lime.css')?fs.readFileSync('rb/rb-lime.css','utf8'):''}${fs.readFileSync('rb/rb.css','utf8')}</style>\n<script>${fs.readFileSync('rb/rb.js','utf8')}</script>\n`:'');
 const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+s3c+tc+rb+v16;

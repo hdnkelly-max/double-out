@@ -70,3 +70,17 @@
 .s3-on #s3Base .s3-bases button[aria-pressed="true"]{border-color:#d7232d;background:rgba(215,35,45,.16)}
 .s3-on #s3Base .s3-bases b{font:800 16px/1 "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.3px}
 .s3-on #s3Base .s3-bases small{font-size:11px;color:#a0a6a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* the old Match result under a Circuit match: never seen (the new-look Result sits over it) */
+.s3-on #result.s3-old{visibility:hidden!important}
+/* Best Leg record: in-match banner (no taps) and the big moment */
+.s3-on .s3-rec{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;pointer-events:none;background:linear-gradient(180deg,#2a1a05,#120c03);border:2px solid #f1c64b;border-radius:14px;padding:10px 22px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);animation:s3rec .45s cubic-bezier(.2,1.4,.4,1);transition:opacity .5s,transform .5s}
+.s3-on .s3-rec small{display:block;font:700 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:#f1c64b}
+.s3-on .s3-rec b{display:block;font:800 italic 38px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;color:#fff;text-transform:uppercase}
+.s3-on .s3-rec.s3-out{opacity:0;transform:translate(-50%,-10px)}
+@keyframes s3rec{from{opacity:0;transform:translate(-50%,-14px) scale(.85)}to{opacity:1;transform:translateX(-50%)}}
+#rbApp .s3-recm .s3-sbox{border:2px solid #f1c64b;background:radial-gradient(120% 80% at 50% 0,#3a2708 0,var(--card) 60%);text-align:center;align-items:center}
+#rbApp .s3-recm .s3-sbox .rb-primary{align-self:stretch}
+#rbApp .s3-recn{font-family:var(--d);font-weight:800;font-style:italic;font-size:110px;line-height:.85;color:#f1c64b;text-shadow:0 4px 30px rgba(241,198,75,.35)}
+#rbApp .s3-recn small{display:block;font-size:26px;font-style:normal;color:var(--ink);letter-spacing:1px;text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){.s3-on .s3-rec{animation:none}}
