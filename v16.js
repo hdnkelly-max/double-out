@@ -86,8 +86,13 @@ if(flag&&Date.now()-flag.t<120000){
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
     boot's own end (showTitle after the cloud pull when signed in, showLogin when the network or the session isn't there) is turned into a
     hub refresh for the next 30 s, so the player stays on the hub; a signed-in boot still adopts the cloud copy (the same save) as usual. */
- const tb=Date.now();const st=showTitle;showTitle=function(){if(Date.now()-tb<30000){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
- const sl=showLogin;showLogin=function(){if(Date.now()-tb<30000){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
+ const tb=Date.now();/* BUG-MENU (David, Android, 17 Nov): this guard turned the PLAYER's own "Main menu" (☰ sheet, in-match Quit) into a hub refresh for 30 s
+     after every between-match reset, so Main menu did nothing right after a match. It is meant for the boot's own calls only: a showTitle or
+     showLogin that comes from a real tap or key (within 1 s of a trusted click/keydown) goes through. */
+  let userAt=0;const mark=e=>{if(e&&e.isTrusted)userAt=Date.now();};addEventListener('click',mark,true);addEventListener('keydown',mark,true);
+  const boot=()=>Date.now()-tb<30000&&Date.now()-userAt>1000;
+  const st=showTitle;showTitle=function(){if(boot()){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
+ const sl=showLogin;showLogin=function(){if(boot()){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
  const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
    if(hubAt&&rig&&(settled||Date.now()-hubAt>1500)){clearInterval(tick);finish(settled?'ready':'hub');return;}/* a character file still loading lands on the hub as usual */bar(p);
