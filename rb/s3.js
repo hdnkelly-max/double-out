@@ -67,6 +67,9 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const money = n => '$' + Math.round(+n || 0).toLocaleString('en-NZ');
   const CI = () => window.TOPS_CIRCUIT;
+  /* a round's name (the engine's FIN_NAME names a FINISH: losing the final = Runner-up; the round itself is the Final) */
+  const RN = { G: 'Group match', F: 'Final', SF: 'Semi-final', QF: 'Quarter-final', L16: 'Last 16', L32: 'Last 32', L64: 'Last 64', L128: 'Last 128' };
+  const roundName = r => RN[r] || r || ''; window.TOPS_S3_ROUND = roundName;
   const IMG = 'assets/rb/';
   const lvArt = i => `${IMG}venue_t${Math.max(0, Math.min(6, i | 0))}.jpg`;   // the level's venue card (W9 swaps it to the Vinyl plate through the manifest)
   const GRAD = ['#5b2a1a', '#1f3b4d', '#2e4a2a', '#4a1d22', '#2a2f5a', '#3a3a3a', '#5a1218'];
@@ -162,7 +165,7 @@
   function live(c) {
     const C = CI(), lv = c.live, e = C.eventOf(lv.id), o = C.nextOpp(c), L = C.LEVELS[e.level];
     const cells = lv.rounds.map((r, i) => { const cls = i < lv.round ? 's3-w' : i === lv.round ? 's3-on' : ''; const t = r === 'G' ? 'Group' + (lv.g ? ' ' + lv.g.w + '–' + (lv.g.p - lv.g.w) : '') : r; return `<li class="${cls}">${t}</li>`; }).join('');
-    const rn = o.round === 'G' ? `Group match ${(lv.g ? lv.g.p : 0) + 1} of 3 · win 2 to go through` : C.FIN_NAME[o.round];
+    const rn = o.round === 'G' ? `Group match ${(lv.g ? lv.g.p : 0) + 1} of 3 · win 2 to go through` : roundName(o.round);
     const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
     let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
       <ol class="s3-draw" aria-label="The draw">${cells}</ol>
@@ -190,7 +193,7 @@
   /* ---------- Best Leg (W6) + Season 1/2 history (W7), on the Circuit tab under the week ---------- */
   // Both are async reads of Career's views (tops_bestleg_s3, tops_history); fetched at most once a minute, the card redraws in place.
   let blRows = null, blAt = 0, hiRows = null, hiAt = 0;
-  const fetchOnce = (fn, at, set, redraw) => { if (Date.now() - at < 60000) return at; try { Promise.resolve(fn()).then(r => { set(r || []); redraw(); }).catch(() => { set(null); }); } catch (e) {} return Date.now(); };
+  const fetchOnce = (fn, at, set, redraw) => { if (Date.now() - at < 60000) return at; try { Promise.resolve(fn()).then(r => { set(r || []); redraw(); }).catch(() => { set('err'); redraw(); }); } catch (e) {} return Date.now(); };
   function records() {
     const B = window.TOPS_BESTLEG, H = window.TOPS_HISTORY; let h = '';
     if (B && B.table) { blAt = fetchOnce(() => B.table(), blAt, r => { blRows = r; }, () => { const el = $id('s3Bl'); if (el) el.outerHTML = blCard(); }); h += blCard(); }
@@ -198,6 +201,7 @@
     return h;
   }
   function blCard() {
+    if (blRows === 'err') { blAt = Date.now() - 45000; return `<div class="rb-card" id="s3Bl"><span class="rb-t2">Best leg · Season 3</span><span class="rb-sub">Can't load the table right now. It comes back when you're online.</span></div>`; }   /* retry in 15 s */
     const rows = (blRows || []).slice(0, 8), mine = (blRows || []).find(r => r.you);
     const list = rows.length ? `<ol class="s3-tbl">${rows.map((r, i) => `<li class="${r.you ? 's3-you' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.name)}</span><b>${r.darts} darts</b></li>`).join('')}</ol>`
       : `<span class="rb-sub">${blRows ? 'Nobody has a best leg yet this season. Win a 501 leg in the Circuit to set one.' : 'Loading the table…'}</span>`;
@@ -208,7 +212,8 @@
     const av = ss.map(x => x.bestAvg).filter(x => x != null), lg = ss.map(x => x.bestLeg).filter(x => x != null);
     return { name: r.name, you: r.you, furthest: f, bestAvg: av.length ? Math.max(...av) : null, bestLeg: lg.length ? Math.min(...lg) : null }; };
   function histCard() {
-    if (!hiRows || !hiRows.length) return `<div id="s3Hi"></div>`;
+    if (hiRows === 'err') hiAt = Date.now() - 45000;
+    if (!Array.isArray(hiRows) || !hiRows.length) return `<div id="s3Hi"></div>`;
     const r = hiRows.map(hist), top = (k, lo) => r.filter(x => x[k] != null).sort((a, b) => k === 'furthest' ? b.furthest.level - a.furthest.level : lo ? a[k] - b[k] : b[k] - a[k])[0];
     const f = top('furthest'), a = top('bestAvg'), n = top('bestLeg', true);
     const line = (lab, w, txt) => `<li><span class="s3-lab">${lab}</span><span>${w ? esc(w.you ? 'You' : w.name) : 'No data'}</span><b>${w ? txt(w) : ''}</b></li>`;
@@ -216,7 +221,7 @@
       <ol class="s3-tbl s3-h3">${line('Furthest', f, w => esc(w.furthest.n || ''))}${line('Highest average', a, w => (+w.bestAvg).toFixed(1))}${line('Closest to a 9-darter', n, w => w.bestLeg + ' darts')}</ol></button>`;
   }
   function histSheet() {
-    const r = (hiRows || []).map(hist);
+    const r = (Array.isArray(hiRows) ? hiRows : []).map(hist);
     const row = x => `<li class="${x.you ? 's3-you' : ''}"><span>${esc(x.you ? 'You' : x.name)}</span><span>${x.furthest ? esc(x.furthest.n) : 'No data'}</span><span>${x.bestAvg != null ? (+x.bestAvg).toFixed(1) : '–'}</span><span>${x.bestLeg != null ? x.bestLeg : '–'}</span></li>`;
     sheet(`<span class="rb-kick">Seasons 1 & 2</span><span class="rb-t1">The records</span><span class="rb-sub">Kept from before the reset: furthest level, best match average, fewest darts in a won 501 leg.</span>
       <ol class="s3-tbl s3-h4"><li class="s3-thd"><span>Player</span><span>Furthest</span><span>Avg</span><span>Darts</span></li>${r.map(row).join('')}</ol>`, 'Done');
@@ -257,7 +262,7 @@
     const C = CI();
     if (p.kind === 'round') {
       seenSet(p.now); const o = C.nextOpp(c); if (!o) return;
-      const nm = o.round === 'G' ? 'next group match' : C.FIN_NAME[o.round];
+      const nm = o.round === 'G' ? 'next group match' : roundName(o.round);
       toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${o.avg}</span>`); return;
     }
     if (p.kind === 'done') {
@@ -300,10 +305,12 @@
   /* ---------- Season 3 wording on the old screens ---------- */
   const words = () => { try { document.querySelectorAll('#login .lgn-help').forEach(e => { if (/^Season 1\./.test(e.textContent)) e.textContent = e.textContent.replace(/^Season 1\./, 'Season 3.'); }); } catch (e) {} };
   words(); document.addEventListener('DOMContentLoaded', words);
+  if (typeof showTitle === 'function') { const _st = showTitle; showTitle = function () { const r = _st.apply(this, arguments); try { const v = $id('tlVer'); if (v) v.textContent = v.textContent.replace(/Season \d+/, 'Season 3'); } catch (e) {} return r; }; }
   /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE") */
-  if (window.TOPS_S3 && typeof TOPS_S3.play === 'function') { const _pl = TOPS_S3.play; TOPS_S3.play = function () { const r = _pl.apply(this, arguments);
-    try { if (r && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), rn = CI().FIN_NAME[S.s3.round] || 'Group match', t = e ? e.n + ' · ' + rn : rn;
-      ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } } catch (e) {} return r; }; }
+  /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE"); Career sets S.s3 right after beginMatch */
+  const s3Head = () => { try { if (typeof S === 'undefined' || !S || !S.s3 || !CI()) return; const e = CI().eventOf(S.s3.id), t = (e ? e.n + ' · ' : '') + roundName(S.s3.round);
+    ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el && el.textContent !== t && !/^Leg |^Bull up/.test(el.textContent)) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
+  if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
 
   /* ---------- 'Season 3 is here': once per device, the first time the game opens with Season 3 on, before the creator (Overseer 09:38) ---------- */
   const WELK = 'tops_s3_welcome';
