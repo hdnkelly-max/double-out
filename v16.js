@@ -83,12 +83,13 @@ const needFresh=()=>played&&!live()&&!busy&&!lastOnline&&!off()&&!window.__noGL&
 function runLaunch(L){try{flagsSet(L.flags);launching=true;if(L.bm){beginMatch(L.bm);}else{const f=ORIG[L.fn]||window[L.fn];if(typeof f==='function')f.apply(window,L.args||[]);}}catch(e){try{console.warn('reset_start_fail',L&&L.fn,String(e&&e.message||e));window.TOPS_LOG&&TOPS_LOG.log('reset_start_fail',{fn:L&&L.fn,e:String(e&&e.message||e).slice(0,80)});}catch(x){}}finally{launching=false;}}
 const jsonOk=a=>{try{return JSON.stringify(a)!==undefined&&JSON.parse(JSON.stringify(a))!=null;}catch(e){return false;}};
 LAUNCHERS.forEach(n=>{try{const f=window[n];if(typeof f!=='function')return;ORIG[n]=f;const w=function(){const args=[].slice.call(arguments);
+  if(!launching&&busy)return;/* ChatGPT P1: a fresh start is already under way: this tap is dropped (the first one starts its match on the new page, or here if the saves fail) */
   if(!launching&&needFresh()&&jsonOk(args)){go('start',{fn:n,args,flags:flagsNow()});return;}launching=true;try{return f.apply(this,arguments);}finally{launching=false;}};w.__rsw=f;window[n]=w;}catch(e){}});
 /* buttons bound to a launcher itself before this file ran (btn.onclick = playNext) are pointed at the gated one */
 try{document.querySelectorAll('button,[onclick],a,div').forEach(el=>{const h=el.onclick;if(typeof h==='function'){for(const n of LAUNCHERS){if(ORIG[n]&&h===ORIG[n]){el.onclick=window[n];break;}}}});}catch(e){}
 /* the exhibition invite starts its match directly (tc/core.js): its options are plain data and nothing runs before them, so the start itself
    travels; any other direct start is logged */
-{const bm2=beginMatch;beginMatch=function(o){if(!launching&&needFresh()&&!(o&&o.online)){if(o&&o.tcExh&&jsonOk(o)){go('start',{fn:'beginMatch',bm:o,flags:flagsNow()});return;}
+{const bm2=beginMatch;beginMatch=function(o){if(!launching&&busy&&!(o&&o.online))return;if(!launching&&needFresh()&&!(o&&o.online)){if(o&&o.tcExh&&jsonOk(o)){go('start',{fn:'beginMatch',bm:o,flags:flagsNow()});return;}
   let who='';try{const st=String(new Error().stack||'');const m=st.match(/at ([A-Za-z_$][\w$]*)/g)||st.match(/^([A-Za-z_$][\w$]*)@/mg)||[];who=m.slice(1,4).join(' ').slice(0,80);}catch(e){}try{window.TOPS_LOG&&TOPS_LOG.log('reset_untagged',{mode:o&&o.mode,practice:!!(o&&o.practice),who});}catch(e){}}
  return bm2.apply(this,arguments);};}
 
@@ -111,8 +112,14 @@ if(flag&&Date.now()-flag.t<120000){
  /* the hub opens as soon as the rig is in: the local save is the one just confirmed in the cloud, so nothing waits for the network. The
     boot's own end (showTitle after the cloud pull when signed in, showLogin when the network or the session isn't there) is turned into a
     hub refresh for the next 30 s, so the player stays on the hub; a signed-in boot still adopts the cloud copy (the same save) as usual. */
- const tb=Date.now();const st=showTitle;showTitle=function(){if(Date.now()-tb<30000){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
- const sl=showLogin;showLogin=function(){if(Date.now()-tb<30000){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
+ const tb=Date.now();/* BUG-MENU (David, Android, 17 Nov): this guard turned the PLAYER's own "Main menu" into a hub refresh for 30 s after every
+     between-match reset, so Main menu did nothing right after a match. It is for the boot's own calls only; a menu the player taps says so with
+     TOPS_USERNAV(fn) (explicit, ChatGPT P1: never "any tap in the last second"), and that call goes through. */
+  let userNav=0,userDone=0;window.TOPS_USERNAV=fn=>{userNav++;userDone=1;try{return fn();}finally{userNav--;}};
+  /* once the player has picked a screen himself, the guard is over: a late boot call must not pull him back to the hub */
+  const boot=()=>Date.now()-tb<30000&&!userNav&&!userDone;
+  const st=showTitle;showTitle=function(){if(boot()){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
+ const sl=showLogin;showLogin=function(){if(boot()){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
  const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
    if(hubAt&&rig&&(settled||Date.now()-hubAt>1500)){clearInterval(tick);finish(settled?'ready':'hub');return;}/* a character file still loading lands on the hub as usual */bar(p);
