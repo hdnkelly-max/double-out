@@ -224,6 +224,9 @@ jobs:
         run: |
           cd site
           git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
+          # s3/ is replaced as a whole from this build, so a file removed from src's s3/ is removed from main and Pages too
+          # (cp -r only adds). Only when the build publishes an s3/ folder; an older build leaves main's s3/ alone.
+          if [ -d ../out/s3 ]; then git rm -rq --ignore-unmatch -- s3; rm -rf -- ./s3; fi
           cp -r ../out/. .
           echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
           git add -A index.html version.json next assets img RELEASES.log
