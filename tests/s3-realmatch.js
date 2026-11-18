@@ -41,8 +41,8 @@ const dir = path.resolve(__dirname, '..');
   if (!r.s0.s3 || r.s0.s3.id !== 'pub_night') f.push('the match is not a Circuit match');
   if (r.end !== 'done') f.push('match did not finish: ' + r.end);
   if (r.m.won) { if (!r.m.res || !r.m.res.next || !r.m.live || r.m.live.round !== 1) f.push('a win did not move to the next round ' + JSON.stringify(r.m)); }
-  if (r.m.won && r.m.bank !== 55) f.push('a won round paid money before the event ended (bank 55 -> ' + r.m.bank + '); only the Circuit prize pays in Season 3');
   else { if (!r.m.res || !r.m.res.done || r.m.res.fin !== 'QF' || r.m.live || r.m.hist !== 1) f.push('a loss did not end the event as a Quarter-final ' + JSON.stringify(r.m)); }
+  if (r.m.won && r.m.bank !== 55) f.push('a won round paid money before the event ended (bank 55 -> ' + r.m.bank + '); only the Circuit prize pays in Season 3');
   if (!r.back) f.push('never got back to the hub'); if (r.after.s2) f.push('a Season 2 device save appeared');
   if (pe.length) f.push('page errors: ' + pe.slice(0, 3).join(' | '));
   console.log(f.length ? 's3-realmatch FAIL: ' + f.join('; ') : 's3-realmatch PASS (' + (r.m.won ? 'won, on to round 2' : 'lost, Quarter-final') + ', button "' + r.m.btn + '")'); await b.close(); process.exit(f.length ? 1 : 0);
