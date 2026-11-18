@@ -294,6 +294,32 @@
     try { const rs = $id('result'); if (rs) rs.classList.toggle('s3-old', !!(id === 'result' && typeof S !== 'undefined' && S && S.s3));   /* the old league-standings Match result never shows for a Circuit match (Overseer 08:56) */
       if (id === 'result' && typeof S !== 'undefined' && S && S.s3 && window.TOPS_RB_S3RESULT) setTimeout(() => { if (!$id('result').hidden) TOPS_RB_S3RESULT(); }, 0); } catch (e) {} return r; }; }
 
+  /* ---------- 'Season 3 is here': once per device, the first time the game opens with Season 3 on, before the creator (Overseer 09:38) ---------- */
+  const WELK = 'tops_s3_welcome';
+  function welcome() {
+    if (lsGet(WELK) || $id('s3Wel')) return;
+    const d = document.createElement('div'); d.id = 's3Wel'; d.className = 's3-wel'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3WelH');
+    d.innerHTML = `<div class="s3-welart" style="background-image:url(img/splash.jpg)"></div><div class="s3-welsh"></div>
+      <div class="s3-welbox"><span class="s3-welk">Season 3</span><h2 id="s3WelH">A new season.<br>A new career.</h2>
+        <ul>
+          <li><b>Everyone starts again at the Pub.</b> New career, new bank.</li>
+          <li><b>The Circuit.</b> Book your events, pay your way, climb seven levels to the Palace.</li>
+          <li><b>New players and venues.</b> Pick your player, then make them yours.</li>
+          <li><b>Best leg.</b> Fewest darts in a leg this season holds the record. Beat it.</li>
+          <li><b>Seasons 1 and 2 are kept.</b> The records board on the Circuit shows who went furthest.</li>
+        </ul>
+        <button type="button" id="s3WelGo">Start your career</button></div>`;
+    document.body.appendChild(d);
+    const go = d.querySelector('#s3WelGo'); try { go.focus({ preventScroll: true }); } catch (e) {}
+    go.onclick = () => { lsSet(WELK, '1'); d.remove(); try { window.TOPS_LOG && TOPS_LOG.log && TOPS_LOG.log('s3_welcome', {}); } catch (e) {}
+      let has = false; try { const c = career(); has = !!(c && c.circuit && (c.circuit.history.length || c.circuit.live)); } catch (e) {}
+      const title = $id('title'); if (!title || title.hidden) return;   /* sign-in first (login screen): the title's New career comes after it, as before */
+      if (!has) { const b = $id('btnNewCareer'); try { if (window.audioInit) audioInit(); } catch (e) {} try { if (b) b.click(); else showCreator(false); } catch (e) { console.warn('s3 welcome', e); } } };
+  }
+  /* after the loading screen lifts, never on the between-match reset page, never mid-match */
+  (function welWait(n) { try { const l = $id('loading'), up = l && !l.classList.contains('gone') && getComputedStyle(l).display !== 'none';
+      if (window.TOPS_RESETTING || lsGet(WELK)) return; if (up || (typeof S !== 'undefined' && S && !S.done) || !document.body) { if (n < 240) setTimeout(() => welWait(n + 1), 250); return; } setTimeout(welcome, 700);   /* after the loader's fade */ } catch (e) {} })(0);
+
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
   if (typeof showCreator === 'function') {
