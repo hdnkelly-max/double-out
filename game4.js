@@ -802,6 +802,20 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   sc(B.Head,1.32,1.32,1.32);['Right','Left'].forEach(s=>{sc(B[s+'ForeArm'],1,.92,1);sc(B[s+'Hand'],1.15,1.15/.92,1.15);sc(B[s+'Foot'],1.12,1.12,1.12);});
   fig.userData.s3v=mode;}
  window.TOPS_VINYL={part:vinylPart,mat:vinylMat,fig:vinylFig};
+ /* the 5 Season 3 base looks (Style Lab: Ray, Kai, Tama, Dazza, Mia) as creator presets on the game's models. The creator starts from
+    one and the player changes skin tone, hair, style and accessories on top; save.look keeps the same fields as today. */
+ window.TOPS_S3_BASES=[
+  {id:'ray',name:'Ray',tag:'The Veteran',look:{model:'brian',build:2,skinTone:'#e2a17e',hair2:'short',hairCol:'#75706a',beard2:1,beardCol:'#a8a29a',beardSoft:{a:1.2,o:.9,s:.95},glasses:1,shirt:'#7a1f2b',shirtTint:1}},
+  {id:'kai',name:'Kai',tag:'The Young Gun',look:{model:'lewis',build:0,skinTone:'#a8693f',hair2:'own',hairCol:'#141010',beard2:0,glasses:0,shirt:'#0e7c86',shirtTint:1}},
+  {id:'tama',name:'Tama',tag:'The Bruiser',look:{model:'david',build:2,skinTone:'#7f4d30',hair2:'own',hairCol:'#120d0b',beard2:1,beardCol:'#120d0b',beardSoft:{a:1,o:.85,s:.9},glasses:0,shirt:'#2a2b33',shirtTint:1}},
+  {id:'dazza',name:'Dazza',tag:'The Showman',look:{model:'bryce',build:1,skinTone:'#e8b08a',hair2:'shaggy',hairCol:'#8f6326',beard2:1,beardCol:'#8c5f2a',glasses:0,shirt:'#e0a21c',shirtTint:1}},
+  {id:'mia',name:'Mia',tag:'The Ace',look:{model:'megan',sex:'f',build:0,skinTone:'#c98e64',hair2:'pony',hairCol:'#3a2416',beard2:0,glasses:0,shirt:'#5b2a86',shirtTint:1}}];
+ window.TOPS_S3_LOOK=id=>{const b=(window.TOPS_S3_BASES||[]).find(x=>x.id===id);return b?JSON.parse(JSON.stringify(b.look)):null;};
+ /* shader warm-up (S3): the Vinyl materials are new programs; compile them on the hub, once per page, so the first match frame doesn't stall */
+ let s3Warm=false;function s3WarmUp(){if(s3Warm||!window.TOPS_S3||!RIG.ready)return;const h=document.getElementById('hub');if(!h||h.hidden||(typeof S!=='undefined'&&S&&!S.done))return;s3Warm=true;
+  const t0=performance.now();try{const figs=[makeFigure(save.look||{},save.name||'You',0),makeFigure(lookFor('Warm Up'),'Warm Up',0)];figs.forEach(f=>pScene.add(f));renderer.compile(pScene,pCam);if(s3Back&&s3Back.material.map)renderer.compile(scene,camera);figs.forEach(f=>{pScene.remove(f);disposeTree(f);});}catch(e){console.warn('s3 warm',e);}
+  try{window.TOPS_LOG&&TOPS_LOG.log('s3_warm',{ms:Math.round(performance.now()-t0)});}catch(e){}}
+ setInterval(()=>{if(window.TOPS_S3&&!s3Warm)s3WarmUp();},1500);
  function faceKit(fig,B,look,ck){if(!look||!B.Head)return;if(ck==='pete')look=Object.assign({hair2:'short',beard2:1},Object.fromEntries(Object.entries(look).filter(([k,v])=>v!=null)));if(window.GFX_HEADDBG){[[1,0,0,0xff0000],[0,1,0,0x00ff00],[0,0,1,0x0000ff]].forEach(([x,y,z,c])=>{const m=new T.Mesh(new T.SphereGeometry(.015),new T.MeshBasicMaterial({color:c}));m.position.set(x*.13,y*.13,z*.13);B.Head.add(m);});}const L=look;const R=RIG.rest;const headH=(B.HeadTop_End&&R[B.HeadTop_End.name]&&R[B.Head.name])?R[B.HeadTop_End.name].p.distanceTo(R[B.Head.name].p):.24;
   const wantHair=L.hair2&&L.hair2!=='own';const needLib=wantHair&&L.hair2!=='bald'||L.beard2;if(needLib&&!HAIRLIB)loadHair();
   fig.traverse(o=>{if(!o.isMesh)return;const ms=Array.isArray(o.material)?o.material:[o.material];
