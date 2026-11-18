@@ -103,7 +103,7 @@ function partPts(key,id){const SH={short:{ct:1,rh:-2},long:{ct:-1,rh:3},carbon:{
 function barrelPts(b){const acc=Math.round((5.6-b.base)/1.8*7);return {sc:acc,fi:acc,rh:Math.round((b.tol-1)/.15*6),ct:Math.round((1.25-b.sway)/.6*7)};}
 function ptsTxt(o){const parts=STATS.filter(s=>o[s.id]).map(s=>`<span class="${o[s.id]<0?'neg':''}">${SN(s.id)} ${o[s.id]>0?'+':''}${o[s.id]}</span>`);return parts.length?parts.join(' · '):'No stat change';}
 function eff(id){const s=st();const hot=(S&&S.hot&&S.hot[id])?3:0;return Math.max(0,Math.min(100,s.v[id]+kitPts()[id]+hot));}
-function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}
+function Lof(id){return Math.max(0,Math.min(1,(eff(id)-20)/75));}window.TOPS_LofT=Lof;/* S3 monitor logs the player's levels */
 function ovr(){let o=0;STATS.forEach(s=>o+=s.w*(st().v[s.id]+kitPts()[s.id]));return Math.round(o);}
 function ident(){const v=st().v;const arr=STATS.map(s=>v[s.id]);if(Math.max(...arr)-Math.min(...arr)<8)return 'All-Rounder';const top=STATS.slice().sort((a,b)=>v[b.id]-v[a.id])[0];return top.t;}
 // ---------- points from levels ----------
@@ -160,7 +160,7 @@ window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;tp.ea=(THROW_TUNE.ease||[])[Math.max(0,Math.min(6,sti))];tp.span=(THROW_TUNE.span||[])[Math.max(0,Math.min(6,sti))]||1;
  const Lr=Lof('rh');const rp=rampAt(Lr);tp.P*=winMs(Lr)*st.win*rp.win/(q0.P*tolMult()*.85);tp.cone*=rp.cone;/* S3 ramp: window and cone grow with Rhythm */
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
