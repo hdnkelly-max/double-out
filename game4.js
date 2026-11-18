@@ -931,14 +931,14 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(L.hair==='quiff'){grow((x,y,z)=>hairLine(.12)(x,y,z)*(.35+.65*sm(.07,.11,y)*sm(.105,.07,Math.abs(x))),.03,hairM);for(let i=0;i<4;i++){const q=mesh(new T.IcosahedronGeometry(.05,1),hairM,head,(i-1.5)*.03,HC+.15*hs+.012*(1-Math.abs(i-1.5)/1.5),.085-.012*Math.abs(i-1.5));q.scale.set(.9,.62,1.25);q.rotation.set(-.55,0,(i-1.5)*.2);}}
   if(L.hair==='mullet'){grow(hairLine(.115),.02,hairM);const mh=mesh(facet(.21,.17,.07,.45,2,.0,.25),hairM,head,0,HC-.085*hs,-.105*hs);mh.rotation.x=.22;[-1,1].forEach(s=>{mesh(facet(.03,.07,.05,.4,1),hairM,head,.128*s*hs,HC-.005,.0);});
     const rootM=M(new T.Color(L.hairC).multiplyScalar(.62).getHex(),{part:'hair'});grow((x,y,z)=>hairLine(.112)(x,y,z)*sm(.02,-.04,z),.012,rootM);
-    [[-.05,.13,.02,.95],[.05,.13,.01,.9],[0,.15,-.03,1],[-.07,.09,-.07,.85],[.07,.09,-.07,.85],[0,.1,-.1,.95]].forEach(([x,y,z,k],i)=>{const c=mesh(new T.IcosahedronGeometry(.045*k,1),i>2?rootM:hairM,head,x*hs,HC+y*hs,z*hs);c.scale.set(1.15,.55,1.1);c.rotation.set(-.4+(i%2)*.2,i*.7,(x>0?-1:1)*.25);});}
+    (L.cap?[]:[[-.05,.13,.02,.95],[.05,.13,.01,.9],[0,.15,-.03,1],[-.07,.09,-.07,.85],[.07,.09,-.07,.85],[0,.1,-.1,.95]]).forEach(([x,y,z,k],i)=>{const c=mesh(new T.IcosahedronGeometry(.045*k,1),i>2?rootM:hairM,head,x*hs,HC+y*hs,z*hs);c.scale.set(1.15,.55,1.1);c.rotation.set(-.4+(i%2)*.2,i*.7,(x>0?-1:1)*.25);});}
   if(L.hair==='ponytail'){grow(hairLine(.135),.016,hairM);const bun=mesh(new T.IcosahedronGeometry(.042,1),hairM,head,0,HC+.07*hs,-.15*hs);const tail=mesh(slathe([[.001,.0],[.034,-.02],[.04,-.07],[.03,-.15],[.012,-.2],[.001,-.21]],10),hairM,bun,0,-.01,-.01);tail.rotation.x=.45;mesh(new T.TorusGeometry(.03,.008,6,12),M(0xd9252e),bun,0,-.015,-.01).rotation.x=Math.PI/2+.45;}
   /* S3 creator accessory: a cap (Overseer 08:40). A dome that sits on the hair surface, a peak, a button; the cap colour or the shirt colour */
-  if(L.cap){const cm=M(L.capC||L.shirt,{part:'shirt'});const cg=new T.Group();head.add(cg);cg.position.set(0,HC+.026*hs,-.004*hs);cg.rotation.x=-.12;
-   const dome=mesh(new T.SphereGeometry(1,Math.round(18*S3_SEGF),Math.round(8*S3_SEGF),0,Math.PI*2,0,Math.PI*.5),cm,cg);dome.scale.set(.163*hs,.175*hs,.16*hs);
-   const band=mesh(new T.CylinderGeometry(1,1,1,Math.round(18*S3_SEGF),1,true),cm,cg,0,-.006*hs,0);band.scale.set(.163*hs,.022*hs,.16*hs);
-   const peak=mesh(new T.CylinderGeometry(1,1,1,Math.round(14*S3_SEGF),1,false,-Math.PI/2,Math.PI),cm,cg,0,-.012*hs,.142*hs);peak.scale.set(.13*hs,.008*hs,.09*hs);peak.rotation.x=.16;
-   mesh(new T.SphereGeometry(.012*hs,8,6),M(L.trim||0xf2f2f2,{part:'trim'}),cg,0,.175*hs,0);}
+  if(L.cap){const cm=M(L.capC||L.shirt,{part:'shirt'});const cg=new T.Group();head.add(cg);cg.position.set(0,HC+.072*hs,-.006*hs);cg.rotation.x=-.22;
+   const dome=mesh(new T.SphereGeometry(1,Math.round(18*S3_SEGF),Math.round(8*S3_SEGF),0,Math.PI*2,0,Math.PI*.5),cm,cg);dome.scale.set(.158*hs,.122*hs,.156*hs);
+   const band=mesh(new T.CylinderGeometry(1,1,1,Math.round(18*S3_SEGF),1,true),cm,cg,0,-.006*hs,0);band.scale.set(.158*hs,.022*hs,.156*hs);
+   const peak=mesh(new T.CylinderGeometry(1,1,1,Math.round(14*S3_SEGF),1,false,-Math.PI/2,Math.PI),cm,cg,0,-.014*hs,.14*hs);peak.scale.set(.13*hs,.008*hs,.09*hs);peak.rotation.x=.16;
+   mesh(new T.SphereGeometry(.012*hs,8,6),M(L.trim||0xf2f2f2,{part:'trim'}),cg,0,.122*hs,0);}
   const arm=(s)=>{const sh=pivot(chest,B.sh*.94*s,.31,0);const a=.085*A;
     tag(mesh(slathe([[.001,-.02],[a*.7,-.03],[a*.92,-.07],[a*1.0,-.15],[a*.95,-.26],[a*.8,-.34],[.001,-.36]],16),skin,sh),'upperarm');
     const SL=[[.001,.034],[a*.92,.028],[a*1.16,.006],[a*1.23,-.04],[a*1.24,-.11],[a*1.28,-.162],[a*1.06,-.17]];
