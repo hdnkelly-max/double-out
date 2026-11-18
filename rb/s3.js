@@ -312,6 +312,10 @@
     ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el && el.textContent !== t && !/^Leg |^Bull up/.test(el.textContent)) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
   if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
 
+  /* the first message after the creator: a Circuit league night, not the old 'Pub league' */
+  try { if (typeof STORY !== 'undefined' && STORY.intro && Array.isArray(STORY.intro.lines)) STORY.intro.lines = STORY.intro.lines.map(l => l.replace("Pub league, 501.", "League night, 501. Eight of us, knockout."));
+    if (Array.isArray(STORY.intro.time)) STORY.intro.time = STORY.intro.time.map(l => l.replace("You'll be on against Big Mal first up. Don't let the belly fool you.", "The draw's on the board when you walk in. Win and you keep throwing.")); } catch (e) {}
+
   /* ---------- 'Season 3 is here': once per device, the first time the game opens with Season 3 on, before the creator (Overseer 09:38) ---------- */
   const WELK = 'tops_s3_welcome';
   function welcome() {
@@ -388,6 +392,7 @@
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: fn => { shell = fn; },
+    refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
 })();
