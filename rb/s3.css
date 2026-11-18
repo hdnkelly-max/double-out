@@ -1,0 +1,100 @@
+/* EXP-S3C Season 3 screens (Circuit, Money, results, records). Same tokens as rb.css (single dark look). */
+.s3-on #rbApp .s3-lv{position:relative;height:178px;border-radius:12px;overflow:hidden;flex:none;background:var(--card)}
+#rbApp .s3-lvart,#rbApp .s3-lvsh{position:absolute;inset:0}
+#rbApp .s3-lvsh{background:linear-gradient(180deg,rgba(10,12,14,0) 30%,rgba(10,12,14,.72) 62%,rgba(10,12,14,.96))}
+#rbApp .s3-lvtx{position:absolute;left:14px;right:14px;bottom:12px;display:flex;flex-direction:column;gap:4px}
+#rbApp .s3-lvn{font-family:var(--d);font-weight:800;font-style:italic;font-size:34px;line-height:.95;text-transform:uppercase;letter-spacing:.3px}
+#rbApp .s3-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;min-width:0}
+#rbApp .s3-row>*{min-width:0}
+#rbApp .s3-lab{display:block;font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink3)}
+#rbApp .s3-num{font-family:var(--d);font-weight:800;font-size:20px;white-space:nowrap}#rbApp .s3-num small{font-size:13px;color:var(--ink3);font-weight:700}
+#rbApp .s3-big{display:block;font-family:var(--d);font-weight:800;font-size:40px;line-height:1}
+#rbApp .s3-mid{display:block;font-family:var(--d);font-weight:800;font-size:24px;line-height:1.1}
+#rbApp .s3-huge{display:block;font-family:var(--d);font-weight:800;font-size:48px;line-height:1}
+#rbApp .s3-warn{font-size:13px;color:var(--warn)}
+#rbApp .s3-pos{color:var(--good)}#rbApp .s3-neg{color:var(--bad)}
+#rbApp .s3-ladder{list-style:none;margin:2px 0 0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+#rbApp .s3-ladder li{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--ink3);text-align:center;line-height:1.1}
+#rbApp .s3-ladder i{display:block;width:100%;height:6px;border-radius:3px;background:var(--card2)}
+#rbApp .s3-ladder .s3-done i{background:var(--good2)}#rbApp .s3-ladder .s3-done{color:var(--ink2)}
+#rbApp .s3-ladder .s3-now i{background:var(--red)}#rbApp .s3-ladder .s3-now{color:var(--ink);font-weight:700}
+#rbApp .s3-post{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--card);flex:none}
+#rbApp .s3-part{position:relative;aspect-ratio:16/7;max-width:100%;display:flex;align-items:flex-end;padding:12px}
+#rbApp .s3-part::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(10,12,14,.94),rgba(10,12,14,.08) 70%)}
+#rbApp .s3-part h3{position:relative;z-index:1;margin:0;font-family:var(--d);font-weight:800;font-style:italic;font-size:24px;line-height:1;text-transform:uppercase;text-wrap:balance}
+#rbApp .s3-tag{position:absolute;z-index:1;top:10px;left:10px;height:24px;padding:0 10px;border-radius:12px;display:inline-flex;align-items:center;background:var(--red);color:#fff;font-size:12px;font-weight:700}
+#rbApp .s3-pbody{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+#rbApp .s3-kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#rbApp .s3-kv div{background:var(--card2);border-radius:10px;padding:8px;min-width:0}
+#rbApp .s3-kv b{display:block;font-family:var(--d);font-weight:800;font-size:19px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rbApp .s3-kv span{display:block;font-size:11px;color:var(--ink3);line-height:1.25}
+#rbApp .rb-primary.s3-off{background:var(--card2);color:var(--ink3);cursor:not-allowed}
+#rbApp .s3-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}#rbApp .s3-two .rb-ghost{width:100%}
+#rbApp .s3-draw{list-style:none;margin:0;padding:0;display:flex;gap:4px}
+#rbApp .s3-draw li{flex:1;min-width:0;text-align:center;font-size:11px;font-weight:700;padding:8px 0;border-radius:8px;background:var(--card2);color:var(--ink3);white-space:nowrap;overflow:hidden}
+#rbApp .s3-draw .s3-w{background:var(--good2);color:#fff}#rbApp .s3-draw .s3-on{outline:2px solid var(--red);outline-offset:-2px;color:var(--ink)}
+#rbApp .s3-tbl,#rbApp .s3-res{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+#rbApp .s3-tbl li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line);font-size:14px;font-variant-numeric:tabular-nums}
+#rbApp .s3-tbl li:last-child{border-bottom:0}#rbApp .s3-tbl li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rbApp .s3-tbl .s3-you{color:var(--ink);font-weight:700;background:rgba(215,35,45,.12);border-radius:6px}
+#rbApp .s3-tbl .s3-cut{display:block;padding:4px 2px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--warn);border-bottom:1px dashed var(--line2)}
+#rbApp .s3-h3 li{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto}
+#rbApp .s3-h4 li{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 44px 44px}#rbApp .s3-h4 .s3-thd{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink3)}
+#rbApp .s3-res li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);min-width:0}
+#rbApp .s3-res li:last-child{border-bottom:0}#rbApp .s3-res li>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+#rbApp .s3-res b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rbApp .s3-res small{font-size:12px;color:var(--ink3)}
+#rbApp .s3-mon li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;font-variant-numeric:tabular-nums}
+#rbApp .s3-mon li>span:not(:first-child){font-size:14px;font-weight:600}
+#rbApp button.s3-hist{color:var(--ink)}
+#rbApp .s3-sheet{position:fixed;inset:0;z-index:80;background:rgba(6,7,8,.82);display:flex;align-items:flex-end;justify-content:center;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:s3in .22s ease-out}
+#rbApp .s3-sbox{width:min(420px,100%);max-height:calc(100% - 40px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;text-align:left}
+#rbApp .s3-win .s3-sbox{border-color:var(--red)}
+#rbApp .s3-fin{font-family:var(--d);font-weight:800;font-style:italic;font-size:44px;line-height:.95;text-transform:uppercase}
+#rbApp .s3-gold{color:#f1c64b}
+#rbApp .s3-promo{align-items:center}
+#rbApp .s3-promo .s3-sbox{padding:0 0 18px;overflow:hidden;border-color:var(--red)}
+#rbApp .s3-promo .s3-sbox>*:not(.s3-pmart){margin:0 18px}
+#rbApp .s3-pmart{height:180px;flex:none;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
+#rbApp .s3-pmn{font-family:var(--d);font-weight:800;font-style:italic;font-size:46px;line-height:.92;text-transform:uppercase;text-wrap:balance}
+#rbApp .s3-grant{align-self:flex-start;height:28px;padding:0 12px;border-radius:14px;display:inline-flex;align-items:center;background:rgba(127,209,154,.14);color:var(--good);font-weight:700;font-size:13px}
+#rbApp .s3-toast{position:fixed;left:50%;top:calc(112px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:79;width:min(360px,calc(100vw - 32px));background:#0a0c0d;border:1px solid var(--red);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;transition:opacity .4s,transform .4s;animation:s3in .22s ease-out}
+#rbApp .s3-toast b{font-family:var(--d);font-weight:800;font-size:20px;text-transform:uppercase}#rbApp .s3-toast span{font-size:13px;color:var(--ink2)}
+#rbApp .s3-toast.s3-out{opacity:0;transform:translate(-50%,-8px)}
+@keyframes s3in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#rbApp .s3-toast{animation-name:none}
+@media (prefers-reduced-motion:reduce){#rbApp .s3-sheet,#rbApp .s3-toast{animation:none;transition:none}}
+
+/* creator: the 5 Vinyl base looks (outside #rbApp) */
+.s3-on #s3Base .s3-bases{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px}
+.s3-on #s3Base .s3-bases button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 10px;border-radius:10px;border:1px solid #343a3e;background:#1a1e21;color:#f3f4f2;cursor:pointer;text-align:left;min-width:0}
+.s3-on #s3Base .s3-bases button[aria-pressed="true"]{border-color:#d7232d;background:rgba(215,35,45,.16)}
+.s3-on #s3Base .s3-bases b{font:800 16px/1 "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.3px}
+.s3-on #s3Base .s3-bases small{font-size:11px;color:#a0a6a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* the old Match result under a Circuit match: never seen (the new-look Result sits over it) */
+.s3-on #result.s3-old{visibility:hidden!important}
+/* Best Leg record: in-match banner (no taps) and the big moment */
+.s3-on .s3-rec{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;pointer-events:none;background:linear-gradient(180deg,#2a1a05,#120c03);border:2px solid #f1c64b;border-radius:14px;padding:10px 22px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);animation:s3rec .45s cubic-bezier(.2,1.4,.4,1);transition:opacity .5s,transform .5s}
+.s3-on .s3-rec small{display:block;font:700 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:#f1c64b}
+.s3-on .s3-rec b{display:block;font:800 italic 38px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;color:#fff;text-transform:uppercase}
+.s3-on .s3-rec.s3-out{opacity:0;transform:translate(-50%,-10px)}
+@keyframes s3rec{from{opacity:0;transform:translate(-50%,-14px) scale(.85)}to{opacity:1;transform:translateX(-50%)}}
+#rbApp .s3-recm .s3-sbox{border:2px solid #f1c64b;background:radial-gradient(120% 80% at 50% 0,#3a2708 0,var(--card) 60%);text-align:center;align-items:center}
+#rbApp .s3-recm .s3-sbox .rb-primary{align-self:stretch}
+#rbApp .s3-recn{font-family:var(--d);font-weight:800;font-style:italic;font-size:110px;line-height:.85;color:#f1c64b;text-shadow:0 4px 30px rgba(241,198,75,.35)}
+#rbApp .s3-recn small{display:block;font-size:26px;font-style:normal;color:var(--ink);letter-spacing:1px;text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){.s3-on .s3-rec{animation:none}}
+
+/* Season 3 welcome (once per device) */
+.s3-on .s3-wel{position:fixed;inset:0;z-index:2147483000;background:#08090b;color:#f3f4f2;display:flex;flex-direction:column;justify-content:flex-end;font-family:Inter,system-ui,-apple-system,sans-serif;animation:s3in .3s ease-out}
+.s3-on .s3-welart{position:absolute;inset:0 0 35% 0;background:#1a0e0f 30% 30%/cover no-repeat}
+.s3-on .s3-welsh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,9,11,0) 20%,rgba(8,9,11,.85) 52%,#08090b 66%)}
+.s3-on .s3-welbox{position:relative;max-width:460px;width:100%;margin:0 auto;padding:0 max(20px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+.s3-on .s3-welk{align-self:flex-start;height:26px;padding:0 12px;border-radius:13px;background:#d7232d;color:#fff;font:800 13px/26px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:1.2px;text-transform:uppercase}
+.s3-on .s3-welbox h2{margin:0;font:800 italic 40px/.95 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:.3px}
+.s3-on .s3-welbox ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.35;color:#c3c8c5}
+.s3-on .s3-welbox li{padding-left:16px;position:relative}.s3-on .s3-welbox li::before{content:"";position:absolute;left:0;top:.5em;width:7px;height:7px;border-radius:2px;background:#d7232d}
+.s3-on .s3-welbox li b{color:#f3f4f2;font-weight:700}
+.s3-on #s3WelGo{margin-top:4px;height:56px;border:0;border-radius:12px;background:#d7232d;color:#fff;font:800 22px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:.6px;text-transform:uppercase;cursor:pointer}
+.s3-on #s3WelGo:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (max-height:640px){.s3-on .s3-welbox h2{font-size:32px}.s3-on .s3-welbox ul{font-size:13px;gap:5px}.s3-on .s3-welart{bottom:45%}}
