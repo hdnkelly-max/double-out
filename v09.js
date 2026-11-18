@@ -160,8 +160,8 @@ window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;
- const Lr=Lof('rh');const rp=rampAt(Lr);tp.P*=winMs(Lr)*st.win*rp.win/(q0.P*tolMult()*.85);tp.cone*=rp.cone;/* S3 ramp: window and cone grow with Rhythm */
+ tp.A*=((window.TOPS_S3FLAG&&curveAt('sway',0))?curveAt('sway',Lof('ct')):qc.A)/(q0.A*(b.sway/1.1)*swayMultRaw());/* S3 curve: sway from Control */tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;
+ const Lr=Lof('rh');const rp=rampAt(Lr);const cw=window.TOPS_S3FLAG?curveAt('win',Lr):null;tp.P*=(cw!=null?cw:winMs(Lr)*rp.win)*st.win/(q0.P*tolMult()*.85);if(cw==null)tp.cone*=rp.cone;/* S3 curve: the window from Rhythm (else the ramp) *//* S3 ramp: window and cone grow with Rhythm */
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -211,7 +211,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */const a=winMs(L(v0))*rampAt(L(v0)).win,b=winMs(L(v1))*rampAt(L(v1)).win;/* S3 ramp included (x1 off Season 3). CAR-TOP: a tougher stage scales the window; show what this stage really gives, and the pub figure */let m=1;try{const c=career();if(c&&!c.run)m=stageTune(c.tier|0).win;}catch(e){}if(m<1){const g=f(a*m)===f(b*m)?(w=>(Math.round(w*100)/100).toFixed(2)):f;return `Perfect window ${g(a*m)} → ${g(b*m)} ms here · ${f(a)} → ${f(b)} ms in the pub`;}return `Perfect window ${f(a)} → ${f(b)} ms`;}
+ if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */const wS=x=>{const c=window.TOPS_S3FLAG?curveAt('win',x):null;return c!=null?c:winMs(x)*rampAt(x).win;};const a=wS(L(v0)),b=wS(L(v1));/* S3 ramp included (x1 off Season 3). CAR-TOP: a tougher stage scales the window; show what this stage really gives, and the pub figure */let m=1;try{const c=career();if(c&&!c.run)m=stageTune(c.tier|0).win;}catch(e){}if(m<1){const g=f(a*m)===f(b*m)?(w=>(Math.round(w*100)/100).toFixed(2)):f;return `Perfect window ${g(a*m)} → ${g(b*m)} ms here · ${f(a)} → ${f(b)} ms in the pub`;}return `Perfect window ${f(a)} → ${f(b)} ms`;}
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';

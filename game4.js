@@ -1652,9 +1652,16 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
    Opponents are not touched. The pull length (time to the tightest ring, tp.D) is not touched. Off-career play uses TT. */
 /* ramp (Season 3, Overseer 08:28 for Hayden): the climb comes from timing, not scatter. On starter Rhythm the perfect window and the near-miss
    cone are scaled by ramp.win / ramp.cone, rising in a straight line to x1 at max Rhythm (kit counts). Perfects still land where you aimed. Season 3 only. */
-const THROW_TUNE={perfK:.36,topS0:6.4,ramp:{win:.8,cone:1},stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]]};
+/* curve (Season 3 per-level rework, Hayden 08:53/08:54): stats and kit move the throw through sway and the timing window only.
+   win = perfect window +-ms at Rhythm level 0 and 1, sway = mm at Control level 0 and 1, both geometric in between. The stage rows then put a
+   newcomer to each level at about 50%. Replaces the ramp and the CAR-WIN window table in Season 3 (off Season 3 nothing changes). */
+const THROW_TUNE={perfK:.36,topS0:6.4,ramp:{win:.8,cone:1},curve:{win:[7,18],sway:[38,15]},stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]],
+  /* s3stage: Season 3's per-level rows (cone steep for big timing errors, ex 1.2), set so a timer halfway between Hayden and Lee enters each
+     level at ~50% and leaves at ~65-70% as stats grow; the Worlds ends at ~50% at ~95 vs 95. stage stays as 3.55 for the game off Season 3 */
+  s3stage:[[1,100,1.2],[1,115,1.2],[1,100,1.2],[1,75,1.2],[1,75,1.2],[1,75,1.2],[1,58,1.2]]};
+function curveAt(kind,L){const c=THROW_TUNE.curve&&THROW_TUNE.curve[kind];if(!c)return null;L=Math.max(0,Math.min(1,+L||0));return c[0]*Math.pow(c[1]/c[0],L);}
 function rampAt(L){const r=THROW_TUNE.ramp;if(!r||!window.TOPS_S3FLAG)return {win:1,cone:1};L=Math.max(0,Math.min(1,+L||0));return {win:r.win+(1-r.win)*L,cone:r.cone+(1-r.cone)*L};}
-function stageTune(t){const s=THROW_TUNE.stage,r=s[Math.max(0,Math.min(s.length-1,t|0))];return {win:r[0],cone:r[1],ex:r[2]};}
+function stageTune(t){const s=(window.TOPS_S3FLAG&&THROW_TUNE.s3stage)||THROW_TUNE.stage,r=s[Math.max(0,Math.min(s.length-1,t|0))];return {win:r[0],cone:r[1],ex:r[2]};}
 const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,THROW_TUNE.topS0,30,560,48]]; /* CAR-TOP: top scatter from THROW_TUNE.topS0; 7th column = ms to the tightest ring (pull length), also the miss cone off-career */
 /* #20e: ttAt runs several times a frame (throwParams + v09's per-skill levels, 4 levels a frame); the last 8 results are reused by level (frozen: callers only read them) */const _ttL=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN],_ttV=[null,null,null,null,null,null,null,null];let _ttI=0;function ttAt(L){L=Math.max(0,Math.min(1,L));for(let i=0;i<8;i++)if(_ttL[i]===L)return _ttV[i];const v=Object.freeze(_ttAt(L));_ttL[_ttI]=L;_ttV[_ttI]=v;_ttI=(_ttI+1)&7;return v;}
 function _ttAt(L){let i=0;while(i<TT.length-2&&TT[i+1][0]<L)i++;const a=TT[i],b=TT[i+1],k=(L-a[0])/(b[0]-a[0]);const m=j=>a[j]+(b[j]-a[j])*k;return {A:m(1),T:m(2),tr:m(3),s0:m(4),P:m(5),D:m(6),R0:m(7)};}
