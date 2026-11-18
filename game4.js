@@ -1,8 +1,4 @@
 <script>
-/* SEASON 3 (Hayden 19 Nov): everything new is behind TOPS_S3. ?s3=1 turns it on and remembers it (the home-screen app can't pass a URL
-   flag, so a Menu switch writes the same key); ?s3=0 turns it off. Off = 3.55 exactly. */
-window.TOPS_S3=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1')localStorage.setItem('tops_s3','1');else if(q==='0')localStorage.removeItem('tops_s3');return localStorage.getItem('tops_s3')==='1';}catch(e){return /[?&]s3=1/.test(location.search);}})();
-window.TOPS_S3_SET=on=>{try{if(on)localStorage.setItem('tops_s3','1');else localStorage.removeItem('tops_s3');}catch(e){}location.reload();};
 ENGINE
 // ===== DATA =====
 const TIERS=[
@@ -749,7 +745,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  // GFX: Mixamo clips (idles, drinking, talking, reactions), retargeted by bone name to each model.
  let ANIMS=null,ANIM_WAIT=false;const ANIM_CACHE={};
  let animsPend=false;function animsFlush(){if(!animsPend)return;animsPend=false;try{charsChanged();}catch(e){}}
- function loadAnims(){if(ANIMS||ANIM_WAIT||window.GFX_LEGACY||!THREE.GLTFLoader)return;ANIM_WAIT=true;glbLoad('assets/anims.glb',g=>{ANIMS={};g.animations.forEach(c=>{if(window.TOPS_S3)c.tracks=c.tracks.filter(t=>!/\.scale$/.test(t.name));ANIMS[c.name]=c;});/* #20 (Hayden 17:36): a clip file landing mid-match used to rebuild both figures and the venue there and then (charsChanged); now that waits for the hub */{const h=document.getElementById('hub');const inHub=!!(h&&!h.hidden)&&!(typeof S!=='undefined'&&S&&!S.done);if(!inHub){animsPend=true;return;}}/* only rebuild in the hub itself: never mid-match, on the result screen (a win's celebration requests clips there) or the title (ChatGPT P1) */try{charsChanged();}catch(e){}},e=>{ANIM_WAIT=false;console.warn('anims',e);});}
+ function loadAnims(){if(ANIMS||ANIM_WAIT||window.GFX_LEGACY||!THREE.GLTFLoader)return;ANIM_WAIT=true;glbLoad('assets/anims.glb',g=>{ANIMS={};g.animations.forEach(c=>{if(window.TOPS_S3FLAG)c.tracks=c.tracks.filter(t=>!/\.scale$/.test(t.name));ANIMS[c.name]=c;});/* #20 (Hayden 17:36): a clip file landing mid-match used to rebuild both figures and the venue there and then (charsChanged); now that waits for the hub */{const h=document.getElementById('hub');const inHub=!!(h&&!h.hidden)&&!(typeof S!=='undefined'&&S&&!S.done);if(!inHub){animsPend=true;return;}}/* only rebuild in the hub itself: never mid-match, on the result screen (a win's celebration requests clips there) or the title (ChatGPT P1) */try{charsChanged();}catch(e){}},e=>{ANIM_WAIT=false;console.warn('anims',e);});}
  function clipFor(name,key){if(!ANIMS||!ANIMS[name])return null;const ck=key+'|'+name;if(ANIM_CACHE[ck])return ANIM_CACHE[ck];const src=ANIMS[name];const tracks=[];
   src.tracks.forEach(tr=>{const m=tr.name.match(/^(?:mixamorig\d*:?)?([A-Za-z0-9_]+)\.(quaternion|position)$/);if(!m)return;const bone=m[1],prop=m[2];if(prop==='position'&&bone!=='Hips')return;const t=tr.clone();t.name=key+'_'+bone+'.'+prop;
    if(prop==='position'){const v=t.values;let mx=0;for(let i=0;i<v.length;i++)mx=Math.max(mx,Math.abs(v[i]));const sc=mx>5?.01:1;const x0=v[0],y0=v[1],z0=v[2];const rh=RIG.rest[key+'_Hips'];const ry=rh?rh.p.y:1;const sit=/^sit/.test(name)?-(ry-.5):0;for(let i=0;i<v.length;i+=3){v[i]=(v[i]-x0)*sc;v[i+1]=ry+(v[i+1]-y0)*sc+sit;v[i+2]=(v[i+2]-z0)*sc;}}tracks.push(t);});
@@ -779,7 +775,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const mm=ms.map(m=>{const c=m.clone();c.map=softBeardMap(m.map,hex,so.a||1);c.alphaTest=.05;c.transparent=true;c.depthWrite=false;c.opacity=so.o||.85;c.needsUpdate=true;return c;});o.material=mm.length===1?mm[0]:mm;o.renderOrder=2;if(B&&!window.TOPS_SOFTB_NOTRIM)trimBeard(o,head,B);o.scale.multiplyScalar(so.s||.95);});}catch(e){}}
  function tintMap(map,hex,key){if(!map||!map.image)return map;const ck=key+'|'+hex;if(HAIRCOL_CACHE[ck])return HAIRCOL_CACHE[ck];const img=map.image,w=Math.min(1024,img.width||1024),h=Math.min(1024,img.height||1024);const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(img,0,0,w,h);const d=x.getImageData(0,0,w,h),a=d.data;const col=new T.Color(hex),hx=col.getHex(),cr=(hx>>16&255)/255,cg=(hx>>8&255)/255,cb=(hx&255)/255;
   for(let i=0;i<a.length;i+=4){const l=Math.min(1,(a[i]*.3+a[i+1]*.59+a[i+2]*.11)/255*2.2);a[i]=Math.min(255,255*cr*l);a[i+1]=Math.min(255,255*cg*l);a[i+2]=Math.min(255,255*cb*l);}x.putImageData(d,0,0);const t=new T.CanvasTexture(c);t.flipY=map.flipY;t.encoding=T.sRGBEncoding;KEEP.add(t);/* #15: cached for reuse, so a freed figure must not dispose it (the next figure re-uploaded it) */return HAIRCOL_CACHE[ck]=t;}
- /* ===== S3 Vinyl Toy (Hayden 19 Nov; Style Lab recipe): glossy toy materials + toy proportions on the rigged figures. Only with TOPS_S3.
+ /* ===== S3 Vinyl Toy (Hayden 19 Nov; Style Lab recipe): glossy toy materials + toy proportions on the rigged figures. Only with TOPS_S3FLAG (Career's single S3 flag).
     Two finishes: 'full' (clearcoat, MeshPhysicalMaterial) and 'phone' (no clearcoat, standard material, a touch rougher, more sheen
     from the environment), so Hayden can compare them before one is picked for phones. ?s3gloss=full|phone (remembered) forces one;
     default: phone finish on phones and tablets, full elsewhere. */
@@ -812,10 +808,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   {id:'mia',name:'Mia',tag:'The Ace',look:{model:'megan',sex:'f',build:0,skinTone:'#c98e64',hair2:'pony',hairCol:'#3a2416',beard2:0,glasses:0,shirt:'#5b2a86',shirtTint:1}}];
  window.TOPS_S3_LOOK=id=>{const b=(window.TOPS_S3_BASES||[]).find(x=>x.id===id);return b?JSON.parse(JSON.stringify(b.look)):null;};
  /* shader warm-up (S3): the Vinyl materials are new programs; compile them on the hub, once per page, so the first match frame doesn't stall */
- let s3Warm=false;function s3WarmUp(){if(s3Warm||!window.TOPS_S3||!RIG.ready)return;const h=document.getElementById('hub');if(!h||h.hidden||(typeof S!=='undefined'&&S&&!S.done))return;s3Warm=true;
+ let s3Warm=false;function s3WarmUp(){if(s3Warm||!window.TOPS_S3FLAG||!RIG.ready)return;const h=document.getElementById('hub');if(!h||h.hidden||(typeof S!=='undefined'&&S&&!S.done))return;s3Warm=true;
   const t0=performance.now();try{const figs=[makeFigure(save.look||{},save.name||'You',0),makeFigure(lookFor('Warm Up'),'Warm Up',0)];figs.forEach(f=>pScene.add(f));renderer.compile(pScene,pCam);if(s3Back&&s3Back.material.map)renderer.compile(scene,camera);figs.forEach(f=>{pScene.remove(f);disposeTree(f);});}catch(e){console.warn('s3 warm',e);}
   try{window.TOPS_LOG&&TOPS_LOG.log('s3_warm',{ms:Math.round(performance.now()-t0)});}catch(e){}}
- setInterval(()=>{if(window.TOPS_S3&&!s3Warm)s3WarmUp();},1500);
+ setInterval(()=>{if(window.TOPS_S3FLAG&&!s3Warm)s3WarmUp();},1500);
  function faceKit(fig,B,look,ck){if(!look||!B.Head)return;if(ck==='pete')look=Object.assign({hair2:'short',beard2:1},Object.fromEntries(Object.entries(look).filter(([k,v])=>v!=null)));if(window.GFX_HEADDBG){[[1,0,0,0xff0000],[0,1,0,0x00ff00],[0,0,1,0x0000ff]].forEach(([x,y,z,c])=>{const m=new T.Mesh(new T.SphereGeometry(.015),new T.MeshBasicMaterial({color:c}));m.position.set(x*.13,y*.13,z*.13);B.Head.add(m);});}const L=look;const R=RIG.rest;const headH=(B.HeadTop_End&&R[B.HeadTop_End.name]&&R[B.Head.name])?R[B.HeadTop_End.name].p.distanceTo(R[B.Head.name].p):.24;
   const wantHair=L.hair2&&L.hair2!=='own';const needLib=wantHair&&L.hair2!=='bald'||L.beard2;if(needLib&&!HAIRLIB)loadHair();
   fig.traverse(o=>{if(!o.isMesh)return;const ms=Array.isArray(o.material)?o.material:[o.material];
@@ -954,7 +950,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   // dart in the right hand (placed in world space each frame), spares in the left
   const dt=(name&&save.name&&name.toUpperCase()===String(save.name).toUpperCase())?myDart(save.flight):oppDart(name);fig.add(dt);dt.matrixAutoUpdate=true;
   [0,1].forEach(k=>{const d=oppDart(name);d.scale.setScalar(1/1.78*3.78*.85);d.position.set(-.01+k*.03,.09,.0);d.rotation.set(1.6,0,0);d.userData.spare=1;B.LeftHand.add(d);});
-  fig.userData={rigged:true,B,dt,hand:B.RightHand,hips:[],ck,stand:isRemy,noSp:!!(NV&&NV.girth)};if(window.TOPS_S3&&!isRemy)try{vinylFig(fig,B);}catch(e){console.warn('s3 vinyl',e);}/* wider build: the left arm rests further out and the spares poke into the oche view, so none are shown */return fig;}
+  fig.userData={rigged:true,B,dt,hand:B.RightHand,hips:[],ck,stand:isRemy,noSp:!!(NV&&NV.girth)};if(window.TOPS_S3FLAG&&!isRemy)try{vinylFig(fig,B);}catch(e){console.warn('s3 vinyl',e);}/* wider build: the left arm rests further out and the spares poke into the oche view, so none are shown */return fig;}
  // aim a bone so the direction to its child matches dirWorld, preserving the rest roll
  const _tq=new T.Quaternion(),_tq2=new T.Quaternion(),_tv=new T.Vector3(),_tv2=new T.Vector3();
  function aimBone(bone,child,dirWorld,twist){const r=RIG.rest[bone.name],rc=RIG.rest[child.name];const restDir=_tv.subVectors(rc.p,r.p).normalize();const want=_tq.setFromUnitVectors(restDir,_tv2.copy(dirWorld).normalize()).multiply(r.q);
@@ -1235,11 +1231,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const cb=plane(.5,.7,new T.MeshStandardMaterial({map:patternTexture((x,w,h)=>{x.fillStyle='#223127';x.fillRect(0,0,w,h);x.strokeStyle='#5a3d24';x.lineWidth=28;x.strokeRect(14,14,w-28,h-28);grain(x,w,h,16);x.fillStyle='rgba(240,236,220,.85)';x.font='600 54px Barlow,Arial';x.fillText('HOME',70,150);x.fillText('AWAY',300,150);x.font='500 46px Barlow,Arial';['501','461','421','381'].forEach((v,i)=>x.fillText(v,80,230+i*70));['501','441','401','356'].forEach((v,i)=>x.fillText(v,310,230+i*70));},512,720),roughness:.9}),1.45,1.35,OCHE_Z-.55,-Math.PI/2);box(.04,1.3,.04,new T.MeshStandardMaterial({color:0x3a2412}),1.45,.65,OCHE_Z-.55);}
   else{/* v1.74: static '501 501' monitor removed (it never updated). A water glass on the high table instead. */const gl=new T.Mesh(new T.CylinderGeometry(.034,.029,.13,16,1,true),new T.MeshStandardMaterial({color:0xcfe6f2,transparent:true,opacity:.35,roughness:.05,side:T.DoubleSide}));gl.position.set(1.1,1.1,OCHE_Z+.32);venue.add(gl);const wt=new T.Mesh(new T.CylinderGeometry(.031,.028,.09,16),new T.MeshStandardMaterial({color:0x9fc4d8,transparent:true,opacity:.28,roughness:0}));wt.position.set(1.1,1.08,OCHE_Z+.32);venue.add(wt);}
   const rim=addLight(new T.PointLight(warm?0xffc98a:0xcfe0ff,warm?.55:.4,4));rim.position.set(1.0,2.2,OCHE_Z+.5);}
- let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}if(window.TOPS_S3)try{s3Plates(t);}catch(e){console.warn('s3 plates',e);}}
+ let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}if(window.TOPS_S3FLAG)try{s3Plates(t);}catch(e){console.warn('s3 plates',e);}}
  /* ===== S3 venue plates (Hayden 19 Nov): a painted plate per level drawn INSIDE the 3D scene as the back wall (a backdrop fixed to the
     camera, drawn first, nothing else changes), so the game canvas stays opaque (one layer for the phone to composite). The 3D room is
     hidden while a plate is up; the board, its surround, the figures, darts and lights stay. Walk-on plate for every view except the
-    opponent-throw view, which gets the oche plate. Plates come through Cache Storage like the character files. Only with TOPS_S3. */
+    opponent-throw view, which gets the oche plate. Plates come through Cache Storage like the character files. Only with TOPS_S3FLAG (Career's single S3 flag). */
  const S3P=['pub','club','opens','dpnz','tt','tc','palace'];const S3TEX={},S3WANT={};let s3Back=null,s3Tier=-1;
  window.TOPS_S3IMG=(url)=>new Promise((res,rej)=>{const abs=new URL(url,location.href).href;const toURL=b=>URL.createObjectURL(new Blob([b],{type:/\.png$/i.test(abs)?'image/png':/\.jpe?g$/i.test(abs)?'image/jpeg':'image/webp'}));
   const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error(url+' '+r.status);return r.arrayBuffer();});
@@ -1247,7 +1243,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   go.then(b=>res(toURL(b)),rej);});
  function s3PlateTex(name){if(S3TEX[name]!==undefined)return S3TEX[name];S3TEX[name]=null;if(S3WANT[name])return null;S3WANT[name]=1;
   TOPS_S3IMG('s3/plates/'+name+'.webp').then(u=>{const im=new Image();im.onload=()=>{const t=new T.Texture(im);t.encoding=T.sRGBEncoding;t.minFilter=T.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;KEEP.add(t);S3TEX[name]=t;};im.src=u;}).catch(e=>{console.warn('s3 plate',name,e&&e.message);});return null;}
- function s3Plates(t){if(!window.TOPS_S3)return;s3Tier=t;const k=S3P[Math.max(0,Math.min(6,t|0))];s3PlateTex(k+'_walk');s3PlateTex(k+'_oche');
+ function s3Plates(t){if(!window.TOPS_S3FLAG)return;s3Tier=t;const k=S3P[Math.max(0,Math.min(6,t|0))];s3PlateTex(k+'_walk');s3PlateTex(k+'_oche');
   if(!s3Back){const m=new T.MeshBasicMaterial({color:0xffffff,depthTest:false,depthWrite:false,toneMapped:false,fog:false});s3Back=new T.Mesh(new T.PlaneGeometry(1,1),m);s3Back.renderOrder=-1e4;s3Back.frustumCulled=false;s3Back.matrixAutoUpdate=false;KEEP.add(s3Back.geometry);KEEP.add(m);
    if(!camera.parent)scene.add(camera);camera.add(s3Back);
    s3Back.onBeforeRender=(r,sc,cam)=>{const k2=S3P[Math.max(0,Math.min(6,s3Tier|0))];const st=typeof S!=='undefined'?S:null;const tex=(st&&!st.done&&st.view===1&&S3TEX[k2+'_oche'])||S3TEX[k2+'_walk']||S3TEX[k2+'_oche'];
@@ -1255,7 +1251,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     const d=cam.far*.9,h=2*d*Math.tan(T.MathUtils.degToRad(cam.fov)/2),w=h*cam.aspect,ph=Math.max(h,w*16/9),pw=ph*9/16;s3Back.matrix.makeScale(pw,ph,1).setPosition(0,0,-d);s3Back.matrixWorld.multiplyMatrices(cam.matrixWorld,s3Back.matrix);};}
   s3Back.visible=true;}
  /* the room hides only once the level's plate is in, so a slow network shows today's room rather than a hole */
- function s3RoomTick(){if(!window.TOPS_S3||!s3Back)return;const k=S3P[Math.max(0,Math.min(6,s3Tier|0))];const has=!!(S3TEX[k+'_walk']||S3TEX[k+'_oche']);s3Back.visible=has;venue.visible=!has;if(sideLed)sideLed.visible=!has;}
+ function s3RoomTick(){if(!window.TOPS_S3FLAG||!s3Back)return;const k=S3P[Math.max(0,Math.min(6,s3Tier|0))];const has=!!(S3TEX[k+'_walk']||S3TEX[k+'_oche']);s3Back.visible=has;venue.visible=!has;if(sideLed)sideLed.visible=!has;}
  window.TOPS_S3PLATES={tex:S3TEX,tier:()=>s3Tier,back:()=>s3Back};
  // v1.08: the side camera looks toward +x. Dress that side so each venue reads from the profile view.
  let sideLed=null;
@@ -1590,7 +1586,7 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
  // --- per frame
  const camOff=new T.Vector3();let splitOn=false;function setSplit(on){splitOn=!!on;document.body.classList.toggle('split',splitOn);}const boardCam=new T.PerspectiveCamera(16,1,.05,20),faceCam=new T.PerspectiveCamera(30,1,.15,40);
  /* #20e: frame() reuses its camera/eye/size vectors, the walk-on argument object and the hidden-dart list (pos/look are only written in place; TOPS_WALKFX doesn't keep them) */const _fPos=new T.Vector3(),_fLook=new T.Vector3(),_fE1=new T.Vector3(),_fE2=new T.Vector3(),_fE3=new T.Vector3(),_fW=new T.Vector3(),_fSz=new T.Vector2(),_fHid=[],_fWv={me:null,pos:null,look:null,T:T,playClip:null,fpFig:null};
- function frame(now,state){const t=now/1000;if(window.TOPS_S3)s3RoomTick();if(!state)state={view:0,nerves:0,p:[{ai:false}],cur:0,done:true,pulling:false,busy:true,aim:{x:0,y:0},sway:{x:0,y:0},sigma:0,oppArm:{pull:0,phase:'idle'}};
+ function frame(now,state){const t=now/1000;if(window.TOPS_S3FLAG)s3RoomTick();if(!state)state={view:0,nerves:0,p:[{ai:false}],cur:0,done:true,pulling:false,busy:true,aim:{x:0,y:0},sway:{x:0,y:0},sigma:0,oppArm:{pull:0,phase:'idle'}};
   const targetK=((state.view===1||state.mateTurn)&&!(state.online&&window.__rr))?1:0;const dt=Math.min(.1,(now-(frame.last||now))/1000);frame.last=now;camK+=(targetK-camK)*Math.min(1,dt*4.5);
   if(state.reader){camSpec.pos.z=portrait?OCHE_Z+1.2:OCHE_Z+.9;}
   let pos=_fPos.lerpVectors(camPlayer.pos,camSpec.pos,camK),look=_fLook.lerpVectors(camPlayer.look,camSpec.look,camK),fov=camPlayer.fov+(camSpec.fov-camPlayer.fov)*camK;
