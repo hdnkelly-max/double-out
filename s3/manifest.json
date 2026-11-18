@@ -219,5 +219,8 @@
   "s3/plates/tc_walk.webp",
   "s3/plates/tt_oche.webp",
   "s3/plates/tt_walk.webp"
+ ],
+ "optional": [
+  "s3/pros/pros.json"
  ]
 }
