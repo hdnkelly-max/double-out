@@ -67,7 +67,7 @@
     el.querySelector('#rbMe').onclick = () => { tab = 'locker'; lk = 'load'; render(); };
     el.querySelector('#rbMenu').onclick = () => { const m = $id('rbMenuSheet'); if (m) { m.remove(); return; } const d = document.createElement('div'); d.id = 'rbMenuSheet'; d.className = 'rb-msheet'; d.innerHTML = `<button type="button" data-m="look">Edit look</button><button type="button" data-m="title">Main menu</button>`; el.appendChild(d);
       setTimeout(() => { const off = ev => { if (!d.isConnected) { document.removeEventListener('pointerdown', off, true); return; } if (!d.contains(ev.target) && ev.target.id !== 'rbMenu' && !ev.target.closest('#rbMenu')) { d.remove(); document.removeEventListener('pointerdown', off, true); } }; document.addEventListener('pointerdown', off, true); }, 0);
-      d.onclick = e => { const k = e.target.dataset && e.target.dataset.m; if (!k) return; d.remove(); if (k === 'title') { close(); try { showTitle(); } catch (x) {} } else if (k === 'look') { close(); const b = $id('btnLook'); if (b) b.click(); } }; };
+      d.onclick = e => { const k = e.target.dataset && e.target.dataset.m; if (!k) return; d.remove(); if (k === 'title') { close(); try { if (window.TOPS_USERNAV) TOPS_USERNAV(showTitle); else showTitle(); } catch (x) {} }   /* BUG-MENU: the player's own Main menu, not the boot's */ else if (k === 'look') { close(); const b = $id('btnLook'); if (b) b.click(); } }; };
     return el;
   }
   function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
