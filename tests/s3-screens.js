@@ -42,6 +42,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await tap('#rbTabs [data-t="money"]'); out.money = await p.evaluate(() => (document.querySelector('#rbApp .s3-bank') || {}).innerText || ''); await shot('6_money'); if (!/tour budget/i.test(out.money)) fail.push('Money tab empty');
   await p.evaluate(() => { const c = career().circuit; c.level = 3; c.live = null; career().bank = 2400; career().tier = 3; persist(); localStorage.setItem('tops_s3_seen', JSON.stringify(TOPS_S3UI._snap(c))); }); await reload();
   await tap('#rbApp [data-s3sub="oom"]'); out.oom = await p.evaluate(() => document.querySelectorAll('#rbApp .s3-tbl li:not(.s3-cut)').length); await shot('7_oom'); if (out.oom !== 13) fail.push('DPNZ OOM rows ' + out.oom);
+  // 8 creator: the 5 Vinyl bases replace the Character row (Engine's TOPS_S3_BASES; stubbed here when Engine's code isn't in this build)
+  out.cr = await p.evaluate(() => { if (!window.TOPS_S3_BASES) { window.TOPS_S3_BASES = [{ id: 'ray', name: 'Ray', tag: 'The Veteran', look: { model: 'brian', hair2: 'short' } }, { id: 'mia', name: 'Mia', tag: 'The Ace', look: { model: 'megan', sex: 'f', hair2: 'pony' } }]; window.TOPS_S3_LOOK = id => { const b = TOPS_S3_BASES.find(x => x.id === id); return b ? JSON.parse(JSON.stringify(b.look)) : null; }; }
+    save.look = {}; showCreator(false); const row = document.getElementById('s3Base'); const ch = document.getElementById('segChar').closest('.field');
+    const first = save.look.s3base; const b = row && row.querySelector('[data-b="' + TOPS_S3_BASES[TOPS_S3_BASES.length - 1].id + '"]'); if (b) b.click();
+    return { row: !!row, n: row ? row.querySelectorAll('[data-b]').length : 0, charHidden: ch.hidden, first, after: save.look.s3base, model: save.look.model, pressed: (document.querySelector('#s3Base [aria-pressed="true"]') || {}).dataset?.b }; });
+  if (!out.cr.row || out.cr.n < 2 || !out.cr.charHidden) fail.push('creator base row ' + JSON.stringify(out.cr)); if (!out.cr.first || out.cr.after === out.cr.first || out.cr.pressed !== out.cr.after) fail.push('base pick did not apply ' + JSON.stringify(out.cr));
+  await shot('8_creator');
   // 7 hidden switch: 5 taps on the version label flips the device flag
   out.hidden = await p.evaluate(() => { const v = document.createElement('p'); v.id = 'tlVer'; document.body.appendChild(v); const rl = location.reload; let n = 0; for (let i = 0; i < 5; i++) v.click(); return localStorage.getItem('tops_s3'); });
   if (out.hidden !== '0') fail.push('hidden switch did not turn S3 off: ' + out.hidden);

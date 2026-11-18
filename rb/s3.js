@@ -284,6 +284,29 @@
     sheet(`<span class="rb-kick">${eq ? 'Equals the Season 3 record' : 'New Season 3 record'}</span><span class="s3-fin s3-gold">${d.darts} darts</span><span class="rb-sub">${eq ? `Level with the best leg this season (${d.prev} darts).` : d.prev ? `The best leg this season was ${d.prev} darts.` : 'The first best leg of the season.'} It's on the Circuit table now.</span>`, 'Nice', () => { lsSet('tops_s3_bl', null); blAt = 0; render(); }, 's3-win');
   }
 
+  /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
+  // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
+  if (typeof showCreator === 'function') {
+    const _sc = showCreator;
+    showCreator = function (editing) {
+      const B = window.TOPS_S3_BASES;
+      if (B && B.length && save && save.look && !save.look.s3base) { const L = window.TOPS_S3_LOOK(B[0].id); if (L) { save.look = Object.assign({}, save.look, L, { s3base: B[0].id }); try { persist(); } catch (e) {} } }
+      const r = _sc.apply(this, arguments);
+      try { if (B && B.length) baseRow(editing); } catch (e) { console.warn('s3 creator', e); }
+      return r;
+    };
+  }
+  function baseRow(editing) {
+    const B = window.TOPS_S3_BASES, ch = $id('segChar'), f = ch && ch.closest('.field'); if (!f) return;
+    f.hidden = true;
+    let row = $id('s3Base'); if (!row) { row = document.createElement('div'); row.className = 'field'; row.id = 's3Base'; f.parentNode.insertBefore(row, f); }
+    const cur = save.look.s3base;
+    row.innerHTML = `<span class="label">Your player</span><div class="s3-bases">${B.map(b => `<button type="button" data-b="${esc(b.id)}" aria-pressed="${b.id === cur}"><b>${esc(b.name)}</b><small>${esc(b.tag || '')}</small></button>`).join('')}</div>`;
+    row.querySelectorAll('[data-b]').forEach(btn => btn.onclick = () => { const L = window.TOPS_S3_LOOK(btn.dataset.b); if (!L) return;
+      save.look = Object.assign({}, L, { s3base: btn.dataset.b }); try { persist(); } catch (e) {}
+      const nm = $id('cName') ? $id('cName').value : null; showCreator(editing); if (nm != null && $id('cName')) $id('cName').value = nm; });
+  }
+
   /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
   let shell = null, annT = 0;
   function render() { if (shell) shell(); }
