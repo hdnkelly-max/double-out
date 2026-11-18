@@ -1643,7 +1643,7 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
      ex   = cone shape (1 = straight line; above 1 = gentle for the first few ms, then faster; never a cliff)
    The near-miss cone starts exactly at the perfect scatter, so 1 ms outside the window costs a little (no cliff).
    Opponents are not touched. The pull length (time to the tightest ring, tp.D) is not touched. Off-career play uses TT. */
-const THROW_TUNE={perfK:.36,topS0:6.4,stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.6,40,1],[.55,30,1.2]]};
+const THROW_TUNE={perfK:.36,topS0:6.4,ease:[5,5,6,7,7,7,7],span:[1,1,1,1.2,1.5,1.9,2.3],stage:[[1,300,.7],[1,290,.7],[1,260,.7],[.8,85,1],[.72,60,1],[.45,40,1],[.35,30,1.2]]};
 function stageTune(t){const s=THROW_TUNE.stage,r=s[Math.max(0,Math.min(s.length-1,t|0))];return {win:r[0],cone:r[1],ex:r[2]};}
 const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,THROW_TUNE.topS0,30,560,48]]; /* CAR-TOP: top scatter from THROW_TUNE.topS0; 7th column = ms to the tightest ring (pull length), also the miss cone off-career */
 /* #20e: ttAt runs several times a frame (throwParams + v09's per-skill levels, 4 levels a frame); the last 8 results are reused by level (frozen: callers only read them) */const _ttL=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN],_ttV=[null,null,null,null,null,null,null,null];let _ttI=0;function ttAt(L){L=Math.max(0,Math.min(1,L));for(let i=0;i<8;i++)if(_ttL[i]===L)return _ttV[i];const v=Object.freeze(_ttAt(L));_ttL[_ttI]=L;_ttV[_ttI]=v;_ttI=(_ttI+1)&7;return v;}
@@ -1670,8 +1670,13 @@ function driftBeat(){}
 /* CAR-TOP: the cone starts where a perfect ends (THROW_TUNE.perfK x s0) and grows smoothly with the timing error; THROW_TUNE.stage sets how fast in career *//* CAR-VIS (P0 on 3.55, David 09:47): the ring you time against shrinks exactly as on 3.54, over the pull length (tp.D), whatever the stage.
    The CAR-TOP stage cone only decides where a released dart lands (ringR); on 3.55 it also drove this ring, so at the Worlds (cone 30 ms) the
    ring sat at its widest for almost the whole pull and only snapped tight in the last few ms. */
-function ringVis(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
-function ringR(dt,tp){const R0p=THROW_TUNE.perfK*1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);/* career: the stage cone (tp.cone); off-career: the pull length as before */const k=Math.pow(e/Math.max(10,(tp.cone||tp.D)-tp.P),tp.ex||.7);return Math.min(70,R0p+Math.max(0,tp.R0-R0p)*k*(dt>0?1.3:1)*(tp.kv||1));}
+/* CAR-EASE (Hayden 10:03): one honest ring. The ring you see IS where the dart lands: perfect inside the window (perfK x s0), and outside it
+   the radius eases in over the pull: slow early, then faster and faster into the ideal hold (and back out after it, 1.3x faster when late).
+   x = how far you are from the window as a share of the pull; ea = how hard the curve bends (THROW_TUNE.ease, by stage): bigger = the ring stays
+   wider longer and near-misses grow faster. "Looks nearly tight" therefore lands nearly on target. */
+function ringShape(dt,tp){const R0p=THROW_TUNE.perfK*1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);let x=Math.min(1,e/Math.max(40,tp.D-tp.P));if(dt>0)x=Math.min(1,x*1.3);const a=tp.ea||3;const E=u=>(Math.exp(a*u)-1)/(Math.exp(a)-1);const R0=tp.R0*(tp.span||1);return Math.min(110,R0p+Math.max(0,R0-R0p)*(1-E(1-x))*(tp.kv||1));}
+function ringVis(dt,tp){return ringShape(dt,tp);}
+function ringR(dt,tp){return ringShape(dt,tp);}/* CAR-EASE: landing = the ring you see */
 function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-THROW_TUNE.perfK*1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
 // release error in ms at a pull fraction
