@@ -1,5 +1,5 @@
 <meta charset="utf-8"><base href="../">
-<script>window.TOPS_BUILD="1794986174796";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1794987509566";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -11130,7 +11130,7 @@ function targetHR(){const n=effNerves();return 70+Math.min(90,n*22);}
 // Release error dt (ms, + late) beyond the perfect band P becomes a readable miss: late lands low, early lands high (kv mm/ms), plus side spread (kh), plus a small floor s0 that never goes away.
 // Release cue (v3): pressing locks the aim and starts a ring shrinking from R0 to its tightest (1.794*s0) at D ms. Inside ±P ms it holds; outside it widens again
 // (sqrt curve, faster when late). The ring at release IS the spread (80th percentile), plus a small early-high / late-low lean. No timing bar.
-const TT=[[0,50,1.9,2.4,13,28,660,74],[.3,38,2.2,2.1,11.2,30,630,62],[.6,26,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,6.4,30,560,48]]; // L, sway A mm, loop s, tremor, perfect sigma, perfect ±ms, ms to tightest, start ring mm
+const TT=[[0,34,1.9,2.4,10.5,28,660,74],[.3,28,2.2,2.1,9.8,30,630,62],[.6,22,2.6,1.7,8.6,31,600,52],[1,13,3.0,1.2,7.6,30,560,48]]; // L, sway A mm, loop s, tremor, perfect sigma, perfect ±ms, ms to tightest, start ring mm. CAR-WIN (Hayden 19:32, proposal D): sway 50/38/26/13 -> 34/28/22/13, perfect sigma 13/11.2/8.6/6.4 -> 10.5/9.8/8.6/7.6 (easier start, tougher top; same for everyone at the same stats)
 /* #20e: ttAt runs several times a frame (throwParams + v09's per-skill levels, 4 levels a frame); the last 8 results are reused by level (frozen: callers only read them) */const _ttL=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN],_ttV=[null,null,null,null,null,null,null,null];let _ttI=0;function ttAt(L){L=Math.max(0,Math.min(1,L));for(let i=0;i<8;i++)if(_ttL[i]===L)return _ttV[i];const v=Object.freeze(_ttAt(L));_ttL[_ttI]=L;_ttV[_ttI]=v;_ttI=(_ttI+1)&7;return v;}
 function _ttAt(L){let i=0;while(i<TT.length-2&&TT[i+1][0]<L)i++;const a=TT[i],b=TT[i+1],k=(L-a[0])/(b[0]-a[0]);const m=j=>a[j]+(b[j]-a[j])*k;return {A:m(1),T:m(2),tr:m(3),s0:m(4),P:m(5),D:m(6),R0:m(7)};}
 function throwLevel(){if(!S)return .3;if(typeof LES!=='undefined'&&LES.on)return Math.max(.3,throwLevelRaw());return throwLevelRaw();}
@@ -13407,7 +13407,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='3.51';
+window.TOPS_VER='3.52';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -13648,7 +13648,7 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 // V4-R (Hayden 19:15, data-fitted 12 Nov): perfect window (ms) by Rhythm level, linear between points. Fitted with sim-player.js on the
 // four mates with enough career data so Pub-level timing averages inside the Pub band and a maxed career reaches the high 90s.
 // Was 20 + 14*L (20 ms at L 0 to 34 ms at L 1).
-const WIN_PTS=[[0,10],[.265,12],[.5,16.5],[.75,21],[1,26]];
+/* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
 function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
 window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
@@ -15467,8 +15467,8 @@ if(typeof beginMatch==='function'){const bm=beginMatch;beginMatch=function(o){tr
  log('match_try',{opp:o&&o.oppName,legs:o&&o.legs,n:matchN});/* logged before, so a start that throws still shows */
  let r;try{r=bm.apply(this,arguments);}catch(err){log('error',errInfo('beginMatch failed: '+(err&&err.message),null,null,err));incident(true);throw err;}
  try{const c=typeof career==='function'?career():null;inMatch=true;visit=null;
-  log('match_start',{mode:S&&(S.online?'online':S.mp?'local':S.practice?'practice':(c&&c.run?'run':'career')),tier:S&&S.tier&&S.tier.n,opp:o&&o.oppName,legs:o&&o.legs,n:matchN});res('start');}catch(e){}return r;};}
-if(typeof endMatch==='function'){const em=endMatch;endMatch=function(){let info=null;try{info={won:null,legs:S&&S.p?S.p.map(p=>p.legs):null,avg:S&&S.p&&S.p[0]&&S.p[0].darts?+(S.p[0].pts/S.p[0].darts*3).toFixed(1):null};}catch(e){}
+  log('match_start',{mode:S&&(S.online?'online':S.mp?'local':S.practice?'practice':(c&&c.run?'run':'career')),tier:S&&S.tier&&S.tier.n,opp:o&&o.oppName,legs:o&&o.legs,n:matchN,orate:o&&o.oppAvg>0?Math.round(o.oppAvg):null,ft:window.TOPS_FIELD_TUNE?'t1':null});/* ft: field version (CAR-TUNE t1), so before/after compare cleanly */res('start');}catch(e){}return r;};}
+if(typeof endMatch==='function'){const em=endMatch;endMatch=function(){let info=null;try{info={won:null,legs:S&&S.p?S.p.map(p=>p.legs):null,avg:S&&S.p&&S.p[0]&&S.p[0].darts?+(S.p[0].pts/S.p[0].darts*3).toFixed(1):null,/* CAR-TUNE (Overseer 18:55): the opponent's match average, so the gap shows in the recorder */oavg:S&&S.p&&S.p[1]&&S.p[1].darts?+(S.p[1].pts/S.p[1].darts*3).toFixed(1):null};}catch(e){}
  flushVisit();if(inMatch)res('pre_end');/* before the game's own cleanup */const r=em.apply(this,arguments);/* CAR-8: the result is decided inside the game's endMatch (it sets S.won); read it after, never the last match's value */try{if(info)info.won=(S&&typeof S.won==='boolean')?S.won:(info.legs&&info.legs.length>1?info.legs[0]>info.legs[1]:null);}catch(e){}if(inMatch)res('end');leftMatch('finished',info);return r;};}
 {const q=document.getElementById('btnQuit');if(q)q.addEventListener('click',()=>{if(!inMatch)return;flushVisit();res('pre_end');leftMatch('quit');},true);/* capture phase: before the game's quit handler */}
 // darts summarised per visit (one event per visit: who, the three scores, perfects) so a match doesn't flush the ring
