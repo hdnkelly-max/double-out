@@ -83,12 +83,13 @@ const needFresh=()=>played&&!live()&&!busy&&!lastOnline&&!off()&&!window.__noGL&
 function runLaunch(L){try{flagsSet(L.flags);launching=true;if(L.bm){beginMatch(L.bm);}else{const f=ORIG[L.fn]||window[L.fn];if(typeof f==='function')f.apply(window,L.args||[]);}}catch(e){try{console.warn('reset_start_fail',L&&L.fn,String(e&&e.message||e));window.TOPS_LOG&&TOPS_LOG.log('reset_start_fail',{fn:L&&L.fn,e:String(e&&e.message||e).slice(0,80)});}catch(x){}}finally{launching=false;}}
 const jsonOk=a=>{try{return JSON.stringify(a)!==undefined&&JSON.parse(JSON.stringify(a))!=null;}catch(e){return false;}};
 LAUNCHERS.forEach(n=>{try{const f=window[n];if(typeof f!=='function')return;ORIG[n]=f;const w=function(){const args=[].slice.call(arguments);
+  if(!launching&&busy)return;/* ChatGPT P1: a fresh start is already under way: this tap is dropped (the first one starts its match on the new page, or here if the saves fail) */
   if(!launching&&needFresh()&&jsonOk(args)){go('start',{fn:n,args,flags:flagsNow()});return;}launching=true;try{return f.apply(this,arguments);}finally{launching=false;}};w.__rsw=f;window[n]=w;}catch(e){}});
 /* buttons bound to a launcher itself before this file ran (btn.onclick = playNext) are pointed at the gated one */
 try{document.querySelectorAll('button,[onclick],a,div').forEach(el=>{const h=el.onclick;if(typeof h==='function'){for(const n of LAUNCHERS){if(ORIG[n]&&h===ORIG[n]){el.onclick=window[n];break;}}}});}catch(e){}
 /* the exhibition invite starts its match directly (tc/core.js): its options are plain data and nothing runs before them, so the start itself
    travels; any other direct start is logged */
-{const bm2=beginMatch;beginMatch=function(o){if(!launching&&needFresh()&&!(o&&o.online)){if(o&&o.tcExh&&jsonOk(o)){go('start',{fn:'beginMatch',bm:o,flags:flagsNow()});return;}
+{const bm2=beginMatch;beginMatch=function(o){if(!launching&&busy&&!(o&&o.online))return;if(!launching&&needFresh()&&!(o&&o.online)){if(o&&o.tcExh&&jsonOk(o)){go('start',{fn:'beginMatch',bm:o,flags:flagsNow()});return;}
   let who='';try{const st=String(new Error().stack||'');const m=st.match(/at ([A-Za-z_$][\w$]*)/g)||st.match(/^([A-Za-z_$][\w$]*)@/mg)||[];who=m.slice(1,4).join(' ').slice(0,80);}catch(e){}try{window.TOPS_LOG&&TOPS_LOG.log('reset_untagged',{mode:o&&o.mode,practice:!!(o&&o.practice),who});}catch(e){}}
  return bm2.apply(this,arguments);};}
 
