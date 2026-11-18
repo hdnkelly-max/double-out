@@ -1,0 +1,24 @@
+// S3 PERF (Overseer 09:38): S3 on vs off (= 3.55) on the same build, iPhone 13 profile, headless Chromium (SwiftShader: absolute fps is
+// not a phone's, the on/off ratio is the signal). Per mode, a fresh browser profile (empty cache):
+//  match 1: first load (ms to the hub with the real figures in, MB downloaded), then a Pub career match: 6 s aim view + 6 s side view;
+//  match 2: the between-match fresh page (reload, warm cache: ms + MB), then the same match again.
+// Per window: fps, p95 frame ms, draw calls per frame (all render passes summed), triangles, visible 3D room. node tests/s3-perf.js <dir>
+const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
+(async()=>{const dir=path.resolve(process.argv[2]);let bytes=0,got=[];const types={'.html':'text/html','.js':'text/javascript','.glb':'model/gltf-binary','.json':'application/json','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.mp3':'audio/mpeg'};
+const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';const f=path.join(dir,u);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}const et='"'+d.length+'"';const h={'content-type':types[path.extname(f)]||'application/octet-stream','cache-control':'max-age=600',etag:et};if(q.headers['if-none-match']===et){r.writeHead(304,h);r.end();return;}bytes+=d.length;got.push(u+' '+d.length);r.writeHead(200,h);r.end(d);});}).listen(0);
+const URL0=`http://127.0.0.1:${srv.address().port}/index.html`;const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist','--host-resolver-rules=MAP *.supabase.co 127.0.0.1:9, MAP cdn.jsdelivr.net 127.0.0.1:9, MAP fonts.googleapis.com 127.0.0.1:9, MAP fonts.gstatic.com 127.0.0.1:9, MAP cdnjs.cloudflare.com 127.0.0.1:9']});
+const out={};
+for(const on of [false,true]){const cx=await b.newContext({...devices['iPhone 13']});const p=await cx.newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
+ await p.addInitScript(on=>{try{localStorage.setItem('tops_s3',on?'1':'0');localStorage.setItem('tops_rebrand','1');localStorage.setItem('tops_q20_app','nowalk');}catch(e){}if(on)window.TOPS_S3FLAG=true;
+  /* sum draw calls + triangles over every render pass in a frame */window.__pf={calls:0,tris:0};const iv=setInterval(()=>{try{const R=V._qa.renderer;if(!R||R.__pw)return;R.__pw=1;const r0=R.render.bind(R);R.render=function(s,c){r0(s,c);window.__pf.calls+=R.info.render.calls;window.__pf.tris+=R.info.render.triangles;};clearInterval(iv);}catch(e){}},20);},on);
+ const ready=async()=>{const t=Date.now();await p.waitForFunction(on=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady()&&(!on||TOPS_RIGS().ids.includes('leonard')),on,{timeout:240000,polling:100});return Date.now()-t;};
+ const match=async()=>{await p.evaluate(()=>{save.authSeen=true;save.name='Hayden';save.lessonDone=true;$('login').hidden=true;if(!career())newCareer();save.walkon='off';save.tcIntro=1;save.tcWelcomed=1;persist();document.querySelectorAll('.tc-sheet').forEach(e=>e.remove());beginMatch({mode:'career',tier:0,p0:'Hayden',oppName:'Big Mal',oppAvg:50,legs:3,purse:0,local:true});});
+  for(let i=0;i<16;i++){await p.waitForTimeout(500);await p.evaluate(()=>{const it=document.getElementById('intro');if(it&&it.classList.contains('show'))it.click();}).catch(()=>{});}
+  const win=async(view)=>{await p.evaluate(v=>{try{S.view=v;}catch(e){}},view);await p.waitForTimeout(1200);return p.evaluate(()=>new Promise(res=>{const ft=[];let last=performance.now(),c0=0;const calls=[],tris=[];const end=last+6000;
+    const f=now=>{ft.push(now-last);last=now;calls.push(window.__pf.calls);tris.push(window.__pf.tris);window.__pf.calls=0;window.__pf.tris=0;if(now<end)requestAnimationFrame(f);else{const s=ft.slice(2).sort((a,b)=>a-b);const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
+     let room=null;try{room=!!(V._qa.venue&&V._qa.venue.visible);}catch(e){}res({fps:+(1000/avg(s)).toFixed(1),p95:+s[Math.floor(s.length*.95)].toFixed(1),calls:Math.round(avg(calls.slice(2))),tris:Math.round(avg(tris.slice(2))),room});}};requestAnimationFrame(f);}));};
+  const a=await win(0),sd=await win(1);await p.evaluate(()=>{try{S.done=true;}catch(e){}});return {aim:a,side:sd};};
+ bytes=0;got=[];const t1=Date.now();await p.goto(URL0+'?s3='+(on?1:0));const l1=await ready();const r1={loadMs:Date.now()-t1,mb:+(bytes/1e6).toFixed(2),files:got.slice(0,14)};r1.m=await match();
+ bytes=0;got=[];const t2=Date.now();await p.reload();await ready();const r2={loadMs:Date.now()-t2,mb:+(bytes/1e6).toFixed(2),files:got.slice(0,12)};r2.m=await match();
+ out[on?'s3':'off']={match1:r1,match2:r2,flag:await p.evaluate(()=>!!window.TOPS_S3FLAG),errors:pe.slice(0,3)};await cx.close();}
+console.log(JSON.stringify(out,null,1));await b.close();srv.close();})();
