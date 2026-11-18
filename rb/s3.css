@@ -57,9 +57,9 @@
 #rbApp .s3-pmart{height:180px;flex:none;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent);mask-image:linear-gradient(180deg,#000 55%,transparent)}
 #rbApp .s3-pmn{font-family:var(--d);font-weight:800;font-style:italic;font-size:46px;line-height:.92;text-transform:uppercase;text-wrap:balance}
 #rbApp .s3-grant{align-self:flex-start;height:28px;padding:0 12px;border-radius:14px;display:inline-flex;align-items:center;background:rgba(127,209,154,.14);color:var(--good);font-weight:700;font-size:13px}
-#rbApp .s3-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:79;width:min(360px,calc(100vw - 32px));background:#0a0c0d;border:1px solid var(--red);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;transition:opacity .4s,transform .4s;animation:s3in .22s ease-out}
+#rbApp .s3-toast{position:fixed;left:50%;top:calc(112px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:79;width:min(360px,calc(100vw - 32px));background:#0a0c0d;border:1px solid var(--red);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;transition:opacity .4s,transform .4s;animation:s3in .22s ease-out}
 #rbApp .s3-toast b{font-family:var(--d);font-weight:800;font-size:20px;text-transform:uppercase}#rbApp .s3-toast span{font-size:13px;color:var(--ink2)}
-#rbApp .s3-toast.s3-out{opacity:0;transform:translate(-50%,8px)}
+#rbApp .s3-toast.s3-out{opacity:0;transform:translate(-50%,-8px)}
 @keyframes s3in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 #rbApp .s3-toast{animation-name:none}
 @media (prefers-reduced-motion:reduce){#rbApp .s3-sheet,#rbApp .s3-toast{animation:none;transition:none}}
