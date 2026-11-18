@@ -8,7 +8,7 @@
 //    backed up, so a throwaway restart can't push a real career out of the list.
 // 3) The title screen shows "Bring back a previous career" while a backup exists. Restoring swaps: the current career (if played) becomes
 //    a backup itself, so a restore is never a one-way door either.
-const BK='tops_career_bak',MAX=3;
+const BK=(window.TOPS_SAVE_NS&&TOPS_SAVE_NS.bak)||'tops_career_bak',MAX=3;/* S3: Season 3 keeps its own backups, so a Season 2 career is never offered in Season 3 */
 // every save field newCareer() resets (game4 + v09 st2 + v12), plus the career-slot fields switchSlot() moves with the career
 const KEYS=['career','perks','attr','arm','picks','owned','barrel','setup','ownedSetup','sponsor','gear','composure','st2','v12res','v12new','v12ent','v12pace'];
 const L=(k,d)=>{try{window.TOPS_LOG&&TOPS_LOG.log(k,d);}catch(e){}};
