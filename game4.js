@@ -1221,7 +1221,28 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const cb=plane(.5,.7,new T.MeshStandardMaterial({map:patternTexture((x,w,h)=>{x.fillStyle='#223127';x.fillRect(0,0,w,h);x.strokeStyle='#5a3d24';x.lineWidth=28;x.strokeRect(14,14,w-28,h-28);grain(x,w,h,16);x.fillStyle='rgba(240,236,220,.85)';x.font='600 54px Barlow,Arial';x.fillText('HOME',70,150);x.fillText('AWAY',300,150);x.font='500 46px Barlow,Arial';['501','461','421','381'].forEach((v,i)=>x.fillText(v,80,230+i*70));['501','441','401','356'].forEach((v,i)=>x.fillText(v,310,230+i*70));},512,720),roughness:.9}),1.45,1.35,OCHE_Z-.55,-Math.PI/2);box(.04,1.3,.04,new T.MeshStandardMaterial({color:0x3a2412}),1.45,.65,OCHE_Z-.55);}
   else{/* v1.74: static '501 501' monitor removed (it never updated). A water glass on the high table instead. */const gl=new T.Mesh(new T.CylinderGeometry(.034,.029,.13,16,1,true),new T.MeshStandardMaterial({color:0xcfe6f2,transparent:true,opacity:.35,roughness:.05,side:T.DoubleSide}));gl.position.set(1.1,1.1,OCHE_Z+.32);venue.add(gl);const wt=new T.Mesh(new T.CylinderGeometry(.031,.028,.09,16),new T.MeshStandardMaterial({color:0x9fc4d8,transparent:true,opacity:.28,roughness:0}));wt.position.set(1.1,1.08,OCHE_Z+.32);venue.add(wt);}
   const rim=addLight(new T.PointLight(warm?0xffc98a:0xcfe0ff,warm?.55:.4,4));rim.position.set(1.0,2.2,OCHE_Z+.5);}
- let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}}
+ let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}if(window.TOPS_S3)try{s3Plates(t);}catch(e){console.warn('s3 plates',e);}}
+ /* ===== S3 venue plates (Hayden 19 Nov): a painted plate per level drawn INSIDE the 3D scene as the back wall (a backdrop fixed to the
+    camera, drawn first, nothing else changes), so the game canvas stays opaque (one layer for the phone to composite). The 3D room is
+    hidden while a plate is up; the board, its surround, the figures, darts and lights stay. Walk-on plate for every view except the
+    opponent-throw view, which gets the oche plate. Plates come through Cache Storage like the character files. Only with TOPS_S3. */
+ const S3P=['pub','club','opens','dpnz','tt','tc','palace'];const S3TEX={},S3WANT={};let s3Back=null,s3Tier=-1;
+ window.TOPS_S3IMG=(url)=>new Promise((res,rej)=>{const abs=new URL(url,location.href).href;const toURL=b=>URL.createObjectURL(new Blob([b],{type:/\.png$/i.test(abs)?'image/png':/\.jpe?g$/i.test(abs)?'image/jpeg':'image/webp'}));
+  const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error(url+' '+r.status);return r.arrayBuffer();});
+  const go=window.caches&&caches.open?caches.open(ACN).then(c=>c.match(abs).then(h=>h?h.arrayBuffer():null).catch(()=>null).then(b=>b&&b.byteLength>200?b:net().then(b=>{try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}return b;}))).catch(()=>net()):net();
+  go.then(b=>res(toURL(b)),rej);});
+ function s3PlateTex(name){if(S3TEX[name]!==undefined)return S3TEX[name];S3TEX[name]=null;if(S3WANT[name])return null;S3WANT[name]=1;
+  TOPS_S3IMG('s3/plates/'+name+'.webp').then(u=>{const im=new Image();im.onload=()=>{const t=new T.Texture(im);t.encoding=T.sRGBEncoding;t.minFilter=T.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;KEEP.add(t);S3TEX[name]=t;};im.src=u;}).catch(e=>{console.warn('s3 plate',name,e&&e.message);});return null;}
+ function s3Plates(t){if(!window.TOPS_S3)return;s3Tier=t;const k=S3P[Math.max(0,Math.min(6,t|0))];s3PlateTex(k+'_walk');s3PlateTex(k+'_oche');
+  if(!s3Back){const m=new T.MeshBasicMaterial({color:0xffffff,depthTest:false,depthWrite:false,toneMapped:false,fog:false});s3Back=new T.Mesh(new T.PlaneGeometry(1,1),m);s3Back.renderOrder=-1e4;s3Back.frustumCulled=false;s3Back.matrixAutoUpdate=false;KEEP.add(s3Back.geometry);KEEP.add(m);
+   if(!camera.parent)scene.add(camera);camera.add(s3Back);
+   s3Back.onBeforeRender=(r,sc,cam)=>{const k2=S3P[Math.max(0,Math.min(6,s3Tier|0))];const st=typeof S!=='undefined'?S:null;const tex=(st&&!st.done&&st.view===1&&S3TEX[k2+'_oche'])||S3TEX[k2+'_walk']||S3TEX[k2+'_oche'];
+    if(!tex){s3Back.visible=false;return;}if(s3Back.material.map!==tex){s3Back.material.map=tex;s3Back.material.needsUpdate=true;}
+    const d=cam.far*.9,h=2*d*Math.tan(T.MathUtils.degToRad(cam.fov)/2),w=h*cam.aspect,ph=Math.max(h,w*16/9),pw=ph*9/16;s3Back.matrix.makeScale(pw,ph,1).setPosition(0,0,-d);s3Back.matrixWorld.multiplyMatrices(cam.matrixWorld,s3Back.matrix);};}
+  s3Back.visible=true;}
+ /* the room hides only once the level's plate is in, so a slow network shows today's room rather than a hole */
+ function s3RoomTick(){if(!window.TOPS_S3||!s3Back)return;const k=S3P[Math.max(0,Math.min(6,s3Tier|0))];const has=!!(S3TEX[k+'_walk']||S3TEX[k+'_oche']);s3Back.visible=has;venue.visible=!has;if(sideLed)sideLed.visible=!has;}
+ window.TOPS_S3PLATES={tex:S3TEX,tier:()=>s3Tier,back:()=>s3Back};
  // v1.08: the side camera looks toward +x. Dress that side so each venue reads from the profile view.
  let sideLed=null;
  function pubDress(t){try{const G=new T.Group();G.name='pubDress';venue.add(G);venue.updateMatrixWorld(true);
@@ -1555,7 +1576,7 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
  // --- per frame
  const camOff=new T.Vector3();let splitOn=false;function setSplit(on){splitOn=!!on;document.body.classList.toggle('split',splitOn);}const boardCam=new T.PerspectiveCamera(16,1,.05,20),faceCam=new T.PerspectiveCamera(30,1,.15,40);
  /* #20e: frame() reuses its camera/eye/size vectors, the walk-on argument object and the hidden-dart list (pos/look are only written in place; TOPS_WALKFX doesn't keep them) */const _fPos=new T.Vector3(),_fLook=new T.Vector3(),_fE1=new T.Vector3(),_fE2=new T.Vector3(),_fE3=new T.Vector3(),_fW=new T.Vector3(),_fSz=new T.Vector2(),_fHid=[],_fWv={me:null,pos:null,look:null,T:T,playClip:null,fpFig:null};
- function frame(now,state){const t=now/1000;if(!state)state={view:0,nerves:0,p:[{ai:false}],cur:0,done:true,pulling:false,busy:true,aim:{x:0,y:0},sway:{x:0,y:0},sigma:0,oppArm:{pull:0,phase:'idle'}};
+ function frame(now,state){const t=now/1000;if(window.TOPS_S3)s3RoomTick();if(!state)state={view:0,nerves:0,p:[{ai:false}],cur:0,done:true,pulling:false,busy:true,aim:{x:0,y:0},sway:{x:0,y:0},sigma:0,oppArm:{pull:0,phase:'idle'}};
   const targetK=((state.view===1||state.mateTurn)&&!(state.online&&window.__rr))?1:0;const dt=Math.min(.1,(now-(frame.last||now))/1000);frame.last=now;camK+=(targetK-camK)*Math.min(1,dt*4.5);
   if(state.reader){camSpec.pos.z=portrait?OCHE_Z+1.2:OCHE_Z+.9;}
   let pos=_fPos.lerpVectors(camPlayer.pos,camSpec.pos,camK),look=_fLook.lerpVectors(camPlayer.look,camSpec.look,camK),fov=camPlayer.fov+(camSpec.fov-camPlayer.fov)*camK;
