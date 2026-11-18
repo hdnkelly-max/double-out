@@ -1,0 +1,518 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>TOPS Style Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one full-height stage on white, a compact control bar pinned at the bottom. Single light look by choice (Hayden asked for a white background). */
+:root{--bg:#f4f3ef;--ink:#16161a;--mute:#6b6b74;--line:#dcdad3;--chip:#ffffff;--red:#d9252e;color-scheme:light}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
+#stage{position:fixed;inset:0;touch-action:none;background-size:cover;background-position:center}
+#stage.plate{inset:auto;left:50%;top:0;transform:translateX(-50%);height:100vh;width:min(100vw,56.25vh)}
+canvas{display:block}
+.top{position:fixed;top:0;left:0;right:0;padding-top:calc(env(safe-area-inset-top,0px) + 12px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none}
+.brand{font-weight:800;font-style:italic;font-size:22px;letter-spacing:-.01em}
+.brand span{color:var(--red)}
+.sub{color:var(--mute);font-size:12px;max-width:30ch}
+.bar{position:fixed;left:0;right:0;bottom:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:10px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(to top,rgba(244,243,239,.96),rgba(244,243,239,.75) 70%,rgba(244,243,239,0))}
+.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.lab{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-align:center}
+button{font:600 13px/1 Inter,system-ui,sans-serif;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:9px 13px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.go[aria-pressed="true"]{background:var(--red);border-color:var(--red)}
+button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+#hint{color:var(--mute);font-size:11px;text-align:center}
+/* phone: the stage sits above a short control strip so the whole figure shows; player/build/style open as a sheet over the stage */
+.more-btn{display:none}
+@media (max-width:899px){
+ .sub{display:none}.brand{font-size:18px}
+ #stage,#stage.plate{inset:0 0 var(--barh,120px) 0;left:0;top:0;transform:none;width:100%;height:auto}
+ .bar{background:var(--bg);padding-top:8px;gap:5px;border-top:1px solid var(--line)}
+ .bar .lab{display:none}
+ .strip{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:1px}.strip::-webkit-scrollbar{display:none}.strip button{flex:0 0 auto}
+ .top{align-items:center}.more-btn{display:inline-block;pointer-events:auto;background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:12px;padding:8px 12px;margin-left:auto}
+ .more{display:none;position:absolute;left:0;right:0;bottom:100%;max-height:58vh;overflow:auto;background:var(--bg);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:12px max(16px,env(safe-area-inset-left,0px)) 10px max(16px,env(safe-area-inset-right,0px));box-shadow:0 -8px 24px rgba(0,0,0,.12)}
+ .bar.open .more{display:flex;flex-direction:column;gap:7px}.bar.open .more .lab{display:block}
+}
+.more{display:contents}
+@media (max-width:899px){.more{display:none}}
+#look{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;-webkit-overflow-scrolling:touch}#look button{flex:0 0 auto}
+@media (min-width:900px){#look{flex-wrap:wrap;justify-content:center}}
+</style>
+
+<div id="stage" aria-label="3D character preview"></div>
+<div class="top">
+  <div><div class="brand">TOPS <span>Style Lab</span></div><div class="sub">Season 3 look: Vinyl Toy (Hayden's pick). Five new players, every Circuit venue. Not in the game yet.</div></div>
+  <button id="moreBtn" class="more-btn" aria-expanded="false" aria-controls="more">Player · style</button>
+</div>
+<div class="bar" id="bar">
+  <div class="more" id="more">
+    <div class="lab">Player</div>
+    <div class="row" id="who"></div>
+    <div class="lab">Build</div>
+    <div class="row" id="body"></div>
+    <div class="lab">Style</div>
+    <div class="row" id="look"></div>
+    <div id="hint"><span id="sref">Vinyl Toy · after designer vinyl figures, Fall Guys</span> · drag to turn · pinch or scroll to zoom</div>
+  </div>
+  <div class="lab">Venue</div>
+  <div class="row strip" id="ven"></div>
+  <div class="lab">Animation</div>
+  <div class="row strip" id="anim"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+const T=THREE;
+const stage=document.getElementById('stage');
+const R=new T.WebGLRenderer({antialias:true,alpha:true});
+R.setPixelRatio(Math.min(2,devicePixelRatio||1));
+R.outputEncoding=T.sRGBEncoding;R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=.95;
+R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
+stage.appendChild(R.domElement);
+const scene=new T.Scene();scene.background=new T.Color(0xf4f3ef);
+const cam=new T.PerspectiveCamera(30,1,.1,100);
+// lights: warm key, cool fill, rim
+const hemi=new T.HemisphereLight(0xffffff,0xbdb6a6,.5);scene.add(hemi);
+const key=new T.DirectionalLight(0xffe6c8,1.5);key.position.set(2.6,4.2,3.2);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-2.5,right:2.5,top:3,bottom:-1,near:.5,far:14});key.shadow.radius=4;key.shadow.bias=-.0004;scene.add(key);
+const fill=new T.DirectionalLight(0xdfe8ff,.38);fill.position.set(-3,2,1.5);scene.add(fill);
+const rim=new T.DirectionalLight(0xffffff,.7);rim.position.set(-1,3,-3.5);scene.add(rim);
+const ground=new T.Mesh(new T.PlaneGeometry(30,30),new T.ShadowMaterial({opacity:.16}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+// ---------- low-poly helpers ----------
+let STYLE='vinyl';
+// ---------- ten render styles; each one is a material recipe plus scene settings ----------
+const rampTex=(vals)=>{const d=new Uint8Array(vals.length*4);vals.forEach((v,i)=>{d.set([v,v,v,255],i*4);});const t=new T.DataTexture(d,vals.length,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;};
+const GLIB=`
+float hash12(vec2 p){vec3 p3=fract(vec3(p.xyx)*.1031);p3+=dot(p3,p3.yzx+33.33);return fract((p3.x+p3.y)*p3.z);}
+float vnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash12(i),hash12(i+vec2(1.,0.)),f.x),mix(hash12(i+vec2(0.,1.)),hash12(i+vec2(1.,1.)),f.x),f.y);}
+float bayer2(vec2 a){a=floor(a);return fract(a.x/2.+a.y*a.y*.75);}
+float bayer4(vec2 a){return bayer2(.5*a)*.25+bayer2(a);}
+float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
+`;
+const SHADE='float shv=lum(outgoingLight)/max(.0001,lum(diffuseColor.rgb));';
+const STYLES={
+ tops:{name:'TOPS Toon',ref:'Team Fortress 2, Wii Sports',kind:'toon',ramp:rampTex([140,205,255]),flat:true,ink:{px:2.2,col:0x1b1418},shirtPlane:true,bg:0xf4f3ef,tone:true,exp:.8,hemi:.28,key:1.5,fill:.38,rim:.7,shadow:.16},
+ comic:{name:'Comic Ink',ref:'Borderlands, Hi-Fi Rush',kind:'phong',flat:false,ink:{px:3,col:0x000000},bg:0xf6efdc,tone:false,exp:1,hemi:.35,key:1.25,fill:.25,rim:.3,shadow:.22,sat:1.18,
+  frag:SHADE+`vec2 fc=gl_FragCoord.xy;vec3 b=diffuseColor.rgb;float lit=step(.55,shv);vec3 c=mix(b*.58,b*1.05,lit);
+  float h1=step(fract((fc.x+fc.y)/5.),.32),h2=step(fract((fc.x-fc.y)/5.),.32);
+  if(shv<.45)c*=1.-.6*h1;if(shv<.22)c*=1.-.6*h2;
+  float fr=pow(1.-clamp(dot(normalize(normal),normalize(vViewPosition)),0.,1.),3.);c+=vec3(1.,.85,.6)*fr*.12*lit;
+  outgoingLight=c;`},
+ halftone:{name:'Halftone Pop',ref:'Spider-Man: Into the Spider-Verse',kind:'phong',flat:false,ink:{px:2.5,col:0x111018},bg:0xfbf4e8,tone:false,exp:1,hemi:.35,key:1.3,fill:.3,rim:.6,shadow:.2,sat:1.25,
+  frag:(part)=>SHADE+`vec2 fc=gl_FragCoord.xy;mat2 r=mat2(.707,-.707,.707,.707);vec2 g=r*fc/10.;vec2 f=fract(g)-.5;float d=length(f);
+  vec3 b=diffuseColor.rgb;float sk=${part==='skin'||part==='face'?'1.':'0.'};float pa=${part==='pants'||part==='shoe'?'1.':'0.'};
+  vec3 c=shv>.5?b:b*mix(.6,.72,sk);float rad=clamp((.45-shv)*1.1,0.,.325)*(1.-sk)*(1.-.5*pa);
+  if(d<rad)c=mix(b*.3,vec3(.125,.137,.17),.45);
+  if(sk<.5&&pa<.5&&shv>.47&&shv<.53)c=mix(c,vec3(.84,.14,.18),.55);
+  outgoingLight=c;`},
+ clay:{name:'Claymation',ref:'Aardman (Wallace & Gromit)',kind:'standard',rough:1,flat:false,ink:null,bg:0xeadfce,tone:true,exp:.95,hemi:.45,key:1.0,fill:.35,rim:.3,shadow:.28,segf:1.35,warm:1,geo:{nose:1.18,ear:1.15,hand:1.1,asym:1},
+  vbegin:`float lump=sin(position.x*31.+1.3)*sin(position.y*27.+.7)*sin(position.z*29.+2.1);transformed+=normal*lump*.009;`,
+  frag:`float dent=vnoise(vLoc.xy*60.+vLoc.z*30.);outgoingLight*=.94+.08*dent;`},
+ vinyl:{name:'Vinyl Toy',ref:'Designer vinyl figures, Fall Guys',kind:'physical',rough:.5,cc:.28,gloss:{shirt:[.76,.13],skin:[.66,.12],hair:[.4,.38],shoe:[.3,.7],pants:[.66,.17],trim:[.66,.2]},geo:{hand:1.15,foot:1.12,fore:.92},flat:false,ink:null,bg:0xeef0f5,tone:true,exp:1.0,hemi:.6,key:1.3,fill:.55,rim:.9,shadow:.18,segf:1.5,headK:1.32,sat:1.3},
+ poster:{name:'Flat Poster',ref:'Firewatch, Olly Moss',kind:'phong',flat:false,
+  frag:(part)=>SHADE+`vec3 b=diffuseColor.rgb;float t=smoothstep(.56,.6,shv);float k=${part==='skin'?'.84':'mix(.86,.7,clamp(lum(b)/.55,0.,1.))'};vec3 sc=b*k*vec3(.9,.86,1.15);
+  float fr=pow(1.-clamp(dot(normalize(normal),normalize(vViewPosition)),0.,1.),3.);outgoingLight=mix(sc,b*vec3(1.08,1.0,.9),t)+b*fr*.1;`,keyPos:[3.8,3.2,.6],sat:1.15,ink:null,bg:0xf1e4cf,tone:false,exp:1,hemi:.32,key:1.05,fill:.15,rim:.15,shadow:.25,pal:'poster'},
+ paper:{name:'Papercraft',ref:'Tearaway, origami',kind:'phong',flat:true,ink:{px:1,col:0x8a7158},bg:0xe7d8bd,tone:false,exp:1,hemi:.45,key:1.1,fill:.35,rim:.2,shadow:.22,segf:.4,keyPos:[3.2,3.6,1.6],
+  frag:`vec3 fn=normalize(normal);float sheet=hash12(floor(fn.xy*7.+fn.z*4.));float gr=vnoise(gl_FragCoord.xy*.9)*.025;outgoingLight*=0.84+.32*step(.5,sheet)*0.5+.1*sheet+gr;`},
+ dither:{name:'Dither Print',ref:'Return of the Obra Dinn, risograph',kind:'phong',flat:false,ink:{px:1.8,col:0x1f1a2e},bg:0xf2ead6,tone:false,exp:1,hemi:.3,key:1.3,fill:.25,rim:.4,shadow:.22,
+  frag:(part)=>SHADE+`float th=bayer4(floor(gl_FragCoord.xy/3.));vec3 b=diffuseColor.rgb;vec3 ink=mix(b*.3,vec3(.19,.157,.22),.55);vec3 c=shv>.95?b:b*.84;
+  ${part==='skin'||part==='face'||part==='hair'?'if(shv<.5)c=b*.7;':'if(shv<.7){c=(shv/.7)>th?b*.84:ink;}'}outgoingLight=c;`},
+ ps1:{name:'PS1 Retro',ref:'Lethal Company, 1990s consoles',kind:'lambert',flat:false,ink:null,bg:0x383b43,tone:false,exp:1,hemi:.55,key:1.2,fill:.35,rim:1,shadow:.3,segf:.55,pr:.5,lift:1.25,
+  vproj:`vec4 sp=gl_Position;sp.xyz/=sp.w;sp.xy=floor(sp.xy*vec2(160.,120.)+.5)/vec2(160.,120.);sp.xyz*=gl_Position.w;gl_Position=sp;`,
+  frag:`outgoingLight=floor(outgoingLight*24.+.5+(bayer4(gl_FragCoord.xy)-.5)*.12)/24.;`},
+ painterly:{name:'Painterly',ref:'Team Fortress 2 shading, Arcane',kind:'phong',flat:false,ink:null,bg:0xe6dfd2,tone:false,exp:1,hemi:.32,key:1.25,fill:.22,rim:.2,shadow:.2,lift:1,
+  frag:(part)=>SHADE+`vec2 fc=gl_FragCoord.xy;float n=vnoise(vec2(fc.x*.03+fc.y*.012,fc.y*.11));float tt=clamp(shv+(n-.5)*${part==='skin'||part==='face'?'.07':'.22'},0.,1.2);float t=floor(tt*4.)/4.;
+  vec3 b=diffuseColor.rgb;vec3 sh=b*vec3(.4,.45,.72),li=b*vec3(1.1,1.,.86);vec3 c=mix(sh,li,clamp(t,0.,1.));
+  float fr=pow(1.-clamp(dot(normalize(normal),normalize(vViewPosition)),0.,1.),2.5);c+=vec3(1.,.9,.75)*fr*.35*step(.4,shv);
+  outgoingLight=c;`}
+};
+let SEGF=1;
+const POSTER=[0x2e3a59,0xc8553d,0xe8b04a,0x3f7f6f,0x6b4f7a,0xd98c6a,0x1f2a33,0xf3e6cf];
+const sty=()=>STYLES[STYLE];
+const adjCol=(c,S,part)=>{if(S.sat){const h={};c.getHSL(h);c.setHSL(h.h,Math.min(1,h.s*S.sat),h.l);}
+  if(S.pal==='poster'&&(part==='shirt'||part==='trim')){let best=null,bd=9;const h0={};c.getHSL(h0);POSTER.forEach(p=>{const q=new T.Color(p),h={};q.getHSL(h);const d=Math.min(Math.abs(h.h-h0.h),1-Math.abs(h.h-h0.h))*2+Math.abs(h.l-h0.l)*1.2+Math.abs(h.s-h0.s)*.5;if(d<bd){bd=d;best=q;}});if(h0.s>.18)c.lerp(best,.55);}
+  if(S.warm){c.r=Math.min(1,c.r*1.03);c.b*=.93;}return c;};
+const M=(c,o={})=>{const S=sty();const col=adjCol(new T.Color(c),S,o.part).convertSRGBToLinear();
+  if(o.metalness||o.transparent)return new T.MeshStandardMaterial(Object.assign({color:col,flatShading:true,roughness:.8,metalness:0},o));
+  const base={color:col,side:o.side||T.FrontSide};let m;
+  if(S.kind==='toon')m=new T.MeshToonMaterial(Object.assign(base,{gradientMap:S.ramp,flatShading:S.flat}));
+  else if(S.kind==='phong')m=new T.MeshPhongMaterial(Object.assign(base,{flatShading:S.flat,shininess:4,specular:new T.Color(0x000000)}));
+  else if(S.kind==='lambert')m=new T.MeshLambertMaterial(base);
+  else if(S.kind==='physical'){const g=(S.gloss&&S.gloss[o.part])||[S.rough,S.cc||0];m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:.25,metalness:0}));}
+  else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:S.rough||.8,metalness:0,flatShading:S.flat}));
+  const shirt=!!(o.shirt&&S.shirtPlane);const FR=typeof S.frag==='function'?S.frag(o.part||''):S.frag;
+  if(S.vbegin||S.vproj||FR||shirt){const key=STYLE+'|'+(o.part||'')+(shirt?'|s':'');m.customProgramCacheKey=()=>key;
+    m.onBeforeCompile=sh=>{sh.vertexShader='varying vec3 vLoc;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vLoc=position;'+(S.vbegin||'')).replace('#include <project_vertex>','#include <project_vertex>\n'+(S.vproj||''));
+      let f='varying vec3 vLoc;\n'+GLIB+sh.fragmentShader;
+      if(shirt)f=f.replace('#include <color_fragment>','#include <color_fragment>\n if(vLoc.z>0.0&&vLoc.y+vLoc.x*0.9<0.08) diffuseColor.rgb*=0.82; if(abs(vLoc.z)<0.007&&vLoc.y<0.3) diffuseColor.rgb*=0.7;');
+      if(FR)f=f.replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );',FR+'\n gl_FragColor = vec4( outgoingLight, diffuseColor.a );');
+      sh.fragmentShader=f;};}
+  return m;};
+// ink outline: the back faces of each part, pushed out a fixed number of screen pixels
+const inkPx={value:.004};const INK=new T.MeshBasicMaterial({color:0x1b1418,side:T.BackSide});
+INK.onBeforeCompile=sh=>{sh.uniforms.inkPx=inkPx;sh.vertexShader='uniform float inkPx;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\n vec3 inkN=normalize(normalMatrix*normal); vec4 inkC=projectionMatrix*vec4(inkN,0.0); if(length(inkC.xy)>0.0001) gl_Position.xy+=normalize(inkC.xy)*inkPx*gl_Position.w;');};
+function ink(root){const add=[];root.traverse(o=>{if(o.isMesh&&!o.userData.noInk&&o.material!==INK&&!o.material.transparent){o.geometry.computeBoundingSphere();const r=o.geometry.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z);if(r>.02)add.push(o);}});add.forEach(o=>{const h=new T.Mesh(o.geometry,INK);h.userData.noInk=true;h.castShadow=false;o.add(h);});}
+// ---------- venues: a painted plate behind the 3D player, with a locked camera and a matching light preset ----------
+let VEN=null;
+// One venue per Circuit level. Each level has two plates: the oche (side-on throw camera) and the walk-on (front camera).
+// Throw always uses the oche plate; walk-on, celebrate and idle use the walk-on plate. The 3D board is hidden on every plate (it's painted in).
+const OCHE_CAM={pos:[4.7,1.42,.42],look:[0,1.12,.42],fov:40},WALK_CAM={pos:[0,1.42,5.6],look:[0,1.32,0],fov:40};
+const VENUES={
+ pub_oche:{plate:'pub_oche.webp',type:'oche',key:{col:0xffb36b,pos:[-.6,3.2,2.4],k:1.15},rim:{col:0xffd2a0,k:.5},hemi:.7,aim:[.11,.255]},
+ pub_walk:{plate:'pub_walk.webp',type:'walk',key:{col:0xffb36b,pos:[1.2,4.0,4.4],k:1.1},rim:{col:0xffd2a0,k:.55},hemi:.7},
+ club_oche:{plate:'club_oche.webp',type:'oche',key:{col:0xfff0e0,pos:[-.6,3.4,2.2],k:1.05},rim:{col:0xffc890,k:.45},hemi:.75,aim:[.09,.27]},
+ club_walk:{plate:'club_walk.webp',type:'walk',key:{col:0xfff0e0,pos:[1.2,4.2,4.5],k:1.05},rim:{col:0xffc890,k:.5},hemi:.75},
+ opens_oche:{plate:'opens_oche.webp',type:'oche',key:{col:0xffe2bc,pos:[-.6,3.4,2.2],k:1.1},rim:{col:0xffc08a,k:.5},hemi:.75,aim:[.09,.26]},
+ opens_walk:{plate:'opens_walk.webp',type:'walk',key:{col:0xffe0b8,pos:[1.2,4.2,4.5],k:1.1},rim:{col:0xffb070,k:.6},hemi:.75},
+ dpnz_oche:{plate:'dpnz_oche.webp',type:'oche',key:{col:0xffd2a8,pos:[-.6,3.5,2.3],k:1.1},rim:{col:0xff5a4a,k:.8},hemi:.6,aim:[.085,.29]},
+ dpnz_walk:{plate:'dpnz_walk.webp',type:'walk',key:{col:0xffd2a8,pos:[1.5,4.2,4.5],k:1.1},rim:{col:0xff5a4a,k:.9},hemi:.6},
+ tt_oche:{plate:'tt_oche.webp',type:'oche',key:{col:0xffdcb0,pos:[-.6,3.5,2.3],k:1.1},rim:{col:0x3fd6c8,k:.8},hemi:.6,aim:[.09,.30]},
+ tt_walk:{plate:'tt_walk.webp',type:'walk',key:{col:0xffe0b0,pos:[1.3,4.3,4.6],k:1.15},rim:{col:0x3fd6c8,k:1.0},hemi:.55},
+ tc_oche:{plate:'tc_oche.webp',type:'oche',key:{col:0xffe6cc,pos:[-.6,3.5,2.3],k:1.05},rim:{col:0x9aa8ff,k:.55},hemi:.7,aim:[.092,.30]},
+ tc_walk:{plate:'tc_walk.webp',type:'walk',key:{col:0xffe6cc,pos:[1.2,4.4,4.6],k:1.05},rim:{col:0x9aa8ff,k:.6},hemi:.7},
+ palace_walk:{plate:'palace_walk.webp',type:'walk',key:{col:0xfff0d8,pos:[0,4.5,5],k:1.25},rim:{col:0xff3b3b,k:1.3},hemi:.55},
+ palace_oche:{plate:'palace_oche.webp',type:'oche',key:{col:0xffe2c8,pos:[-.6,3.6,2.4],k:1.15},rim:{col:0xff4a3a,k:1.1},hemi:.55,aim:[.07,.28]}
+};
+const LEVELS=[['pub','Pub'],['club','Club'],['opens','Opens'],['dpnz','DPNZ'],['tt','Trans-Tasman'],['tc','Tour Card'],['palace','The Palace']].filter(([k])=>VENUES[k+'_oche']&&VENUES[k+'_walk']||VENUES[k+'_oche']||VENUES[k+'_walk']);
+// the plate for the current level and animation (falls back to the other plate only while a level is still being painted)
+function curV(){if(!VEN)return null;const o=VENUES[VEN+'_oche'],w=VENUES[VEN+'_walk'];const V=anim==='throw'?(o||w):(w||o);if(!V)return null;V.cam=V.cam||(V.type==='oche'?OCHE_CAM:WALK_CAM);if(V.type==='oche'){V.board=false;V.root=V.root||[0,0,-.05];}return V;}
+// how the 9:16 plate sits in the stage (background-size:cover, centred): used to keep the 3D camera and the aim point locked to the painting at any screen shape
+function plateFit(){const w=stage.clientWidth||innerWidth,h=stage.clientHeight||innerHeight,sc=Math.max(w/9,h/16);return{w,h,pw:9*sc,ph:16*sc};}
+function applyVenue(){const V=curV();stage.classList.toggle('plate',!!V);stage.style.backgroundImage=V?'url('+V.plate+')':'none';applyStyle();
+  if(V){key.color.set(V.key.col);key.position.set(...V.key.pos);key.intensity=V.key.k*sty().key/1.4;rim.color.set(V.rim.col);rim.intensity=V.rim.k;hemi.intensity=V.hemi*sty().hemi/.4;board.visible=false;}
+  else{key.color.set(0xffe6c8);rim.color.set(0xffffff);}size();}
+function applyStyle(){const S=sty();SEGF=S.segf||1;const kp=S.keyPos||[2.6,4.2,3.2];key.position.set(kp[0],kp[1],kp[2]);scene.background=VEN?null:new T.Color(S.bg);R.toneMapping=S.tone?T.ACESFilmicToneMapping:T.NoToneMapping;R.toneMappingExposure=S.exp;
+  hemi.intensity=S.hemi;key.intensity=S.key;fill.intensity=S.fill;rim.intensity=S.rim;ground.material.opacity=S.shadow;key.shadow.radius=STYLE==='clay'?8:4;
+  if(S.ink){INK.color.set(S.ink.col).convertSRGBToLinear();}
+  const pr=S.pr?S.pr:Math.min(2,devicePixelRatio||1);R.setPixelRatio(pr);R.domElement.style.imageRendering=S.pr?'pixelated':'auto';size();
+  [board,flyer].forEach(g=>g.traverse(o=>{if(o.material)o.material.needsUpdate=true;}));document.body.style.background='#'+new T.Color(S.bg).getHexString();}
+// faceted rounded box: a segmented box whose corners are pulled in, so it reads as big flat planes
+function facet(w,h,d,round=.35,seg=2,taperTop=0,taperBot=0){
+  const g=new T.BoxGeometry(w,h,d,seg,seg,seg);const p=g.attributes.position;const v=new T.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);
+    const nx=v.x/(w/2),ny=v.y/(h/2),nz=v.z/(d/2);
+    const corner=(Math.abs(nx)+Math.abs(ny)+Math.abs(nz))/3;const k=1-round*Math.max(0,corner-.55);
+    let sx=1;if(ny>0)sx-=taperTop*ny;else sx-=taperBot*(-ny);
+    v.x*=k*sx;v.z*=k*(ny>0?1-taperTop*.6*ny:1-taperBot*.6*(-ny));v.y*=1-round*.25*Math.max(0,corner-.55);
+    p.setXYZ(i,v.x,v.y,v.z);}
+  g.computeVertexNormals();return g;}
+const cyl=(rt,rb,h,s=6)=>new T.CylinderGeometry(rt,rb,h,s,1);
+const slathe=(pts,seg0=14,n0=24)=>{const seg=Math.max(5,Math.round(seg0*SEGF)),n=Math.max(7,Math.round(n0*Math.min(1.3,SEGF+.25)));const q=pts.slice().sort((a,b)=>a[1]-b[1]);const c=new T.CatmullRomCurve3(q.map(([r,y])=>new T.Vector3(r,y,0)),false,'centripetal');const g=new T.LatheGeometry(c.getPoints(n).map(v=>new T.Vector2(Math.max(.001,v.x),v.y)),seg);g.computeVertexNormals();return g;};
+const lathe=(pts,seg0=8,open=false)=>{const seg=Math.max(5,Math.round(seg0*SEGF));const g=new T.LatheGeometry(pts.slice().sort((a,b)=>a[1]-b[1]).map(([r,y])=>new T.Vector2(r,y)),seg);g.computeVertexNormals();return g;};
+// cloth: nudge each vertex a little in or out (seeded by its position) so the fabric breaks into uneven folds; seam vertices move together
+const cloth=(g,amt=.006,seed=1)=>{const p=g.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const r=Math.hypot(v.x,v.z);if(r<.02)continue;const h=Math.sin((Math.round(v.x*300)*12.9898+Math.round(v.y*300)*78.233+Math.round(v.z*300)*37.719+seed)*.7)*43758.5453;const n=(h-Math.floor(h)-.5)*2*amt;const k=(r+n)/r;p.setXYZ(i,v.x*k,v.y,v.z*k);}g.computeVertexNormals();return g;};
+const BODIES={skinny:{sh:.27,chest:.19,waist:.155,hip:.165,depth:.62,arm:.78,leg:.8,neck:.072},standard:{sh:.31,chest:.235,waist:.205,hip:.2,depth:.64,arm:1,leg:1,neck:.086},female:{sh:.27,chest:.215,waist:.165,hip:.215,depth:.66,arm:.8,leg:.96,neck:.068,bust:1},heavy:{sh:.33,chest:.27,waist:.29,hip:.26,depth:.8,arm:1.22,leg:1.28,neck:.1,belly:.2},muscle:{sh:.37,chest:.3,waist:.2,hip:.2,depth:.6,arm:1.42,leg:1.18,neck:.108,pecs:1}};
+let curBody='heavy';
+function mesh(g,m,parent,x=0,y=0,z=0){const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;if(parent)parent.add(o);return o;}
+function tag(o,t){o.userData.tag=t;return o;}
+// the shirt's lower half follows the hips (a two-bone skin): when the chest leans or twists, the hem stays over the trousers
+const SKIN=[];const _Mr=new T.Matrix4(),_K=new T.Matrix4(),_Ki=new T.Matrix4(),_v=new T.Vector3(),_u=new T.Vector3(),_bind=new T.Matrix4().makeTranslation(0,.28,0);
+function skinShirt(){if(!rig||!SKIN.length)return;rig.root.updateMatrixWorld(true);_Mr.copy(rig.chest.matrixWorld).invert().multiply(rig.hips.matrixWorld).multiply(_bind);
+ SKIN.forEach(o=>{const g=o.geometry,p=g.attributes.position;if(!o.userData.base){o.userData.base=p.array.slice();}const b=o.userData.base;o.updateMatrix();_K.copy(o.matrix);_Ki.copy(o.matrix).invert();
+  const K=new T.Matrix4().multiplyMatrices(_Ki,_Mr).multiply(_K);for(let i=0;i<p.count;i++){_v.set(b[3*i],b[3*i+1],b[3*i+2]);const y=_v.y;const w=y>-.1?0:y<-.3?1:((-.1-y)/.2)*((-.1-y)/.2)*(3-2*((-.1-y)/.2));if(w<=0){p.setXYZ(i,_v.x,_v.y,_v.z);continue;}_u.copy(_v).applyMatrix4(K);p.setXYZ(i,_v.x+(_u.x-_v.x)*w,_v.y+(_u.y-_v.y)*w,_v.z+(_u.z-_v.z)*w);}
+  // and the hem rides over a thigh that swings forward under it (cloth pushed out by the leg)
+  if(rig.thighs){o.updateMatrixWorld(true);const Mw=o.matrixWorld,Mi=new T.Matrix4().copy(Mw).invert();const TH=rig.thighs.map(([th,r,len])=>{const a=new T.Vector3().setFromMatrixPosition(th.matrixWorld),bb=new T.Vector3(0,-len,0).applyMatrix4(th.matrixWorld);return [a,bb,r];});const w=new T.Vector3(),c=new T.Vector3(),ab=new T.Vector3();
+   for(let i=0;i<p.count;i++){if(b[3*i+1]>-.2)continue;w.fromBufferAttribute(p,i).applyMatrix4(Mw);let moved=false;for(const [a,bb,r] of TH){ab.subVectors(bb,a);const tt=Math.max(0,Math.min(1,c.subVectors(w,a).dot(ab)/ab.lengthSq()));c.copy(a).addScaledVector(ab,tt);const dv=w.clone().sub(c);const dl=dv.length(),need=r+.006;if(dl<need&&dl>1e-5){w.copy(c).addScaledVector(dv,need/dl);moved=true;}}if(moved){w.applyMatrix4(Mi);p.setXYZ(i,w.x,w.y,w.z);}}}
+  p.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere();});}
+// shirt-surface helpers (chest-local): where the shirt is along a horizontal ray from the body axis, so trims, placket and print sit ON it
+function surfR(tor,y,dx,dz){const tm=new T.Mesh(tor.geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));tor.updateMatrix();tm.matrixWorld.copy(tor.matrix);tm.matrixAutoUpdate=false;const rc=new T.Raycaster();const d=new T.Vector3(dx,0,dz).normalize();for(const j of [0,.004,-.004]){rc.set(new T.Vector3(0,y,0),d.clone().applyAxisAngle(new T.Vector3(0,1,0),j));const h=rc.intersectObject(tm,false);if(h.length)return h[h.length-1].distance;}return 0;}
+function sitOn(o,tor,off){o.updateMatrix();const g=o.geometry=o.geometry.clone();const p=g.attributes.position,v=new T.Vector3(),M=o.matrix,Mi=M.clone().invert();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(M);const r=Math.hypot(v.x,v.z);if(r<.01)continue;const h=surfR(tor,v.y,v.x,v.z);if(h&&r<h+off){const k=(h+off)/r;v.x*=k;v.z*=k;}v.applyMatrix4(Mi);p.setXYZ(i,v.x,v.y,v.z);}g.computeVertexNormals();return o;}
+function pivot(parent,x=0,y=0,z=0){const o=new T.Group();o.position.set(x,y,z);parent.add(o);return o;}
+function chestText(color){const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');x.fillStyle=color;x.font='italic 900 64px Arial Black,Impact,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('TOPS',128,66);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
+
+// ---------- the player ----------
+// five original player models to choose from (not the mates): each has its own build, face, hair and colours
+const LOOKS={
+ ray:{name:'Ray',tag:'The Veteran',body:'heavy',dep:1.1,legK:.95,skin:0xe2a17e,shirt:0x7a1f2b,trim:0xf2f2f2,hair:'horseshoe',hairC:0x75706a,face:'walrus',beardC:0xa8a29a,brow:0x8d8780,glasses:true,nose:1.25,jaw:1.15,shW:.92,fore:1.1,big:true},
+ kai:{name:'Kai',tag:'The Young Gun',body:'skinny',armK:.92,legK:1.04,skin:0xa8693f,shirt:0x0e7c86,trim:0xf2f2f2,hair:'quiff',hairC:0x141010,face:'clean',brow:0x141010,nose:.9,jaw:.92,shW:.96,fore:.95},
+ tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0x7f4d30,shirt:0x2a2b33,trim:0xd9252e,hair:'buzz',hairC:0x120d0b,face:'goatee',beardC:0x120d0b,brow:0x120d0b,nose:1.1,jaw:1.18,shW:1.15,chW:1.16,fore:1.05,waistK:.92},
+ dazza:{name:'Dazza',tag:'The Showman',body:'standard',legK:1.06,skin:0xe8b08a,shirt:0xe0a21c,trim:0x1c1c22,hair:'mullet',hairC:0x8f6326,face:'full',beardC:0x8c5f2a,brow:0x9a6c36,nose:1.05,jaw:1.0,band:true,shW:1.06,waistK:.9},
+ mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xc98e64,shirt:0x5b2a86,trim:0xf2f2f2,hair:'ponytail',hairC:0x3a2416,face:'clean',brow:0x2e1c11,nose:.78,jaw:.84,shW:.92,fore:.88,soft:true,handK:.9}
+};
+let P=null,rig=null;
+const sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+// sculpt the torso: wide sloping shoulders flowing into the traps, plus belly or pecs pushed out of the same surface (one mesh, no stuck-on parts)
+function sculpt(g,B){const p=g.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const r=Math.hypot(v.x,v.z);if(r<.002)continue;const y=v.y;
+  const wide=1+.12*sm(.1,.34,y)*(1-sm(.37,.43,y));v.x*=wide;
+  const fx=Math.min(1,Math.abs(v.x)/(B.sh*.9));v.y-=.06*fx*fx*sm(.3,.4,y);
+  const front=Math.max(0,v.z/r);
+  if(y<-.25)v.y-=.018*front*front;
+  if(B.belly)v.z+=B.belly*.62*Math.exp(-Math.pow((y+.1)/.14,2))*front*front;
+  if(B.bust)v.z+=.042*Math.exp(-Math.pow((y-.19)/.065,2)-Math.pow((Math.abs(v.x)-.07)/.055,2))*Math.pow(front,1.3);
+  if(B.pecs)v.z+=.045*Math.exp(-Math.pow((y-.24)/.075,2))*Math.pow(front,1.5)*(1-.5*Math.exp(-Math.pow(v.x/.025,2)));
+  p.setXYZ(i,v.x,v.y,v.z);}g.computeVertexNormals();return g;}
+function build(look){
+  if(P){scene.remove(P);P.traverse(o=>{if(o.geometry)o.geometry.dispose();});}SKIN.length=0;
+  const L=LOOKS[look];const LK=L.legK||1;const S=(L.big?1.04:1)*(1+(LK-1)*.9);const GK=sty().geo||{};
+  const skin=M(L.skin,{part:'skin'}),shirt=M(L.shirt,{part:'shirt'}),trim=M(L.trim,{part:'trim'}),pants=M(sty().lift?0x2c2e36:0x1e1f24,{part:'pants'}),shoe=M(0x121214,{part:'shoe'}),dark=M(0x141210,{part:'face'}),hairM=M(L.hairC||0x222222,{part:'hair'}),beardM=M(L.beardC||0x222222,{part:'hair',side:T.DoubleSide}),browM=M(L.brow||0x222222,{part:'hair'});
+  const root=new T.Group();scene.add(root);P=root;
+  const B=Object.assign({},BODIES[curBody]||BODIES.standard);B.sh*=L.shW||1;B.chest*=L.chW||1;B.waist*=L.waistK||1;const A=B.arm*(L.armK||1),G=B.leg,D=B.depth*(L.dep||1);const FA=L.fore||1;
+  const hips=pivot(root,0,.86*S,0);
+  tag(mesh(lathe([[.001,-.2],[B.hip*.8,-.17],[B.hip*1.08,-.11],[B.hip*.98,-.06],[B.waist*.8,.0],[B.waist*.7,.05],[.001,.06]],20),pants,hips),'pants').scale.z=D*1.02;
+  // legs: full thigh, a soft knee, a calf that tapers to the ankle; trousers, so the shape is gentle
+  const leg=(side)=>{const th=pivot(hips,B.hip*.54*side,-.06,0);const t=.12*G;
+    const tg=tag(mesh(slathe([[.001,.0],[t*.86,-.015],[t*1.08,-.08],[t*.98,-.23],[t*.75,-.38],[.001,-.42]],16),pants,th),'pants');tg.scale.y=LK;tg.rotation.z=.03*side;
+    const kn=pivot(th,0,-.41*LK,0);mesh(new T.IcosahedronGeometry(t*.72,2),pants,kn);
+    mesh(slathe([[.001,.02],[t*.72,0],[t*.82,-.1],[t*.63,-.26],[t*.5,-.37],[.001,-.4]],16),pants,kn).scale.y=LK;
+    const an=pivot(kn,0,-.39*LK,0);const sh=mesh(facet(.11,.068,.205,.5,2,.18,0),shoe,an,0,-.04,.038);sh.scale.setScalar(GK.foot||1);return {th,kn,an};};
+  const lL=leg(-1),lR=leg(1);const thighs=[lL,lR].map(l=>[l.th,.12*G*1.1,.36*LK]);
+  const spine=pivot(hips,0,.06,0);
+  const chest=pivot(spine,0,.22,0);
+  // shirt: one continuous torso surface from collar to hem, sitting loose over the body
+  const sw=Math.max(B.waist,B.chest*.9)+.02, hem=Math.max(sw*1.16+(B.hip>.21?.03:0),(B.hip*.54+.12*B.leg*1.12)*1.12+.022,B.hip*1.2+.02);
+  const shirtTop=[[.001,.44],[B.neck*1.45,.435],[B.sh*.7,.362],[B.chest*1.04+.015,.31],[B.chest*1.09+.018,.18],[sw*.97,-.06],[hem,-.35],[hem*1.025,-.385],[hem*.92,-.39],[.001,-.39]];
+  const shirtT=M(L.shirt,{shirt:true,part:'shirt'});
+  const tor=tag(mesh(cloth(sculpt(slathe(shirtTop,22,30),B),.0025,1),shirtT,chest),'shirt');tor.scale.z=D*1.02;SKIN.push(tor);
+  // a thin darker hem band that follows the same surface
+  SKIN.push(tag(mesh(sculpt(lathe([[hem*1.031,-.39],[hem*1.02,-.365],[hem*.95,-.36],[hem*.95,-.395]],22),B),M(new T.Color(L.shirt).multiplyScalar(.78).getHex()),chest),'hem'));SKIN[SKIN.length-1].scale.z=D*1.02;
+  const cz=(B.chest*1.09+.018)*D*1.02;
+  // collar and placket
+  // polo collar: a stand round the neck and a fold-down band that lies on the shoulders, open in a V at the front, white edge
+  const cg=(pts,ph0,ph)=>{const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),14,ph0,ph);g.computeVertexNormals();return g;};
+  const stand=tag(mesh(cg([[B.neck*1.19,.415],[B.neck*1.14,.468]],.35,Math.PI*2-.7,),M(L.shirt,{side:T.DoubleSide}),chest),'collar');
+  sitOn(tag(mesh(cg([[B.neck*1.19,.472],[B.neck*1.75,.415]],.5,Math.PI*2-1.0),M(L.shirt,{side:T.DoubleSide,roughness:.8}),chest),'fold'),tor,.004).scale.z=1.04;
+  sitOn(tag(mesh(cg([[B.neck*1.74,.418],[B.neck*1.79,.41]],.5,Math.PI*2-1.0),M(L.trim,{side:T.DoubleSide}),chest),'fold'),tor,.006).scale.z=1.04;
+  const pz=cz+(B.pecs?.035:0)+(B.belly?.01:0);
+  {const sz=y=>Math.max(...[-.008,0,.008].map(k=>Math.max(surfR(tor,y+k,.02,1),surfR(tor,y+k,-.02,1))))||pz*.9;const pl=tag(mesh(new T.BoxGeometry(.045,.12,.004,1,6,1),M(new T.Color(L.shirt).multiplyScalar(.86).getHex()),chest,0,.35,0),'placket');sitOn(pl,tor,.0032);[.38,.33].forEach(y=>tag(mesh(new T.CylinderGeometry(.007,.007,.004,8),trim,chest,0,y,sz(y)+.0065),'placket').rotation.x=Math.PI/2);}
+  const pr=new T.Mesh(new T.PlaneGeometry(.16,.08,12,4),new T.MeshStandardMaterial({map:chestText('#ffffff'),transparent:true,roughness:.9}));{const r=surfR(tor,.255,Math.sin(.28),Math.cos(.28));pr.position.set(Math.sin(.28)*(r-.01),.255,Math.cos(.28)*(r-.01));}pr.rotation.y=.28;chest.add(pr);sitOn(tag(pr,'placket'),tor,.0025);/* the print wraps onto the chest curve */
+  const back=new T.Mesh(new T.PlaneGeometry(.26,.13,16,6),new T.MeshStandardMaterial({map:chestText('#ffffff'),transparent:true,roughness:.9}));back.position.set(0,.22,-(surfR(tor,.22,0,-1)||cz)-.004);back.rotation.y=Math.PI;chest.add(back);back.position.z+=.012;sitOn(tag(back,'placket'),tor,.0025);
+  // neck + head
+  const neck=pivot(chest,0,.41,0);const nkm=tag(mesh(cyl(B.neck*1.05,B.neck*1.25,.17,12),skin,neck,0,.05,0),'neck');nkm.rotation.x=.07;
+  // collar stand fitted to the real (forward-leaning) neck: every vertex sits 2.5 mm off the neck surface, so no gap and no poke
+  {chest.updateMatrixWorld(true);const ci=new T.Matrix4().copy(chest.matrixWorld).invert();const nm=new T.Mesh(nkm.geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));nm.matrixWorld.copy(ci).multiply(nkm.matrixWorld);nm.matrixAutoUpdate=false;
+   const g=stand.geometry=stand.geometry.clone(),p=g.attributes.position,v=new T.Vector3(),rc=new T.Raycaster();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const d=new T.Vector3(v.x,0,v.z).normalize();rc.set(new T.Vector3(0,v.y,0),d);const h=rc.intersectObject(nm,false);if(h.length){const r=h[h.length-1].distance+.0025;p.setXYZ(i,d.x*r,v.y,d.z*r);}}g.computeVertexNormals();}
+  const head=pivot(neck,0,.068,0);head.scale.setScalar(1.06*(sty().headK||1));
+  const hs=L.big?1.06:1;const HC=.175*hs;
+  // one sculpted head: a sphere pushed into a skull, cheekbones, a jaw that tapers to the chin, a brow, a nose and soft eye sockets, all one surface
+  const hg=new T.SphereGeometry(1,Math.max(8,Math.round(20*SEGF)),Math.max(6,Math.round(14*SEGF)));{const p=hg.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);
+    // a slightly boxy skull (superellipse), width:height:depth about .82:1:.78
+    const bx=(c,e)=>Math.sign(c)*Math.pow(Math.abs(c),e);const ux=bx(v.x,.82),uy=v.y,uz=bx(v.z,v.z<0?.72:.85);
+    let x=ux*.141,y=uy*.172,z=uz*.134;const ax=Math.abs(x),fr=sm(.15,.55,v.z);
+    if(y>.1)y*=1-.04*sm(.1,.172,y);
+    x*=1-.22*(2-(L.jaw||1))*sm(-.055,-.14,y);z*=1-.1*sm(-.04,-.172,y);           // jaw narrows toward the chin
+    x*=1+.05*Math.exp(-Math.pow((y-.0)/.04,2));                  // cheekbones
+    z-=fr*.008*sm(.05,.1,ax)*Math.exp(-Math.pow((y+.03)/.035,2)); // flat cheek plane under the cheekbone
+    if(v.z<0)z*=.87;z+=.014*sm(-.04,-.12,y)*sm(-.2,.3,v.z);if(y<-.13)y=-.13+(y+.13)*.55;
+    z+=fr*.012*Math.exp(-Math.pow((y+.15)/.035,2)-Math.pow(x/.07,2));   // broad chin
+    z+=fr*.018*Math.exp(-Math.pow((y-.065)/.02,2))*sm(.11,.03,ax);      // brow ridge
+    z-=fr*.006*Math.exp(-Math.pow((y-.035)/.018,2)-Math.pow((ax-.036)/.02,2)); // eye sockets
+    p.setXYZ(i,x*hs,y*hs+HC,z*hs);}hg.computeVertexNormals();}
+  const sk=mesh(hg,skin,head);
+  head.position.z=-.018;
+  const ray=new T.Raycaster(),probe=new T.Mesh(hg,new T.MeshBasicMaterial({side:T.DoubleSide}));probe.updateMatrixWorld(true);
+  const surf=(x,y0,side=0)=>{const y=y0+HC;const o=side?new T.Vector3(side,y,0):new T.Vector3(x,y,1),d=side?new T.Vector3(-Math.sign(side),0,0):new T.Vector3(0,0,-1);if(side)o.z=x;ray.set(o,d);const h=ray.intersectObject(probe)[0];return h?h.point:new T.Vector3(x,y,.14);};
+  // hair and beards grow out of the same surface: copy the head, push masked areas out, tuck the rest just inside
+  const grow=(mask,th,mat)=>{const g=hg.clone(),p=g.attributes.position,n=hg.attributes.normal,v=new T.Vector3(),nv=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);nv.fromBufferAttribute(n,i);const m=mask(v.x/hs,(v.y-HC)/hs,v.z/hs);v.addScaledVector(nv,th*m-.006*(1-m));p.setXYZ(i,v.x,v.y,v.z);}g.computeVertexNormals();return mesh(g,mat,head);};
+  const lipC=M(new T.Color(L.skin).multiplyScalar(.42).getHex());
+  // nose: a short angular wedge with a few deliberate planes, sitting into the face
+  {const nb=surf(0,.0*hs);const k=hs;const P=[[0,.028,-.01],[-.0135,.014,-.004],[.0135,.014,-.004],[0,-.03,.048*(L.nose||1)*(GK.nose||1)],[-.024,-.044,.002],[.024,-.044,.002],[0,-.048,.024*(L.nose||1)*(GK.nose||1)]].map(([x,y,z])=>new T.Vector3(x*k,y*k+nb.y,z*k+nb.z-.006));
+   const F=[[1,4,3],[1,3,0],[0,3,2],[2,3,5],[4,6,3],[3,6,5],[1,0,2],[4,1,5]];const pos=[];F.forEach(f=>f.forEach(ix=>pos.push(P[ix].x,P[ix].y,P[ix].z)));
+   const ng=new T.BufferGeometry();ng.setAttribute('position',new T.Float32BufferAttribute(pos,3));ng.computeVertexNormals();mesh(ng,M(L.skin,{side:T.DoubleSide}),head);}
+  const fullMask=(x,y,z)=>{const ax=Math.abs(x);const back=sm(-.03,-.01,z);
+      const jaw=sm(-.084,-.09,y),side=.72*sm(.104,.11,ax)*sm(.01,.0,y)*sm(.065,.035,z),cheek=.75*sm(.06,.068,ax)*sm(-.058,-.066,y),must=.7*sm(.064,.058,ax)*sm(-.054,-.06,y);
+      return Math.max(jaw,side,cheek,must)*back;};
+  const stubM=M(new T.Color(L.skin).lerp(new T.Color(L.beardC||L.hairC||0x222222),.42).getHex());
+  if(L.face==='full')grow(fullMask,.011,beardM);
+  if(L.face==='stubble')grow(fullMask,.0028,stubM);
+  if(L.face==='walrus')grow((x,y,z)=>{const ax=Math.abs(x);return sm(0,.04,z)*sm(.085,.07,ax)*sm(-.05,-.058,y)*sm(-.098,-.088,y)*(ax>.05?sm(-.11,-.09,y)+1:1);},.014,beardM);
+  if(L.face==='goatee')grow((x,y,z)=>{const ax=Math.abs(x);const must=sm(.056,.046,ax)*sm(-.056,-.062,y)*sm(-.08,-.074,y),chin=sm(.04,.03,ax)*sm(-.096,-.104,y),link=sm(.056,.046,ax)*sm(.03,.038,ax)*sm(-.06,-.066,y)*sm(-.11,-.1,y);return Math.max(must,chin,link)*sm(-.02,0,z);},.012,beardM);
+  if(L.face!=='full'){const lp=surf(0,-.094*hs);mesh(new T.BoxGeometry(L.soft?.034:.03,L.soft?.009:.006,.004),L.soft?M(0xa4544a):lipC,head,0,lp.y,lp.z-.0015);}
+  // eyes set into the sockets, brows that follow the brow ridge, ears on the side of the head
+  [-1,1].forEach(s=>{const e=surf(.036*s*hs,.035*hs);const eg=mesh(new T.SphereGeometry(.0185,10,8),dark,head,e.x,e.y,e.z-.005);eg.scale.set(1,1.3,.45);
+    if(L.soft){const lw=mesh(new T.BoxGeometry(.036,.006,.008),dark,head,e.x+.004*s,e.y+.021,e.z-.001);lw.rotation.z=-.18*s;}
+    const b=surf(.039*s*hs,.066*hs);const br=mesh(facet(.064,.019,.02,.4,1,.0,.1),browM,head,b.x,b.y+(GK.asym?(s>0?.004:-.002)*((look.length%3)-1||1):0),b.z-.004);br.rotation.set(-.12,.26*s,.04*s+(GK.asym?.08*s*((look.length%2)?1:-1):0));
+    const ea=surf(-.008,.008*hs,s);const er=mesh(new T.SphereGeometry(1,8,6),skin,head,ea.x-.004*s,ea.y,ea.z);er.scale.set(.011*(GK.ear||1),.036*(GK.ear||1),.024*(GK.ear||1));er.rotation.y=-.3*s;});
+  if(L.glasses){const gm=M(0x111111,{roughness:.4});[-1,1].forEach(s=>{const e=surf(.036*s*hs,.035*hs);const fr=mesh(new T.TorusGeometry(.029,.0035,6,18),gm,head,e.x,e.y,e.z+.004);fr.scale.y=.72;fr.rotation.y=.18*s;
+      const l=mesh(new T.CircleGeometry(.027,16),new T.MeshStandardMaterial({color:0xbad4e6,transparent:true,opacity:.3,roughness:.1}),head,e.x,e.y,e.z+.004);l.scale.y=.72;l.rotation.y=.18*s;l.castShadow=false;
+      });
+    const c=surf(0,.04*hs);mesh(new T.BoxGeometry(.03,.005,.005),gm,head,0,c.y,c.z+.012);}
+  const hairLine=(line)=>(x,y,z)=>{const ax=Math.abs(x);const fy=line-.045*sm(.05,.11,ax);const mf=sm(fy-.012,fy+.008,y),mb=sm(-.095,-.065,y),ms=sm(.02,.04,y);return lerp(lerp(mb,ms,sm(-.07,-.03,z)),mf,sm(.03,.07,z))*(1-sm(.105,.125,ax)*sm(.045,.02,y)*sm(-.06,.0,z));};
+  const hairMask=hairLine(.125);
+  if(L.hair==='short')grow(hairMask,.016,hairM);
+  if(L.hair==='buzz')grow(hairLine(.12),.0032,M(new T.Color(L.skin).lerp(new T.Color(L.hairC),.55).getHex()));
+  // Ray: short grey hair receding at the crown front (a full horseshoe read as a bandage from behind)
+  if(L.hair==='horseshoe')grow((x,y,z)=>hairLine(.125)(x,y,z)*(1-.92*sm(.07,.115,y)*sm(-.03,.05,z)),.011,hairM);
+  if(L.hair==='horseshoe'){const rootM=M(new T.Color(L.hairC).multiplyScalar(.6).getHex(),{part:'hair'});[-1,1].forEach(s=>{[[.115,.035,-.02,1],[.11,-.005,-.05,.9],[.085,.04,-.08,.85]].forEach(([x,y,z,k],i)=>{const tf=mesh(new T.IcosahedronGeometry(.03*k,1),i===1?rootM:hairM,head,x*s*hs,HC+y*hs,z*hs);tf.scale.set(.7,.9,1.2);tf.rotation.set(.3,.4*s,.3*s);});});}
+  if(L.hair==='quiff'){grow((x,y,z)=>hairLine(.12)(x,y,z)*(.35+.65*sm(.07,.11,y)*sm(.105,.07,Math.abs(x))),.03,hairM);
+    for(let i=0;i<4;i++){const q=mesh(new T.IcosahedronGeometry(.05,1),hairM,head,(i-1.5)*.03,HC+.15*hs+.012*(1-Math.abs(i-1.5)/1.5),.085-.012*Math.abs(i-1.5));q.scale.set(.9,.62,1.25);q.rotation.set(-.55,0,(i-1.5)*.2);}}
+  if(L.hair==='mullet'){grow(hairLine(.115),.02,hairM);const mh=mesh(facet(.21,.17,.07,.45,2,.0,.25),hairM,head,0,HC-.085*hs,-.105*hs);mh.rotation.x=.22;
+    [-1,1].forEach(s=>{const sb=mesh(facet(.03,.07,.05,.4,1),hairM,head,.128*s*hs,HC-.005,.0);});
+    const rootM=M(new T.Color(L.hairC).multiplyScalar(.62).getHex(),{part:'hair'});grow((x,y,z)=>hairLine(.112)(x,y,z)*sm(.02,-.04,z),.012,rootM);
+    [[-.05,.13,.02,.95],[.05,.13,.01,.9],[0,.15,-.03,1],[-.07,.09,-.07,.85],[.07,.09,-.07,.85],[0,.1,-.1,.95]].forEach(([x,y,z,k],i)=>{const c=mesh(new T.IcosahedronGeometry(.045*k,1),i>2?rootM:hairM,head,x*hs,HC+y*hs,z*hs);c.scale.set(1.15,.55,1.1);c.rotation.set(-.4+(i%2)*.2,i*.7,(x>0?-1:1)*.25);});}
+  if(L.hair==='ponytail'){grow(hairLine(.135),.016,hairM);const bun=mesh(new T.IcosahedronGeometry(.042,1),hairM,head,0,HC+.07*hs,-.15*hs);
+    const tail=mesh(slathe([[.001,.0],[.034,-.02],[.04,-.07],[.03,-.15],[.012,-.2],[.001,-.21]],10),hairM,bun,0,-.01,-.01);tail.rotation.x=.45;
+    mesh(new T.TorusGeometry(.03,.008,6,12),M(0xd9252e),bun,0,-.015,-.01).rotation.x=Math.PI/2+.45;}
+  // arms: oversized but anatomical. Deltoid cap, bicep, a narrower elbow, forearm bulge, thin wrist, chunky fist.
+  const arm=(s)=>{const sh=pivot(chest,B.sh*.94*s,.31,0);const a=.085*A;
+    tag(mesh(slathe([[.001,-.02],[a*.7,-.03],[a*.92,-.07],[a*1.0,-.15],[a*.95,-.26],[a*.8,-.34],[.001,-.36]],16),skin,sh),'upperarm');
+    // fitted sleeve: hugs the deltoid and tapers onto the upper arm; the open end tucks in to the arm, so no bucket and no hollow
+    const SL=[[.001,.034],[a*.92,.028],[a*1.16,.006],[a*1.23,-.04],[a*1.24,-.11],[a*1.28,-.162],[a*1.06,-.17]];
+    const slv=tag(mesh(cloth(slathe(SL,16,20),.0015,2),shirt,sh),'sleeve');
+    const gus=mesh(new T.IcosahedronGeometry(a*1.05,1),shirt,sh,-.045*s,-.055,0);gus.scale.set(1,1.25,.95);// underarm: fills the gap between sleeve and body
+    const sr=(y0,y1)=>{const p=slv.geometry.attributes.position;let m=0;for(let i=0;i<p.count;i++){const y=p.getY(i);if(y>=y0-.012&&y<=y1+.012)m=Math.max(m,Math.hypot(p.getX(i),p.getZ(i)));}return m;};
+    const rc=sr(-.156,-.14)+.0035,rs=sr(-.139,-.131)+.0045;const cf=tag(mesh(new T.CylinderGeometry(rc,rc,.016,24,1,true),M(L.trim,{side:T.DoubleSide}),sh,0,-.148,0),'cuff');tag(mesh(new T.CylinderGeometry(rs,rs,.008,24,1,true),M(0xd9252e,{side:T.DoubleSide}),sh,0,-.135,0),'cuff').castShadow=false;cf.castShadow=false;
+    const el=pivot(sh,0,-.35,0);el.scale.y=GK.fore||1;mesh(new T.IcosahedronGeometry(a*.8,2),skin,el);
+    mesh(slathe([[.001,.03],[a*.82*FA,.01],[a*.96*FA,-.08],[a*.84*FA,-.16],[a*.58*FA,-.26],[a*.5*FA,-.3],[.001,-.31]],16),skin,el);
+    const wr=pivot(el,0,-.29,0);const k=Math.sqrt(A)*(GK.hand||1)*(L.handK||1);
+    if(L.band&&s===1)mesh(new T.CylinderGeometry(a*.6,a*.62,.07,10),M(L.shirt,{roughness:.95}),el,0,-.26,0);// sweatband
+    const hand=mesh(facet(.135*k,.15*k,.12*k,.42,2,.05,.12),skin,wr,0,-.08*k,.005);
+    mesh(facet(.135*k,.04*k,.045*k,.4,1),skin,wr,0,-.13*k,.048*k);// knuckle ridge
+    const th=mesh(facet(.045*k,.08*k,.05*k,.4,1),skin,wr,.068*s*k,-.07*k,.035*k);th.rotation.z=.35*s;
+    return {sh,el,wr,hand};};
+  const aL=arm(-1),aR=arm(1);
+  const dart=new T.Group();const brass=M(0xc9a24a,{metalness:.6,roughness:.35});const flightM=M(0xd9252e,{roughness:.6,side:T.DoubleSide});
+  mesh(cyl(.008,.008,.06,6),brass,dart,0,0,0);mesh(cyl(.002,.006,.035,5),M(0xdddddd,{metalness:.8,roughness:.2}),dart,0,.047,0);mesh(cyl(.004,.004,.04,5),M(0x111111),dart,0,-.05,0);
+  [0,1].forEach(k=>{const f=mesh(new T.PlaneGeometry(.04,.045),flightM,dart,0,-.085,0);f.rotation.y=k*Math.PI/2;});
+  aL.wr.add(dart);dart.position.set(0,-.11,.07);dart.rotation.x=Math.PI/2;
+  if(sty().ink)ink(root);
+  rig={root,hips,spine,chest,neck,head,lL,lR,aL,aR,dart,S,thighs};
+  pose0();
+}
+// ---------- poses ----------
+function pose0(){const r=rig;[r.hips,r.spine,r.chest,r.neck,r.head,r.lL.th,r.lL.kn,r.lL.an,r.lR.th,r.lR.kn,r.lR.an,r.aL.sh,r.aL.el,r.aL.wr,r.aR.sh,r.aR.el,r.aR.wr].forEach(o=>o.rotation.set(0,0,0));r.root.position.set(0,0,0);r.root.rotation.set(0,0,0);r.hips.position.y=.86*r.S;}
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;const lerp=(a,b,t)=>a+(b-a)*t;const cl=t=>Math.max(0,Math.min(1,t));
+// flying dart for the throw
+const flyer=new T.Group();scene.add(flyer);flyer.visible=false;let throwFrom=null;
+const board=new T.Group();scene.add(board);
+(function(){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');const cx=256;x.fillStyle='#111';x.beginPath();x.arc(cx,cx,250,0,7);x.fill();
+ const ring=(r0,r1,a,b)=>{for(let i=0;i<20;i++){x.fillStyle=i%2?a:b;x.beginPath();x.arc(cx,cx,r1,(i-.5)/20*Math.PI*2-Math.PI/2,(i+.5)/20*Math.PI*2-Math.PI/2);x.arc(cx,cx,r0,(i+.5)/20*Math.PI*2-Math.PI/2,(i-.5)/20*Math.PI*2-Math.PI/2,true);x.fill();}};
+ ring(0,200,'#f1e6cc','#1b1b1b');ring(190,200,'#2e8a4a','#c8282e');ring(116,126,'#2e8a4a','#c8282e');x.fillStyle='#2e8a4a';x.beginPath();x.arc(cx,cx,18,0,7);x.fill();x.fillStyle='#c8282e';x.beginPath();x.arc(cx,cx,8,0,7);x.fill();
+ const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;const f=new T.Mesh(new T.CircleGeometry(.23,40),new T.MeshStandardMaterial({map:t,roughness:.9}));f.position.z=.016;board.add(f);
+ const back=new T.Mesh(new T.CylinderGeometry(.23,.23,.03,40),M(0x111111));back.rotation.x=Math.PI/2;board.add(back);board.position.set(0,1.73,2.37);board.rotation.y=Math.PI;board.traverse(o=>{if(o.isMesh)o.castShadow=true;});})();
+board.visible=false;
+
+// ---------- animations ----------
+let anim='walkon',t0=performance.now();
+const ANIMS={
+ idle(t){const r=rig;const b=Math.sin(t*1.6);r.chest.rotation.x=.02*b;r.head.rotation.y=.15*Math.sin(t*.5);r.aL.sh.rotation.z=-.08;r.aR.sh.rotation.z=.08;r.aL.el.rotation.x=-.12;r.aR.el.rotation.x=-.12;r.hips.position.y=.86*r.S+.004*b;},
+ walkon(t){// walk out with arms swinging, one fist pump on the way, stop, turn a full circle as the arms go up, then work the crowd
+  const r=rig;const u=t%8;const walk=1-sm(2.9,3.4,u);const ph=u*5.2;const s=Math.sin(ph),c=Math.cos(ph);
+  r.lL.th.rotation.x=-.6*s*walk;r.lR.th.rotation.x=.6*s*walk;r.lL.kn.rotation.x=.7*Math.max(0,c)*walk;r.lR.kn.rotation.x=.7*Math.max(0,-c)*walk;
+  r.lL.an.rotation.x=-.2*s*walk;r.lR.an.rotation.x=.2*s*walk;
+  r.hips.position.y=.86*r.S-.012*walk+.034*Math.abs(c)*walk;r.hips.rotation.y=.1*s*walk;r.hips.rotation.z=.035*s*walk;r.chest.rotation.y=-.13*s*walk;r.chest.rotation.x=-.03+.11*walk;r.chest.rotation.z=-.03*s*walk;
+  // natural arm swing, opposite to the legs
+  let lx=.38*s*walk,rx=-.38*s*walk,le=-.25-.15*Math.max(0,s)*walk,re=-.25-.15*Math.max(0,-s)*walk,lz=-.1,rz=.1;
+  // fist pump on the way out (right arm), 1.4 to 2.5 s
+  const fp=sm(1.4,1.65,u)*(1-sm(2.25,2.55,u));const sh=Math.sin(u*14)*.08*sm(1.6,1.7,u)*(1-sm(2.15,2.25,u));
+  rx=lerp(rx,-1.15+sh,fp);re=lerp(re,-2.05,fp);rz=lerp(rz,.3,fp);
+  // stop, turn a full circle while the arms rise, 3.2 to 4.8 s
+  const spin=ease(cl((u-3.2)/1.6));r.root.rotation.y=spin*Math.PI*2;
+  const up=sm(3.6,4.6,u)*(1-sm(7.2,7.8,u));const pump=Math.sin((u-4.6)*6)*.25*sm(4.6,4.9,u)*(1-sm(7,7.2,u));
+  lx=lerp(lx,-2.75-pump,up);rx=lerp(rx,-2.75+pump,up);le=lerp(le,-.35,up);re=lerp(re,-.35,up);lz=lerp(lz,-.38,up);rz=lerp(rz,.38,up);
+  r.aL.sh.rotation.set(lx,0,lz);r.aR.sh.rotation.set(rx,0,rz);r.aL.el.rotation.x=le;r.aR.el.rotation.x=re;
+  r.aL.wr.rotation.x=r.aR.wr.rotation.x=-.15;
+  r.head.rotation.x=lerp(.02,-.2,up)+.05*Math.sin(u*3)*up;r.head.rotation.y=.3*Math.sin(u*.9)*(1-up*.5);
+  r.root.position.z=lerp(-1.4,.55,ease(cl(u/3.3)));r.dart.visible=false;},
+ throw(t){// side-on darts stance: front foot at the oche, body turned, leaning forward; set, sight, draw back, release, follow through
+  const r=rig;const T0=2.8;const u=(t%T0)/T0;const VV=curV();board.visible=!VV;r.root.position.set(...(VV&&VV.root||[0,0,-.12]));r.root.rotation.y=1.12;
+  // stance: weight on the front (right) leg, back leg trailing on the ball of the foot, upper body leaning toward the board
+  const breathe=.006*Math.sin(t*2.2);
+  r.hips.rotation.set(.1,0,.1);r.spine.rotation.set(.12+breathe,0,.1);r.chest.rotation.set(.06,-.16,0);
+  r.lL.th.rotation.set(-.14,0,-.1);r.lL.kn.rotation.x=.08;r.lL.an.rotation.x=.04;
+  r.lR.th.rotation.set(.3,0,-.02);r.lR.kn.rotation.x=.32;r.lR.an.rotation.x=.45;
+  r.hips.position.y=.86*r.S-.012;
+  r.aR.sh.rotation.set(-.12,0,.1);r.aR.el.rotation.x=-.28;r.aR.wr.rotation.x=0;
+  // throwing arm (right): elevation of the upper arm and elbow bend through the throw
+  let e,el,wr,set;
+  if(u<.16){const k=ease(u/.16);set=k;e=-.06;el=lerp(-.35,-1.6,k);wr=-.2;}                 // bring the dart up to the eye
+  else if(u<.42){set=1;e=-.06+.003*Math.sin(u*60);el=-1.6;wr=-.2;}                        // sight
+  else if(u<.5){const k=ease((u-.42)/.08);set=1;e=-.07;el=lerp(-1.6,-2.15,k);wr=lerp(-.2,-.5,k);}   // draw back, elbow stays put
+  else if(u<.545){const k=(u-.5)/.045;set=1;e=lerp(-.07,.0,k);el=lerp(-2.15,-.26,k*k*(3-2*k));wr=lerp(-.5,-.35,k);} // snap open
+  else if(u<.6){const k=(u-.545)/.055;set=1;e=-.03;el=-.26;wr=lerp(-.35,.4,ease(k));}     // late wrist
+  else if(u<.8){set=1;e=-.02;el=-.24;wr=.4;}                                                // hold the follow-through at the target
+  else {const k=ease((u-.8)/.2);set=1-k;e=-.02;el=lerp(-.24,-.35,k);wr=lerp(.4,0,k);}    // drop the arm
+  r.root.updateMatrixWorld(true);
+  const sh=r.aL.sh,par=sh.parent;const shW=new T.Vector3().setFromMatrixPosition(sh.matrixWorld);
+  let aimPt=new T.Vector3(0,1.73,2.37);if(VV&&VV.aim){placeCam();cam.updateMatrixWorld();const rc=new T.Raycaster();{const F=plateFit();const ax=(F.w-F.pw)/2+VV.aim[0]*F.pw,ay=(F.h-F.ph)/2+VV.aim[1]*F.ph;rc.setFromCamera(new T.Vector2(2*ax/F.w-1,1-2*ay/F.h),cam);}const pl=new T.Plane(new T.Vector3(0,0,-1),2.37);const hit=new T.Vector3();if(rc.ray.intersectPlane(pl,hit))aimPt=hit;}const hz=new T.Vector3(aimPt.x-shW.x,0,aimPt.z-shW.z).normalize();
+  const dW=hz.clone().multiplyScalar(Math.cos(e)).add(new T.Vector3(0,Math.sin(e),0)).normalize();
+  const pq=new T.Quaternion();par.getWorldQuaternion(pq);const iq=pq.clone().invert();
+  const d=dW.clone().applyQuaternion(iq),up=new T.Vector3(0,1,0).applyQuaternion(iq);
+  const zb=up.clone().addScaledVector(d,-up.dot(d)).normalize(),yb=d.clone().negate(),xb=new T.Vector3().crossVectors(yb,zb);
+  const aimQ=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(xb,yb,zb));
+  const restQ=new T.Quaternion().setFromEuler(new T.Euler(-.15,0,-.12));
+  sh.quaternion.copy(restQ).slerp(aimQ,set);r.aL.el.rotation.x=el;r.aL.wr.rotation.x=wr;
+  // the head turns to sight the board
+  r.root.updateMatrixWorld(true);r.head.lookAt(aimPt.x,aimPt.y,aimPt.z);
+  // the dart in the hand always points at the board
+  r.root.updateMatrixWorld(true);const dp=new T.Vector3().setFromMatrixPosition(r.dart.matrixWorld);
+  const rel=u>=.545&&u<.99;r.dart.visible=!rel&&set>.6||u<.16&&set>.6;
+  if(r.dart.visible){const wq=new T.Quaternion();r.dart.parent.getWorldQuaternion(wq);const dq=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),aimPt.clone().sub(dp).normalize());r.dart.quaternion.copy(wq.invert().multiply(dq));}
+  // flight: from where it left the hand to the treble twenty, a slight arc, then it stays in the board
+  if(u>=.545&&u<.99){if(!throwFrom||u<.55)throwFrom=dp.clone();flyer.visible=true;const k=cl((u-.545)/.09);const tp=aimPt.clone().add(new T.Vector3(0,.1,-.03));
+    const p=throwFrom.clone().lerp(tp,k);p.y+=.09*Math.sin(k*Math.PI);flyer.position.copy(p);
+    const v=tp.clone().sub(throwFrom).normalize();v.y+=.35*Math.cos(k*Math.PI);flyer.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());}
+  else {flyer.visible=false;throwFrom=null;}},
+ celebrate(t){// fist pump at the chest, like the record moment
+  const r=rig;const u=(t%2.2)/2.2;const k=u<.2?ease(u/.2):u<.7?1:1-ease((u-.7)/.3);const shake=Math.sin(t*16)*.06*(u>.2&&u<.7?1:0);
+  r.root.position.z=0;r.root.rotation.y=0;r.dart.visible=false;
+  r.aL.sh.rotation.set(lerp(-.1,-1.25,k)+shake,0,lerp(-.1,-.25,k));r.aL.el.rotation.x=lerp(-.15,-2.1,k);r.aL.wr.rotation.x=-.3*k;
+  r.aR.sh.rotation.set(-.15,0,.12);r.aR.el.rotation.x=-.25;
+  r.chest.rotation.x=lerp(0,-.12,k);r.head.rotation.x=lerp(0,-.25,k);r.spine.rotation.x=lerp(0,.06,k);
+  r.lL.th.rotation.x=-.06;r.lR.th.rotation.x=.06;r.hips.position.y=.86*r.S-.02*k;}
+};
+// flying dart model
+(function(){const brass=M(0xc9a24a,{metalness:.6,roughness:.35});mesh(cyl(.008,.008,.06,6),brass,flyer);mesh(cyl(.002,.006,.035,5),M(0xdddddd),flyer,0,.047,0);mesh(cyl(.004,.004,.04,5),M(0x111111),flyer,0,-.05,0);[0,1].forEach(k=>{const f=mesh(new T.PlaneGeometry(.04,.045),M(0xd9252e,{side:T.DoubleSide}),flyer,0,-.085,0);f.rotation.y=k*Math.PI/2;});})();
+
+// ---------- camera orbit (drag to turn, pinch/scroll to zoom) ----------
+let yaw=.35,pitch=.1,dist=5.1,drag=null,pinch=null,camTY=null;
+const tgt=new T.Vector3(0,1.05,0);
+function placeCam(){const V=curV();if(V){const F=plateFit();cam.fov=2*Math.atan((F.h/F.ph)*Math.tan(V.cam.fov*Math.PI/360))*180/Math.PI;cam.updateProjectionMatrix();cam.position.set(...V.cam.pos);cam.lookAt(...V.cam.look);return;}const th=anim==='throw';const y=th?Math.PI/2+(yaw-.35):yaw;tgt.z=th?1.12:0;tgt.y=th?1.12:(camTY??.82);let dd=dist;if(th){const hf=Math.atan(Math.tan(cam.fov*Math.PI/360)*cam.aspect);dd=Math.max(3.6,1.65/Math.tan(hf))*dist/5.1;}cam.position.set(tgt.x+dd*Math.sin(y)*Math.cos(pitch),tgt.y+dd*Math.sin(pitch)+.15,tgt.z+dd*Math.cos(y)*Math.cos(pitch));cam.lookAt(tgt);}
+const el=R.domElement;const pts=new Map();
+el.addEventListener('pointerdown',e=>{pts.set(e.pointerId,[e.clientX,e.clientY]);el.setPointerCapture(e.pointerId);});
+el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const [px,py]=pts.get(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);
+ if(pts.size===1){yaw-=(e.clientX-px)*.008;pitch=Math.max(-.1,Math.min(.6,pitch+(e.clientY-py)*.004));}
+ else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pinch)dist=Math.max(2.2,Math.min(8,dist*pinch/d));pinch=d;}});
+const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+el.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(2.2,Math.min(8,dist*(1+e.deltaY*.001)));},{passive:false});
+
+// ---------- UI ----------
+const who=document.getElementById('who'),an=document.getElementById('anim');let cur='ray';
+Object.entries(LOOKS).forEach(([k,v])=>{const b=document.createElement('button');b.id='p-'+k;b.textContent=v.name;b.setAttribute('aria-pressed',k===cur);b.onclick=()=>{cur=k;if(v.body)setBody(v.body,false);build(k);[...who.children].forEach(x=>x.setAttribute('aria-pressed',x===b));updSum();};who.appendChild(b);});
+const venRow=document.getElementById('ven');[['', 'White studio'],...LEVELS].forEach(([k,n])=>{const b=document.createElement('button');b.id='v-'+(k||'none');b.textContent=n;b.setAttribute('aria-pressed',(k||null)===VEN);b.onclick=()=>{VEN=k||null;[...venRow.children].forEach(x=>x.setAttribute('aria-pressed',x===b));applyVenue();build(cur);updSum();};venRow.appendChild(b);});
+const lookRow=document.getElementById('look');Object.entries(STYLES).forEach(([k,v])=>{const b=document.createElement('button');b.id='l-'+k;b.textContent=v.name;b.title=v.ref;b.setAttribute('aria-pressed',k===STYLE);b.onclick=()=>{STYLE=k;[...lookRow.children].forEach(x=>x.setAttribute('aria-pressed',x===b));applyVenue();build(cur);document.getElementById('sref').textContent=v.name+' · after '+v.ref;updSum();};lookRow.appendChild(b);});{const vb=document.getElementById('l-vinyl');if(vb){vb.textContent='Vinyl Toy ★';lookRow.prepend(vb);}}
+const bodyRow=document.getElementById('body');function setBody(k,rebuild=true){curBody=k;[...bodyRow.children].forEach(x=>x.setAttribute('aria-pressed',x.dataset.k===k));if(rebuild)build(cur);}
+[['skinny','Skinny'],['standard','Standard'],['heavy','Heavy'],['muscle','Muscle'],['female','Female']].forEach(([k,n])=>{const b=document.createElement('button');b.id='b-'+k;b.dataset.k=k;b.textContent=n;b.setAttribute('aria-pressed',k===curBody);b.onclick=()=>setBody(k);bodyRow.appendChild(b);});
+[['walkon','Walk-on'],['throw','Throw'],['celebrate','Celebrate'],['idle','Idle']].forEach(([k,n])=>{const b=document.createElement('button');b.id='a-'+k;b.className='go';b.textContent=n;b.setAttribute('aria-pressed',k===anim);b.onclick=()=>{anim=k;t0=performance.now();pose0();board.visible=false;flyer.visible=false;[...an.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(VEN)applyVenue();};an.appendChild(b);});
+
+const bar=document.getElementById('bar'),moreBtn=document.getElementById('moreBtn');
+function updSum(){const L=LOOKS[cur];moreBtn.textContent=(L?L.name:'Player')+' · '+(STYLES[STYLE]?STYLES[STYLE].name:'style')+(bar.classList.contains('open')?' ▴':' ▾');}
+moreBtn.onclick=()=>{bar.classList.toggle('open');moreBtn.setAttribute('aria-expanded',bar.classList.contains('open'));updSum();};
+stage.addEventListener('pointerdown',()=>{if(bar.classList.contains('open')){bar.classList.remove('open');moreBtn.setAttribute('aria-expanded','false');updSum();}});
+function setBarH(){document.documentElement.style.setProperty('--barh',bar.offsetHeight+'px');size();}
+if(window.ResizeObserver)new ResizeObserver(setBarH).observe(bar);addEventListener('orientationchange',()=>setTimeout(setBarH,300));
+function size(){const w=stage.clientWidth||innerWidth,h=stage.clientHeight||innerHeight;inkPx.value=2*((sty().ink||{}).px||1.6)/h;R.setSize(w,h);cam.aspect=w/h;cam.fov=w<h?40:36;cam.updateProjectionMatrix();}
+addEventListener('resize',size);setBarH();updSum();
+applyStyle();build(cur);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// contact shadows: a tight dark pad under each foot so the figure sits on the painted floor (ChatGPT plate-fit review, P1)
+const csTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(0,0,0,.85)');gr.addColorStop(.45,'rgba(0,0,0,.45)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);return new T.CanvasTexture(c);})();
+const cshad=[0,1].map(()=>{const m=new T.Mesh(new T.PlaneGeometry(.26,.34),new T.MeshBasicMaterial({map:csTex,transparent:true,depthWrite:false,opacity:.7}));m.rotation.x=-Math.PI/2;m.renderOrder=1;scene.add(m);return m;});
+const _fw=new T.Vector3();
+function footShadows(){if(!rig)return;[rig.lL,rig.lR].forEach((l,i)=>{const m=cshad[i];if(!l||!l.an){m.visible=false;return;}l.an.getWorldPosition(_fw);m.visible=true;m.position.set(_fw.x,.004,_fw.z+.03);const lift=Math.max(0,_fw.y-.08);m.material.opacity=(VEN?.62:.32)*Math.max(0,1-lift*5);m.scale.setScalar(1+lift*2);m.rotation.z=-rig.root.rotation.y;});}
+function loop(now){const t=(now-t0)/1000;pose0();(ANIMS[anim]||ANIMS.idle)(reduce?0:t);skinShirt();placeCam();footShadows();R.render(scene,cam);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+// clipping check (Season 3 test): every inner mesh stays under the mesh that covers it, in every pose.
+// pants under the shirt above the hem; upper-arm skin under the sleeve; cuff and stripe outside the sleeve; collar stand hugging the neck
+function clipCheck(){const out={pants:0,arm:0,cuff:0,collar:0,trim:0,checked:0,worst:{}};P.updateMatrixWorld(true);
+ const byTag=t=>{const r=[];P.traverse(o=>{if(o.isMesh&&o.userData.tag===t)r.push(o);});return r;};
+ const prox=o=>{const m=new T.Mesh(o.geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));m.matrixWorld.copy(o.matrixWorld);m.matrixAutoUpdate=false;return m;};
+ const rc=new T.Raycaster(),p=new T.Vector3(),l=new T.Vector3(),ax=new T.Vector3(),d=new T.Vector3(),inv=new T.Matrix4();
+ // signed depth of p below the cover along the ray from the frame's axis (positive = covered)
+ const depth=(p,frame,covers)=>{inv.copy(frame.matrixWorld).invert();l.copy(p).applyMatrix4(inv);ax.set(0,l.y,0).applyMatrix4(frame.matrixWorld);d.copy(p).sub(ax);const dist=d.length();if(dist<1e-4)return 1;d.normalize();rc.far=dist+.5;let h=[];for(const j of [0,.004,-.004,.009]){const dd=d.clone().applyAxisAngle(new T.Vector3(0,1,0),j);rc.set(ax,dd);h=rc.intersectObjects(covers,false);if(h.length)break;}/* a ray exactly along a lathe seam can slip between triangles: nudge and retry */if(!h.length)return -1;return h[h.length-1].distance-dist;};
+ const verts=(o,fn)=>{const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=1){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);fn(p);}};
+ const worst=(k,v)=>{out.worst[k]=Math.min(out.worst[k]??1,v);};out.ex=[];const ex=(k,q,fr,dp)=>{if(out.ex.length<12){inv.copy(fr.matrixWorld).invert();const u=q.clone().applyMatrix4(inv);out.ex.push(k+' '+[u.x,u.y,u.z].map(v=>v.toFixed(3)).join(',')+' d='+dp.toFixed(4));}};const pole=(q,fr)=>{inv.copy(fr.matrixWorld).invert();const u=q.clone().applyMatrix4(inv);return Math.hypot(u.x,u.z)<.006;};
+ const chest=rig.chest,shirt=byTag('shirt').map(prox);
+ const hipsI=new T.Matrix4().copy(rig.hips.matrixWorld).invert();byTag('pants').forEach(o=>verts(o,q=>{/* the hem follows the hips, so 'above the hem' is measured in the hips frame */const y=l.copy(q).applyMatrix4(hipsI).y;if(y<-.098||y>.3)return;if(pole(q,chest))return;out.checked++;const dp=depth(q,chest,shirt);worst('pants',dp);if(dp<.001){out.pants++;ex('pants',q,chest,dp);}}));
+ [rig.aL,rig.aR].forEach(A=>{const sl=[];A.sh.children.forEach(o=>{if(o.userData.tag==='sleeve')sl.push(prox(o));});
+  A.sh.children.forEach(o=>{if(o.userData.tag==='upperarm')verts(o,q=>{inv.copy(A.sh.matrixWorld).invert();const y=l.copy(q).applyMatrix4(inv).y;if(y<-.158)return;if(pole(q,A.sh))return;out.checked++;const dp=depth(q,A.sh,sl);worst('arm',dp);if(dp<.0008){out.arm++;ex('arm',q,A.sh,dp);}});
+   if(o.userData.tag==='cuff')verts(o,q=>{out.checked++;const dp=depth(q,A.sh,sl);worst('cuff',-dp);if(dp>-.0008)out.cuff++;});});});
+ ['fold','placket'].forEach(tg=>byTag(tg).forEach(o=>verts(o,q=>{if(pole(q,chest))return;out.checked++;const dp=depth(q,chest,shirt);worst('trim',-dp);if(dp>-.0005){out.trim++;ex(tg,q,chest,dp);}})));
+ const nk=byTag('neck').map(prox);byTag('collar').forEach(o=>verts(o,q=>{out.checked++;const dp=depth(q,chest,nk);/* dp<0: collar outside the neck by -dp */worst('collar',-Math.abs(dp));if(-dp>.008){out.collar++;ex('collar',q,chest,dp);}}));
+ return out;}
+window.__lab={clip:clipCheck,pose:(a,t)=>{pose0();(ANIMS[a]||ANIMS.idle)(t);skinShirt();},venue:(k)=>document.getElementById('v-'+(k||'none')).click(),look:(k)=>document.getElementById('l-'+k).click(),zoom:(d,ty,p)=>{dist=d;camTY=ty;if(p!=null)pitch=p;},yaw:(v)=>{yaw=v;},body:(b)=>document.getElementById('b-'+b).click(),set:(p,a)=>{if(p){document.getElementById('p-'+p).click();}if(a){document.getElementById('a-'+a).click();}},time:(s)=>{t0=performance.now()-s*1000;}};
+})();
+</script>
+
+</body></html>

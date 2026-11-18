@@ -1,0 +1,14 @@
+// Season 3 clipping check (Director's claude/director/circuit/s3-clip.js, Engine copy): every player x build x pose of the Style Lab figure
+// that the game ports (tests/s3lab/index.html = the Lab page); fails if any inner mesh pokes through its cover (trousers through the shirt
+// hem, arm through the sleeve, cuff stripe, collar, trim). node tests/s3-clip.js   (LAB=<dir> to point at another copy of the Lab)
+const {chromium}=require('playwright');const fs=require('fs'),http=require('http'),path=require('path');const dir=process.env.LAB||path.join(__dirname,'s3lab');
+const srv=http.createServer((q,r)=>{let f=path.join(dir,decodeURIComponent(q.url.split('?')[0]));if(q.url==='/'||q.url.startsWith('/?'))f=path.join(dir,'index.html');if(q.url.includes('three.min.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end(fs.readFileSync(require.resolve('three/build/three.min.js',{paths:[path.join(__dirname,'..')]})));}if(!fs.existsSync(f)){r.writeHead(404);return r.end();}let b=fs.readFileSync(f);if(f.endsWith('.html')){let s=b.toString().replace('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','/three.min.js');if(!/<html/i.test(s))s='<!doctype html><html><head><meta charset=utf-8></head><body>'+s+'</body></html>';b=s;}r.end(b);}).listen(0);
+(async()=>{const port=srv.address().port;const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const p=await b.newPage({viewport:{width:400,height:700}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.goto('http://127.0.0.1:'+port+'/');await p.waitForFunction(()=>window.__lab,null,{timeout:30000});await p.waitForTimeout(500);
+const res=await p.evaluate(()=>{const players=['ray','kai','tama','dazza','mia'],bodies=['skinny','standard','heavy','muscle','female'];
+ const poses=[['idle',0],['walkon',.5],['walkon',1.0],['walkon',1.9],['walkon',3.6],['walkon',4.6],['walkon',5.5],['throw',0],['throw',.4],['throw',.8],['throw',1.05],['throw',1.6],['throw',2.2],['celebrate',.3],['celebrate',.7],['celebrate',1.2]];
+ const fails=[];let n=0,tot={pants:0,arm:0,cuff:0,collar:0,trim:0},worst={};
+ if(__lab.look)__lab.look('vinyl');
+ for(const pl of players){__lab.set(pl);for(const bd of bodies){__lab.body(bd);for(const [a,t] of poses){__lab.pose(a,t);const r=__lab.clip();n+=r.checked;for(const k in tot){tot[k]+=r[k]||0;if(r[k])fails.push(`${pl}/${bd}/${a}@${t} ${k}:${r[k]}`);}for(const k in (r.worst||{}))worst[k]=Math.min(worst[k]??1,r.worst[k]);}}}
+ return {n,tot,worst,fails:fails.slice(0,40),nf:fails.length};});
+console.log(JSON.stringify(res));if(errs.length)console.log('page errors',JSON.stringify(errs.slice(0,3)));const bad=res.nf||errs.length||!res.n;console.log(bad?'S3-CLIP FAIL':'S3-CLIP PASS ('+res.n+' checks)');await b.close();srv.close();process.exit(bad?1:0);})();

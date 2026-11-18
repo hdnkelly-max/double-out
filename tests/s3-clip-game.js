@@ -1,0 +1,18 @@
+// Season 3 clipping check, IN THE GAME: Director's clipCheck (tests/s3-clip.js runs it on the Style Lab) on the game's own S3 figures (the Lab
+// build carried by the game skeleton, shirt skinned to the hips every frame) through the game's match clips, so mocap poses the Lab never
+// plays are covered too. Every base (Ray, Kai, Tama, Dazza, Mia) and three seeded opponents x every clip x 6 moments. Fails on any poke-through.
+// node tests/s3-clip-game.js <dir>   (<dir> = the built page as index.html + assets/ + rig/)
+const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
+(async()=>{const dir=path.resolve(process.argv[2]);const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':/\.webp$/.test(u)?'image/webp':'application/octet-stream'});r.end(d);});}).listen(0);
+const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const ctx=await b.newContext({...devices['iPhone 13']});const p=await ctx.newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
+await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript(()=>{window.TOPS_S3FLAG=true;try{localStorage.setItem('tops_s3','1');}catch(e){}});
+await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
+await p.evaluate(()=>{TOPS_LOADCHAR('leonard');V.loadAnims();});await p.waitForFunction(()=>TOPS_RIGS().ids.includes('leonard')&&V._qa.animNames().length>0,null,{timeout:180000});
+const res=await p.evaluate(()=>{const Q=V._qa;const specs=[...TOPS_S3_BASES.map(b=>[b.look,'You',true,b.id]),[{},'Big Mal',false,'opp:Big Mal'],[{},'Shazza',false,'opp:Shazza'],[{},'Deano',false,'opp:Deano']];
+ const clips=Q.animNames();const fails=[];let n=0,figs=0;const worst={};const per={};
+ for(const [look,name,me,id] of specs){const f=Q.makeFigure(look,name,0);if(!f.userData.s3rig){fails.push(id+': not an S3 figure');continue;}figs++;Q.scene.add(f);
+  for(const c of clips){const a=Q.playClip(f,c,{t:0});if(!a)continue;const dur=a.getClip().duration;for(const k of [0,.17,.34,.5,.67,.84]){a.time=dur*k;f.userData.mixer.update(0);const r=TOPS_S3CLIP(f);if(!r)continue;n+=r.checked;
+    for(const key of ['pants','arm','cuff','collar','trim'])if(r[key]){fails.push(`${id}/${c}@${k} ${key}:${r[key]} ${r.ex.slice(0,2).join(' ')}`);per[key]=(per[key]||0)+1;}for(const w in r.worst)worst[w]=Math.min(worst[w]??1,r.worst[w]);}}
+  Q.scene.remove(f);Q.dispose(f);}
+ return {figs,clips:clips.length,n,worst,per,nf:fails.length,fails:fails.slice(0,30)};});
+console.log(JSON.stringify(res));if(pe.length)console.log('page errors',JSON.stringify(pe.slice(0,3)));const bad=res.nf||pe.length||!res.n||res.figs<8;console.log(bad?'S3-CLIP-GAME FAIL':'S3-CLIP-GAME PASS ('+res.figs+' figures, '+res.clips+' clips, '+res.n+' checks)');await b.close();srv.close();process.exit(bad?1:0);})();

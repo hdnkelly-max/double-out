@@ -6,7 +6,7 @@
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]);const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':'application/octet-stream'});r.end(d);});}).listen(0);
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const p=await (await b.newContext({...devices['Pixel 7']})).newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
-await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.goto(`http://127.0.0.1:${srv.address().port}/index.html`);
+await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());if(process.env.S3)await p.addInitScript(()=>{window.TOPS_S3FLAG=true;try{localStorage.setItem('tops_s3','1');}catch(e){}});await p.goto(`http://127.0.0.1:${srv.address().port}/index.html${process.env.S3?'?s3=1':''}`);
 await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
 await p.evaluate(()=>TOPS_LOADHAIR());await p.waitForFunction(()=>Array.isArray(V._qa.gfx().hair),null,{timeout:120000});
 const fails=[];const out={};
