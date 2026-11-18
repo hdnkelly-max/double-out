@@ -1,0 +1,306 @@
+// TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
+// except the hidden tester switch on the title screen.
+//
+// Flag: ?s3=1 / ?s3=0 (remembered on this device), or the hidden switch: 5 taps on the version label on the title screen.
+// There is no Menu toggle (Hayden 07:45: players must not find it). window.TOPS_S3_ON is the one place the flag is read.
+//
+// Data comes from Career (W1/W2/W6/W7). Interface this file reads (Career owns the data; this file only presents it):
+//   TOPS_S3.state()   the Circuit career, shape of tc/circuit.js newCareer(): {level, week, bank, pts, oom, history, live, debt, dpnzEv, ...}
+//   TOPS_S3.book(id)  pay entry + travel, start the event          -> {ok} | {ok:false, why}
+//   TOPS_S3.play()    walk on for the live event's next match (the game's real match)
+//   TOPS_S3.advance() hardship advance                              -> {ok, amt} | {ok:false, why}
+//   TOPS_S3.moneyMatch() the back-room money match
+//   TOPS_HISTORY.rows() Season 1/2 board: [{name, you, furthest:{level, n}, bestAvg, closest9}] (closest9 = fewest darts in a won 501 leg) | null
+//   TOPS_BESTLEG.mine() {darts} | null ;  TOPS_BESTLEG.table() -> Promise<[{name, you, darts}]>
+// Until Career's functions exist, a dev stand-in runs the real engine (TOPS_CIRCUIT) on a local copy, so the screens can be built and tested.
+(function () {
+  'use strict';
+  const q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return new URLSearchParams(''); } })();
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
+  if (q.has('s3')) lsSet('tops_s3', q.get('s3') === '1' ? '1' : null);
+  if (typeof window.TOPS_S3_ON !== 'boolean') window.TOPS_S3_ON = lsGet('tops_s3') === '1';
+  const ON = window.TOPS_S3_ON;
+
+  /* ---------- hidden tester switch: 5 taps on the title's version label within 3 s (works with S3 on or off) ---------- */
+  (function hidden() {
+    let n = 0, t0 = 0;
+    document.addEventListener('click', e => {
+      const v = e.target && e.target.closest && e.target.closest('#tlVer'); if (!v) return;
+      const now = Date.now(); if (now - t0 > 3000) n = 0; t0 = now; n++;
+      if (n < 5) return; n = 0;
+      lsSet('tops_s3', ON ? null : '1');
+      try { v.textContent = ON ? 'Season 3 test off · reloading' : 'Season 3 test on · reloading'; } catch (x) {}
+      setTimeout(() => { try { location.reload(); } catch (x) {} }, 700);
+    }, true);
+  })();
+  if (!ON) return;
+  try { document.documentElement.classList.add('s3-on'); } catch (e) {}
+
+  /* ---------- s3/ image switch (W9): Director's manifest maps an old path to its Vinyl redo ---------- */
+  // window.TOPS_S3_MANIFEST = { "assets/rb/venue_t0.jpg": "s3/rb/venue_t0.webp", ... } (inlined by build.js from s3/manifest.json).
+  // Only listed paths change; a listed file that fails to load falls back to the old image (img) and the miss is logged once.
+  // A path mapped to "" has no Vinyl redo yet: it shows a plain on-brand placeholder, never the old lifelike image (Hayden 07:55).
+  const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>');
+  const MAN = Object.assign({}, window.TOPS_S3_MANIFEST || {}); Object.keys(MAN).forEach(k => { if (!MAN[k]) MAN[k] = PH; });
+  const KEYS = Object.keys(MAN).sort((a, b) => b.length - a.length);
+  const RX = KEYS.length ? new RegExp(KEYS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g') : null;
+  const swap = s => (RX && typeof s === 'string' && s.length < 400000) ? s.replace(RX, m => MAN[m]) : s;
+  const REV = {}; KEYS.forEach(k => { REV[MAN[k]] = k; });
+  window.TOPS_S3_IMG = swap;
+  if (RX) {
+    const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
+      Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { return d.set.call(this, fn(v, this)); } }); };
+    try { wrapSet(HTMLImageElement.prototype, 'src', (v, img) => { const n = swap(v); if (n !== v) img.addEventListener('error', function back() { img.removeEventListener('error', back); const o = REV[n] || v; miss(n); img.src = o; }, { once: true }); return n; }); } catch (e) {}
+    try { wrapSet(Element.prototype, 'innerHTML', v => swap(v)); } catch (e) {}
+    try { const sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function (k, v) { return sa.call(this, k, (k === 'src' || k === 'style' || k === 'href') ? swap(v) : v); }; } catch (e) {}
+    try { const sp = CSSStyleDeclaration.prototype.setProperty; CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { return sp.call(this, k, swap(v), p); };
+      ['background', 'backgroundImage', 'cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
+    const sheets = () => { try { document.querySelectorAll('style').forEach(s => { if (s.dataset.s3) return; const t = s.textContent, n = swap(t); if (n !== t) s.textContent = n; s.dataset.s3 = 1; }); } catch (e) {} };
+    sheets(); document.addEventListener('DOMContentLoaded', sheets);
+  }
+  const missed = {}; function miss(p) { if (missed[p]) return; missed[p] = 1; try { window.TOPS_LOG && TOPS_LOG('s3_img_miss', { p }); } catch (e) {} }
+
+  /* ---------- helpers ---------- */
+  const $id = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const money = n => '$' + Math.round(+n || 0).toLocaleString('en-NZ');
+  const CI = () => window.TOPS_CIRCUIT;
+  const IMG = 'assets/rb/';
+  const lvArt = i => `${IMG}venue_t${Math.max(0, Math.min(6, i | 0))}.jpg`;   // the level's venue card (W9 swaps it to the Vinyl plate through the manifest)
+  const GRAD = ['#5b2a1a', '#1f3b4d', '#2e4a2a', '#4a1d22', '#2a2f5a', '#3a3a3a', '#5a1218'];
+  const SHORT = ['Pub', 'Club', 'Opens', 'DPNZ', 'Trans-Tas', 'Tour Card', 'Palace'];
+  const TOWN = s => String(s || '').replace(/^DPNZ Tour · /, '').replace(/^Players Championship · /, '');
+
+  /* ---------- data: Career's functions, else the dev stand-in ---------- */
+  const API = () => window.TOPS_S3 || {};
+  const DEVK = 'tops_s3c_dev';
+  let devC = null;
+  const devState = () => { if (devC) return devC; try { devC = JSON.parse(lsGet(DEVK) || 'null'); } catch (e) {} if (!devC && CI()) devC = CI().newCareer({}); return devC; };
+  const devSave = () => lsSet(DEVK, JSON.stringify(devC));
+  const isDev = () => typeof API().state !== 'function';
+  const D = {
+    st() { try { return isDev() ? devState() : API().state(); } catch (e) { console.warn('s3 state', e); return null; } },
+    book(id) { if (!isDev()) return API().book(id); const r = CI().book(devState(), id); devSave(); return r; },
+    play() { if (!isDev()) return API().play(); devTap = 1; render(); },
+    advance() { if (!isDev()) return API().advance(); const r = CI().advance(devState()); devSave(); return r; },
+    moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) {} },
+    devResult(won) { const r = CI().result(devState(), won); devSave(); devTap = 0; return r; }
+  };
+  let devTap = 0;
+  window.TOPS_S3UI_DEV = D;   // tests drive the dev stand-in through this (never used when Career's TOPS_S3 is present)
+
+  /* ---------- what changed since the last screen: drives the round toast, the event result and the promotion moment ---------- */
+  // The match reloads the page (ENG-RESET), so nothing is kept in memory: the last state the player SAW is kept on the device and compared
+  // with the state now. A result is shown once; OK marks it seen. Works whether or not Career fires an event.
+  const SEENK = 'tops_s3_seen';
+  const snap = c => ({ h: (c.history || []).length, lv: c.level, r: c.live ? c.live.round : -1, id: c.live ? c.live.id : '', g: c.live && c.live.g ? c.live.g.p : 0 });
+  const seenGet = () => { try { return JSON.parse(lsGet(SEENK) || 'null'); } catch (e) { return null; } };
+  const seenSet = s => lsSet(SEENK, JSON.stringify(s));
+  function pending(c) {
+    const was = seenGet(), now = snap(c);
+    if (!was) { seenSet(now); return null; }
+    if (now.h > was.h) { const rec = c.history[c.history.length - 1]; return { kind: 'done', rec, up: now.lv !== was.lv ? { from: was.lv, to: now.lv } : null, now }; }
+    if (now.id && now.id === was.id && (now.r > was.r || now.g > was.g)) return { kind: 'round', now };
+    if (now.lv !== was.lv) return { kind: 'level', up: { from: was.lv, to: now.lv }, now };
+    if (now.id !== was.id || now.r !== was.r) { seenSet(now); }   // booked a new event, nothing to announce
+    return null;
+  }
+
+  /* ---------- Circuit tab ---------- */
+  let sub = 'week';   // week | oom | results
+  function circuit() {
+    const C = CI(), c = D.st(); if (!C || !c) return `<div class="rb-card"><span class="rb-t2">The Circuit is loading</span></div>`;
+    const L = C.LEVELS[c.level], have = c.pts[L.id] || 0, need = L.need;
+    const best = C.BEST_N[L.id], bestTxt = best && best < 50 ? `best ${best} count` : 'every result counts';
+    const ladder = C.LEVELS.map((x, i) => `<li class="${i < c.level ? 's3-done' : i === c.level ? 's3-now' : ''}"><i></i><span>${SHORT[i]}</span></li>`).join('');
+    const head = `<section class="s3-lv">
+      <div class="s3-lvart" style="background:url(${lvArt(c.level)}) 50% 40%/cover no-repeat,${GRAD[c.level]}"></div><div class="s3-lvsh"></div>
+      <div class="s3-lvtx"><span class="rb-kick">Level ${c.level + 1} of 7 · week ${c.week}</span><span class="s3-lvn">${esc(L.n)}</span><span class="rb-sub">${esc(L.s)}</span></div>
+    </section>
+    <div class="rb-card s3-prog">
+      ${need ? `<div class="s3-row"><span class="s3-lab">To move up · ${bestTxt}</span><b class="s3-num">${have} <small>/ ${need} pts</small></b></div><div class="rb-bar"><i style="width:${Math.min(100, 100 * have / need)}%"></i></div>` : ''}
+      <span class="rb-sub">${esc(L.up)}</span>
+      ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
+      <ol class="s3-ladder" aria-label="The seven levels, you're on ${esc(L.n)}">${ladder}</ol>
+    </div>`;
+    const isO = L.oom || L.id === 'tt';
+    const seg = `<div class="rb-seg" role="tablist">${[['week', c.live ? 'Playing now' : 'This week'], L.id === 'dpnz' ? ['oom', 'Order of Merit'] : null, ['results', 'Results']].filter(Boolean).map(([k, n]) => `<button type="button" role="tab" data-s3sub="${k}" aria-selected="${sub === k}">${n}</button>`).join('')}</div>`;
+    if (sub === 'oom' && L.id !== 'dpnz') sub = 'week';
+    let body = '';
+    if (sub === 'oom') body = oom(c);
+    else if (sub === 'results') body = results(c);
+    else body = c.live ? live(c) : week(c);
+    return head + seg + body + records(c) + (isO ? '' : '');
+  }
+  function week(c) {
+    const C = CI(), cal = C.calendar(c);
+    let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
+    if (!cal.length) h += `<div class="rb-card"><span class="rb-t2">Nothing on at this level this week</span></div>`;
+    if (C.broke(c)) h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">A money match in the back room pays for the next one. Or take the hardship advance: two entries, paid back from half of each prize.</span>
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button></div></div>`;
+    return h;
+  }
+  function poster(c, e) {
+    const C = CI(), L = C.LEVELS[e.level];
+    const fmt = e.kind === 'groupko' ? `Group of 4, then ${e.size / 2}-player knockout` : `${e.size}-player knockout`;
+    const win = C.prizeFor(e, 'W'), pts = C.pointsFor(e, 'W');
+    const left = c.bank - e.cost;
+    return `<article class="s3-post">
+      <div class="s3-part" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}">${e.jump ? '<span class="s3-tag">Win it to move up</span>' : ''}<h3>${esc(e.n)}</h3></div>
+      <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
+        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
+        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
+          : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
+      </div></article>`;
+  }
+  function live(c) {
+    const C = CI(), lv = c.live, e = C.eventOf(lv.id), o = C.nextOpp(c), L = C.LEVELS[e.level];
+    const cells = lv.rounds.map((r, i) => { const cls = i < lv.round ? 's3-w' : i === lv.round ? 's3-on' : ''; const t = r === 'G' ? 'Group' + (lv.g ? ' ' + lv.g.w + '–' + (lv.g.p - lv.g.w) : '') : r; return `<li class="${cls}">${t}</li>`; }).join('');
+    const rn = o.round === 'G' ? `Group match ${(lv.g ? lv.g.p : 0) + 1} of 3 · win 2 to go through` : C.FIN_NAME[o.round];
+    const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
+    let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
+      <ol class="s3-draw" aria-label="The draw">${cells}</ol>
+      <div class="s3-row"><div><span class="s3-lab">Next opponent</span><b class="s3-big">${o.avg}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
+        <div style="text-align:right"><span class="s3-lab">${esc(rn)}</span><b class="s3-mid">${money(winNow)}</b><span class="rb-sub">to the winner</span></div></div>
+      ${safe ? `<span class="rb-sub">Lose now and you still take ${money(safe)}</span>` : ''}
+      <button class="rb-primary" type="button" id="s3Go"><b>Walk on</b><small>${esc(rn)}${L.legs ? ' · best of ' + L.legs : ''}</small></button>`;
+    if (isDev() && devTap) h += `<div class="s3-two"><button class="rb-ghost" type="button" data-s3dev="1">Dev: I won</button><button class="rb-ghost" type="button" data-s3dev="0">Dev: I lost</button></div>`;
+    return h + `</div>`;
+  }
+  function oom(c) {
+    const C = CI(), t = C.dpnzTable(c), me = t.findIndex(r => r.you) + 1;
+    const rows = t.map((r, i) => `<li class="${r.you ? 's3-you' : ''}${i === 0 ? ' s3-p1' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.n)}</span><b>${r.pts}</b></li>${i === 0 ? '<li class="s3-cut">#1 goes to the Palace</li>' : i === 9 ? '<li class="s3-cut">Top 10 go to the Trans-Tasman</li>' : ''}`).join('');
+    return `<div class="rb-card"><div class="s3-row"><span class="rb-t2">DPNZ Order of Merit</span><span class="rb-sub">event ${c.dpnzEv || 0} of 8</span></div>
+      <span class="rb-sub">You're ${ordinal(me)}. Your best 6 events count. The others bank points every event, whether you play or not.</span>
+      <ol class="s3-tbl">${rows}</ol></div>`;
+  }
+  function results(c) {
+    const C = CI(), hs = (c.history || []).slice().reverse().slice(0, 20);
+    if (!hs.length) return `<div class="rb-card"><span class="rb-t2">No events yet</span><span class="rb-sub">Book one from This week. Every result shows here.</span></div>`;
+    return `<div class="rb-card"><ol class="s3-res">${hs.map(h => `<li><span><b>${esc(h.n)}</b><small>Week ${h.week} · ${esc(C.LEVELS[h.level].n)}</small></span><span style="text-align:right"><b>${esc(C.FIN_NAME[h.fin])}</b><small>${h.prize ? '+' + money(h.prize) : '$0'}${h.pts ? ' · +' + h.pts + ' pts' : ''}</small></span></li>`).join('')}</ol></div>`;
+  }
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+
+  /* ---------- Best Leg (W6) + Season 1/2 history (W7), on the Circuit tab under the week ---------- */
+  let blRows = null, blAt = 0;
+  function records() {
+    const B = window.TOPS_BESTLEG, H = window.TOPS_HISTORY;
+    let h = '';
+    if (B) {
+      if (B.table && Date.now() - blAt > 60000) { blAt = Date.now(); try { Promise.resolve(B.table()).then(r => { blRows = r || []; const el = $id('s3Bl'); if (el) el.outerHTML = blCard(); }).catch(() => {}); } catch (e) {} }
+      h += blCard();
+    }
+    if (H && H.rows) { let r = null; try { r = H.rows(); } catch (e) {} if (r && r.length) h += histCard(r); }
+    return h;
+  }
+  function blCard() {
+    const B = window.TOPS_BESTLEG; let mine = null; try { mine = B.mine && B.mine(); } catch (e) {}
+    const rows = (blRows || []).slice(0, 8);
+    const list = rows.length ? `<ol class="s3-tbl">${rows.map((r, i) => `<li class="${r.you ? 's3-you' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.name)}</span><b>${r.darts} darts</b></li>`).join('')}</ol>` : `<span class="rb-sub">${blRows ? 'Nobody has a best leg yet this season.' : 'Loading the table…'}</span>`;
+    return `<div class="rb-card" id="s3Bl"><div class="s3-row"><span class="rb-t2">Best leg · Season 3</span><span class="rb-sub">${mine && mine.darts ? 'Yours: ' + mine.darts + ' darts' : 'Win a 501 leg to set yours'}</span></div>${list}</div>`;
+  }
+  function histCard(r) {
+    const best = (k, lo) => r.filter(x => x[k] != null && (typeof x[k] !== 'object' || x[k].level != null)).sort((a, b) => lo ? val(a, k) - val(b, k) : val(b, k) - val(a, k))[0];
+    const val = (x, k) => k === 'furthest' ? x.furthest.level : +x[k];
+    const f = best('furthest'), a = best('bestAvg'), n = best('closest9', true);
+    const line = (lab, w, txt) => `<li><span class="s3-lab">${lab}</span><span>${w ? esc(w.you ? 'You' : w.name) : 'No data'}</span><b>${w ? txt(w) : ''}</b></li>`;
+    return `<button class="rb-card s3-hist" type="button" data-s3="hist"><div class="s3-row"><span class="rb-t2">Seasons 1 & 2 · the records</span><span class="rb-sub">All ›</span></div>
+      <ol class="s3-tbl s3-h3">${line('Furthest', f, w => esc(w.furthest.n || ''))}${line('Highest average', a, w => (+w.bestAvg).toFixed(1))}${line('Closest to a 9-darter', n, w => w.closest9 + ' darts')}</ol></button>`;
+  }
+  function histSheet() {
+    const H = window.TOPS_HISTORY; let r = []; try { r = H.rows() || []; } catch (e) {}
+    const row = x => `<li class="${x.you ? 's3-you' : ''}"><span>${esc(x.you ? 'You' : x.name)}</span><span>${x.furthest && x.furthest.n ? esc(x.furthest.n) : 'No data'}</span><span>${x.bestAvg != null ? (+x.bestAvg).toFixed(1) : '–'}</span><span>${x.closest9 != null ? x.closest9 : '–'}</span></li>`;
+    sheet(`<span class="rb-kick">Seasons 1 & 2</span><span class="rb-t1">The records</span><span class="rb-sub">Kept from before the reset. Furthest level, best match average and fewest darts in a won 501 leg.</span>
+      <ol class="s3-tbl s3-h4"><li class="s3-thd"><span>Player</span><span>Furthest</span><span>Avg</span><span>Darts</span></li>${r.map(row).join('')}</ol>`, 'Done');
+  }
+
+  /* ---------- Money tab ---------- */
+  function moneyTab() {
+    const C = CI(), c = D.st(); if (!C || !c) return '';
+    const L = C.LEVELS[c.level], avg = L.events.reduce((s, e) => s + C.cost(e), 0) / L.events.length, run = c.bank / avg;
+    const hs = (c.history || []).slice().reverse().slice(0, 30);
+    const tin = hs.reduce((s, h) => s + (h.prize || 0), 0), tout = hs.reduce((s, h) => s + (h.cost || 0), 0);
+    const runTxt = run < 1 ? 'Not enough for a trip at this level' : `About ${Math.floor(run)} trip${Math.floor(run) === 1 ? '' : 's'} at this level`;
+    const rows = hs.map(h => `<li><span><b>${esc(h.n)}</b><small>Week ${h.week} · ${esc(C.FIN_NAME[h.fin])}</small></span><span class="s3-neg">−${money(h.cost)}</span><span class="s3-pos">${h.prize ? '+' + money(h.prize) : '$0'}</span></li>`).join('');
+    return `<div class="rb-card s3-bank"><span class="s3-lab">Tour budget</span><b class="s3-huge">${money(c.bank)}</b><span class="rb-sub">${runTxt} (avg trip ${money(avg)})</span>
+        <div class="rb-bar"><i style="width:${Math.min(100, run / 8 * 100)}%"></i></div>
+        ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
+      <div class="rb-card"><span class="rb-t2">Every dollar has a job</span><span class="rb-sub">Entry and travel are paid when you book. Prize money comes from how far you get. Moving up a level pays a one-off travel grant.</span></div>
+      <div class="rb-card"><div class="s3-row"><span class="rb-t2">In and out</span><span class="rb-sub">${hs.length ? `last ${hs.length}: <span class="s3-pos">+${money(tin)}</span> · <span class="s3-neg">−${money(tout)}</span>` : ''}</span></div>
+        ${rows ? `<ol class="s3-res s3-mon">${rows}</ol>` : `<span class="rb-sub">Nothing yet. Book an event on the Circuit tab.</span>`}</div>`;
+  }
+
+  /* ---------- overlays: round toast, event result, promotion moment, new best leg ---------- */
+  function sheet(html, ok, onOk, cls) {
+    const old = $id('s3Sheet'); if (old) old.remove();
+    const d = document.createElement('div'); d.id = 's3Sheet'; d.className = 's3-sheet ' + (cls || ''); d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    d.innerHTML = `<div class="s3-sbox">${html}<button class="rb-primary" type="button" id="s3Ok"><b>${esc(ok || 'OK')}</b></button></div>`;
+    (document.getElementById('rbApp') || document.body).appendChild(d);
+    const b = d.querySelector('#s3Ok'); b.onclick = () => { d.remove(); if (onOk) onOk(); }; try { b.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function toast(html) {
+    const old = $id('s3Toast'); if (old) old.remove();
+    const d = document.createElement('div'); d.id = 's3Toast'; d.className = 's3-toast'; d.setAttribute('role', 'status'); d.innerHTML = html;
+    (document.getElementById('rbApp') || document.body).appendChild(d); setTimeout(() => { if (d.isConnected) d.classList.add('s3-out'); }, 2600); setTimeout(() => d.remove(), 3100);
+  }
+  function announce(c) {
+    if ($id('s3Sheet')) return;
+    const p = pending(c); if (!p) return;
+    const C = CI();
+    if (p.kind === 'round') {
+      seenSet(p.now); const o = C.nextOpp(c); if (!o) return;
+      const nm = o.round === 'G' ? 'next group match' : C.FIN_NAME[o.round];
+      toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${o.avg}</span>`); return;
+    }
+    if (p.kind === 'done') {
+      const r = p.rec, won = r.fin === 'W', L = C.LEVELS[r.level];
+      const head = `<span class="rb-kick">${esc(r.n)}</span><span class="s3-fin ${won ? 's3-gold' : ''}">${won ? 'Winner' : esc(C.FIN_NAME[r.fin])}</span>
+        <div class="s3-kv"><div><b>${r.prize ? '+' + money(r.prize) : '$0'}</b><span>prize money</span></div><div><b>${r.pts ? '+' + r.pts : (L.oom || L.id === 'tt' ? 'OOM' : '0')}</b><span>${r.pts ? 'points' : 'ranking'}</span></div><div><b>${money(c.bank)}</b><span>tour budget</span></div></div>`;
+      const after = () => { seenSet(snap(c)); if (p.up) promo(c, p.up); else render(); };
+      seenSet(Object.assign({}, p.now, { lv: p.up ? p.up.from : p.now.lv }));   // the result is seen; the promotion (if any) still shows
+      sheet(head, p.up ? 'Next' : 'OK', after, won ? 's3-win' : '');
+      return;
+    }
+    if (p.kind === 'level') promo(c, p.up);
+  }
+  function promo(c, up) {
+    const C = CI(), to = C.LEVELS[up.to], down = up.to < up.from;
+    const g = (c.grants && c.grants[up.to] && !down) ? [0, 60, 450, 900, 850, 0, 3000][up.to] : 0;
+    const html = `<div class="s3-pmart" style="background:url(${lvArt(up.to)}) 50% 40%/cover no-repeat,${GRAD[up.to]}"></div>
+      <span class="rb-kick">${down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
+      <span class="rb-sub">${esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
+    sheet(html, 'See what\'s on', () => { seenSet(snap(c)); sub = 'week'; render(); }, 's3-promo');
+  }
+  // new best leg: Career fires window 'tops:bestleg' {detail:{darts, prev}}; kept on the device so it still shows after the reset reload
+  window.addEventListener('tops:bestleg', e => { try { lsSet('tops_s3_bl', JSON.stringify(e.detail || {})); } catch (x) {} });
+  function bestLeg() {
+    if ($id('s3Sheet')) return; let d = null; try { d = JSON.parse(lsGet('tops_s3_bl') || 'null'); } catch (e) {} if (!d || !d.darts) return;
+    sheet(`<span class="rb-kick">New best leg</span><span class="s3-fin s3-gold">${d.darts} darts</span><span class="rb-sub">${d.prev ? `Beats your ${d.prev}. ` : ''}Your best this season, on the Home table now.</span>`, 'Nice', () => { lsSet('tops_s3_bl', null); blAt = 0; render(); }, 's3-win');
+  }
+
+  /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
+  let shell = null;
+  function render() { if (shell) shell(); }
+  function wire() {
+    const app = $id('rbApp'); if (!app) return;
+    app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
+    app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }
+      if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
+    const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
+    app.querySelectorAll('[data-s3dev]').forEach(b => b.onclick = () => { D.devResult(b.dataset.s3dev === '1'); render(); });
+    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3;
+      if (k === 'mm') D.moneyMatch();
+      else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'hist') histSheet(); });
+    const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
+    setTimeout(() => { const c2 = D.st(); if (c2) announce(c2); bestLeg(); }, 0);
+  }
+  window.TOPS_S3UI = {
+    TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
+    owns: t => t === 'circuit' || t === 'money',
+    view: t => t === 'money' ? moneyTab() : circuit(),
+    wire, attach: fn => { shell = fn; },
+    _snap: snap, _seen: seenGet
+  };
+})();

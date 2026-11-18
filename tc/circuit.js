@@ -1,0 +1,191 @@
+/* TOPS Season 3 · The Circuit (career rework) · data + engine
+   Brief: claude/director/08-circuit-economy.md. Owner: Director (prototype), Career (wiring).
+   Pure functions over a plain state object, so it runs in the game, in the prototype page and in node tests.
+   Rules (Hayden): fields are static by level and event, never read from the player's average. The throw is untouched.
+   Ranking points come from your finish in each event only. Every dollar has a job: entry and travel are the main cost.
+   Career 19 Nov (Hayden 07:33/07:45): Season 3 is a full reset (everyone starts at the Pub, banks reset), so the Legacy
+   split from the prototype is removed. */
+(function (root) {
+  'use strict';
+
+  // Finish ladder, best first. 'G' is a group-stage exit (Opens only).
+  const FIN = ['W', 'F', 'SF', 'QF', 'L16', 'L32', 'L64', 'L128', 'G'];
+  const FIN_NAME = { W: 'Winner', F: 'Runner-up', SF: 'Semi-final', QF: 'Quarter-final', L16: 'Last 16', L32: 'Last 32', L64: 'Last 64', L128: 'Last 128', G: 'Group stage' };
+  // a knockout of N players: finishing round names from the first round to the final
+  const roundsFor = n => { const r = []; let k = n; while (k >= 2) { r.push(k === 2 ? 'F' : k === 4 ? 'SF' : k === 8 ? 'QF' : 'L' + k); k /= 2; } return r; };
+
+  // money and points ladders by finish, as share of the purse / of the event's points
+  const PURSE_SPLIT = { W: .28, F: .14, SF: .07, QF: .035, L16: .016, L32: .008, L64: .004, L128: .002, G: 0 };
+  const PTS_SPLIT = { W: 1, F: .6, SF: .36, QF: .2, L16: .1, L32: .05, L64: .02, L128: .01, G: .02 };
+  // only your best N results at a level count, so playing more events is not the same as playing well (ChatGPT review)
+  const BEST_N = { pub: 99, club: 6, opens: 5, dpnz: 6 };
+
+  // ---------------------------------------------------------------------------------------------
+  // The seven levels. avg = the static field average (today's TIERS). legs = best-of. need = threshold to move up.
+  // Each event: id, n (name), where, kind ('ko' | 'groupko' | 'league'), size (draw), entry, travel, purse, pts, every (weeks)
+  const LEVELS = [
+    { id: 'pub', n: 'Pub', s: 'Thursday nights at the Kauri Arms', avg: 52, legs: 3, need: 150, minEv: 1,
+      up: 'Reach 150 Kauri points, or win the Kauri Cup',
+      events: [
+        { id: 'pub_night', n: 'Kauri Arms league night', where: 'The Kauri Arms', kind: 'ko', size: 8, entry: 5, travel: 0, purse: 120, pts: 50, every: 1, field: -2 },
+        { id: 'kauri_cup', n: 'The Kauri Cup', where: 'The Kauri Arms', kind: 'ko', size: 16, entry: 10, travel: 0, purse: 600, pts: 150, every: 4, jump: true, field: 2 }
+      ] },
+    { id: 'club', n: 'Club', s: 'RSA club nights, interclub and the association Open', avg: 65, legs: 3, need: 150, minEv: 2,
+      up: 'Reach 150 association points (your best 6 nights count) to be named in the rep squad',
+      events: [
+        { id: 'club_night', n: 'RSA club night', where: 'Henderson RSA', kind: 'ko', size: 8, entry: 20, travel: 10, purse: 700, pts: 80, every: 1, field: -3 },
+        { id: 'interclub', n: 'Interclub · Auckland association', where: 'Rotating clubs', kind: 'ko', size: 16, entry: 15, travel: 20, purse: 1200, pts: 120, every: 2, field: 0 },
+        { id: 'assoc_open', n: 'Waitākere Open', where: 'Henderson RSA', kind: 'ko', size: 32, entry: 30, travel: 10, purse: 3000, pts: 260, every: 4, jump: true, field: 3 }
+      ] },
+    { id: 'opens', n: 'Regional Opens', s: 'NZDC-ranked weekend Opens around the North Island', avg: 75, legs: 5, need: 260, minEv: 2,
+      up: 'Reach 260 NZ Opens points (your best 5 Opens count) for a DPNZ Tour place',
+      events: [
+        { id: 'northland', n: 'Northland Open', where: 'Whangārei', kind: 'groupko', size: 32, entry: 30, travel: 90, purse: 2600, pts: 260, every: 3, field: -3 },
+        { id: 'waikato', n: 'Waikato Open', where: 'Hamilton', kind: 'groupko', size: 32, entry: 30, travel: 70, purse: 3200, pts: 340, every: 3, field: 0 },
+        { id: 'bop', n: 'Bay of Plenty Open', where: 'Tauranga', kind: 'groupko', size: 32, entry: 30, travel: 110, purse: 2600, pts: 260, every: 3, field: -3 },
+        { id: 'manawatu', n: 'Manawatū Open', where: 'Palmerston North', kind: 'groupko', size: 32, entry: 40, travel: 180, purse: 4000, pts: 420, every: 3, field: 3 },
+        { id: 'hb', n: 'Hawke’s Bay Open', where: 'Napier', kind: 'groupko', size: 32, entry: 30, travel: 160, purse: 3600, pts: 360, every: 3, field: 1 },
+        { id: 'akl_open', n: 'Auckland Open', where: 'Auckland', kind: 'groupko', size: 64, entry: 40, travel: 40, purse: 6000, pts: 420, every: 6, jump: true, field: 4 }
+      ] },
+    { id: 'dpnz', n: 'DPNZ Tour', s: 'Six weekends, two events each. #1 on the Order of Merit goes to the Palace', avg: 85, legs: 5, need: 900, minEv: 2, oom: true,
+      up: 'NZ route: finish #1 on the DPNZ Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
+      events: [
+        { id: 'dpnz_wlg', n: 'DPNZ Tour · Wellington', where: 'Wellington', kind: 'ko', size: 32, entry: 60, travel: 380, purse: 8000, pts: 400, every: 1, field: 1 },
+        { id: 'dpnz_ham', n: 'DPNZ Tour · Hamilton', where: 'Hamilton', kind: 'ko', size: 32, entry: 60, travel: 150, purse: 8000, pts: 400, every: 1 },
+        { id: 'dpnz_akl', n: 'DPNZ Tour · Auckland', where: 'Auckland', kind: 'ko', size: 32, entry: 60, travel: 120, purse: 8000, pts: 400, every: 1, field: 2 },
+        { id: 'dpnz_rot', n: 'DPNZ Tour · Rotorua', where: 'Rotorua', kind: 'ko', size: 32, entry: 60, travel: 220, purse: 8000, pts: 400, every: 1 },
+        { id: 'dpnz_chc', n: 'DPNZ Tour · Christchurch', where: 'Christchurch', kind: 'ko', size: 32, entry: 60, travel: 420, purse: 8000, pts: 400, every: 1 },
+        { id: 'dpnz_dun', n: 'DPNZ Tour · Dunedin', where: 'Dunedin', kind: 'ko', size: 32, entry: 60, travel: 450, purse: 8000, pts: 400, every: 1 }
+      ] },
+    { id: 'tt', n: 'Trans-Tasman', s: 'One Brisbane weekend: top 8 NZ v top 8 AUS', avg: 88, legs: 7, need: 0, minEv: 1,
+      up: 'Reach the final for the Palace (both finalists go). Semi-finalists earn a funded Q-School place (optional)',
+      events: [
+        { id: 'tt_bne', n: 'Trans-Tasman Championship', where: 'Brisbane', kind: 'ko', size: 16, entry: 150, travel: 700, purse: 40000, pts: 0, every: 1 }
+      ] },
+    { id: 'card', n: 'Tour Card', s: 'Optional: Q-School, then the Pro Tour from a UK base', avg: 95, legs: 7, need: 0, minEv: 4, oom: true,
+      up: 'Finish in the top 32 of the Pro Tour Order of Merit for a seeded Palace place',
+      events: [
+        { id: 'qschool', n: 'Q-School', where: 'Leicester', kind: 'ko', size: 128, entry: 1100, travel: 2600, purse: 0, pts: 0, every: 52, once: true, card: true },
+        { id: 'pc_wigan', n: 'Players Championship · Wigan', where: 'Wigan', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
+        { id: 'pc_mk', n: 'Players Championship · Milton Keynes', where: 'Milton Keynes', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
+        { id: 'pc_hild', n: 'Players Championship · Hildesheim', where: 'Hildesheim', kind: 'ko', size: 64, entry: 120, travel: 900, purse: 40000, pts: 0, every: 2, needCard: true }
+      ] },
+    { id: 'palace', n: 'The Palace', s: 'The World Championship: seven rounds, lose once and it’s over', avg: 101, legs: 9, need: 0, minEv: 1,
+      up: 'Win it for Champion’s Year',
+      events: [
+        { id: 'worlds', n: 'World Championship', where: 'The Palace · London', kind: 'ko', size: 128, entry: 0, travel: 3000, purse: 300000, pts: 0, every: 52 }
+      ] }
+  ];
+  // Pro Tour and Trans-Tasman pay prize money into the Order of Merit (two-year, real PDC style), not points
+  const OOM_BY_MONEY = { card: true, tt: true };
+
+  // ---------------------------------------------------------------------------------------------
+  // field strength by round: early rounds sit below the level average, the final above it (static, by round only)
+  function oppAvg(level, round, rounds, field) {
+    const L = LEVELS[level], k = rounds <= 1 ? 1 : round / (rounds - 1); // 0..1
+    return Math.round(L.avg + (field || 0) - 6 + 12 * k);
+  }
+  const eventOf = id => { for (let i = 0; i < LEVELS.length; i++) { const e = LEVELS[i].events.find(x => x.id === id); if (e) return Object.assign({ level: i }, e); } return null; };
+  const cost = e => e.entry + e.travel;
+  const shareTotal = size => { let t = 0; ['W', 'F', 'SF', 'QF', 'L16', 'L32', 'L64', 'L128'].forEach((f, i) => { const cnt = i === 0 ? 1 : Math.pow(2, i - 1); if (Math.pow(2, i) <= size) t += PURSE_SPLIT[f] * cnt; }); return t; };
+  const prizeFor = (e, fin) => { const sz = e.kind === 'groupko' ? e.size / 2 : e.size; return Math.round(e.purse * (PURSE_SPLIT[fin] || 0) / Math.max(1, shareTotal(sz)) / 5) * 5; };
+  const pointsFor = (e, fin) => Math.round(e.pts * (PTS_SPLIT[fin] || 0));
+
+  // ---------------------------------------------------------------------------------------------
+  // career state: { level, week, bank, pts:{levelId:n}, oom:{}, card:false, history:[], booked:null, live:null }
+  function newCareer(o) {
+    return Object.assign({ level: 0, week: 1, bank: 60, pts: {}, oom: {}, card: false, history: [], booked: null, live: null, seen: {} }, o || {});
+  }
+  // what's on this week at your level (and the next level's events you've been invited to)
+  function calendar(c) {
+    const L = LEVELS[c.level];
+    return L.events.filter(e => (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1))
+      && !(e.once && c.history.some(h => h.id === e.id)) && !(e.needCard && !c.card) && !(e.card && c.card))
+      .map(e => Object.assign({ level: c.level, cost: cost(e), canAfford: c.bank >= cost(e) }, e));
+  }
+  // book an event: pay entry + travel up front
+  function book(c, id) {
+    const e = eventOf(id); if (!e) throw new Error('no event ' + id);
+    if (c.bank < cost(e)) return { ok: false, why: 'Not enough in the tour budget' };
+    c.bank -= cost(e); c.booked = id;
+    const rounds = e.kind === 'groupko' ? ['G'].concat(roundsFor(e.size / 2)) : roundsFor(e.size);
+    c.live = { id, round: 0, rounds, lost: false, results: [] };
+    return { ok: true, live: c.live };
+  }
+  // the next opponent for the live event: static by level and round
+  function nextOpp(c) {
+    const lv = c.live; if (!lv) return null; const e = eventOf(lv.id);
+    return { round: lv.rounds[lv.round], avg: oppAvg(e.level, lv.round, lv.rounds.length, e.field), legs: LEVELS[e.level].legs };
+  }
+  // report a match result for the live event. A group stage needs 2 wins from 3.
+  function result(c, won) {
+    const lv = c.live; if (!lv) return null;
+    const r = lv.rounds[lv.round];
+    if (r === 'G') {
+      lv.g = lv.g || { w: 0, p: 0 }; lv.g.p++; if (won) lv.g.w++; lv.results.push({ r, won });
+      if (lv.g.w >= 2) { lv.round++; return { next: true }; }
+      if (lv.g.p - lv.g.w >= 2) return finish(c, 'G');
+      return { next: true, group: lv.g };
+    }
+    lv.results.push({ r, won });
+    if (!won) return finish(c, r);
+    if (r === 'F') return finish(c, 'W');
+    lv.round++; return { next: true };
+  }
+  // the event is over: pay prize money, award points, move the week on, check promotion
+  function finish(c, fin) {
+    const lv = c.live, e = eventOf(lv.id), L = LEVELS[e.level];
+    const prize = prizeFor(e, fin), pts = pointsFor(e, fin);
+    c.bank += prize; repay(c, prize);
+    c.res = c.res || {}; (c.res[L.id] = c.res[L.id] || []).push(pts);
+    c.pts[L.id] = c.res[L.id].slice().sort((a, b) => b - a).slice(0, BEST_N[L.id] || 99).reduce((s, x) => s + x, 0);
+    if (OOM_BY_MONEY[L.id]) c.oom[L.id] = (c.oom[L.id] || 0) + prize;
+    if (e.card && (fin === 'W' || fin === 'F' || fin === 'SF')) c.card = true;
+    const rec = { week: c.week, id: e.id, n: e.n, level: e.level, fin, prize, pts, cost: cost(e) };
+    c.history.push(rec); c.live = null; c.booked = null; c.week++;
+    const up = checkUp(c, e, fin);
+    return Object.assign({ done: true, fin, finName: FIN_NAME[fin], prize, pts }, up ? { up } : {});
+  }
+  // how you move up: a points threshold (with a minimum number of events), or a jump event won, or a route to the Palace
+  function checkUp(c, e, fin) {
+    const L = LEVELS[c.level], played = c.history.filter(h => h.level === c.level).length;
+    if (L.id === 'tt') { if (fin === 'W' || fin === 'F') return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : 'Trans-Tasman finalist') + ': you’re going to the Palace'); if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
+    if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace'); return null; }
+    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1; if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
+      if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
+      if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
+      newDpnzSeason(c); return { to: 3, n: 'DPNZ Tour', msg: 'Finished #' + r + '. A new DPNZ season: 40% of your points roll over' }; }
+    if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;
+    if (played >= L.minEv && ((c.pts[L.id] || 0) >= L.need || (e.jump && fin === 'W'))) return promote(c, c.level + 1, 'Up to ' + LEVELS[c.level + 1].n);
+    return null;
+  }
+  const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
+  const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
+  function newDpnzSeason(c) { c.dpnzEv = 0; const carry = Math.round((c.pts.dpnz || 0) * .4); c.res = c.res || {}; c.res.dpnz = carry ? [carry] : []; c.pts.dpnz = carry; c.dpnzYear = (c.dpnzYear || 0) + 1; }
+  const GRANT = [0, 60, 450, 900, 850, 0, 3000]; // paid when you arrive at a level: rep-squad fund, DPNZ travel subsidy, NZ team flights, Palace travel
+  function promote(c, to, msg) { c.grants = c.grants || {}; const g = to > c.level && !c.grants[to] ? GRANT[to] : 0; if (g) c.grants[to] = 1; c.level = to; c.bank += g; return { to, n: LEVELS[to].n, msg, grant: g }; }
+  // hardship advance: two entries at your level, paid back from half of each prize until cleared (once at a time)
+  function advance(c) { if (c.debt) return { ok: false, why: 'Pay back the last advance first' }; const L = LEVELS[c.level], ch = L.events.map(cost).sort((a, b) => a - b)[0]; const amt = ch * 2; c.bank += amt; c.debt = amt; return { ok: true, amt }; }
+  function repay(c, prize) { if (!c.debt || !prize) return; const p = Math.min(c.debt, Math.round(prize / 2)); c.debt -= p; c.bank -= p; }
+
+  // DPNZ Order of Merit: 12 named rivals play every event of the season with fixed ratings (seeded, never reads the player)
+  const DPNZ_RIVALS = [['Ben Robb', 88], ['Haupai Puha', 86], ['Kayden Milne', 84], ['Jonny Tata', 82], ['Hone Rata', 80], ['Blair Simmons', 79], ['Pita Lelei', 78], ['Scott Mabey', 77], ['Rangi Meihana', 76], ['Josh Teddy', 75], ['Cody Harwood', 74], ['Kane Lister', 73]];
+  const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+  function rivalFinish(name, a, key) { // walk a 32 draw round by round against the static field
+    const rounds = roundsFor(32); for (let r = 0; r < rounds.length; r++) { const opp = oppAvg(3, r, rounds.length); const p = 1 / (1 + Math.pow(10, (opp - a) / 12)); if (hash(name + key + r) > p) return rounds[r]; } return 'W'; }
+  function dpnzTable(c) {
+    const yr = c.dpnzYear || 0, ev = c.dpnzEv || 0, E = { pts: 400 };
+    const rows = DPNZ_RIVALS.map(([n, a]) => { const res = []; for (let k = 0; k < ev; k++) res.push(pointsFor(E, rivalFinish(n, a, 'y' + yr + 'e' + k)));
+      let carry = 0; if (yr) { const prev = []; for (let k = 0; k < DPNZ_SEASON; k++) prev.push(pointsFor(E, rivalFinish(n, a, 'y' + (yr - 1) + 'e' + k))); carry = Math.round(prev.sort((x, y) => y - x).slice(0, BEST_N.dpnz).reduce((s, x) => s + x, 0) * .4); }
+      return { n, pts: carry + res.sort((x, y) => y - x).slice(0, BEST_N.dpnz).reduce((s, x) => s + x, 0) }; });
+    rows.push({ n: 'You', you: true, pts: c.pts.dpnz || 0 });
+    return rows.sort((a, b) => b.pts - a.pts);
+  }
+  const dpnzRank = c => dpnzTable(c).findIndex(r => r.you) + 1;
+
+  // broke: the way back is money matches and hardship entry (today's systems), so the career never dead-ends
+  const broke = c => calendar(c).every(e => !e.canAfford);
+
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance };
+  if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
+})(this);

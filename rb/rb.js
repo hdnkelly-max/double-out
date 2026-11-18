@@ -54,10 +54,12 @@
     return { c, v, t, sn, n, rows, yi, need, pct: v.xp / need, form, bank: c.bank, name: save.name || 'You' };
   }
   /* ---------- shell ---------- */
-  const TABS = [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
+  const S3 = window.TOPS_S3UI || null;   /* EXP-S3C: with Season 3 on, Circuit and Money replace Tonight and Season (Hayden 07:45) */
+  const TABS = S3 ? S3.TABS : [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
-  const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1 };   // until each new screen lands, the tab opens the old one
-  let tab = 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
+  const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1, circuit: 1, money: 1 };
+  if (S3) S3.attach(() => { try { render(); } catch (e) { console.warn('s3 render', e); } });   // until each new screen lands, the tab opens the old one
+  let tab = S3 ? 'circuit' : 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
     el = document.createElement('div'); el.id = 'rbApp'; el.hidden = true;
@@ -70,7 +72,7 @@
       d.onclick = e => { const k = e.target.dataset && e.target.dataset.m; if (!k) return; d.remove(); if (k === 'title') { close(); try { if (window.TOPS_USERNAV) TOPS_USERNAV(showTitle); else showTitle(); } catch (x) {} }   /* BUG-MENU: the player's own Main menu, not the boot's */ else if (k === 'look') { close(); const b = $id('btnLook'); if (b) b.click(); } }; };
     return el;
   }
-  function open(t) { if (resOn) return; const el = ensure(); tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
+  function open(t) { if (resOn) return; const el = ensure(); if (S3 && (t === 'tonight' || t === 'season')) t = 'circuit'; tab = t || tab; el.hidden = false; $id('rbBack').hidden = true; render(); }
   function close() { clearInterval(armT); const el = $id('rbApp'); if (el) el.hidden = true; }
   /* live bug (05:45): Setup & gear showed an empty old Store (no dart, no list): switching the hub tab alone doesn't draw it. Press the game's own
      hub tab button, which switches and draws (Store → showShop, Player → showPlayer, Practice → renderPractice); Setup & gear lands on the Setup tab */
@@ -82,8 +84,8 @@
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
     qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
-    let html = ''; try { html = tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tab === 'practice' ? practice(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
-    $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M);
+    let html = ''; try { html = S3 && S3.owns(tab) ? S3.view(tab) : tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tab === 'practice' ? practice(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
+    $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M); if (S3) { try { S3.wire(); } catch (e) { console.warn('s3 wire', e); } }
   }
   /* ---------- Tonight (live data) ---------- */
   function tonight(M) {
