@@ -103,6 +103,28 @@ const holdCase=async()=>{const tag='iphone reward pending';const {p,ctx,st}=awai
  await p.evaluate(()=>{C3.pending=window.__pd;});for(let i=0;i<40&&st.loads===l0;i++)await p.waitForTimeout(250);if(st.loads===l0)F(tag,'no reset after the reward card was done '+JSON.stringify(await diag(p)));else await afterReload(p,tag);out.push({tag,held:adv});await ctx.close();};
 const staleCase=async()=>{const tag='iphone stale flag';const {p,ctx,st}=await page('iphone');await fresh(p);await p.evaluate(()=>{sessionStorage.setItem('tops_reset_go',JSON.stringify({t:Date.now()-600000,sv:1}));});await p.reload();await ready(p);await p.waitForTimeout(3000);
  const r=await p.evaluate(()=>({resetting:!!window.TOPS_RESETTING,flag:sessionStorage.getItem('tops_reset_go')}));out.push({tag,r});if(r.resetting)F(tag,'a stale flag forced the reset path');if(r.flag)F(tag,'stale flag not cleared');await ctx.close();};
+/* ENG-RESET-ALL (Overseer 18:55): a match started WITHOUT passing the hub also gets a fresh page, and the same match starts on it.
+   career win -> while the result chain is still up, Practice (as from the message screen) -> reload -> practice live on the new page;
+   quit it -> straight into a Drill -> reload -> drill live; quit -> an exhibition invite -> reload -> exhibition live. Each new page: state
+   identical (the same digest as the reset cases), the flag gone, and the started match is the one asked for. */
+const startCase=async(prof)=>{const touch=prof!=='desktop';const tag=prof+' start gate';const {p,ctx,st}=await page(prof);await fresh(p);
+ const a=await toAim(p,touch);if(a!=='aim'){F(tag,'aim: '+a);await ctx.close();return;}const w=await win(p);if(w!=='done'){F(tag,'match: '+w);await ctx.close();return;}
+ for(let i=0;i<40;i++){if(await p.evaluate(()=>!(typeof S!=='undefined'&&S&&!S.done)&&!(window.C3&&C3.pending&&C3.pending())).catch(()=>false))break;await p.waitForTimeout(250);}
+ const step=async(label,startJs,check)=>{const l0=st.loads;const t0=Date.now();await p.evaluate(startJs).catch(()=>{});for(let i=0;i<120&&st.loads===l0;i++)await p.waitForTimeout(250);
+  if(st.loads===l0){F(tag,label+': no fresh start '+JSON.stringify(await diag(p)));return false;}await ready(p);
+  let x=null;for(let i=0;i<120;i++){x=await p.evaluate(check).catch(()=>null);if(x&&x.ok)break;await p.waitForTimeout(250);}
+  const r=await p.evaluate(()=>({last:TOPS_RESET.last,flag:sessionStorage.getItem('tops_reset_go'),snap:JSON.parse(sessionStorage.getItem('__snap')||'null'),dig:__dig()})).catch(()=>({}));
+  out.push({tag,step:label,secs:Math.round((Date.now()-t0)/1000),started:x,last:r.last});if(!x||!x.ok)F(tag,label+': the asked-for match did not start on the new page '+JSON.stringify(x));if(r.flag)F(tag,label+': flag left');
+  if(r.snap&&r.snap.dig&&JSON.stringify(r.snap.dig)!==JSON.stringify(r.dig))F(tag,label+': state changed across the reload');return true;};
+ const cur=()=>({ok:typeof S!=='undefined'&&!!S&&!S.done,practice:!!(S&&S.practice),opp:S&&S.p&&S.p[1]&&S.p[1].name,exh:!!(S&&S.tcExh)});
+ if(!(await step('career result -> Practice',()=>{playPractice();},()=>{const c={ok:typeof S!=='undefined'&&!!S&&!S.done&&!!S.practice,practice:!!(S&&S.practice),opp:S&&S.p&&S.p[1]&&S.p[1].name};return c;}))){await ctx.close();return;}
+ await quit(p,touch);
+ const did=await p.evaluate(()=>{const d=(typeof DRILLS!=='undefined'?DRILLS:[]).find(d=>!d.soon);return d&&d.id;});
+ if(did)await step('practice -> Drill '+did,id=>{startDrill(id);},()=>({ok:typeof S!=='undefined'&&!!S&&!S.done&&S.p&&S.p[1]&&S.p[1].name==='Drill',opp:S&&S.p&&S.p[1]&&S.p[1].name}));else F(tag,'no drill to start');
+ await quit(p,touch);
+ await step('drill -> exhibition invite',()=>{const c=career();beginMatch({mode:'career',tier:c.tier,p0:save.name||'You',oppName:'Exhibition Test',oppAvg:60,legs:3,purse:0,local:true,tcExh:'test-exh'});},()=>({ok:typeof S!=='undefined'&&!!S&&!S.done&&S.p&&S.p[1]&&S.p[1].name==='Exhibition Test',opp:S&&S.p&&S.p[1]&&S.p[1].name}));
+ if(st.pe.length)F(tag,'page errors: '+st.pe.slice(0,3).join(' | '));await ctx.close();};
+if(!ONLY||ONLY.includes('start'))await startCase('iphone');if(ONLY&&ONLY.includes('start-android'))await startCase('android');
 if(!ONLY||ONLY.includes('hold'))await holdCase();if(!ONLY||ONLY.includes('stale'))await staleCase();
 for(const m of ['ok','refused','slow','otherok','off'])if(!ONLY||ONLY.includes('signed')||ONLY.split(' ').includes(m))await signedCase(m);
 await b.close();srv.close();console.log(JSON.stringify({fails}));console.log(fails.length?'RESET FAIL':'RESET PASS');process.exit(fails.length?1:0);})();
