@@ -72,6 +72,10 @@ RS.go=go;
    head); it lifts only when the screen the boot lands on is up, two frames after, so the old title / splash never paint ---- */
 const lift=()=>{const d=document.documentElement;window.TOPS_LDHOLD=false;window.TOPS_BOOTHOLD=false;const go=()=>{/* the page's own pre-paint hold (Experience's TOPS_PRE, released once the new look is installed) is left to its owner */if(!window.TOPS_PRE)d.classList.remove('tops-pre');/* the game's own way out (#loading.gone): the loader fills its bar and fades on that (Experience's observer) */try{const l=ld();if(l)l.classList.add('gone');}catch(e){}};
  try{requestAnimationFrame(()=>requestAnimationFrame(go));setTimeout(()=>{if(d.classList.contains('tops-pre'))go();},300);/* hidden tab: no frames */}catch(e){go();}};
+/* ENG-CHARCACHE: ask for the player's and the next opponent's character files now and after every match, so the next match builds the
+   real figures (BUG-AVATAR: the default player; BUG-BEARD: a figure rebuilt around a late file) */
+const preload=()=>{try{if(!window.TOPS_PRELOAD)return;const L=[];try{L.push([save.look||null,save.name||'You']);}catch(e){}try{const c=career();const n=c&&(c.next||(window.nextOpponent&&nextOpponent()));if(n&&n.oppName){let lk=null;try{lk=window.oppLookFor?oppLookFor(n):(window.lookFor?lookFor(n.oppName):null);}catch(e){}L.push([lk,n.oppName]);}}catch(e){}TOPS_PRELOAD(L);}catch(e){}};
+setTimeout(preload,0);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(preload,500);});
 /* ---- the fresh page: straight to the hub ---- */
 let flag=null;try{flag=JSON.parse(sessionStorage.getItem(FK)||'null');sessionStorage.removeItem(FK);}catch(e){flag=null;}
 if(flag&&Date.now()-flag.t<120000){
