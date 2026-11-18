@@ -59,7 +59,10 @@ fs.writeFileSync('double-out.html','<meta charset="utf-8">\n'+finish(page0,'<scr
 const crypto=require('crypto');const glb=Buffer.from(fs.readFileSync('remy.b64.txt','utf8').trim(),'base64');const sha=crypto.createHash('sha256').update(glb).digest('hex').slice(0,8);
 fs.mkdirSync('rig',{recursive:true});   /* older remy-*.glb are never deleted here (ChatGPT P1): a page still cached on a phone may name one; release keeps them on the site too */
 const RIGF=`rig/remy-${sha}.glb`;fs.writeFileSync(RIGF,glb);
-const rig=`<script>window.RIG_URL="${RIGF}";window.RIG_BYTES=${glb.length}</script>\n`;
+/* S3 images (Delivery QA 09:12): a repainted plate keeps its file name, and phones kept the old one (Cache Storage + HTTP cache, both by URL).
+   The shipped page carries an 8-char content hash per s3/ file; TOPS_S3IMG asks for <file>?v=<hash>, so new art = a new URL on every phone. */
+const S3V={};(function walk(d){if(!fs.existsSync(d))return;for(const n of fs.readdirSync(d)){const f=d+'/'+n;const st=fs.statSync(f);if(st.isDirectory())walk(f);else if(/\.(webp|png|jpe?g)$/i.test(n))S3V[f]=crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').slice(0,8);}})('s3');
+const rig=`<script>window.RIG_URL="${RIGF}";window.RIG_BYTES=${glb.length}</script>\n<script>window.TOPS_S3V=${JSON.stringify(S3V)}</script>\n`;
 const ship=finish(page0,rig);
 // build guards: no inline model left in the page, the model file it names exists with that size, version.json matches the page
 if(/data:model\/gltf-binary|RIG_P\b/.test(ship))throw new Error('build: the shipped page still inlines the player model');

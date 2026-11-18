@@ -887,7 +887,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   sitOn(tag(mesh(cg([[B.neck*1.74,.418],[B.neck*1.79,.41]],.5,Math.PI*2-1.0),M(L.trim||0xf2f2f2,{side:T.DoubleSide}),chest),'fold'),tor,.006).scale.z=1.04;
   const pz=cz+(B.pecs?.035:0)+(B.belly?.01:0);
   {const sz=y=>Math.max(...[-.008,0,.008].map(k=>Math.max(surfR(tor,y+k,.02,1),surfR(tor,y+k,-.02,1))))||pz*.9;const pl=tag(mesh(new T.BoxGeometry(.045,.12,.004,1,6,1),M(new T.Color(L.shirt).multiplyScalar(.86).getHex()),chest,0,.35,0),'placket');sitOn(pl,tor,.0032);[.38,.33].forEach(y=>tag(mesh(new T.CylinderGeometry(.007,.007,.004,8),trim,chest,0,y,sz(y)+.0065),'placket').rotation.x=Math.PI/2);}
-  const prM=new T.MeshStandardMaterial({map:s3chestText(),transparent:true,roughness:.9});
+  const prM=new T.MeshStandardMaterial({map:s3chestText(),transparent:true,roughness:.9});prM.userData.s3v=true;/* the TOPS print is part of the Vinyl kit */
   const pr=new T.Mesh(new T.PlaneGeometry(.16,.08,12,4),prM);{const r=surfR(tor,.255,Math.sin(.28),Math.cos(.28));pr.position.set(Math.sin(.28)*(r-.01),.255,Math.cos(.28)*(r-.01));}pr.rotation.y=.28;chest.add(pr);sitOn(tag(pr,'placket'),tor,.0025);
   const back=new T.Mesh(new T.PlaneGeometry(.26,.13,16,6),prM);back.position.set(0,.22,-(surfR(tor,.22,0,-1)||cz)-.004);back.rotation.y=Math.PI;chest.add(back);back.position.z+=.012;sitOn(tag(back,'placket'),tor,.0025);
   const neck=pivot(chest,0,.41,0);const nkm=tag(mesh(cyl(B.neck*1.05,B.neck*1.25,.17,12),skin,neck,0,.05,0),'neck');nkm.rotation.x=.07;
@@ -1469,7 +1469,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     hidden while a plate is up; the board, its surround, the figures, darts and lights stay. Walk-on plate for every view except the
     opponent-throw view, which gets the oche plate. Plates come through Cache Storage like the character files. Only with TOPS_S3FLAG (Career's single S3 flag). */
  const S3P=['pub','club','opens','dpnz','tt','tc','palace'];const S3TEX={},S3WANT={};let s3Back=null,s3Tier=-1;
- window.TOPS_S3IMG=(url)=>new Promise((res,rej)=>{const abs=new URL(url,location.href).href;const toURL=b=>URL.createObjectURL(new Blob([b],{type:/\.png$/i.test(abs)?'image/png':/\.jpe?g$/i.test(abs)?'image/jpeg':'image/webp'}));
+ window.TOPS_S3IMG=(url)=>new Promise((res,rej)=>{{const k=String(url).replace(/^\.?\//,'').split('?')[0],h=(window.TOPS_S3V||{})[k];if(h&&!/[?&]v=/.test(url))url+=(String(url).includes('?')?'&':'?')+'v='+h;}/* content hash per file (build.js): repainted art = a new URL */const abs=new URL(url,location.href).href;const toURL=b=>URL.createObjectURL(new Blob([b],{type:/\.png$/i.test(abs)?'image/png':/\.jpe?g$/i.test(abs)?'image/jpeg':'image/webp'}));
   const net=()=>fetch(abs).then(r=>{if(!r.ok)throw new Error(url+' '+r.status);return r.arrayBuffer();});
   const go=window.caches&&caches.open?caches.open(ACN).then(c=>c.match(abs).then(h=>h?h.arrayBuffer():null).catch(()=>null).then(b=>b&&b.byteLength>200?b:net().then(b=>{try{c.put(abs,new Response(b.slice(0))).catch(()=>{});}catch(e){}return b;}))).catch(()=>net()):net();
   go.then(b=>res(toURL(b)),rej);});
@@ -1803,7 +1803,7 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
  const lkEase=k=>k<=0?0:k>=1?1:k*k*(3-2*k);
  function lkPushK(now){if(!lkPushS)return 0;const t=now-lkPushS.t0;if(t>=350){lkPushS=null;return 0;}return t<140?lkEase(t/140):1-lkEase((t-140)/210);}
  function lkReactK(now){if(!lkReactS)return 0;const t=now-lkReactS.t0,d=lkReactS.dur;if(t>=d){lkReactS=null;return 0;}return t<120?lkEase(t/120):t>d-160?1-lkEase((t-(d-160))/160):1;}
- const lkFace={hx:0,hy:1.62,tz:OCHE_Z,set:false};
+ const lkFace={hx:0,hy:1.62,tz:OCHE_Z,set:false};let s3hfK=1;
  // lighting pass: one warm key on the board from above-left, venue ~1.5 stops under the thrower, rim on the thrower, restrained distance fade
  function lkRelight(t){const phone=lkPhone();let key=null,pool=null;lights.children.forEach(L=>{if(L.isSpotLight&&(L.userData.boardKey||L.target===board))key=L;else if(L.isSpotLight&&!pool)pool=L;});
   if(key){key.position.set(-.95,3.05,BOARD_Z+1.55);key.color.set(0xffe4c4);key.angle=.46;key.penumbra=.65;key.decay=1;key.intensity=Math.max(key.intensity,1.6);key.castShadow=!phone;}
@@ -1860,9 +1860,9 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
    if(pk>0&&lkPushS){const w=mmToWorld(lkPushS.x,lkPushS.y);cx+=(w.x-cx)*.074*pk;cy+=(w.y-cy)*.074*pk;bfov=bfov/(1+.08*pk);}
    let dkc=null;try{dkc=window.TOPS_DRUNKCAM?TOPS_DRUNKCAM(now):null;}catch(e){}if(dkc){cx+=dkc.x;cy+=dkc.y;bfov*=dkc.f;}boardCam.position.set(cx,cy,BOARD_Z+dist);boardCam.lookAt(cx,cy,BOARD_Z);if(dkc)boardCam.rotateZ(dkc.r);boardCam.fov=bfov;
    // player pane: stable three-quarter thrower; the head target is frozen while pulling/throwing so the shot never moves during a pull
-   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;}
+   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;/* S3: the toy head is bigger and its centre sits higher than the head bone: frame its box (offset + scale measured once per figure) */if(thrower.userData.s3fig){const q=thrower.userData.s3hf||(thrower.userData.s3hf=(()=>{const F=s3HeadFrame(thrower,hw.y+.1);return {dy:F.c-hw.y-.1,f:Math.pow(F.f,.75)};})());hy+=q.dy;s3hfK=q.f;}else s3hfK=1;}else s3hfK=1;
    const tz=(thrower&&thrower.position)?thrower.position.z:OCHE_Z;const locked=state.pulling||state.anim||state.flyingOwn;if(!lkFace.set||state.cur!==lkFace.cur){Object.assign(lkFace,{hx,hy,tz,set:true,cur:state.cur});}else if(!locked){lkFace.hx+=(hx-lkFace.hx)*.08;lkFace.hy+=(hy-lkFace.hy)*.08;lkFace.tz+=(tz-lkFace.tz)*.08;}
-   const rk=lkReactK(now);const fx=lkFace.hx,fy=lkFace.hy,fz=lkFace.tz;{const an=(window.TOPS_CAMANG!=null?window.TOPS_CAMANG:0)*Math.PI/180,D=2.3;faceCam.position.set(fx-D*Math.cos(an),fy+(vert?.1:.02)+.04*rk,fz+.1-D*Math.sin(an));}faceCam.lookAt(fx+.1,fy+(vert?.03:-.22)+(vert?.04:.16)*rk,fz+.02);faceCam.fov=(vert?21:30)*(1-.2*rk);if(window.GFX_FACECAM){const c=window.GFX_FACECAM;faceCam.position.set(...c.pos);faceCam.lookAt(...c.look);faceCam.fov=c.fov||50;}
+   const rk=lkReactK(now);const fx=lkFace.hx,fy=lkFace.hy,fz=lkFace.tz;{const an=(window.TOPS_CAMANG!=null?window.TOPS_CAMANG:0)*Math.PI/180,D=2.3*s3hfK;faceCam.position.set(fx-D*Math.cos(an),fy+(vert?.1:.02)+.04*rk,fz+.1-D*Math.sin(an));}faceCam.lookAt(fx+.1,fy+(vert?.03:-.22)+(vert?.04:.16)*rk,fz+.02);faceCam.fov=(vert?21:30)*(1-.2*rk);if(window.GFX_FACECAM){const c=window.GFX_FACECAM;faceCam.position.set(...c.pos);faceCam.lookAt(...c.look);faceCam.fov=c.fov||50;}
    renderer.setScissorTest(false);renderer.setViewport(0,0,W,Hh);renderer.clear();renderer.setScissorTest(true);renderer.autoClear=true;
    renderer.setViewport(BP.x,Hh-(BP.y+BP.h),BP.w,BP.h);renderer.setScissor(BP.x,Hh-(BP.y+BP.h),BP.w,BP.h);
    boardCam.aspect=BP.w/BP.h;boardCam.updateProjectionMatrix();if(fpFig)fpFig.visible=false;const hid=_fHid;hid.length=0;for(let i=0;i<flights.length;i++){const f=flights[i];if(f.d.position.distanceTo(boardCam.position)<.5){f.d.visible=false;hid.push(f.d);}}renderer.render(scene,boardCam);for(let i=0;i<hid.length;i++)hid[i].visible=true;hid.length=0;
