@@ -1,8 +1,9 @@
-// CAR-VIS (P0, David 09:47 on 3.55): the ring you time against must shrink over the pull exactly as on 3.54, on every tier.
-// For a real career match at max stats on tiers 0 and 6 (nerves 0), the drawn ring (S.sigma path: ringVis) is sampled across the hold:
-//   1 it equals 3.54's formula at every hold time (radius from the pull length tp.D, not the stage cone)
-//   2 it shrinks steadily over the pull (not parked at the 70 mm cap until the last few ms)
-//   3 where the dart lands still uses the stage cone (ringR differs from the drawn ring off the window at the Worlds)
+// CAR-EASE (Hayden 10:03, after CAR-VIS): one honest ring that eases in. For a real career match at max stats on tiers 0 and 6 (nerves 0),
+// the drawn ring (S.sigma path: ringVis) is sampled across the hold:
+//   1 it IS the landing ring (ringR) at every hold time: what you see is where the dart lands
+//   2 it eases in: it shrinks over the pull, slowly early and faster and faster into the ideal hold (the first half of the pull moves it less
+//     than the last tenth), it's tight at the ideal hold (the perfect scatter) and grows back after it
+//   3 it never sits parked at the 70 mm cap through the first half of the pull
 // usage: node tests/ring-visual.js
 const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
@@ -13,8 +14,10 @@ const {chromium}=require('playwright');const path=require('path');
    const old=(dt)=>{const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));};
    const holds=[.1,.25,.5,.75,.9,1,1.1].map(f=>f*tp.D);const rows=holds.map(h=>{const dt=h-tp.D;return {hold:Math.round(h),vis:+ringVis(dt,tp).toFixed(2),old:+old(dt).toFixed(2),land:+ringR(dt,tp).toFixed(2)};});
    out[tier]={D:+tp.D.toFixed(1),P:+tp.P.toFixed(1),rows};S.done=true;}return out;});
- const f=[];for(const t of ['0','6']){const x=r[t];x.rows.forEach(w=>{if(Math.abs(w.vis-w.old)>.01)f.push(`tier ${t} hold ${w.hold}: drawn ring ${w.vis} mm, 3.54 formula ${w.old}`);});
-  const v=x.rows.map(w=>w.vis);for(let i=1;i<5;i++)if(!(v[i]<v[i-1]))f.push(`tier ${t}: drawn ring does not shrink over the pull ${v.join(',')}`);if(v[2]>=69.9)f.push(`tier ${t}: drawn ring still at the cap halfway through the pull`);}
- const w6=r['6'].rows[2];if(!(w6.land>w6.vis))f.push('Worlds: landing no longer uses the stage cone');
+ const f=[];for(const t of ['0','6']){const x=r[t];x.rows.forEach(w=>{if(Math.abs(w.vis-w.land)>.01)f.push(`tier ${t} hold ${w.hold}: drawn ring ${w.vis} mm but the dart lands from ${w.land} mm`);});
+  const v=x.rows.map(w=>w.vis);for(let i=1;i<6;i++)if(!(v[i]<v[i-1]))f.push(`tier ${t}: drawn ring does not shrink over the pull ${v.join(',')}`);
+  if(!(v[6]>v[5]))f.push(`tier ${t}: the ring does not grow back after the ideal hold`);
+  if(!((v[0]-v[2])<(v[4]-v[5])))f.push(`tier ${t}: no ease-in: the first half of the pull moves the ring ${(v[0]-v[2]).toFixed(1)} mm, the last tenth ${(v[4]-v[5]).toFixed(1)} mm`);
+  if(v[2]>=109.9)f.push(`tier ${t}: drawn ring still at the cap halfway through the pull`);}
  if(errs.length)f.push('page errors '+errs.slice(0,2).join(' | '));console.log(JSON.stringify(r));await b.close();
- if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log(`PASS: drawn ring = 3.54 formula on Pub and Worlds; Worlds ring across the hold ${r['6'].rows.map(w=>w.vis).join(' / ')} mm (was the landing cone ${r['6'].rows.map(w=>w.land).join(' / ')})`);})();
+ if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}console.log(`PASS: drawn ring = landing ring and eases in, Pub ${r['0'].rows.map(w=>w.vis).join(' / ')} mm, Worlds ${r['6'].rows.map(w=>w.vis).join(' / ')} mm at holds 10/25/50/75/90/100/110% of the pull`);})();
