@@ -44,7 +44,7 @@
   const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
   const one = p => HAVE[p] ? 's3/' + p : PEOPLE.test(p) ? PH : null;
-  const swap = s => (typeof s !== 'string' || s.length > 400000) ? s : s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
+  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
   window.TOPS_S3_IMG = swap;
   {
     const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
@@ -55,7 +55,10 @@
     try { const sp = CSSStyleDeclaration.prototype.setProperty; CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { return sp.call(this, k, swap(v), p); };
       ['background', 'backgroundImage', 'cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
     const sheets = () => { try { document.querySelectorAll('style').forEach(s => { if (s.dataset.s3) return; const t = s.textContent, n = swap(t); if (n !== t) s.textContent = n; s.dataset.s3 = 1; }); } catch (e) {} };
-    sheets(); document.addEventListener('DOMContentLoaded', sheets);
+    /* images the game set before this file loaded (title menu art, sign-in splash at boot): set them again through the switch */
+    const rescan = () => { try { sheets(); document.querySelectorAll('img[src]').forEach(im => { const v = im.getAttribute('src'), n = swap(v); if (n !== v) im.src = v; });
+      document.querySelectorAll('[style*="url("]').forEach(e => { const v = e.getAttribute('style'), n = swap(v); if (n !== v) e.setAttribute('style', v); }); } catch (e) {} };
+    rescan(); document.addEventListener('DOMContentLoaded', rescan); window.addEventListener('load', rescan);
   }
   const missed = {}; function miss(p) { if (missed[p]) return; missed[p] = 1; try { window.TOPS_LOG && TOPS_LOG('s3_img_miss', { p }); } catch (e) {} }
 
@@ -64,6 +67,9 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const money = n => '$' + Math.round(+n || 0).toLocaleString('en-NZ');
   const CI = () => window.TOPS_CIRCUIT;
+  /* a round's name (the engine's FIN_NAME names a FINISH: losing the final = Runner-up; the round itself is the Final) */
+  const RN = { G: 'Group match', F: 'Final', SF: 'Semi-final', QF: 'Quarter-final', L16: 'Last 16', L32: 'Last 32', L64: 'Last 64', L128: 'Last 128' };
+  const roundName = r => RN[r] || r || ''; window.TOPS_S3_ROUND = roundName;
   const IMG = 'assets/rb/';
   const lvArt = i => `${IMG}venue_t${Math.max(0, Math.min(6, i | 0))}.jpg`;   // the level's venue card (W9 swaps it to the Vinyl plate through the manifest)
   const GRAD = ['#5b2a1a', '#1f3b4d', '#2e4a2a', '#4a1d22', '#2a2f5a', '#3a3a3a', '#5a1218'];
@@ -159,7 +165,7 @@
   function live(c) {
     const C = CI(), lv = c.live, e = C.eventOf(lv.id), o = C.nextOpp(c), L = C.LEVELS[e.level];
     const cells = lv.rounds.map((r, i) => { const cls = i < lv.round ? 's3-w' : i === lv.round ? 's3-on' : ''; const t = r === 'G' ? 'Group' + (lv.g ? ' ' + lv.g.w + '–' + (lv.g.p - lv.g.w) : '') : r; return `<li class="${cls}">${t}</li>`; }).join('');
-    const rn = o.round === 'G' ? `Group match ${(lv.g ? lv.g.p : 0) + 1} of 3 · win 2 to go through` : C.FIN_NAME[o.round];
+    const rn = o.round === 'G' ? `Group match ${(lv.g ? lv.g.p : 0) + 1} of 3 · win 2 to go through` : roundName(o.round);
     const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
     let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
       <ol class="s3-draw" aria-label="The draw">${cells}</ol>
@@ -187,7 +193,7 @@
   /* ---------- Best Leg (W6) + Season 1/2 history (W7), on the Circuit tab under the week ---------- */
   // Both are async reads of Career's views (tops_bestleg_s3, tops_history); fetched at most once a minute, the card redraws in place.
   let blRows = null, blAt = 0, hiRows = null, hiAt = 0;
-  const fetchOnce = (fn, at, set, redraw) => { if (Date.now() - at < 60000) return at; try { Promise.resolve(fn()).then(r => { set(r || []); redraw(); }).catch(() => { set(null); }); } catch (e) {} return Date.now(); };
+  const fetchOnce = (fn, at, set, redraw) => { if (Date.now() - at < 60000) return at; try { Promise.resolve(fn()).then(r => { set(r || []); redraw(); }).catch(() => { set('err'); redraw(); }); } catch (e) {} return Date.now(); };
   function records() {
     const B = window.TOPS_BESTLEG, H = window.TOPS_HISTORY; let h = '';
     if (B && B.table) { blAt = fetchOnce(() => B.table(), blAt, r => { blRows = r; }, () => { const el = $id('s3Bl'); if (el) el.outerHTML = blCard(); }); h += blCard(); }
@@ -195,6 +201,7 @@
     return h;
   }
   function blCard() {
+    if (blRows === 'err') { blAt = Date.now() - 45000; return `<div class="rb-card" id="s3Bl"><span class="rb-t2">Best leg · Season 3</span><span class="rb-sub">Can't load the table right now. It comes back when you're online.</span></div>`; }   /* retry in 15 s */
     const rows = (blRows || []).slice(0, 8), mine = (blRows || []).find(r => r.you);
     const list = rows.length ? `<ol class="s3-tbl">${rows.map((r, i) => `<li class="${r.you ? 's3-you' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.name)}</span><b>${r.darts} darts</b></li>`).join('')}</ol>`
       : `<span class="rb-sub">${blRows ? 'Nobody has a best leg yet this season. Win a 501 leg in the Circuit to set one.' : 'Loading the table…'}</span>`;
@@ -205,7 +212,8 @@
     const av = ss.map(x => x.bestAvg).filter(x => x != null), lg = ss.map(x => x.bestLeg).filter(x => x != null);
     return { name: r.name, you: r.you, furthest: f, bestAvg: av.length ? Math.max(...av) : null, bestLeg: lg.length ? Math.min(...lg) : null }; };
   function histCard() {
-    if (!hiRows || !hiRows.length) return `<div id="s3Hi"></div>`;
+    if (hiRows === 'err') hiAt = Date.now() - 45000;
+    if (!Array.isArray(hiRows) || !hiRows.length) return `<div id="s3Hi"></div>`;
     const r = hiRows.map(hist), top = (k, lo) => r.filter(x => x[k] != null).sort((a, b) => k === 'furthest' ? b.furthest.level - a.furthest.level : lo ? a[k] - b[k] : b[k] - a[k])[0];
     const f = top('furthest'), a = top('bestAvg'), n = top('bestLeg', true);
     const line = (lab, w, txt) => `<li><span class="s3-lab">${lab}</span><span>${w ? esc(w.you ? 'You' : w.name) : 'No data'}</span><b>${w ? txt(w) : ''}</b></li>`;
@@ -213,7 +221,7 @@
       <ol class="s3-tbl s3-h3">${line('Furthest', f, w => esc(w.furthest.n || ''))}${line('Highest average', a, w => (+w.bestAvg).toFixed(1))}${line('Closest to a 9-darter', n, w => w.bestLeg + ' darts')}</ol></button>`;
   }
   function histSheet() {
-    const r = (hiRows || []).map(hist);
+    const r = (Array.isArray(hiRows) ? hiRows : []).map(hist);
     const row = x => `<li class="${x.you ? 's3-you' : ''}"><span>${esc(x.you ? 'You' : x.name)}</span><span>${x.furthest ? esc(x.furthest.n) : 'No data'}</span><span>${x.bestAvg != null ? (+x.bestAvg).toFixed(1) : '–'}</span><span>${x.bestLeg != null ? x.bestLeg : '–'}</span></li>`;
     sheet(`<span class="rb-kick">Seasons 1 & 2</span><span class="rb-t1">The records</span><span class="rb-sub">Kept from before the reset: furthest level, best match average, fewest darts in a won 501 leg.</span>
       <ol class="s3-tbl s3-h4"><li class="s3-thd"><span>Player</span><span>Furthest</span><span>Avg</span><span>Darts</span></li>${r.map(row).join('')}</ol>`, 'Done');
@@ -254,7 +262,7 @@
     const C = CI();
     if (p.kind === 'round') {
       seenSet(p.now); const o = C.nextOpp(c); if (!o) return;
-      const nm = o.round === 'G' ? 'next group match' : C.FIN_NAME[o.round];
+      const nm = o.round === 'G' ? 'next group match' : roundName(o.round);
       toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${o.avg}</span>`); return;
     }
     if (p.kind === 'done') {
@@ -293,6 +301,46 @@
   if (typeof sceneBg === 'function') { const _ss = sceneBg; sceneBg = function (id) { const r = _ss.apply(this, arguments);
     try { const rs = $id('result'); if (rs) rs.classList.toggle('s3-old', !!(id === 'result' && typeof S !== 'undefined' && S && S.s3));   /* the old league-standings Match result never shows for a Circuit match (Overseer 08:56) */
       if (id === 'result' && typeof S !== 'undefined' && S && S.s3 && window.TOPS_RB_S3RESULT) setTimeout(() => { if (!$id('result').hidden) TOPS_RB_S3RESULT(); }, 0); } catch (e) {} return r; }; }
+
+  /* ---------- Season 3 wording on the old screens ---------- */
+  const words = () => { try { document.querySelectorAll('#login .lgn-help').forEach(e => { if (/^Season 1\./.test(e.textContent)) e.textContent = e.textContent.replace(/^Season 1\./, 'Season 3.'); }); } catch (e) {} };
+  words(); document.addEventListener('DOMContentLoaded', words);
+  if (typeof showTitle === 'function') { const _st = showTitle; showTitle = function () { const r = _st.apply(this, arguments); try { const v = $id('tlVer'); if (v) v.textContent = v.textContent.replace(/Season \d+/, 'Season 3'); } catch (e) {} return r; }; }
+  /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE") */
+  /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE"); Career sets S.s3 right after beginMatch */
+  const s3Head = () => { try { if (typeof S === 'undefined' || !S || !S.s3 || !CI()) return; const e = CI().eventOf(S.s3.id), t = (e ? e.n + ' · ' : '') + roundName(S.s3.round);
+    ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el && el.textContent !== t && !/^Leg |^Bull up/.test(el.textContent)) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
+  if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
+
+  /* the first message after the creator: a Circuit league night, not the old 'Pub league' */
+  try { if (typeof STORY !== 'undefined' && STORY.intro && Array.isArray(STORY.intro.lines)) STORY.intro.lines = STORY.intro.lines.map(l => l.replace("Pub league, 501.", "League night, 501. Eight of us, knockout."));
+    if (Array.isArray(STORY.intro.time)) STORY.intro.time = STORY.intro.time.map(l => l.replace("You'll be on against Big Mal first up. Don't let the belly fool you.", "The draw's on the board when you walk in. Win and you keep throwing.")); } catch (e) {}
+
+  /* ---------- 'Season 3 is here': once per device, the first time the game opens with Season 3 on, before the creator (Overseer 09:38) ---------- */
+  const WELK = 'tops_s3_welcome';
+  function welcome() {
+    if (lsGet(WELK) || $id('s3Wel')) return;
+    const d = document.createElement('div'); d.id = 's3Wel'; d.className = 's3-wel'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3WelH');
+    d.innerHTML = `<div class="s3-welart" style="background-image:url(img/splash.jpg)"></div><div class="s3-welsh"></div>
+      <div class="s3-welbox"><span class="s3-welk">Season 3</span><h2 id="s3WelH">A new season.<br>A new career.</h2>
+        <ul>
+          <li><b>Everyone starts again at the Pub.</b> New career, new bank.</li>
+          <li><b>The Circuit.</b> Book your events, pay your way, climb seven levels to the Palace.</li>
+          <li><b>New players and venues.</b> Pick your player, then make them yours.</li>
+          <li><b>Best leg.</b> Fewest darts in a leg this season holds the record. Beat it.</li>
+          <li><b>Seasons 1 and 2 are kept.</b> The records board on the Circuit shows who went furthest.</li>
+        </ul>
+        <button type="button" id="s3WelGo">Start your career</button></div>`;
+    document.body.appendChild(d);
+    const go = d.querySelector('#s3WelGo'); try { go.focus({ preventScroll: true }); } catch (e) {}
+    go.onclick = () => { lsSet(WELK, '1'); d.remove(); try { window.TOPS_LOG && TOPS_LOG.log && TOPS_LOG.log('s3_welcome', {}); } catch (e) {}
+      let has = false; try { const c = career(); has = !!(c && c.circuit && (c.circuit.history.length || c.circuit.live)); } catch (e) {}
+      const title = $id('title'); if (!title || title.hidden) return;   /* sign-in first (login screen): the title's New career comes after it, as before */
+      if (!has) { const b = $id('btnNewCareer'); try { if (window.audioInit) audioInit(); } catch (e) {} try { if (b) b.click(); else showCreator(false); } catch (e) { console.warn('s3 welcome', e); } } };
+  }
+  /* after the loading screen lifts, never on the between-match reset page, never mid-match */
+  (function welWait(n) { try { const l = $id('loading'), up = l && !l.classList.contains('gone') && getComputedStyle(l).display !== 'none';
+      if (window.TOPS_RESETTING || lsGet(WELK)) return; if (up || (typeof S !== 'undefined' && S && !S.done) || !document.body) { if (n < 240) setTimeout(() => welWait(n + 1), 250); return; } setTimeout(welcome, 700);   /* after the loader's fade */ } catch (e) {} })(0);
 
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
@@ -344,6 +392,7 @@
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: fn => { shell = fn; },
+    refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
 })();

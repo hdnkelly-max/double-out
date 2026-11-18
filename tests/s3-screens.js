@@ -4,7 +4,7 @@
 // usage: node tests/s3-screens.js [dir]   (SHOTS=1 writes tests/s3_*.png at 390)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-  const ctx = await b.newContext({ viewport: { width: +(process.env.VW || 390), height: +(process.env.VH || 844) }, hasTouch: true, isMobile: true }); const p = await ctx.newPage();
+  const ctx = await b.newContext({ viewport: { width: +(process.env.VW || 390), height: +(process.env.VH || 844) }, hasTouch: true, isMobile: true }); const p = await ctx.newPage(); await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); } catch (e) {} });   /* the welcome has its own test (s3-welcome.js) */ 
   const pe = []; p.on('pageerror', e => pe.push(e.message)); await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
   const fail = [], out = {}; const shot = async n => { if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_' + n + '.png') }); };
   const boot = async (qs) => { await p.goto('file://' + dir + '/index.html' + qs, { timeout: 180000 }); await p.waitForFunction(() => window.TC_API && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(800);

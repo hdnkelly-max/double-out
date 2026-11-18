@@ -37,7 +37,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
-  const sceneImg = tier => `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`;
+  const sceneImg = tier => { const u = `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`; return window.TOPS_S3_IMG ? TOPS_S3_IMG(u) : u; };   /* S3: the Vinyl venue, swapped at the source as well as by the page-wide switch */
   /* ---------- components (same as the v9.1 prototype) ---------- */
   const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
   const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
@@ -318,7 +318,7 @@
     const t = TIERS[c.tier] || {}, kick = S.intro ? 'Your fill-in night' : money0 ? (S.local ? 'Local night' : 'Money match · back room') : `${t.n || ''}${M.rows && M.yi >= 0 ? ` · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}` : ''}`;
     /* S3: a Circuit match reports the event and the round (Career's S.s3 / S.s3res), not the old league table */
     const s3m = S3 && S.s3 && window.TOPS_CIRCUIT ? (() => { const E = TOPS_CIRCUIT, e = E.eventOf(S.s3.id), r = S.s3res || {}, nx = r.next && c.circuit && c.circuit.live ? E.nextOpp(c.circuit) : null;
-      return { kick: `${e ? e.n : ''} · ${E.FIN_NAME[S.s3.round] || 'Group match'}`, done: !!r.done, line: r.done ? `Event over · ${r.finName || ''}` : nx ? `Through · ${nx.round === 'G' ? 'next group match' : E.FIN_NAME[nx.round]} next` : '', sub: r.done ? (r.pts ? '+' + r.pts + ' pts' : '') : nx ? 'Opponent avg ' + nx.avg : '' }; })() : null;
+      return { kick: `${e ? e.n : ''} · ${window.TOPS_S3_ROUND ? TOPS_S3_ROUND(S.s3.round) : S.s3.round}`, done: !!r.done, line: r.done ? `Event over · ${r.finName || ''}` : nx ? `Through · ${nx.round === 'G' ? 'next group match' : (window.TOPS_S3_ROUND ? TOPS_S3_ROUND(nx.round) : nx.round)} next` : '', sub: r.done ? (r.pts ? '+' + r.pts + ' pts' : '') : nx ? 'Opponent avg ' + nx.avg : '' }; })() : null;
     const heroIm = !won && c.tier === 1 ? `${IMG}w_loss_t1.jpg` : WIMG(c.tier);
     const head = `<div class="rbw-hero${won ? '' : ' rbw-lost'}${!won && c.tier !== 1 ? ' rbw-dim' : ''}"><div class="rb-im" style="background-image:url(${heroIm})"></div><div class="rbw-lt"><span class="rbw-kick">${esc(s3m ? s3m.kick : kick)}</span><span class="rbw-res">${won ? 'Won' : 'Lost'}</span><div class="rbw-score"><b class="rb-num rb-lockup-n">${me.legs || 0}–${op.legs || 0}</b><span>vs<em>${esc(op.disp || op.name || '')}</em></span></div></div></div>`;
     const co = me.coAtt ? Math.round(me.coHit / me.coAtt * 100) : null;
