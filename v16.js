@@ -110,7 +110,7 @@ const figsThen=(L,go)=>{let keys=[],done=false;const t0=Date.now();
   keys.push(charKey(save.look||null,save.name||'You'));
   const bm=L.bm;let n=null;if(bm&&bm.oppName)n=bm;else if(L.fn==='playNext'){const c=career();n=c&&(c.next||(window.nextOpponent&&nextOpponent()));}
   else if(L.fn==='playPractice')n={oppName:'Practice'};else if(L.fn==='playRevenge'){try{const v=window.V3?V3():null,R=v&&v.rev;if(R&&R.name)n={oppName:R.name};}catch(e){}}
-  if(n&&n.oppName)keys.push(charKey(lookOf(n),n.oppName));}catch(e){}
+  if(n&&n.oppName){const lk=(L.bm&&L.bm.oppLook)||(L.fn==='playNext'?lookOf(n):(window.lookFor?lookFor(n.oppName):null));keys.push(window.TOPS_OPPKEY?TOPS_OPPKEY(lk,n.oppName):charKey(lk,n.oppName));}}catch(e){}
  keys=keys.filter((k,i,a)=>k&&k!=='remy'&&a.indexOf(k)===i);try{if(window.TOPS_LOADHAIR)TOPS_LOADHAIR();keys.forEach(k=>{const r=TOPS_RIGS();if(!r.ids.includes(k)&&!r.waitIds.includes(k)&&window.TOPS_LOADCHAR)TOPS_LOADCHAR(k);});}catch(e){}
  const ready=()=>{try{const r=TOPS_RIGS();return keys.every(k=>r.ids.includes(k)||!r.waitIds.includes(k))&&!r.hairWait;}catch(e){return true;}};
  const step=()=>{if(done)return;const ok=ready(),ms=Date.now()-t0;if(ok||ms>=4000){done=true;try{window.TOPS_LOG&&TOPS_LOG.log('reset_figs',{ms,ok,keys:keys.join(',')});}catch(e){}go();return;}setTimeout(step,50);};
