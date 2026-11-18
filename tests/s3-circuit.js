@@ -6,6 +6,7 @@
 //   5 three wins at a Pub league night: winner's prize paid into the bank (feats may add their own bonus on top), points, week moves on, tops:s3 fires with done/fin/prize
 //   6 a loss ends the event with that round's finish
 //   7 TOPS_HISTORY.rows() and TOPS_BESTLEG.table()/record() read the views (mocked here) into the frozen shape
+//   7b the hub's old Play (playNext) books the first affordable event and plays it, never the Season 2 league
 //   8 flag off: TOPS_S3.on() is false and a new career has no Circuit state
 // usage: node tests/s3-circuit.js
 const {chromium}=require('playwright');const path=require('path');
@@ -34,6 +35,10 @@ const {chromium}=require('playwright');const path=require('path');
   out.loss=evs[evs.length-1];
   out.hist=await TOPS_HISTORY.rows();out.bl=await TOPS_BESTLEG.table();out.rec=await TOPS_BESTLEG.record();
  }catch(e){out.err=String(e&&e.stack||e);}return out;});
+ // 7b the hub's old Play (playNext); ENG-RESET may reload the page first, so check after it settles
+ const b0=await p.evaluate(()=>{S.done=true;career().circuit.live=null;persist();setTimeout(()=>playNext(),0);return career().bank;});
+ await p.waitForTimeout(7000);
+ r.pn=await p.evaluate(b0=>({live:!!(career()&&career().circuit&&career().circuit.live),s3:!!(typeof S!=='undefined'&&S&&S.s3),paid:b0-career().bank}),b0).catch(e=>({err:String(e)}));
  const want=['bank','calendar','card','debt','history','ladder','level','live','oom','qsOffer','runway','week'];
  if(r.err)f.push('error: '+r.err);else{
   if(!r.start.on||r.start.tier!==0||r.start.bank!==60||!r.start.circ||r.start.level!==0)f.push('new career is not a fresh Pub start '+JSON.stringify(r.start));
@@ -50,6 +55,7 @@ const {chromium}=require('playwright');const path=require('path');
   if(!r.loss||!r.loss.done||r.loss.fin!=='SF')f.push('loss in round 2 '+JSON.stringify(r.loss));
   const lee=(r.hist||[]).find(x=>x.name==='Lee McKenzie');if(!lee||!lee.s1||lee.s1.bestLeg!==14||!lee.s2||lee.s2.furthest.n!=='Regional rep'||lee.s2.bestAvg!==115.6)f.push('history '+JSON.stringify(r.hist));
   const gene=(r.hist||[]).find(x=>x.name==='Gene Lovelock');if(!gene||gene.s1!==null)f.push('history: a season with no row is not null (no data) '+JSON.stringify(gene));
+  if(!r.pn||!r.pn.live||!r.pn.s3||r.pn.paid!==5)f.push('playNext under S3 '+JSON.stringify(r.pn));
   if(!r.bl||r.bl.length!==2||r.bl[0].darts!==12||!r.rec||r.rec.darts!==12)f.push('best leg '+JSON.stringify(r.bl)+' '+JSON.stringify(r.rec));}
  // 8 flag off
  await p.goto(url+'?s3=0');await p.waitForTimeout(4500);

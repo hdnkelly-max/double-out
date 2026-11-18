@@ -36,6 +36,13 @@
     if(SS()){S.s3={id:e.id,round:o.round,level:k.level};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
   function advance(){if(!on())return {ok:false,why:'Season 3 is off'};const r=sync(k=>C().advance(k));if(r&&r.ok){persist();L('s3_advance',{amt:r.amt});}return r;}
 
+  // ---- the hub's old "Play" goes to the Circuit: the next round of your event, or (until the Circuit screen books for you) the first
+  //      event on this week you can afford; broke = the hardship advance. Never the Season 2 league.
+  if(typeof playNext==='function'){const _pn=playNext;playNext=function(){if(!on())return _pn.apply(this,arguments);const c=career();if(!c||c.run)return _pn.apply(this,arguments);
+    const k=circ();if(!k.live){const v=view();let e=v.calendar.find(x=>x.canAfford);if(!e){const a=advance();if(a&&a.ok)e=view().calendar.find(x=>x.canAfford);}
+      if(!e){try{showMsg({from:'Tour budget',lines:['Nothing on this week you can afford.','Money matches pay. Come back with the cash.'],replies:[['OK','ok']]},()=>showHub());}catch(x){}return;}book(e.id);}
+    play();};}
+
   // ---- after a Circuit match: the career's own bookkeeping (XP, bests, leaderboard), then the engine decides the event
   if(typeof careerAfterMatch==='function'){const _cam=careerAfterMatch;careerAfterMatch=function(){
     if(!on()||!SS()||!S.s3||S.practice)return _cam.apply(this,arguments);
@@ -69,6 +76,11 @@
       p['s'+r.season]={furthest:lv,bestAvg:r.best_avg!=null?+r.best_avg:null,bestLeg:r.best_leg!=null?+r.best_leg:null};});
     return Object.values(by).sort((a,b)=>((b.s2&&b.s2.furthest?b.s2.furthest.level:-1)-(a.s2&&a.s2.furthest?a.s2.furthest.level:-1))||((b.s2&&b.s2.bestAvg||0)-(a.s2&&a.s2.bestAvg||0)));}};
 
+  // the match result's main button: in Season 3 it carries on the Circuit (next round of this event, or back to the Circuit screen),
+  // never the Season 2 league's "Next fixture · Week n of 8". Experience restyles it; this keeps the flow right until then.
+  window.addEventListener('tops:s3',ev=>{const r=ev.detail||{};let n=0;const t=setInterval(()=>{const b=document.getElementById('btnResAction');if(!b&&++n<50)return;clearInterval(t);if(!b)return;
+    const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
+    /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
   window.TOPS_S3={on,view,book,play,advance,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ};
   window.TOPS_BESTLEG=BESTLEG;window.TOPS_HISTORY=HISTORY;
 })();
