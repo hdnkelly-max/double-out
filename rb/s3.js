@@ -44,7 +44,7 @@
   const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
   const one = p => HAVE[p] ? 's3/' + p : PEOPLE.test(p) ? PH : null;
-  const swap = s => (typeof s !== 'string' || s.length > 400000) ? s : s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
+  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
   window.TOPS_S3_IMG = swap;
   {
     const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
@@ -55,7 +55,10 @@
     try { const sp = CSSStyleDeclaration.prototype.setProperty; CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { return sp.call(this, k, swap(v), p); };
       ['background', 'backgroundImage', 'cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
     const sheets = () => { try { document.querySelectorAll('style').forEach(s => { if (s.dataset.s3) return; const t = s.textContent, n = swap(t); if (n !== t) s.textContent = n; s.dataset.s3 = 1; }); } catch (e) {} };
-    sheets(); document.addEventListener('DOMContentLoaded', sheets);
+    /* images the game set before this file loaded (title menu art, sign-in splash at boot): set them again through the switch */
+    const rescan = () => { try { sheets(); document.querySelectorAll('img[src]').forEach(im => { const v = im.getAttribute('src'), n = swap(v); if (n !== v) im.src = v; });
+      document.querySelectorAll('[style*="url("]').forEach(e => { const v = e.getAttribute('style'), n = swap(v); if (n !== v) e.setAttribute('style', v); }); } catch (e) {} };
+    rescan(); document.addEventListener('DOMContentLoaded', rescan); window.addEventListener('load', rescan);
   }
   const missed = {}; function miss(p) { if (missed[p]) return; missed[p] = 1; try { window.TOPS_LOG && TOPS_LOG('s3_img_miss', { p }); } catch (e) {} }
 
@@ -293,6 +296,14 @@
   if (typeof sceneBg === 'function') { const _ss = sceneBg; sceneBg = function (id) { const r = _ss.apply(this, arguments);
     try { const rs = $id('result'); if (rs) rs.classList.toggle('s3-old', !!(id === 'result' && typeof S !== 'undefined' && S && S.s3));   /* the old league-standings Match result never shows for a Circuit match (Overseer 08:56) */
       if (id === 'result' && typeof S !== 'undefined' && S && S.s3 && window.TOPS_RB_S3RESULT) setTimeout(() => { if (!$id('result').hidden) TOPS_RB_S3RESULT(); }, 0); } catch (e) {} return r; }; }
+
+  /* ---------- Season 3 wording on the old screens ---------- */
+  const words = () => { try { document.querySelectorAll('#login .lgn-help').forEach(e => { if (/^Season 1\./.test(e.textContent)) e.textContent = e.textContent.replace(/^Season 1\./, 'Season 3.'); }); } catch (e) {} };
+  words(); document.addEventListener('DOMContentLoaded', words);
+  /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE") */
+  if (window.TOPS_S3 && typeof TOPS_S3.play === 'function') { const _pl = TOPS_S3.play; TOPS_S3.play = function () { const r = _pl.apply(this, arguments);
+    try { if (r && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), rn = CI().FIN_NAME[S.s3.round] || 'Group match', t = e ? e.n + ' · ' + rn : rn;
+      ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } } catch (e) {} return r; }; }
 
   /* ---------- 'Season 3 is here': once per device, the first time the game opens with Season 3 on, before the creator (Overseer 09:38) ---------- */
   const WELK = 'tops_s3_welcome';

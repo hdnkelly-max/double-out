@@ -11,6 +11,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     for (let i = 0; i < 60 && !(await wel(p)); i++) await p.waitForTimeout(250);
     await p.waitForTimeout(800); out.first = await wel(p); if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_welcome.png') });
     if (!out.first) fail.push('no welcome on first open'); else { if (!/start your career/i.test(out.first.t) || !/pub/i.test(out.first.t) || !/circuit/i.test(out.first.t) || !/best leg/i.test(out.first.t) || !/seasons 1 and 2/i.test(out.first.t)) fail.push('welcome copy ' + out.first.t.slice(0, 200)); if (!out.first.top) fail.push('welcome not on top'); if (out.first.wide) fail.push('welcome scrolls sideways'); }
+    out.art = await p.evaluate(() => [...document.querySelectorAll('img')].map(i => i.getAttribute('src') || '').filter(x => /img\/(menu|splash|v\d)/.test(x)));
+    if (!out.art.length || out.art.some(x => !/^s3\//.test(x))) fail.push('title/sign-in art not Vinyl: ' + JSON.stringify(out.art));
+    out.words = await p.evaluate(() => [...document.querySelectorAll('#login .lgn-help')].map(e => e.textContent).join(' | ')); if (/Season 1\./.test(out.words) || !/Season 3\./.test(out.words)) fail.push('sign-in text: ' + out.words);
     out.loaderGone = await p.evaluate(() => { const l = document.getElementById('loading'); return !l || l.classList.contains('gone') || getComputedStyle(l).display === 'none'; }); if (!out.loaderGone) fail.push('welcome showed under the loading screen');
     out.screenBefore = await p.evaluate(() => !document.getElementById('title').hidden ? 'title' : !document.getElementById('login').hidden ? 'login' : 'other');
     await p.locator('#s3WelGo').tap(); await p.waitForTimeout(1500);
