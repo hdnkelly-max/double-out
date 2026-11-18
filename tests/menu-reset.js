@@ -20,6 +20,8 @@ const { chromium, devices } = require('playwright'); const path = require('path'
         if (mb) { await p.touchscreen.tap(mb[0], mb[1]); await p.waitForTimeout(350); const ib = await p.evaluate(() => { const e = document.querySelector('#rbMenuSheet [data-m="title"]'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
           tapped = { at: ((Date.now() - t0) / 1000).toFixed(1), delay, sheet: !!ib }; if (ib) await p.touchscreen.tap(ib[0], ib[1]); } }
       if (tapped && Date.now() - t0 > (+tapped.at * 1000) + 8000) break; await p.waitForTimeout(250); }
+    // ChatGPT P1: late automatic boot calls (not from a tap) must not move the player off the title he chose
+    if (tapped) { await p.evaluate(() => { try { showTitle(); } catch (e) {} try { showLogin(); } catch (e) {} }); await p.waitForTimeout(800); }
     const fin = await screen(); runs.push({ k, tapped, final: fin, tl: tl.filter((x, i) => i === 0 || x.split(' ')[1] !== tl[i - 1].split(' ')[1]) });
     
     await p.evaluate(() => { try { showHub('play'); } catch (e) {} }); await p.waitForTimeout(1500); }

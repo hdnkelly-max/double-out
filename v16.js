@@ -90,10 +90,11 @@ if(flag&&Date.now()-flag.t<120000){
      between-match reset, so Main menu did nothing right after a match. It is for the boot's own calls only; a menu the player taps says so with
      TOPS_USERNAV(fn) (explicit, ChatGPT P1: never "any tap in the last second"), and that call goes through. */
   let userNav=0,userDone=0;window.TOPS_USERNAV=fn=>{userNav++;userDone=1;try{return fn();}finally{userNav--;}};
-  /* once the player has picked a screen himself, the guard is over: a late boot call must not pull him back to the hub */
-  const boot=()=>Date.now()-tb<30000&&!userNav&&!userDone;
-  const st=showTitle;showTitle=function(){if(boot()){if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
- const sl=showLogin;showLogin=function(){if(boot()){if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
+  /* the guard stays on for the boot's own calls for the whole 30 s; once the player has picked a screen himself, a boot call is dropped
+     (no hub refresh, no title, no login), so nothing pulls him off the screen he chose (ChatGPT P1) */
+  const boot=()=>Date.now()-tb<30000&&!userNav;
+  const st=showTitle;showTitle=function(){if(boot()){if(userDone)return;if(!hubAt)return toHub();try{showHub();if(flag.tab&&window.hubTab)hubTab(flag.tab);}catch(e){}return;}return st.apply(this,arguments);};
+ const sl=showLogin;showLogin=function(){if(boot()){if(userDone)return;if(!hubAt)toHub();try{const lg=$('login');if(lg)lg.hidden=true;}catch(e){}return;}return sl.apply(this,arguments);};
  /* bar: rig in, hub shown, character files and venue settled; capped so a slow file can't hold the screen */
  const t1=Date.now();const tick=setInterval(()=>{try{let p=.35;const rig=V&&V._qa&&V._qa.rigReady&&V._qa.rigReady();if(rig){p=.6;if(!hubAt)toHub();}if(hubAt)p=.8;let settled=false;try{const r=TOPS_RIGS();settled=!((r.wait&&r.wait.length)||r.loading);}catch(e){settled=true;}
    if(hubAt&&rig&&(settled||Date.now()-hubAt>1500)){clearInterval(tick);finish(settled?'ready':'hub');return;}/* a character file still loading lands on the hub as usual */bar(p);
