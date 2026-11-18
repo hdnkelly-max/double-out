@@ -37,7 +37,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // #18 (Director/Overseer 23:50): never caption a stock photo with the player's name. Player heroes use his OWN render (V.heroShot of save.look)
   // over a people-free venue still; the header avatar is his own portrait.
-  const sceneImg = tier => `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`;
+  const sceneImg = tier => { const u = `${IMG}venue_t${Math.max(0, Math.min(6, tier | 0))}.jpg`; return window.TOPS_S3_IMG ? TOPS_S3_IMG(u) : u; };   /* S3: the Vinyl venue, swapped at the source as well as by the page-wide switch */
   /* ---------- components (same as the v9.1 prototype) ---------- */
   const chip = (t, c = '') => `<span class="rb-chip ${c ? 'rb-' + c : ''}">${t}</span>`;
   const meter = (n, fill, o = {}) => { let h = ''; for (let i = 0; i < n; i++) { const c = i < fill ? 'rb-f' : i < fill + (o.ghost || 0) ? 'rb-gh' : ''; h += `<i class="${c}"></i>`; } return `<div class="rb-meter" aria-hidden="true">${h}${o.tick != null ? `<span class="rb-mtk" style="left:calc(${o.tick * 100}% - 1px)"></span>` : ''}</div>`; };
