@@ -7,7 +7,8 @@ const {chromium}=require('playwright');const path=require('path');
 const LEGS=+process.argv[2]||200, REPORT=process.argv.includes('--report-only');
 // draft bands (Overseer rule 11): opponent 3-dart average. v1.80 (Hayden 21:52): one setting for everyone (Club); the old Rookie and
 // Competitive saves must play exactly like Club.
-const BANDS=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
+const BANDS0=[[50,58],[56,64],[62,70],[68,76],[74,82],[80,90],[88,100]];
+let BANDS=BANDS0;/* CAR-TUNE: each band moves with the game's own field tune (window.TOPS_FIELD_TUNE, read from the page below) */
 // settings to check: [label, diff level, placement]. Placement +15 is the cap (a pub player averaging ~77).
 // Lee's case: Competitive, ~70 player average at the pub -> old placement round((70-52)*0.6) = +11; Leemus's live save is Rookie +14
 const SETS=[['club','club',0],['none',null,null],['old rookie save','rookie',0],['old comp save','comp',0],['comp+11 (Lee)','comp',11],['rookie+14 (Leemus save)','rookie',14],['comp+15 (max)','comp',15]];
@@ -15,6 +16,7 @@ const SETS=[['club','club',0],['none',null,null],['old rookie save','rookie',0],
  const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
+ {const T=await p.evaluate(()=>window.TOPS_FIELD_TUNE||null);if(Array.isArray(T))BANDS=BANDS0.map(([lo,hi],i)=>[lo+(T[i]||0),hi+(T[i]||0)]);console.log('bands (with field tune '+JSON.stringify(T)+'): '+JSON.stringify(BANDS));}
  const res=await p.evaluate(({LEGS,SETS})=>{save.authSeen=true;$('login').hidden=true;
   const out=[];
   // one leg of 501 for an AI with target average `avg` at tier t (double out, busts, pressure + settle like startTurn)
