@@ -29,19 +29,20 @@ const v13=fs.existsSync('v13.js')?fs.readFileSync('v13.js','utf8'):'';
 const v14=fs.existsSync('v14.js')?fs.readFileSync('v14.js','utf8'):'';
 const v15=fs.existsSync('v15.js')?fs.readFileSync('v15.js','utf8'):'';/* CAR-S career backup + confirm */
 const v16=fs.existsSync('v16.js')?fs.readFileSync('v16.js','utf8'):'';/* ENG-RESET fresh page between matches */
+const s3c=fs.existsSync('tc/s3.js')?`<script>${fs.readFileSync('tc/circuit.js','utf8')}\n${fs.readFileSync('tc/s3.js','utf8')}</script>\n`:'';/* S3 Circuit career (Career): engine + wiring, off unless the s3 flag is on */
 const dg=fs.existsSync('dartgeo.json')?`<script>window.TOPS_DG_RAW=${fs.readFileSync('dartgeo.json','utf8')}</script>\n`:'';
 // collectibles (cards, packs, cabinet, exhibitions): tc/
 const tcf=n=>fs.existsSync('tc/'+n)?fs.readFileSync('tc/'+n,'utf8'):'';
-const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<script>${tcf('cards.js')}\n${tcf('data.js')}\n${tcf('fx.js')}\n${tcf('core.js')}\n${tcf('venue.js')}\n${tcf('pubfx.js')}\n${tcf('cab3d.js')}\n${tcf('circuit.js')}</script>\n`:'';
+const tc=tcf('core.js')?`<style>${tcf('cards.css')}\n${tcf('tc.css')}</style>\n<script>${tcf('cards.js')}\n${tcf('data.js')}\n${tcf('fx.js')}\n${tcf('core.js')}\n${tcf('venue.js')}\n${tcf('pubfx.js')}\n${tcf('cab3d.js')}</script>\n`:'';
 // rebrand (EXP-REBRAND): new menu set behind ?rebrand=1; installs nothing when off
-// EXP-S3C Season 3 (Experience): rb/s3.js goes before rb.js (rb.js reads TOPS_S3UI); s3/manifest.json (Director's W9 old path -> Vinyl redo) is inlined
+// EXP-S3C Season 3 (Experience): rb/s3.js goes before rb.js (rb.js reads TOPS_S3UI)
 // every file under s3/ is a Vinyl redo of the repo path after 's3/' (Director's rule: same name and size); the build lists them so the page
 // knows which old paths have a redo (the release copies s3/ to the site alongside assets/)
 const s3walk=d=>fs.existsSync(d)?fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?s3walk(d+'/'+e.name):[d+'/'+e.name]):[];
 const s3man=s3walk('s3').filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).map(f=>f.slice(3)).sort();
 const s3=fs.existsSync('rb/s3.js')?`<style>${fs.existsSync('rb/s3.css')?fs.readFileSync('rb/s3.css','utf8'):''}</style>\n<script>window.TOPS_S3_HAVE=${JSON.stringify(s3man)};\n${fs.readFileSync('rb/s3.js','utf8')}</script>\n`:'';
 const rb=s3+(fs.existsSync('rb/rb.js')?`<style>${fs.existsSync('rb/rb-lime.css')?fs.readFileSync('rb/rb-lime.css','utf8'):''}${fs.readFileSync('rb/rb.css','utf8')}</style>\n<script>${fs.readFileSync('rb/rb.js','utf8')}</script>\n`:'');
-const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+tc+rb+v16;
+const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+s3c+tc+rb+v16;
 // ENG-FLASH real progress (Experience, Overseer 17:58) + Q&D 18:23: every shipped file is parsed top to bottom, so how far the parser has got IS the
 // load progress. After the loader, a tiny TOPS_LOAD.part('parse', f) goes in after the first </script> past every 10 % of THAT file (always top
 // level: the HTML parser ends a script at </script>), f = the real fraction at that point; weighted in TOPS_LOAD.part with the page parsed (8 %) and

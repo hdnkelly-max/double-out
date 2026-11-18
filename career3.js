@@ -274,7 +274,7 @@ function luxBuy(id,force){const c=career();const it=LUX.find(x=>x.id===id);if(!i
  // S3b: the purchase only counts once it's saved on the device. If the local save fails (storage full, private mode), undo it and say so
  const prev={bank:c.bank,lux:c.lux?JSON.parse(JSON.stringify(c.lux)):undefined};const L=luxSt();
  c.bank-=it.price;L.owned.push(id);L.at[id]=Date.now();if(it.k==='edition')L.edition=save.barrel;
- let saved=true;try{localStorage.setItem('doubleout2',JSON.stringify(save));}catch(e){saved=false;}
+ let saved=true;try{localStorage.setItem(TOPS_SAVE_NS.key,JSON.stringify(save));}catch(e){saved=false;}
  if(!saved){c.bank=prev.bank;if(prev.lux===undefined)delete c.lux;else c.lux=prev.lux;luxLog('lux_save_fail',{id,price:it.price});return {err:'save'};}
  try{persist();}catch(e){}/* the game's own save path: cloud push + hub bank */
  luxLog('lux_buy',{id,price:it.price,bank:c.bank,tier:c.tier,forced:!!(force&&risk.length)});try{window.dispatchEvent(new CustomEvent('tops:lux',{detail:{id,bank:c.bank}}));}catch(e){}return {ok:1,item:it};}

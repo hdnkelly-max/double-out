@@ -1,8 +1,8 @@
 // TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
 // except the hidden tester switch on the title screen.
 //
-// Flag: ?s3=1 / ?s3=0 (remembered on this device), or the hidden switch: 5 taps on the version label on the title screen.
-// There is no Menu toggle (Hayden 07:45: players must not find it). window.TOPS_S3_ON is the one place the flag is read.
+// Flag: window.TOPS_S3FLAG (Career owns it: S3_DEFAULT, ?s3=1 / ?s3=0, localStorage tops_s3). This file adds the hidden tester switch:
+// 5 taps on the version label on the title screen flips it (Hayden 07:45: no Menu toggle players can find).
 //
 // Data comes from Career (W1/W2/W6/W7). Interface this file reads (Career owns the data; this file only presents it):
 //   TOPS_S3.state()   the Circuit career, shape of tc/circuit.js newCareer(): {level, week, bank, pts, oom, history, live, debt, dpnzEv, ...}
@@ -18,9 +18,7 @@
   const q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return new URLSearchParams(''); } })();
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
-  if (q.has('s3')) lsSet('tops_s3', q.get('s3') === '1' ? '1' : null);
-  if (typeof window.TOPS_S3_ON !== 'boolean') window.TOPS_S3_ON = lsGet('tops_s3') === '1';
-  const ON = window.TOPS_S3_ON;
+  const ON = !!window.TOPS_S3FLAG;   /* the one Season 3 flag (Career, top of game4.js; Overseer 08:08) */
 
   /* ---------- hidden tester switch: 5 taps on the title's version label within 3 s (works with S3 on or off) ---------- */
   (function hidden() {
@@ -29,7 +27,7 @@
       const v = e.target && e.target.closest && e.target.closest('#tlVer'); if (!v) return;
       const now = Date.now(); if (now - t0 > 3000) n = 0; t0 = now; n++;
       if (n < 5) return; n = 0;
-      lsSet('tops_s3', ON ? null : '1');
+      lsSet('tops_s3', ON ? '0' : '1');   /* Career's key: '1' on, '0' the sticky opt-out */
       try { v.textContent = ON ? 'Season 3 test off · reloading' : 'Season 3 test on · reloading'; } catch (x) {}
       setTimeout(() => { try { location.reload(); } catch (x) {} }, 700);
     }, true);
@@ -74,17 +72,21 @@
 
   /* ---------- data: Career's functions, else the dev stand-in ---------- */
   const API = () => window.TOPS_S3 || {};
+  const live3 = () => { const a = API(); return typeof a.view === 'function' && typeof a._circ === 'function'; };
   const DEVK = 'tops_s3c_dev';
   let devC = null;
   const devState = () => { if (devC) return devC; try { devC = JSON.parse(lsGet(DEVK) || 'null'); } catch (e) {} if (!devC && CI()) devC = CI().newCareer({}); return devC; };
   const devSave = () => lsSet(DEVK, JSON.stringify(devC));
-  const isDev = () => typeof API().state !== 'function';
+  const isDev = () => !live3();
+  // Career's TOPS_S3: the engine state lives in save.career.circuit and save.career.bank is the one bank (tc/s3.js); read it, never write it
+  const real = () => { const k = API()._circ(); if (!k) return null; try { k.bank = (career() || {}).bank || 0; } catch (e) {} return k; };
   const D = {
-    st() { try { return isDev() ? devState() : API().state(); } catch (e) { console.warn('s3 state', e); return null; } },
+    st() { try { return isDev() ? devState() : real(); } catch (e) { console.warn('s3 state', e); return null; } },
+    oppName() { try { const v = !isDev() && API().view(); return v && v.live && v.live.opp ? v.live.opp.name : ''; } catch (e) { return ''; } },
     book(id) { if (!isDev()) return API().book(id); const r = CI().book(devState(), id); devSave(); return r; },
-    play() { if (!isDev()) return API().play(); devTap = 1; render(); },
+    play() { if (!isDev()) { if (!API().play()) toast('<b>Can\'t walk on</b><span>The event isn\'t running</span>'); return; } devTap = 1; render(); },
     advance() { if (!isDev()) return API().advance(); const r = CI().advance(devState()); devSave(); return r; },
-    moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) {} },
+    moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) { console.warn('s3 money match', e); } },
     devResult(won) { const r = CI().result(devState(), won); devSave(); devTap = 0; return r; }
   };
   let devTap = 0;
@@ -161,7 +163,7 @@
     const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
     let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
       <ol class="s3-draw" aria-label="The draw">${cells}</ol>
-      <div class="s3-row"><div><span class="s3-lab">Next opponent</span><b class="s3-big">${o.avg}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
+      <div class="s3-row"><div><span class="s3-lab">Next opponent${D.oppName() ? ' · ' + esc(D.oppName()) : ''}</span><b class="s3-big">${o.avg}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
         <div style="text-align:right"><span class="s3-lab">${esc(rn)}</span><b class="s3-mid">${money(winNow)}</b><span class="rb-sub">to the winner</span></div></div>
       ${safe ? `<span class="rb-sub">Lose now and you still take ${money(safe)}</span>` : ''}
       <button class="rb-primary" type="button" id="s3Go"><b>Walk on</b><small>${esc(rn)}${L.legs ? ' · best of ' + L.legs : ''}</small></button>`;
@@ -183,35 +185,37 @@
   const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 
   /* ---------- Best Leg (W6) + Season 1/2 history (W7), on the Circuit tab under the week ---------- */
-  let blRows = null, blAt = 0;
+  // Both are async reads of Career's views (tops_bestleg_s3, tops_history); fetched at most once a minute, the card redraws in place.
+  let blRows = null, blAt = 0, hiRows = null, hiAt = 0;
+  const fetchOnce = (fn, at, set, redraw) => { if (Date.now() - at < 60000) return at; try { Promise.resolve(fn()).then(r => { set(r || []); redraw(); }).catch(() => { set(null); }); } catch (e) {} return Date.now(); };
   function records() {
-    const B = window.TOPS_BESTLEG, H = window.TOPS_HISTORY;
-    let h = '';
-    if (B) {
-      if (B.table && Date.now() - blAt > 60000) { blAt = Date.now(); try { Promise.resolve(B.table()).then(r => { blRows = r || []; const el = $id('s3Bl'); if (el) el.outerHTML = blCard(); }).catch(() => {}); } catch (e) {} }
-      h += blCard();
-    }
-    if (H && H.rows) { let r = null; try { r = H.rows(); } catch (e) {} if (r && r.length) h += histCard(r); }
+    const B = window.TOPS_BESTLEG, H = window.TOPS_HISTORY; let h = '';
+    if (B && B.table) { blAt = fetchOnce(() => B.table(), blAt, r => { blRows = r; }, () => { const el = $id('s3Bl'); if (el) el.outerHTML = blCard(); }); h += blCard(); }
+    if (H && H.rows) { hiAt = fetchOnce(() => H.rows(), hiAt, r => { hiRows = r; }, () => { const el = $id('s3Hi'); if (el) { el.outerHTML = histCard(); wire(); } }); h += histCard(); }
     return h;
   }
   function blCard() {
-    const B = window.TOPS_BESTLEG; let mine = null; try { mine = B.mine && B.mine(); } catch (e) {}
-    const rows = (blRows || []).slice(0, 8);
-    const list = rows.length ? `<ol class="s3-tbl">${rows.map((r, i) => `<li class="${r.you ? 's3-you' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.name)}</span><b>${r.darts} darts</b></li>`).join('')}</ol>` : `<span class="rb-sub">${blRows ? 'Nobody has a best leg yet this season.' : 'Loading the table…'}</span>`;
-    return `<div class="rb-card" id="s3Bl"><div class="s3-row"><span class="rb-t2">Best leg · Season 3</span><span class="rb-sub">${mine && mine.darts ? 'Yours: ' + mine.darts + ' darts' : 'Win a 501 leg to set yours'}</span></div>${list}</div>`;
+    const rows = (blRows || []).slice(0, 8), mine = (blRows || []).find(r => r.you);
+    const list = rows.length ? `<ol class="s3-tbl">${rows.map((r, i) => `<li class="${r.you ? 's3-you' : ''}"><span>${i + 1}</span><span>${esc(r.you ? 'You' : r.name)}</span><b>${r.darts} darts</b></li>`).join('')}</ol>`
+      : `<span class="rb-sub">${blRows ? 'Nobody has a best leg yet this season. Win a 501 leg in the Circuit to set one.' : 'Loading the table…'}</span>`;
+    return `<div class="rb-card" id="s3Bl"><div class="s3-row"><span class="rb-t2">Best leg · Season 3</span><span class="rb-sub">${mine ? 'Yours: ' + mine.darts + ' darts' : ''}</span></div>${list}</div>`;
   }
-  function histCard(r) {
-    const best = (k, lo) => r.filter(x => x[k] != null && (typeof x[k] !== 'object' || x[k].level != null)).sort((a, b) => lo ? val(a, k) - val(b, k) : val(b, k) - val(a, k))[0];
-    const val = (x, k) => k === 'furthest' ? x.furthest.level : +x[k];
-    const f = best('furthest'), a = best('bestAvg'), n = best('closest9', true);
+  // a player's best across both seasons: furthest level, highest average, fewest darts in a won leg
+  const hist = r => { const ss = [r.s1, r.s2].filter(Boolean), f = ss.map(x => x.furthest).filter(Boolean).sort((a, b) => b.level - a.level)[0] || null;
+    const av = ss.map(x => x.bestAvg).filter(x => x != null), lg = ss.map(x => x.bestLeg).filter(x => x != null);
+    return { name: r.name, you: r.you, furthest: f, bestAvg: av.length ? Math.max(...av) : null, bestLeg: lg.length ? Math.min(...lg) : null }; };
+  function histCard() {
+    if (!hiRows || !hiRows.length) return `<div id="s3Hi"></div>`;
+    const r = hiRows.map(hist), top = (k, lo) => r.filter(x => x[k] != null).sort((a, b) => k === 'furthest' ? b.furthest.level - a.furthest.level : lo ? a[k] - b[k] : b[k] - a[k])[0];
+    const f = top('furthest'), a = top('bestAvg'), n = top('bestLeg', true);
     const line = (lab, w, txt) => `<li><span class="s3-lab">${lab}</span><span>${w ? esc(w.you ? 'You' : w.name) : 'No data'}</span><b>${w ? txt(w) : ''}</b></li>`;
-    return `<button class="rb-card s3-hist" type="button" data-s3="hist"><div class="s3-row"><span class="rb-t2">Seasons 1 & 2 · the records</span><span class="rb-sub">All ›</span></div>
-      <ol class="s3-tbl s3-h3">${line('Furthest', f, w => esc(w.furthest.n || ''))}${line('Highest average', a, w => (+w.bestAvg).toFixed(1))}${line('Closest to a 9-darter', n, w => w.closest9 + ' darts')}</ol></button>`;
+    return `<button class="rb-card s3-hist" type="button" id="s3Hi" data-s3="hist"><div class="s3-row"><span class="rb-t2">Seasons 1 & 2 · the records</span><span class="rb-sub">All ›</span></div>
+      <ol class="s3-tbl s3-h3">${line('Furthest', f, w => esc(w.furthest.n || ''))}${line('Highest average', a, w => (+w.bestAvg).toFixed(1))}${line('Closest to a 9-darter', n, w => w.bestLeg + ' darts')}</ol></button>`;
   }
   function histSheet() {
-    const H = window.TOPS_HISTORY; let r = []; try { r = H.rows() || []; } catch (e) {}
-    const row = x => `<li class="${x.you ? 's3-you' : ''}"><span>${esc(x.you ? 'You' : x.name)}</span><span>${x.furthest && x.furthest.n ? esc(x.furthest.n) : 'No data'}</span><span>${x.bestAvg != null ? (+x.bestAvg).toFixed(1) : '–'}</span><span>${x.closest9 != null ? x.closest9 : '–'}</span></li>`;
-    sheet(`<span class="rb-kick">Seasons 1 & 2</span><span class="rb-t1">The records</span><span class="rb-sub">Kept from before the reset. Furthest level, best match average and fewest darts in a won 501 leg.</span>
+    const r = (hiRows || []).map(hist);
+    const row = x => `<li class="${x.you ? 's3-you' : ''}"><span>${esc(x.you ? 'You' : x.name)}</span><span>${x.furthest ? esc(x.furthest.n) : 'No data'}</span><span>${x.bestAvg != null ? (+x.bestAvg).toFixed(1) : '–'}</span><span>${x.bestLeg != null ? x.bestLeg : '–'}</span></li>`;
+    sheet(`<span class="rb-kick">Seasons 1 & 2</span><span class="rb-t1">The records</span><span class="rb-sub">Kept from before the reset: furthest level, best match average, fewest darts in a won 501 leg.</span>
       <ol class="s3-tbl s3-h4"><li class="s3-thd"><span>Player</span><span>Furthest</span><span>Avg</span><span>Darts</span></li>${r.map(row).join('')}</ol>`, 'Done');
   }
 
@@ -276,7 +280,8 @@
   window.addEventListener('tops:bestleg', e => { try { lsSet('tops_s3_bl', JSON.stringify(e.detail || {})); } catch (x) {} });
   function bestLeg() {
     if ($id('s3Sheet')) return; let d = null; try { d = JSON.parse(lsGet('tops_s3_bl') || 'null'); } catch (e) {} if (!d || !d.darts) return;
-    sheet(`<span class="rb-kick">New best leg</span><span class="s3-fin s3-gold">${d.darts} darts</span><span class="rb-sub">${d.prev ? `Beats your ${d.prev}. ` : ''}Your best this season, on the Home table now.</span>`, 'Nice', () => { lsSet('tops_s3_bl', null); blAt = 0; render(); }, 's3-win');
+    const eq = d.kind === 'equal';
+    sheet(`<span class="rb-kick">${eq ? 'Equals the Season 3 record' : 'New Season 3 record'}</span><span class="s3-fin s3-gold">${d.darts} darts</span><span class="rb-sub">${eq ? `Level with the best leg this season (${d.prev} darts).` : d.prev ? `The best leg this season was ${d.prev} darts.` : 'The first best leg of the season.'} It's on the Circuit table now.</span>`, 'Nice', () => { lsSet('tops_s3_bl', null); blAt = 0; render(); }, 's3-win');
   }
 
   /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
