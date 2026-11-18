@@ -28,16 +28,16 @@ const {chromium}=require('playwright');const path=require('path');
   career().bank=60;career().circuit.live=null;out.book3=TOPS_S3.book('pub_night');
   const evs=[];window.addEventListener('tops:s3',e=>evs.push(e.detail));
   const v1=TOPS_S3.view();out.live=v1.live;
-  for(let i=0;i<3;i++){const ok=TOPS_S3.play();if(!ok){out.err='play failed at '+i;break;}if(i===0)out.match={mode:'career',oppAvg:S.p[1].avg||S.oppAvg,s3:S.s3,legs:S.bestOf,name:S.p[1].name};S.won=true;S.p[0].pts=300;S.p[0].darts=18;careerAfterMatch();S.done=true;}
+  for(let i=0;i<3;i++){const ok=TOPS_S3._playNow();if(!ok){out.err='play failed at '+i;break;}if(i===0)out.match={mode:'career',oppAvg:S.p[1].avg||S.oppAvg,s3:S.s3,legs:S.bestOf,name:S.p[1].name};S.won=true;S.p[0].pts=300;S.p[0].darts=18;careerAfterMatch();S.done=true;}
   out.evs=evs.slice();out.after={bank:career().bank,week:career().circuit.week,pts:career().circuit.pts.pub,hist:career().circuit.history.length,wins:career().wins};
   // a loss in the second round
-  TOPS_S3.book('pub_night');TOPS_S3.play();S.won=true;S.p[0].pts=200;S.p[0].darts=18;careerAfterMatch();S.done=true;TOPS_S3.play();S.won=false;S.p[0].pts=100;S.p[0].darts=18;careerAfterMatch();S.done=true;
+  TOPS_S3.book('pub_night');TOPS_S3._playNow();S.won=true;S.p[0].pts=200;S.p[0].darts=18;careerAfterMatch();S.done=true;TOPS_S3._playNow();S.won=false;S.p[0].pts=100;S.p[0].darts=18;careerAfterMatch();S.done=true;
   out.loss=evs[evs.length-1];
   out.hist=await TOPS_HISTORY.rows();out.bl=await TOPS_BESTLEG.table();out.rec=await TOPS_BESTLEG.record();
  }catch(e){out.err=String(e&&e.stack||e);}return out;});
  // 7b the hub's old Play (playNext); ENG-RESET may reload the page first, so check after it settles
  const b0=await p.evaluate(()=>{S.done=true;career().circuit.live=null;persist();setTimeout(()=>playNext(),0);return career().bank;});
- await p.waitForTimeout(7000);
+ await p.waitForTimeout(15000);
  r.pn=await p.evaluate(b0=>({live:!!(career()&&career().circuit&&career().circuit.live),s3:!!(typeof S!=='undefined'&&S&&S.s3),paid:b0-career().bank}),b0).catch(e=>({err:String(e)}));
  const want=['bank','calendar','card','debt','history','ladder','level','live','oom','qsOffer','runway','week'];
  if(r.err)f.push('error: '+r.err);else{
