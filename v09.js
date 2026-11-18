@@ -160,7 +160,7 @@ window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));const sti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);const st=stageTune(sti);tp.D*=qr.D/q0.D;/* pull length: as 3.54 */tp.cone=st.cone*(1-.08*Math.min(1,nv));tp.ex=st.ex;tp.ea=(THROW_TUNE.ease||[])[Math.max(0,Math.min(6,sti))];tp.span=(THROW_TUNE.span||[])[Math.max(0,Math.min(6,sti))]||1;
  const Lr=Lof('rh');const rp=rampAt(Lr);tp.P*=winMs(Lr)*st.win*rp.win/(q0.P*tolMult()*.85);tp.cone*=rp.cone;/* S3 ramp: window and cone grow with Rhythm */
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
