@@ -169,6 +169,9 @@ jobs:
           else
             echo "{\"v\":\"$V\"}" > ../out/version.json
           fi
+          # Delivery QA (Season 3): every file the page names must exist in what we publish (main's files + this build's own).
+          # Missing art fails the release here instead of showing a broken image on phones. No-op until src has the test.
+          if [ -f tests/asset-refs.js ]; then node tests/asset-refs.js double-out-standalone.html ../site . | tee -a $GITHUB_STEP_SUMMARY; fi
           cp assets/ui/* ../out/assets/ui/ 2>/dev/null || true
           cp assets/voice/* ../out/assets/voice/ 2>/dev/null || true
           cp img/menu_*.jpg ../out/img/ 2>/dev/null || true
