@@ -285,7 +285,7 @@
   }
 
   /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
-  let shell = null;
+  let shell = null, annT = 0;
   function render() { if (shell) shell(); }
   function wire() {
     const app = $id('rbApp'); if (!app) return;
@@ -299,7 +299,12 @@
       else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
       else if (k === 'hist') histSheet(); });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
-    setTimeout(() => { const c2 = D.st(); if (c2) announce(c2); bestLeg(); }, 0);
+    /* not while the between-match reset is about to reload the page (ENG-RESET): the result would show behind the loader and be lost */
+    /* nor while the loading screen still covers the page (the fresh page after the reset): wait for it to lift, then show it once */
+    const resetting = () => { try { const r = window.TOPS_RESET && TOPS_RESET.state && TOPS_RESET.state(); if (r && (r.played || r.busy)) return true; const l = $id('loading'); return !!(l && !l.classList.contains('gone') && getComputedStyle(l).display !== 'none'); } catch (e) { return false; } };
+    clearTimeout(annT); let tries = 0;
+    const tryAnn = () => { if (!$id('rbApp') || $id('rbApp').hidden) return; if (resetting()) { if (++tries < 40) annT = setTimeout(tryAnn, 400); return; } const c2 = D.st(); if (c2) announce(c2); bestLeg(); };
+    annT = setTimeout(tryAnn, 0);
   }
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
