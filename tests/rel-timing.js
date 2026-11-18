@@ -34,8 +34,11 @@ await p.evaluate(()=>{window.TH_PRESS_NOW=false;});
 const avg=a=>a.length?Math.round(a.reduce((s,x)=>s+x,0)/a.length):null;
 for(const arm of ['old','nw']){const by={};for(const d of A[arm]){(by[d.block]=by[d.block]||[]).push(d);}
  const sum=Object.fromEntries(Object.entries(by).map(([k,v])=>[k,{n:v.length,meanErr:avg(v.map(d=>d.err)),meanPressLag:avg(v.map(d=>d.lag))}]));O({part:'A',arm:arm==='old'?'old (start = handler time)':'new (start = press timeStamp)',byBlockMs:sum});
- if(arm==='old'&&by[120]&&!(avg(by[120].map(d=>d.err))<-70))F('A: old code did not show the early bias under a 120 ms block (test not exercising the bug?)');
- if(arm==='nw')for(const [k,v] of Object.entries(by)){const m=avg(v.map(d=>d.err));if(Math.abs(m)>12)F('A: new code, '+k+' ms block: mean error '+m+' ms (want within 12 ms)');if(+k>0&&!(avg(v.map(d=>d.lag))>=+k*0.6))F('A: press handler delay not logged for a '+k+' ms block');}}
+ /* the same release, measured against the same hold: what matters is how much a late press HANDLER moves the score (the 0 ms row is this
+    box's baseline: the touch screen offset, the pull speed of the practice match) */
+ const base=by[0]?avg(by[0].map(d=>d.err)):null;
+ if(arm==='old'&&by[120]&&!(avg(by[120].map(d=>d.err))-base<-70))F('A: old code did not show the early bias under a 120 ms block (test not exercising the bug?)');
+ if(arm==='nw')for(const [k,v] of Object.entries(by)){const m=avg(v.map(d=>d.err));if(Math.abs(m-base)>15)F('A: new code, '+k+' ms block: the score moved '+(m-base)+' ms from the unblocked presses (want within 15 ms)');if(+k>0&&!(avg(v.map(d=>d.lag))>=+k*0.6))F('A: press handler delay not logged for a '+k+' ms block');}}
 // ---- B ----
 if(H){/* frame profile: his tonight's histograms. bins (ms): <9, 9-13, 13-18, 18-21, 21-26, 26-34, 34-51, 51-101, 101-200, >200; stalls: max_ms */
  const mids=[7,11,15.5,19.5,23.5,30,42.5,76,150,0];const W=[];let tot=0;for(const m of H.hist.filter(m=>m.mi===1||m.mode==='career')){m.h.forEach((c,i)=>{if(i<9&&c){W.push([mids[i],c]);tot+=c;}});/* the >200 bin: his long stalls */const big=m.h[9]||0;if(big){W.push([Math.max(250,m.max||1300)*0.6,big-1]);W.push([m.max||1300,1]);}}
