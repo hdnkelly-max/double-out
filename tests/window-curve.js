@@ -20,8 +20,12 @@ const {chromium}=require('playwright');const path=require('path');
   // the Rhythm card shows the same window the throw uses (QA 19:40): fxLine('rh', v, v+1) for a spread of stats
   const kp=(window.TOPS_kitPts?TOPS_kitPts().rh:0)||0;const Lv=v=>Math.max(0,Math.min(1,(v+kp-20)/75));const f=w=>String(Math.round(w*10)/10);
   const card=[20,21,33,40,58,76,94,95].map(v=>{const got=window.TOPS_FXLINE?TOPS_FXLINE('rh',v,v+1):null;const want=`Perfect window ${f(W(Lv(v)))} → ${f(W(Lv(v+1)))} ms`;return {v,got,want};});
-  return {pts,mono,rows,card};});
+  // CAR-WIN (ChatGPT P2): sway and perfect-dart scatter still shrink as the level rises, at every point and between points, and the table is the approved one
+  const tt=[];for(let i=0;i<=40;i++){const L=i/40,q=ttAt(L);tt.push({L,A:q.A,s0:q.s0});}const ttMono=tt.every((r,i)=>i===0||(r.A<=tt[i-1].A+1e-9&&r.s0<=tt[i-1].s0+1e-9));
+  const ttPts=[0,.3,.6,1].map(L=>{const q=ttAt(L);return [+q.A.toFixed(2),+q.s0.toFixed(2)];});
+  return {pts,mono,rows,card,ttMono,ttPts};});
  const f=[];if(r.err)f.push(r.err);else{
+  if(!r.ttMono)f.push('sway or scatter grows with level somewhere');if(JSON.stringify(r.ttPts)!==JSON.stringify([[34,10.5],[28,9.8],[22,8.6],[13,7.6]]))f.push('sway/scatter table: '+JSON.stringify(r.ttPts)+' want [[34,10.5],[28,9.8],[22,8.6],[13,7.6]]');
   r.pts.forEach(x=>{if(Math.abs(x.got-x.want)>.01)f.push(`TOPS_WIN(${x.L}) = ${x.got}, want ${x.want}`);});if(!r.mono)f.push('window narrows somewhere as Rhythm rises');
   r.card.forEach(c=>{if(c.got!==c.want)f.push(`Rhythm card at ${c.v}: "${c.got}", want "${c.want}"`);});
   const ks=r.rows.map(x=>x.k);if(Math.max(...ks)-Math.min(...ks)>.002)f.push('career window is not the table times one factor: '+JSON.stringify(r.rows));
@@ -29,4 +33,4 @@ const {chromium}=require('playwright');const path=require('path');
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  console.log(JSON.stringify(r.rows||r));await b.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}
- console.log('PASS: window table 15/16/18/20/22 ms at Rhythm level 0/.265/.5/.75/1, linear between, clamped, never narrowing; career throwParams follows it at Rhythm 20-95 (factor '+r.rows[0].k+'); sway and scatter unchanged; Rhythm card text matches the table (e.g. '+r.card[0].got+')');})();
+ console.log('PASS: sway 34/28/22/13 mm and perfect scatter 10.5/9.8/8.6/7.6 mm, never growing with level; window table 15/16/18/20/22 ms at Rhythm level 0/.265/.5/.75/1, linear between, clamped, never narrowing; career throwParams follows it at Rhythm 20-95 (factor '+r.rows[0].k+'); sway and scatter unchanged; Rhythm card text matches the table (e.g. '+r.card[0].got+')');})();
