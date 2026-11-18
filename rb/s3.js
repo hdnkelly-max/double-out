@@ -37,23 +37,23 @@
   if (!ON) return;
   try { document.documentElement.classList.add('s3-on'); } catch (e) {}
 
-  /* ---------- s3/ image switch (W9): Director's manifest maps an old path to its Vinyl redo ---------- */
-  // window.TOPS_S3_MANIFEST = { "assets/rb/venue_t0.jpg": "s3/rb/venue_t0.webp", ... } (inlined by build.js from s3/manifest.json).
-  // Only listed paths change; a listed file that fails to load falls back to the old image (img) and the miss is logged once.
-  // A path mapped to "" has no Vinyl redo yet: it shows a plain on-brand placeholder, never the old lifelike image (Hayden 07:55).
+  /* ---------- s3/ image switch (W9): a person or venue image shows its Vinyl redo, or an on-brand placeholder, never the old lifelike image ---------- */
+  // TOPS_S3_HAVE (from build.js): the repo paths that have a redo at 's3/' + path. PEOPLE: the paths that show a person or a venue
+  // (Director's art audit, 10-season3-build.md); one of those without a redo yet shows a plain dark placeholder (Hayden 07:55).
+  // Objects (darts, trophies, badges, icons) keep their own images.
   const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>');
-  const MAN = Object.assign({}, window.TOPS_S3_MANIFEST || {}); Object.keys(MAN).forEach(k => { if (!MAN[k]) MAN[k] = PH; });
-  const KEYS = Object.keys(MAN).sort((a, b) => b.length - a.length);
-  const RX = KEYS.length ? new RegExp(KEYS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g') : null;
-  const swap = s => (RX && typeof s === 'string' && s.length < 400000) ? s.replace(RX, m => MAN[m]) : s;
-  const REV = {}; KEYS.forEach(k => { REV[MAN[k]] = k; });
+  const HAVE = {}; (window.TOPS_S3_HAVE || []).forEach(p => { HAVE[p] = 1; });
+  const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
+  const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
+  const one = p => HAVE[p] ? 's3/' + p : PEOPLE.test(p) ? PH : null;
+  const swap = s => (typeof s !== 'string' || s.length > 400000) ? s : s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
   window.TOPS_S3_IMG = swap;
-  if (RX) {
+  {
     const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
       Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable, get: d.get, set(v) { return d.set.call(this, fn(v, this)); } }); };
-    try { wrapSet(HTMLImageElement.prototype, 'src', (v, img) => { const n = swap(v); if (n !== v) img.addEventListener('error', function back() { img.removeEventListener('error', back); const o = REV[n] || v; miss(n); img.src = o; }, { once: true }); return n; }); } catch (e) {}
+    try { wrapSet(HTMLImageElement.prototype, 'src', (v, img) => { const n = swap(v); if (n !== v && n.indexOf('s3/') >= 0) img.addEventListener('error', function back() { miss(n); img.src = PH; }, { once: true }); return n; }); } catch (e) {}
     try { wrapSet(Element.prototype, 'innerHTML', v => swap(v)); } catch (e) {}
-    try { const sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function (k, v) { return sa.call(this, k, (k === 'src' || k === 'style' || k === 'href') ? swap(v) : v); }; } catch (e) {}
+    try { const sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function (k, v) { return sa.call(this, k, (k === 'src' || k === 'style') ? swap(v) : v); }; } catch (e) {}
     try { const sp = CSSStyleDeclaration.prototype.setProperty; CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { return sp.call(this, k, swap(v), p); };
       ['background', 'backgroundImage', 'cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
     const sheets = () => { try { document.querySelectorAll('style').forEach(s => { if (s.dataset.s3) return; const t = s.textContent, n = swap(t); if (n !== t) s.textContent = n; s.dataset.s3 = 1; }); } catch (e) {} };
