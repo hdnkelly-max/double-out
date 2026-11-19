@@ -1373,7 +1373,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     {p:[[1.45,2.15],[1.7,2.42],[2.02,2.7]],w:0.058,hk:0.85,n:20},{p:[[1.4,-2.1],[1.75,-2.32],[2.05,-2.5]],w:0.056,hk:0.85},{p:[[1.75,2.95],[2.0,3.08],[2.25,3.15]],w:0.052,hk:0.8},
     {p:[[0.85,1.25],[0.9,1.7],[1.1,2.1],[1.35,2.4]],w:0.055,hk:0.9},{p:[[0.85,-1.35],[0.95,-1.8],[1.2,-2.15],[1.3,-2.3]],w:0.055,hk:0.9}],
    HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x543424,shadow:0x2A1810,hi:0x7A5C4C},
-   o:{valley:0.026,wk:0.85,hiLo:0.9,hi:0.35,rough:0.5,cc:0.08,lip:[0.16,2]}};
+   o:{valley:0.026,wk:0.85,hiLo:0.9,hi:0.35,rough:0.5,cc:0.08,lip:[0.16,2],tone:1.3}};/* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
   return {envR,envS,groove,KAI};})();
  const V2HAIRS={
   quiffL(h,L,K){const G=V2GROOVE,Q=G.KAI;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-0.01,2.35]]);
@@ -2545,7 +2545,8 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
   if(cine){const k=(now-cine.t0)/cine.dur;if(k>=1.0){cine=null;}else{const tgt=mmToWorld(cine.x,cine.y);let cp,cl;if(flights.length){const f=flights[0];const dp=f.d.position.lengthSq()<1e-6?f.from:f.d.position;const e=Math.min(1,k*1.15);const side=new T.Vector3(.26,.03,.3).multiplyScalar(1-e*.45);cp=dp.clone().add(side);cl=dp.clone().lerp(tgt,.55+e*.45);cine.lastPos=cp;cine.lastLook=cl;}else{cp=cine.lastPos||pos.clone();cl=tgt.clone();}
    const back=Math.max(0,(k-.82)/.18);if(back>0){const e=back*back;pos.lerpVectors(cp,pos,e);look.lerpVectors(cl,look,e);fov=34+(fov-34)*e;}else{pos.copy(cp);look.copy(cl);fov=34;}punch=null;}}
   if(punch){const k=(now-punch.t0)/punch.dur;if(k>=1)punch=null;else{const e=k<.25?k/.25:1-Math.pow((k-.25)/.75,2);const w=mmToWorld(punch.x,punch.y);const spec=camK>=.5;look.lerp(_fW.set(w.x,w.y,0),(spec?.6:.85)*e);fov=fov+(Math.max(spec?20:14,fov*(spec?.55:.42))-fov)*e;}}
-  if(previewOn){if(portrait){pos.set(Math.sin(t*.4)*.2,1.75,OCHE_Z-1.7);look.set(0,.7,OCHE_Z+1.5);fov=50;}else{pos.copy(camPrev.pos);pos.x+=Math.sin(t*.4)*.2;look.copy(camPrev.look);fov=40;}}
+  if(previewOn){if(portrait){pos.set(Math.sin(t*.4)*.2,1.75,OCHE_Z-1.7);look.set(0,.7,OCHE_Z+1.5);fov=50;}else{pos.copy(camPrev.pos);pos.x+=Math.sin(t*.4)*.2;look.copy(camPrev.look);fov=40;}
+   if(me&&me.userData.s3rig&&me.userData.s3rig.v3){pos.y+=.07;look.y+=.05;fov+=5;}/* Vinyl v3: a taller head and hair at the same head height: the preview frames up a little and widens so the quiff isn't cut */}
   else if(idleOn&&titleOn){const k=(Math.sin(t*.07)+1)/2;pos.set(-.75+.2*k,1.6,OCHE_Z+1.75-.25*k);look.set(portrait?-.3:-.72,1.56,0);fov=portrait?60:46;}else if(idleOn){const k=(Math.sin(t*.12)+1)/2;pos.set(1.6-2.4*k,1.75-.15*k,OCHE_Z+4.2-1.6*k);look.set(.1,1.45,0);fov=portrait?70:56;}
   if(Math.abs(camera.fov-fov)>.01){camera.fov=fov;camera.updateProjectionMatrix();}
   const nv=state.nerves;const sw=(1-camK)*(.0015+nv*.0025);pos.x+=Math.sin(t*1.3)*sw+camOff.x;pos.y+=Math.cos(t*1.7)*sw*.6+camOff.y;if(window.TOPS_WALKFX){try{const wv=_fWv;wv.me=me;wv.pos=pos;wv.look=look;wv.playClip=playClip;wv.fpFig=fpFig;const r=TOPS_WALKFX(now,wv);if(r&&r.fov!=null)fov=r.fov;}catch(e){}}camera.position.copy(pos);camera.lookAt(look);camOff.multiplyScalar(.8);
