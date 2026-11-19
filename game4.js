@@ -1121,7 +1121,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
  const V3EYE={dx:178,v:0.455,rx:83,ry:92};
  const V3FACE={def:{brow:[1.0,0.0,1.0],browUp:0,mouth:1.18,smile:1.0,asym:0,squint:0,cheek:1.0,jaw:1.0,cheekW:1.0},
-  kai:{browC:'#24160F',brow:[1.12,-0.02,1.15],browUp:4,browOut:4,mouth:1.18,smile:1.0,asym:0.08,squint:0.07,cheek:1.0,jaw:1.15,cheekW:1.0},
+  kai:{earTuck:0.135,browC:'#24160F',brow:[1.12,-0.02,1.15],browUp:4,browIn:6,browOut:7,cheekUp:0.035,mouth:1.18,smile:1.04,/* r12 cheeky (Director doc 28, ChatGPT 27 #2): inner brow up 6 px, outer third up 3 px more, upper cheeks up, corners +4%; eyes kept */asym:0.08,squint:0.07,cheek:1.0,jaw:1.15,cheekW:1.0},
   ray:{browC:'#a8a39e',brow:[1.0,-0.08,1.2],browUp:10,mouth:1.0,smile:1.15,asym:0,squint:0.1,cheek:1.1,jaw:0.9,cheekW:1.0},
   tama:{browC:'#140c0a',brow:[1.25,-0.02,1.05],browUp:2,mouth:1.08,smile:1.2,asym:0,squint:0.06,cheek:1.35,jaw:0.95,cheekW:1.25},
   dazza:{browC:'#2a170d',brow:[1.2,-0.06,1.15],browUp:4,mouth:1.05,smile:1.1,asym:0.04,squint:0.12,cheek:1.15,jaw:1.25,cheekW:1.1},
@@ -1134,8 +1134,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   sx*=1+(0.085+0.06*FP.cheekW)*smf(-0.05,-0.55,d.y)*smf(-0.3,0.4,d.z)*(1-0.6*smf(-0.75,-1,d.y));sy*=1-0.06*smf(-0.7,-1,d.y);
   sx*=1-0.035*smf(0.55,0.95,Math.abs(d.x))*smf(-0.2,0.3,d.y);sx*=1+0.05*smf(-0.72,-0.95,d.y)*smf(-0.1,0.5,d.z);sx*=1+0.045*FP.jaw*smf(-0.6,-0.85,d.y)*smf(0,0.5,d.z);
   const p=new T.Vector3(d.x*R[0]*sx,d.y*R[1]*sy,d.z*R[2]*sz);const ph=Math.atan2(d.x,d.z),th=Math.acos(Math.max(-1,Math.min(1,d.y)));
-  const ch=0.095*(cheek||1)*(gs(ph,0.66,0.24)+gs(ph,-0.66,0.24))*gs(th,1.98,0.22),mz=0.05*gs(ph,0,0.45)*gs(th,2.25,0.2),br=0.05*(gs(ph,0.34,0.2)+gs(ph,-0.34,0.2))*gs(th,1.31,0.065);
-  p.multiplyScalar(1+ch+mz+br);p.z+=0.032*R[2]*(cheek||1)*(gs(ph,0.66,0.26)+gs(ph,-0.66,0.26))*gs(th,1.98,0.22);return p;}
+  const ch=0.095*(cheek||1)*(gs(ph,0.66,0.24)+gs(ph,-0.66,0.24))*gs(th,1.98-(FP.cheekUp||0),0.22),mz=0.05*gs(ph,0,0.45)*gs(th,2.25,0.2),br=0.05*(gs(ph,0.34,0.2)+gs(ph,-0.34,0.2))*gs(th,1.31,0.065);
+  p.multiplyScalar(1+ch+mz+br);p.z+=0.032*R[2]*(cheek||1)*(gs(ph,0.66,0.26)+gs(ph,-0.66,0.26))*gs(th,1.98-(FP.cheekUp||0),0.22);return p;}
  /* the v3 torso shell (vinyl3.js torsoGeo): trapezoid, belly, built-in sloped shoulders; lathe-style UV so the poster shirt texture fits */
  function v3TorsoGeo(BK,dy){const t=V3P.torso,h=t.y1-t.y0,U=Math.round(48*S3_SEGF),Vn=Math.round(26*S3_SEGF),pos=[],uv=[],idx=[],smf=v3smf,gs=v3gs;
   for(let j=0;j<=Vn;j++){const v=j/Vn;let rx=0.276-0.008*gs(v,0.26,0.1)+(t.rx-0.272)*smf(0.3,0.66,v)+(t.sh-t.rx)*smf(0.62,0.82,v);let rz=t.rz*(0.95+0.06*smf(0.35,0.7,v));const y=v*h;
@@ -1155,7 +1155,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     rounded upper-lip frame); sk = the canvas skin colour (the squint lid) */
  function v3FaceSheet(L,sk){const c=document.createElement('canvas');c.width=1024;c.height=640;const x=c.getContext('2d'),W=1024,H=640,Fp=v3FaceOf(L),E=V3EYE;
   const ex=[W*0.5-E.dx,W*0.5+E.dx],ey=H*E.v;const RX=E.rx,RY=E.ry*1.05*(1-Fp.squint);const eyeC=Fp.eyeC||'#24170F';
-  [ex[0]-26,ex[1]+26].forEach(cx=>{const g=x.createRadialGradient(cx,ey+130,0,cx,ey+130,92*Fp.cheek);g.addColorStop(0,'rgba(240,110,100,.32)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-110,ey+20,220,220);});
+  [ex[0]-26,ex[1]+26].forEach(cx=>{const cyb=ey+130-(Fp.cheekUp||0)*200;const g=x.createRadialGradient(cx,cyb,0,cx,cyb,92*Fp.cheek);g.addColorStop(0,'rgba(240,110,100,.32)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-110,cyb-110,220,220);});
   ex.forEach((cx,i)=>{x.save();x.translate(cx,ey);x.fillStyle='#ffffff';x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.fill();x.save();x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.clip();
    {const g=x.createRadialGradient(i?-6:6,14,10,i?-6:6,14,RX*0.98);g.addColorStop(0,'#120b07');g.addColorStop(0.7,eyeC);g.addColorStop(1,'#5a3420');x.fillStyle=g;}
    x.beginPath();x.ellipse(i?-6:6,12,RX*0.97,92,0,0,7);x.fill();x.fillStyle='#0a0604';x.beginPath();x.ellipse(i?-6:6,16,RX*0.52,52,0,0,7);x.fill();
@@ -1164,7 +1164,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    x.strokeStyle='#1a0f0a';x.lineWidth=8;x.lineCap='round';x.beginPath();x.ellipse(0,0,RX,RY,0,Math.PI*1.06,Math.PI*1.94);x.stroke();
    if(L.lash){x.lineWidth=8;[[-50,-40,-72,-62],[-32,-56,-48,-84],[i?44:-12,-62,i?58:-14,-92]].forEach(([a,b,c2,d])=>{const s=i?-1:1;x.beginPath();x.moveTo(a*s,b);x.lineTo(c2*s,d);x.stroke();});}x.restore();});
   x.fillStyle=Fp.browC||v2hex(L.brow||0x3a1e10);
-  ex.forEach((cx,i)=>{const s=i?1:-1;const k=Fp.brow[0],ang=Fp.brow[1],arch=Fp.brow[2];const up=Fp.browUp-(i?0:1)*Fp.asym*30;const iy=ey-126+ang*60-up,oy=ey-138-ang*30-up-(Fp.browOut||0),py=ey-180-arch*22-up;
+  ex.forEach((cx,i)=>{const s=i?1:-1;const k=Fp.brow[0],ang=Fp.brow[1],arch=Fp.brow[2];const up=Fp.browUp-(i?0:1)*Fp.asym*30;const iy=ey-126+ang*60-up-(Fp.browIn||0),oy=ey-138-ang*30-up-(Fp.browOut||0),py=ey-180-arch*22-up;
    const K=k*1.4*1.13*1.15;x.beginPath();x.moveTo(cx-108*s,iy+24*K);x.quadraticCurveTo(cx-116*s,iy-6,cx-100*s,iy-26*K);x.quadraticCurveTo(cx+8*s,py-8*K,cx+114*s,oy);x.quadraticCurveTo(cx+120*s,oy+7,cx+110*s,oy+11);
    x.quadraticCurveTo(cx+10*s,py+40*K,cx-108*s,iy+24*K);x.closePath();x.fill();});
   const my=H*0.728,mw=215*Fp.mouth*0.84,sm_=Fp.smile,as=Fp.asym*40;const lc=[W/2-mw,my-44*sm_+as],rc=[W/2+mw,my-44*sm_-as];
@@ -1210,13 +1210,14 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const sk=mesh(sg,hm,head);sk.userData.tag='skull';sk.castShadow=false;
   {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),skin,head,0,np.y,np.z-0.022).castShadow=false;}
   const earIn=v2M(new T.Color(L.skin).multiplyScalar(0.82).getHex(),'skin');
-  [-1,1].forEach(s=>{const ex=s*R[0]*1.07;const e=mesh(ell(0.032,0.082,0.058,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012,0.055,0.036,12,9),earIn,head,ex+s*0.022,-0.02,-0.005);ie.rotation.y=s*0.32;
+  const tuck=(FP.earTuck||0)*(R[0]*1.07+0.032-v3HeadPoint(new T.Vector3(1,-0.074,-0.055).normalize(),FP.cheek,FP).x);/* r10: per-character ear tuck (Kai 0.135) */
+  [-1,1].forEach(s=>{const ex=s*(R[0]*1.07-tuck);const e=mesh(ell(0.032,0.082,0.058,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012,0.055,0.036,12,9),earIn,head,ex+s*0.022,-0.02,-0.005);ie.rotation.y=s*0.32;
    if(L.earring)mesh(new T.TorusGeometry(.032,.008,6,16),v2M(L.earring,'trim'),head,s*R[0],-.11,0).rotation.y=Math.PI/2;});
   const bc=L.beardC||L.hairC||0x3a2010;if(L.face==='full'||L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
   v2Hair(head,Object.assign({},L,{_v3:true}),hairM);
   sk.userData.eyeAt=s=>v3EyeOnHead(s,FP);
   if(L.glasses){/* lenses centred on the painted v3 eyes (on the shaped skull), sized from the v3 eye; no temple arms */const gm=v2M(0x111111,'shoe'),F=V3P.face;const lr=V3EYE.rx/1024*F.phi[1]*R[0]*1.35,lh=V3EYE.ry/640*F.theta[1]*R[1]*1.12;
-   [-1,1].forEach(s=>{const e=v3EyeOnHead(s,FP);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(.97,.11,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});/* doc 27 #5: a thinner rim (-31%) and ~7% smaller outer diameter; the opening stays the same size */
+   [-1,1].forEach(s=>{const e=v3EyeOnHead(s,FP);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(.962,.12,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});/* doc 27 #5 / Director r12: outer diameter -6.7%, rim 25% thinner; the opening stays the same size */
    const l=v3EyeOnHead(-1,FP),r=v3EyeOnHead(1,FP);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.01,.01),gm,head,0,l.y+lh*.25,Math.max(l.z,r.z)+.03).castShadow=false;}
   return FP;}
  function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
@@ -1396,7 +1397,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     {p:[[1.0,-0.95],[1.1,-1.35],[1.3,-2.05],[1.7,-2.55]],w:0.066},{p:[[1.08,1.0],[1.18,1.4],[1.35,2.0],[1.7,2.45]],w:0.05,hk:0.85},{p:[[0.5,2.5],[1.0,2.68],[1.5,2.85],[1.95,3.0],[2.15,3.05]],w:0.072,soft:0.22},
     {p:[[0.6,-2.6],[1.1,-2.72],[1.6,-2.88],[1.9,-2.98],[2.05,-3.02]],w:0.068,soft:0.22},{p:[[1.6,2.25],[1.88,2.5],[2.12,2.78]],w:0.05,hk:0.8,soft:0.2},{p:[[1.5,-2.15],[1.82,-2.4],[2.05,-2.7]],w:0.05,hk:0.8,soft:0.2},
     {p:[[1.25,-1.3],[1.35,-1.7],[1.55,-2.1]],w:0.045,hk:0.8},{p:[[0.8,-1.0],[0.85,-1.6],[1.05,-2.2],[1.35,-2.6]],w:0.06,hk:0.9},{p:[[0.82,1.05],[0.9,1.65],[1.1,2.2],[1.4,2.55]],w:0.058,hk:0.9},{p:[[0.3,2.4],[0.65,2.9],[1.15,3.18],[1.7,3.22]],w:0.055,hk:0.9,soft:0.2}],
-   HLP:[[0,0.94],[0.3,0.846],[-0.3,0.846],[0.62,0.764],[-0.62,0.764],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x4e4a47,hi:0xf4f1ec},/* fix 3: front hairline 0.14 rad lower (RAY_HLF) */
+   HLP:[[0,1.01],[0.3,0.909],[-0.3,0.909],[0.62,0.806],[-0.62,0.806],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x4e4a47,hi:0xf4f1ec},/* fix 3 + r12: front hairline 0.21 rad lower (RAY_HLF), filling the side notch */
    o:{hlSmooth:0.22,valley:0.028,wk:0.9,pw:0.6,frontDense:0.5,U:84,round:0.12,hi:0.6,hiLo:0.84,tone:0.88}};
   return {envR,envS,groove,KAI,RAY};})();
  const V2HAIRS={
@@ -1405,8 +1406,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const hl=K.HL([[0,1.0],[.3,1.04],[-.3,1.04],[.6,.98],[-.6,.98],[.9,1.08],[-.9,1.08],...K.sideHL(1,1.55,1.32,1.7),...K.sideHL(-1,1.58,1.32,1.7),[2.45,2.22],[-2.45,2.22],[2.85,2.3],[-2.9,2.28],[Math.PI-.01,2.32]]);parts.push(K.cap(hl,.02,28,6));
    const C=[[.92,0,.11,.034],[.94,.36,.1,.032],[.95,-.34,.1,.033],[.98,.7,.085,.026],[.99,-.72,.088,.027],[1.1,1.0,.07,.02],[1.1,-1.0,.072,.02],[.55,.15,.13,.04],[.6,-.5,.12,.038],[.62,.8,.12,.036],[.2,0,.14,.042],[.35,1.9,.13,.036],[.4,-1.55,.13,.037],[.42,2.9,.13,.036],[.65,-2.45,.12,.033],
     [1.1,1.45,.09,.022],[1.05,-1.4,.095,.024],[1.0,2.1,.11,.026],[.98,-2.0,.11,.026],[1.15,2.75,.11,.024],[1.2,-2.85,.11,.024],[1.55,2.35,.09,.014],[1.6,-2.4,.09,.014],[1.7,3.1,.1,.012],[1.4,1.8,.08,.014],[1.42,-1.75,.08,.014],[.85,2.55,.12,.03],[.85,-2.7,.12,.03],[1.3,3.05,.12,.026],[1.35,2.45,.11,.024],[1.35,-2.35,.11,.024],[1.25,2.0,.1,.022],[1.22,-2.05,.1,.022],[.75,1.45,.11,.03],[.78,-1.2,.11,.03]];
-   const RK=[1.06,1.85,.3,1.45,2.3,.82];for(let i=0;i<C.length;i++){const c=C[i];const front=i<7,rear=Math.abs(c[1])>1.9,top=c[0]<.5;const deep=Math.abs(c[1])>=RK[4]&&c[0]>=RK[2]&&c[0]<=RK[3];
-    const sz=c[2]*1.3*(c[0]>1.15?1.25:1)*(front?1.1:1)*(deep?RK[0]:(rear&&c[0]<1.2?.88:1)),ht=c[3]*1.8*(top?RK[5]:1)*(front?1.05:1)*(deep?RK[1]:1);parts.push(...K.cluster(c[0],c[1]+(K.rnd()-.5)*.06,sz,ht,deep?2:(c[0]>1.15?2:0),deep?[11,4]:null));}
+   const RK=[1.06,1.85,.3,1.45,2.3,.82],CK=window.TOPS_TAMA_CROWN||[1.4,.6],RT=[1.08,.95,2.0];for(let i=0;i<C.length;i++){const c=C[i];const front=i<7,rear=Math.abs(c[1])>1.9,top=c[0]<.5;const deep=Math.abs(c[1])>=RK[4]&&c[0]>=RK[2]&&c[0]<=RK[3];
+    const crown=!front&&c[0]<CK[1],rtop=!front&&!crown&&c[0]<RT[1]&&Math.abs(c[1])>=RT[2];/* r12 (Director doc 28): the non-front crown curls stand x1.4 taller (the top-centre curl x1.3), rear-top x1.08; the front row is untouched. The game ran r9 before this */
+    const sz=c[2]*1.3*(c[0]>1.15?1.25:1)*(front?1.1:1)*(deep?RK[0]:(rear&&c[0]<1.2?.88:1)),ht=c[3]*1.8*(top?RK[5]:1)*(front?1.05:1)*(deep?RK[1]:1)*(crown?(c[0]<.3?1.3:CK[0]):1)*(rtop?RT[0]:1);parts.push(...K.cluster(c[0],c[1]+(K.rnd()-.5)*.06,sz,ht,deep?2:(c[0]>1.15?2:0),deep?[11,4]:null));}
    K.done(h,parts,L.hairC!=null&&L.hairC!==0x1a1210?K.colsFrom(L.hairC):cols,{top:.07,hiAmt:.85},[.58,.03]);},
   /* r9 Ray (sweptL): his poster-fitted masses and groove locks, verbatim from hair28.js */
   sweptL(h,L,K){const G=V2GROOVE,Q=G.RAY;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
