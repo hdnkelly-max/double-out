@@ -15,6 +15,8 @@ C=${ARGS[0]}; ITEM=${ARGS[1]}; TESTS=${ARGS[2]:-}   # optional item tests for th
 cd "$(git rev-parse --show-toplevel)"
 git fetch -q origin src
 C=$(git rev-parse --verify "$C^{commit}") || { echo "unknown commit $C (fetch its branch first)"; exit 1; }
+# the green fast suite must have run on exactly what ships: so the commit must already contain src (then release.yml's merge is a no-op)
+git merge-base --is-ancestor origin/src "$C" || { echo "REFUSED: ${C:0:7} does not contain src $(git rev-parse --short origin/src); rebase onto src, push, wait for the fast suite, then ship"; exit 1; }
 # same checks release.yml's gate makes (it is the one that counts; these fail early with a clearer message)
 PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
 bad=$(git diff -M --no-ext-diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
@@ -25,8 +27,6 @@ case ", $runs" in
   ", ") echo "REFUSED: no ci (fast suite) push run on ${C:0:7}: push it to a feature branch and wait"; exit 1 ;;
   *) echo "REFUSED: no green fast-suite run on ${C:0:7} yet (ci runs: $runs)"; exit 1 ;;
 esac
-# the green fast suite must have run on exactly what ships: so the commit must already contain src (then release.yml's merge is a no-op)
-git merge-base --is-ancestor origin/src "$C" || { echo "REFUSED: ${C:0:7} does not contain src $(git rev-parse --short origin/src); rebase onto src, push, wait for the fast suite, then ship"; exit 1; }
 T=$(git rev-parse "$C^{tree}")
 BASE=$(git rev-parse --short origin/src); MODE=release; [ -n "$DRY" ] && MODE=dry_run
 echo "shipping R3 ${C:0:7} tree ${T:0:7} base $BASE item '$ITEM'${DRY:+ (dry run)}"
