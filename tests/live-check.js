@@ -27,7 +27,7 @@ async function sweep() {
   have.forEach(k => paths.add('s3/' + k));
   const opt = new Set((man && man.optional) || []); const list = [...paths].filter(f => !opt.has(f) && !OPTIONAL.some(o => o.test('/' + f)));
   const bad = []; let i = 0;
-  await Promise.all(Array.from({ length: 8 }, async () => { while (i < list.length) { const f = list[i++]; let st = 0; for (let t = 0; t < 2 && st !== 200; t++) { try { st = (await fetch(URL0 + f, { method: 'HEAD' })).status; } catch (e) { st = 'net'; } } if (st !== 200) bad.push(`${st} ${f}`); } }));
+  await Promise.all(Array.from({ length: 8 }, async () => { while (i < list.length) { const f = list[i++]; let st = 0; for (let t = 0; t < 3 && st !== 200; t++) { if (t) await new Promise(r => setTimeout(r, 5000 * t)); try { st = (await fetch(URL0 + f, { method: 'HEAD' })).status; } catch (e) { st = 'net'; } } if (st !== 200) bad.push(`${st} ${f}`); } }));
   return { files: list.length, manifest: !!man, bad };
 }
 (async () => {
@@ -48,6 +48,8 @@ async function sweep() {
       r.loader_s = sec();
       r.version = await p.evaluate(() => window.TOPS_VER || (typeof TOPS_VER !== 'undefined' ? TOPS_VER : null)).catch(() => null);
       r.s3 = await p.evaluate(() => !!window.TOPS_S3FLAG).catch(() => null);
+      // ChatGPT P2: a CDN edge can lag a release by a little: reload up to 3 times, 20 s apart, before calling a wrong version
+      for (let k = 0; k < 3 && want && want !== '-' && String(r.version) !== String(want); k++) { await p.waitForTimeout(20000); await p.goto(URL0 + '?qa=' + Date.now() + 'r' + k, { timeout: 120000 }); await p.waitForFunction(() => { const l = document.getElementById('loading'); return !l || l.classList.contains('gone') || getComputedStyle(l).display === 'none'; }, null, { timeout: 120000 }); r.version = await p.evaluate(() => window.TOPS_VER || null).catch(() => null); r.reloads = k + 1; }
       if (want && want !== '-' && String(r.version) !== String(want)) r.fails.push(`page is version ${r.version}, release is ${want}`);
       await p.waitForTimeout(2000); await p.screenshot({ path: path.join(outDir, `${tag}_1_open.png`) });
       // a brand-new player first sees the Season 3 welcome sheet: tap its start button like a finger (what is on top at its centre)
@@ -74,6 +76,15 @@ async function sweep() {
         if (d) { thrown++; (r.darts = r.darts || []).push(d); await p.waitForTimeout(1500); }
       }
       if (thrown < 3) r.fails.push(`only ${thrown} of 3 darts could be thrown by touch`);
+      // ChatGPT P2: plus one real touch gesture (browser touch -> pointer events), not a synthetic event: a tap on the pad must
+      // start a throw and end it (a tap is a very short pull, so where it lands doesn't matter)
+      for (let tries = 0; tries < 300; tries++) { const st = await p.evaluate(() => { if (!S || S.done) return { done: 1 }; const pad = document.getElementById('pullPad'); const bb = pad.getBoundingClientRect(); return { can: padCanPull(), x: bb.x + bb.width / 2, y: bb.y + bb.height / 2, n: (window.__qaRel = window.__qaRel || 0) }; });
+        if (st.done) break; if (!st.can) { await p.waitForTimeout(150); continue; }
+        await p.evaluate(() => { window.__qaTouch = 0; if (!window.__qaHook) { window.__qaHook = 1; const sp = startPull; startPull = function (src) { if (src === 'pad') window.__qaTouch |= 1; return sp.apply(this, arguments); }; } });
+        await p.touchscreen.tap(st.x, st.y); await p.waitForTimeout(1200);
+        r.realTouch = await p.evaluate(() => ({ started: !!(window.__qaTouch & 1), pulling: !!S.pulling, busy: !!S.busy }));
+        if (!r.realTouch.started) r.fails.push('a real touch tap on the pull pad did not start a throw'); else if (r.realTouch.pulling) r.fails.push('a real touch tap on the pull pad started a throw that never ended');
+        break; }
       r.myDarts = await p.evaluate(() => S.p[0].darts || 0);
       await p.screenshot({ path: path.join(outDir, `${tag}_3_after.png`) });
     } catch (e) { r.fails.push('stopped: ' + String(e.message || e).split('\n')[0].slice(0, 160)); try { await p.screenshot({ path: path.join(outDir, `${tag}_x_error.png`) }); } catch (x) {} }

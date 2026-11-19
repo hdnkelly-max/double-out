@@ -46,6 +46,9 @@ jobs:
           SH=$(for t in $ALL; do s=60; for kv in $TEST_SECS; do [ "${kv%%:*}" = "$t" ] && s=${kv##*:}; done; echo "$s $t"; done | sort -rn | awk -v n="$SHARDS" '
             { best=0; for(i=1;i<n;i++) if(load[i]<load[best]) best=i; load[best]+=$1; list[best]=list[best]" "$2 }
             END { printf "["; c=0; for(i=0;i<n;i++) if(list[i]!=""){ printf "%s{\"n\":%d,\"tests\":\"%s\",\"secs\":%d}", (c++?",":""), i+1, substr(list[i],2), load[i] } printf "]" }')
+          # ChatGPT P1-1: never a silent empty or broken plan
+          [ -n "$(echo $ALL)" ] || { echo "::error::no tests selected"; exit 1; }
+          echo "$SH" | node -e 'const s=JSON.parse(require("fs").readFileSync(0,"utf8"));const t=s.flatMap(x=>x.tests.split(" "));if(!s.length||t.length!==new Set(t).size)process.exit(1)' || { echo "::error::bad shard plan: $SH"; exit 1; }
           echo "shards=$SH" >> $GITHUB_OUTPUT; echo "all=$(echo $ALL)" >> $GITHUB_OUTPUT; echo "shards: $SH"
   fast:
     needs: pick
@@ -89,12 +92,21 @@ jobs:
           done
           for t in $failed; do echo "::group::$t (last 40 lines)"; tail -40 "out_$t.log"; echo "::endgroup::"; done
           { echo "### shard ${{ matrix.shard.n }}: $pass/$n passed"; echo '```'; cat ci.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # the shard's evidence for the status job: every test it ran and whether it passed (ChatGPT P1-1)
+          mkdir -p result; awk '{print $1".js "$2}' ci.log > "result/shard-${{ matrix.shard.n }}.txt"
           [ $pass = $n ] && [ $n -gt 0 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'shard-${{ matrix.shard.n }}', path: result/, retention-days: 7 }
   status:
     needs: [pick, fast]
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/download-artifact@v4
+        if: needs.pick.result == 'success'
+        with: { pattern: 'shard-*', path: results, merge-multiple: true }
+        continue-on-error: true
       - name: Status + summary
         env:
           GH_TOKEN: '${{ github.token }}'
@@ -105,7 +117,10 @@ jobs:
           N=$(echo $ALL | wc -w)
           # the failing shards, from the shard jobs' own names ("fast 2 (s3-screens.js)") and results
           F=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=50" --jq '[.jobs[]|select(.name|startswith("fast "))|select(.conclusion!="success")|.name|capture("\\((?<t>.*)\\)").t]|join(" ")' 2>/dev/null || true)
-          if [ "$PICK" = success ] && [ "$FAST" = success ]; then st=success; d="$N/$N passed"; else st=failure; d="${F:+failing: $F}"; [ -z "$d" ] && d="setup failed (pick=$PICK fast=$FAST)"; fi
+          # ChatGPT P1-1: green only if every selected test is in the shards' own results exactly once, as PASS
+          miss=""; for t in $ALL; do c=$(cat results/shard-*.txt 2>/dev/null | grep -c "^$t PASS$" || true); [ "$c" = 1 ] || miss="$miss $t"; done
+          extra=$(cat results/shard-*.txt 2>/dev/null | awk '{print $1}' | sort | uniq -d | tr '\n' ' ')
+          if [ "$PICK" = success ] && [ "$FAST" = success ] && [ -z "$miss" ] && [ -z "$extra" ] && [ "$N" -gt 0 ]; then st=success; d="$N/$N passed"; elif [ "$PICK" = success ] && [ "$FAST" = success ]; then st=failure; d="not every test reported a pass:${miss}${extra:+ dup: $extra}"; else st=failure; d="${F:+failing: $F}"; [ -z "$d" ] && d="setup failed (pick=$PICK fast=$FAST)"; fi
           gh api -X POST "repos/${{ github.repository }}/statuses/${{ github.sha }}" -f state=$st -f context=tops/fast-suite -f description="${d:0:139}" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
           echo "### TOPS fast suite: $d · commit \`${GITHUB_SHA::7}\` · branch \`${GITHUB_REF_NAME}\` (per-test times in each shard's summary)" >> "$GITHUB_STEP_SUMMARY"
           [ $st = success ]
