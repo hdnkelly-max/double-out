@@ -157,11 +157,13 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 /* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
 function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
 window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
+/* CAR-PULL (Overseer 18:42, value 19:38 option B): the full pull in ms for every Season 3 player, the starter-Rhythm pull every Season 3 career has played so far (3.54/Season 2 ran 660 at Rhythm 20 down to 560 at 95, so a player re-learned his timing as Rhythm rose) */const S3_PULL_MS=660;window.TOPS_S3_PULL=S3_PULL_MS;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=(window.TOPS_S3FLAG?S3_PULL_MS:qr.D)/q0.D;/* CAR-PULL: Season 3 has one pull length for everyone at every Rhythm (S3_PULL_MS); Rhythm only widens the perfect window */
  const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
+ /* CAR-TUNE (Season 3): the tier's window scale and near-miss ramp, frozen at match start (TOPS_TUNE, tops_tune) */if(window.TOPS_S3FLAG&&S.tune){tp.P*=S.tune.win;tp.ramp=S.tune.ramp;}
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -211,7 +213,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */return `Perfect window ${f(winMs(L(v0)))} → ${f(winMs(L(v1)))} ms`;}
+ if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */let ws=1;try{if(window.TOPS_S3FLAG&&window.TOPS_TUNE&&career())ws=TOPS_TUNE.snap(career().tier|0).win;}catch(e){}/* CAR-TUNE: the card shows this tier's window, as the throw uses it */return `Perfect window ${f(winMs(L(v0))*ws)} → ${f(winMs(L(v1))*ws)} ms`;}
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';
