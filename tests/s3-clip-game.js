@@ -12,7 +12,7 @@ const res=await p.evaluate(()=>{const Q=V._qa;const specs=[...TOPS_S3_BASES.map(
  const clips=Q.animNames();const fails=[];let n=0,figs=0;const worst={};const per={};
  for(const [look,name,me,id] of specs){const f=Q.makeFigure(look,name,0);if(!f.userData.s3rig){fails.push(id+': not an S3 figure');continue;}figs++;Q.scene.add(f);
   for(const c of clips){const a=Q.playClip(f,c,{t:0});if(!a)continue;const dur=a.getClip().duration;for(const k of [0,.17,.34,.5,.67,.84]){a.time=dur*k;f.userData.mixer.update(0);const r=TOPS_S3CLIP(f);if(!r)continue;n+=r.checked;
-    for(const key of ['pants','arm','cuff','collar','trim'])if(r[key]){fails.push(`${id}/${c}@${k} ${key}:${r[key]} ${r.ex.slice(0,2).join(' ')}`);per[key]=(per[key]||0)+1;}for(const w in r.worst)worst[w]=Math.min(worst[w]??1,r.worst[w]);}}
+    for(const key of ['pants','arm','cuff','collar','trim','head','fist'])if(r[key]){fails.push(`${id}/${c}@${k} ${key}:${r[key]} ${r.ex.slice(0,2).join(' ')}`);per[key]=(per[key]||0)+1;}for(const w in r.worst)worst[w]=Math.min(worst[w]??1,r.worst[w]);}}
   Q.scene.remove(f);Q.dispose(f);}
  return {figs,clips:clips.length,n,worst,per,nf:fails.length,fails:fails.slice(0,30)};});
 console.log(JSON.stringify(res));if(pe.length)console.log('page errors',JSON.stringify(pe.slice(0,3)));const bad=res.nf||pe.length||!res.n||res.figs<8;console.log(bad?'S3-CLIP-GAME FAIL':'S3-CLIP-GAME PASS ('+res.figs+' figures, '+res.clips+' clips, '+res.n+' checks)');await b.close();srv.close();process.exit(bad?1:0);})();

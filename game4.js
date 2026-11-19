@@ -1033,7 +1033,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const sole=new T.CylinderGeometry(1,1,.035,Math.round(20*S3_SEGF));sole.scale(S.w/2*1.02,1,S.len/2*1.02);mesh(sole,v2M(0x1e1e20,'dark'),an,0,-S.h+.03,S.toe);return {th,kn,an};};
   const lL=leg(-1),lR=leg(1);tag(mesh(ell(.2*BK[0],.1,.16*BK[1]),pantM,hips,0,.02,0),'pants');
   return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[],thighs:[],v2:true};}
- function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head);
+ function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head).userData.tag='skull';
   const F=V2P.face;const fg=new T.SphereGeometry(1,Math.round(28*S3_SEGF),Math.round(18*S3_SEGF),Math.PI/2-F.phi[1]/2,F.phi[1],F.theta[0],F.theta[1]);fg.scale(R[0]*1.008,R[1]*1.008,R[2]*1.008);
   const fm=new T.MeshStandardMaterial({map:v2FaceTex(L),transparent:true,roughness:.3,metalness:0,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,envMap:v2Env()||null,envMapIntensity:.32});fm.userData.s3v=true;const fc=mesh(fg,fm,head);fc.renderOrder=2;fc.castShadow=false;fc.userData.tag='face';
   mesh(ell(.048*(L.nose||1),.04,.04,14,10),skin,head,0,-R[1]*.36,R[2]*.93);
@@ -1143,7 +1143,25 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   ['fold','placket'].forEach(tg=>byTag(tg).forEach(o=>verts(o,q=>{if(pole(q,chest))return;out.checked++;const dp=depth(q,chest,shirt);worst('trim',-dp);if(dp>-.0005){out.trim++;ex(tg,dp);}})));
   const nk=byTag('neck').map(prox);byTag('collar').forEach(o=>verts(o,q=>{out.checked++;const dp=depth(q,chest,nk);worst('collar',-Math.abs(dp));if(-dp>.008){out.collar++;ex('collar',dp);}}));
   return out;}
- window.TOPS_S3CLIP=s3Clip;
+ /* Vinyl v2 relations (Director spec 11: "tests/s3-clip-game.js still 0"): the v2 build has no neck, a ring cuff and a lathe torso, so the
+    v1 checks don't apply as written. Checked instead, in every clip: trousers above the hem stay under the shirt (pants), the upper arm stays
+    under the puffed sleeve (arm), the skull never sinks into the shirt (head: no neck, so a nod could push it in), the fists never go inside
+    the torso (fist). Depths in v2 units (metres at k=1). */
+ function s3ClipV2(fig){const R=fig.userData.s3rig;fig.updateMatrixWorld(true);const out={pants:0,arm:0,head:0,fist:0,checked:0,worst:{},ex:[],cuff:0,collar:0,trim:0};const bx=pv=>pv.userData.box;const chest=bx(R.chest),hips=bx(R.hips);if(!chest||!hips)return out;const kw=new T.Vector3().setFromMatrixScale(chest.matrixWorld).x;
+  const byTag=t=>{const r=[];fig.traverse(o=>{if(o.isMesh&&o.userData.tag===t)r.push(o);});return r;};const prox=o=>{const m=new T.Mesh(o.geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));m.matrixWorld.copy(o.matrixWorld);m.matrixAutoUpdate=false;return m;};
+  const rc=new T.Raycaster(),p=new T.Vector3(),l=new T.Vector3(),ax=new T.Vector3(),d=new T.Vector3(),inv=new T.Matrix4(),Y=new T.Vector3();
+  const depth=(p,frame,covers)=>{inv.copy(frame.matrixWorld).invert();l.copy(p).applyMatrix4(inv);ax.set(0,l.y,0).applyMatrix4(frame.matrixWorld);d.copy(p).sub(ax);const dist=d.length();if(dist<1e-4)return 1;d.normalize();Y.set(0,1,0).transformDirection(frame.matrixWorld);rc.far=dist+.6*kw;rc.set(ax,d);const h=rc.intersectObjects(covers,false);if(!h.length)return -1;return (h[h.length-1].distance-dist)/kw;};
+  const verts=(o,step,fn)=>{const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=step){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);fn(p);}};const worst=(k,v)=>{out.worst[k]=Math.min(out.worst[k]??1,v);};const ex=(k,dp)=>{if(out.ex.length<8)out.ex.push(k+' d='+dp.toFixed(4));};
+  const shirt=byTag('shirt').map(prox);const ci=new T.Matrix4().copy(chest.matrixWorld).invert();const yHem=-.3+.03,yTop=.2;/* chest-local: hem at -0.3, collar at +0.25 */
+  byTag('pants').forEach(o=>verts(o,1,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y<yHem||y>yTop)return;out.checked++;const dp=depth(q,chest,shirt);worst('pants',dp);if(dp<.001&&dp>-1){out.pants++;ex('pants',dp);}}));
+  [R.aL,R.aR].forEach(A=>{const sb=bx(A.sh);if(!sb)return;const sl=sb.children.filter(o=>o.userData.tag==='sleeve').map(prox);const si=new T.Matrix4().copy(sb.matrixWorld).invert();
+   sb.children.forEach(o=>{if(o.userData.tag==='upperarm')verts(o,1,q=>{const y=l.copy(q).applyMatrix4(si).y;if(y<-.1||y>-.0)return;const u=l.clone();if(Math.hypot(u.x,u.z)<.004)return;out.checked++;const dp=depth(q,sb,sl);worst('arm',dp);if(dp<.0008&&dp>-1){out.arm++;ex('arm',dp);}});});});
+  /* skull vs shirt: a skull vertex at a height the shirt spans must be outside it (the ray from the torso axis reaches the shirt first) */
+  byTag('skull').forEach(o=>verts(o,3,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.002){out.head++;ex('head',dp);}worst('head',-dp);}));
+  /* fists vs torso: no fist vertex inside the shirt */
+  [R.aL,R.aR].forEach(A=>{const wb=bx(A.wr);if(!wb)return;wb.children.forEach(o=>verts(o,4,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.004){out.fist++;ex('fist',dp);}worst('fist',-dp);}));});
+  return out;}
+ window.TOPS_S3CLIP=f=>f&&f.userData&&f.userData.s3rig&&f.userData.s3rig.v2?s3ClipV2(f):s3Clip(f);
  window.TOPS_S3FIG={look:s3Look,build:s3Build,dress:s3Dress,skin:s3SkinFig,skinAll:s3SkinAll};scene.onBeforeRender=()=>{if(S3SKINF.size)s3SkinAll();};
  function faceKit(fig,B,look,ck){if(!look||!B.Head)return;if(ck==='pete')look=Object.assign({hair2:'short',beard2:1},Object.fromEntries(Object.entries(look).filter(([k,v])=>v!=null)));if(window.GFX_HEADDBG){[[1,0,0,0xff0000],[0,1,0,0x00ff00],[0,0,1,0x0000ff]].forEach(([x,y,z,c])=>{const m=new T.Mesh(new T.SphereGeometry(.015),new T.MeshBasicMaterial({color:c}));m.position.set(x*.13,y*.13,z*.13);B.Head.add(m);});}const L=look;const R=RIG.rest;const headH=(B.HeadTop_End&&R[B.HeadTop_End.name]&&R[B.Head.name])?R[B.HeadTop_End.name].p.distanceTo(R[B.Head.name].p):.24;
   const wantHair=L.hair2&&L.hair2!=='own';const needLib=wantHair&&L.hair2!=='bald'||L.beard2;if(needLib&&!HAIRLIB)loadHair();
