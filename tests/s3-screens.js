@@ -47,12 +47,20 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   if (!out.bl || !/14 darts/i.test(out.bl.t) || out.bl.pe !== 'none') fail.push('record banner ' + JSON.stringify(out.bl));
   await reload(); out.blm = await look(); await shot('7b_record'); if (!/new season 3 record/i.test(out.blm.sheet) || !/14/.test(out.blm.sheet)) fail.push('record moment after reload: ' + out.blm.sheet);
   await tap('#s3Ok'); await reload(); out.blm2 = await look(); if (/record/i.test(out.blm2.sheet)) fail.push('record moment showed twice');
-  // 8 creator: the 5 Vinyl bases replace the Character row (Engine's TOPS_S3_BASES; stubbed here when Engine's code isn't in this build)
-  out.cr = await p.evaluate(() => { if (!window.TOPS_S3_BASES) { window.TOPS_S3_BASES = [{ id: 'ray', name: 'Ray', tag: 'The Veteran', look: { model: 'brian', hair2: 'short' } }, { id: 'mia', name: 'Mia', tag: 'The Ace', look: { model: 'megan', sex: 'f', hair2: 'pony' } }]; window.TOPS_S3_LOOK = id => { const b = TOPS_S3_BASES.find(x => x.id === id); return b ? JSON.parse(JSON.stringify(b.look)) : null; }; }
-    save.look = {}; showCreator(false); const row = document.getElementById('s3Base'); const ch = document.getElementById('segChar').closest('.field');
-    const first = save.look.s3base; const b = row && row.querySelector('[data-b="' + TOPS_S3_BASES[TOPS_S3_BASES.length - 1].id + '"]'); if (b) b.click();
-    return { row: !!row, n: row ? row.querySelectorAll('[data-b]').length : 0, charHidden: ch.hidden, first, after: save.look.s3base, model: save.look.model, pressed: (document.querySelector('#s3Base [aria-pressed="true"]') || {}).dataset?.b }; });
-  if (!out.cr.row || out.cr.n < 2 || !out.cr.charHidden) fail.push('creator base row ' + JSON.stringify(out.cr)); if (!out.cr.first || out.cr.after === out.cr.first || out.cr.pressed !== out.cr.after) fail.push('base pick did not apply ' + JSON.stringify(out.cr));
+  // 8 creator: ONE player row (Overseer 14:52). With Engine's Season 3 creator (s3Creator, #s3Cre PLAYER portraits) in the build, the shell's
+  //   'Your player' row never appears; without it, the shell's row stands in (stubbed bases).
+  out.cr = await p.evaluate(() => { const eng = typeof s3Creator === 'function'; const look0 = JSON.stringify(save.look || {});
+    if (!eng && !window.TOPS_S3_BASES) { window.TOPS_S3_BASES = [{ id: 'ray', name: 'Ray', tag: 'The Veteran', look: { model: 'brian', hair2: 'short' } }, { id: 'mia', name: 'Mia', tag: 'The Ace', look: { model: 'megan', sex: 'f', hair2: 'pony' } }]; window.TOPS_S3_LOOK = id => { const b = TOPS_S3_BASES.find(x => x.id === id); return b ? JSON.parse(JSON.stringify(b.look)) : null; }; }
+    if (!eng) save.look = {};
+    showCreator(false); const vis = e => !!e && !e.hidden && e.getClientRects().length > 0;
+    const mine = document.getElementById('s3Base'), theirs = document.getElementById('s3Cre');
+    const rows = [...document.querySelectorAll('#creator .field > .label')].filter(l => vis(l) && /^(your )?player$/i.test(l.textContent.trim())).length;
+    if (eng) return { eng, rows, mine: !!mine, theirs: vis(theirs), lookSame: JSON.stringify(save.look || {}) === look0 };
+    const first = save.look.s3base; const b = mine && mine.querySelector('[data-b="' + TOPS_S3_BASES[TOPS_S3_BASES.length - 1].id + '"]'); if (b) b.click();
+    return { eng, rows, mine: !!mine, first, after: save.look.s3base, pressed: (document.querySelector('#s3Base [aria-pressed="true"]') || {}).dataset?.b }; });
+  if (out.cr.rows !== 1) fail.push('creator shows ' + out.cr.rows + ' player rows, want 1: ' + JSON.stringify(out.cr));
+  if (out.cr.eng) { if (out.cr.mine || !out.cr.theirs) fail.push('with Engine\'s creator: ' + JSON.stringify(out.cr)); }
+  else if (!out.cr.mine || !out.cr.first || out.cr.after === out.cr.first || out.cr.pressed !== out.cr.after) fail.push('base pick did not apply ' + JSON.stringify(out.cr));
   await shot('8_creator');
   // 7 hidden switch: 5 taps on the version label flips the device flag
   out.hidden = await p.evaluate(() => { const v = document.createElement('p'); v.id = 'tlVer'; document.body.appendChild(v); const rl = location.reload; let n = 0; for (let i = 0; i < 5; i++) v.click(); return localStorage.getItem('tops_s3'); });

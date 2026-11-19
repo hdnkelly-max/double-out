@@ -346,17 +346,23 @@
 
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
+  /* Engine's Season 3 creator (s3Creator: the PLAYER portrait row, writes save.vlook) replaces this row. When it's in the build this
+     wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
+  const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {
     const _sc = showCreator;
     showCreator = function (editing) {
       const B = window.TOPS_S3_BASES;
+      /* first open: start on the first base (as 4.01 does; Engine's creator then opens on Ray) */
       if (B && B.length && save && save.look && !save.look.s3base) { const L = window.TOPS_S3_LOOK(B[0].id); if (L) { save.look = Object.assign({}, save.look, L, { s3base: B[0].id }); try { persist(); } catch (e) {} } }
+      if (engineCre()) { const r = _sc.apply(this, arguments); const old = $id('s3Base'); if (old) old.remove(); return r; }
       const r = _sc.apply(this, arguments);
       try { if (B && B.length) baseRow(editing); } catch (e) { console.warn('s3 creator', e); }
       return r;
     };
   }
   function baseRow(editing) {
+    if (engineCre()) { const old = $id('s3Base'); if (old) old.remove(); return; }
     const B = window.TOPS_S3_BASES, ch = $id('segChar'), f = ch && ch.closest('.field'); if (!f) return;
     f.hidden = true;
     let row = $id('s3Base'); if (!row) { row = document.createElement('div'); row.className = 'field'; row.id = 's3Base'; f.parentNode.insertBefore(row, f); }
