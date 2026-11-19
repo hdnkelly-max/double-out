@@ -64,12 +64,17 @@ jobs:
             # the author path is checked HERE, not only in tools/ship-low.sh, so a direct dispatch can't skip it:
             # (a) the commit already contains src, so the tree that ships is exactly the tree CI tested (no merge);
             git merge-base --is-ancestor origin/src "$C" || { echo "::error::REFUSED (author attest): $C does not contain src $(git rev-parse --short origin/src); rebase onto src, push, let CI pass"; exit 1; }
-            # (b) CI ran src's own ci.yml (a branch can't ship on a weakened copy of the suite);
-            git diff --quiet origin/src "$C" -- .github/workflows/ci.yml || { echo "::error::REFUSED (author attest): the commit changes .github/workflows/ci.yml; that needs a Q&D pass"; exit 1; }
+            # (b) nothing the author path must not touch (ChatGPT P1s, 19 Nov): the CI and release machinery, the test harness and the
+            #     existing tests (so CI ran src's own suite; NEW tests are fine), the build, sql, and the throw/board geometry and
+            #     career/money files. The game's UI also lives in game4.js / v*.js, so those can't be fenced by path: R3 there stays
+            #     the author's call (Hayden 17:03), and the post-release live check is the backstop.
+            PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
+            bad=$(git diff --name-status origin/src "$C" | awk -v P="$PROT" '{f=$NF} f ~ P || ($1 !~ /^A/ && $2 ~ /^tests\//) {print $1" "$2}')
+            [ -z "$bad" ] || { echo "::error::REFUSED (author attest): these need a Q&D pass (R0-R2 path): $(echo $bad)"; exit 1; }
             # (c) a push run of ci.yml on exactly this commit concluded success (the run itself, not a commit status anyone with statuses:write could post).
-            ok=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .path==".github/workflows/ci.yml" and .conclusion=="success")]|length' 2>/dev/null || echo 0)
+            ok=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and (.path|split("@")[0])==".github/workflows/ci.yml" and .conclusion=="success")]|length') || { echo "::error::REFUSED (author attest): could not read the CI runs for $C (GitHub API error)"; exit 1; }
             [ "${ok:-0}" -gt 0 ] || { echo "::error::REFUSED (author attest): no successful ci (fast suite) push run on $C"; exit 1; }
-            echo "author attest: $C contains src, ci.yml unchanged, fast suite green ($ok run(s))" >> $GITHUB_STEP_SUMMARY
+            echo "author attest: $C contains src, no protected path changed, fast suite green ($ok run(s))" >> $GITHUB_STEP_SUMMARY
           fi
           LOG=../site/RELEASES.log; touch $LOG
           if grep -q " live .*tree=${TREE}" $LOG; then echo "mode=noop" >> $GITHUB_OUTPUT; echo "::notice::tree $TREE is already live; nothing to do"; exit 0; fi
