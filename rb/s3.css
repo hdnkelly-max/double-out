@@ -98,3 +98,6 @@
 .s3-on #s3WelGo{margin-top:4px;height:56px;border:0;border-radius:12px;background:#d7232d;color:#fff;font:800 22px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:.6px;text-transform:uppercase;cursor:pointer}
 .s3-on #s3WelGo:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media (max-height:640px){.s3-on .s3-welbox h2{font-size:32px}.s3-on .s3-welbox ul{font-size:13px;gap:5px}.s3-on .s3-welart{bottom:45%}}
+
+/* creator PLAYER row: the painted Vinyl head, framed on the face (the PNGs are head and shoulders) */
+.s3-on #s3Cre .s3c-base img.s3-head{object-fit:cover;transform:scale(1.75);transform-origin:50% 6%}

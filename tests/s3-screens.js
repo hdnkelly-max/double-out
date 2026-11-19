@@ -55,10 +55,12 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     showCreator(false); const vis = e => !!e && !e.hidden && e.getClientRects().length > 0;
     const mine = document.getElementById('s3Base'), theirs = document.getElementById('s3Cre');
     const rows = [...document.querySelectorAll('#creator .field > .label')].filter(l => vis(l) && /^(your )?player$/i.test(l.textContent.trim())).length;
-    if (eng) return { eng, rows, mine: !!mine, theirs: vis(theirs), lookSame: JSON.stringify(save.look || {}) === look0 };
+    const heads = [...document.querySelectorAll('#s3Cre [data-pt]')].map(i => { const im = i.querySelector('img'); return im ? im.getAttribute('src') : ''; });
+    if (eng) return { eng, rows, mine: !!mine, theirs: vis(theirs), heads, lookSame: JSON.stringify(save.look || {}) === look0 };
     const first = save.look.s3base; const b = mine && mine.querySelector('[data-b="' + TOPS_S3_BASES[TOPS_S3_BASES.length - 1].id + '"]'); if (b) b.click();
     return { eng, rows, mine: !!mine, first, after: save.look.s3base, pressed: (document.querySelector('#s3Base [aria-pressed="true"]') || {}).dataset?.b }; });
   if (out.cr.rows !== 1) fail.push('creator shows ' + out.cr.rows + ' player rows, want 1: ' + JSON.stringify(out.cr));
+  if (out.cr.eng && (out.cr.heads.length !== 5 || out.cr.heads.some((h, k) => !/^s3\/assets\/creator\/head_\w+\.png/.test(h)))) fail.push('creator PLAYER row heads: ' + JSON.stringify(out.cr.heads));
   if (out.cr.eng) { if (out.cr.mine || !out.cr.theirs) fail.push('with Engine\'s creator: ' + JSON.stringify(out.cr)); }
   else if (!out.cr.mine || !out.cr.first || out.cr.after === out.cr.first || out.cr.pressed !== out.cr.after) fail.push('base pick did not apply ' + JSON.stringify(out.cr));
   await shot('8_creator');
