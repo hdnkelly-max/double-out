@@ -92,5 +92,23 @@
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
   window.TOPS_S3={on,view,book,play,advance,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
+  // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
+  // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are
+  // the baked fallback. beginMatch freezes the values for that match, so a late read or a change applies from the next match.
+  // win_scale is the one difficulty lever per tier: it scales the perfect window and the near-miss ramp together (the whole forgiving
+  // zone), so a 10% step moves results about as much as Hayden expects. ramp_ms sets the shape (Hayden 19:42: gentle for ~40 ms past the window).
+  // Each value is checked on its own (win_scale .5-1.5, ramp_ms 0-120, tier 0-6); anything else keeps the baked value.
+  const TUNE_BAKED=Object.freeze({win:Object.freeze([1,1,1,1,1,1,1]),ramp:Object.freeze([40,40,40,40,40,40,40])});
+  const TUNE={win:TUNE_BAKED.win.slice(),ramp:TUNE_BAKED.ramp.slice(),src:'baked',at:null,rows:0};
+  const okW=v=>isFinite(v)&&v>=.5&&v<=1.5,okR=v=>isFinite(v)&&v>=0&&v<=120;
+  async function tuneLoad(){try{const rows=await rest('tops_tune?select=tier,win_scale,ramp_ms,updated_at&order=tier.asc');if(!Array.isArray(rows))throw new Error('not a list');
+      const w=TUNE_BAKED.win.slice(),r=TUNE_BAKED.ramp.slice();let n=0,last=null;
+      for(const x of rows){const t=Number(x&&x.tier);if(!Number.isInteger(t)||t<0||t>6)continue;const ws=Number(x.win_scale),rm=Number(x.ramp_ms);if(okW(ws))w[t]=ws;if(okR(rm))r[t]=rm;n++;if(x.updated_at&&(!last||x.updated_at>last))last=x.updated_at;}
+      if(!n)throw new Error('no rows');TUNE.win=w;TUNE.ramp=r;TUNE.src='db';TUNE.at=last;TUNE.rows=n;L('tune_load',{win:w,ramp:r,at:last});
+    }catch(e){L('tune_fail',{m:String(e&&e.message||e).slice(0,80)});}}
+  const tierIx=t=>{t=Number(t);return Number.isInteger(t)&&t>=0&&t<=6?t:0;};
+  window.TOPS_TUNE={snap(t){t=tierIx(t);return Object.freeze({tier:t,win:TUNE.win[t],ramp:TUNE.ramp[t]*TUNE.win[t],src:TUNE.src});},state:()=>JSON.parse(JSON.stringify(TUNE)),baked:TUNE_BAKED,load:tuneLoad};
+  if(on())tuneLoad();
+  if(typeof beginMatch==='function'){const _bmt=beginMatch;beginMatch=function(o){const r=_bmt.apply(this,arguments);try{const s=SS();if(s)s.tune=(on()&&o&&o.mode==='career')?TOPS_TUNE.snap(s.tier&&TIERS.indexOf(s.tier)>=0?TIERS.indexOf(s.tier):((career()&&career().tier)|0)):null;}catch(e){}return r;};}
   window.TOPS_BESTLEG=BESTLEG;window.TOPS_HISTORY=HISTORY;
 })();

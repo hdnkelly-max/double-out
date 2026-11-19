@@ -163,6 +163,7 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
  tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=(window.TOPS_S3FLAG?S3_PULL_MS:qr.D)/q0.D;/* CAR-PULL: Season 3 has one pull length for everyone at every Rhythm (S3_PULL_MS); Rhythm only widens the perfect window */
  const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
+ /* CAR-TUNE (Season 3): the tier's window scale and near-miss ramp, frozen at match start (TOPS_TUNE, tops_tune) */if(window.TOPS_S3FLAG&&S.tune){tp.P*=S.tune.win;tp.ramp=S.tune.ramp;}
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -212,7 +213,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */return `Perfect window ${f(winMs(L(v0)))} → ${f(winMs(L(v1)))} ms`;}
+ if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */let ws=1;try{if(window.TOPS_S3FLAG&&window.TOPS_TUNE&&career())ws=TOPS_TUNE.snap(career().tier|0).win;}catch(e){}/* CAR-TUNE: the card shows this tier's window, as the throw uses it */return `Perfect window ${f(winMs(L(v0))*ws)} → ${f(winMs(L(v1))*ws)} ms`;}
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';
