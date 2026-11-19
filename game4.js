@@ -2426,7 +2426,9 @@ function driftAt(now,p){const dt=TH.last?Math.min(.1,(now-TH.last)/1000):0;TH.la
 function driftBeat(){}
 // ring radius (mm) for a release dt ms from the tightest moment (+ late)
 function ringR(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
-function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
+function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);let sg=r/1.794;let lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const cap=pf?1.4:Infinity;
+ /* CAR-RAMP (Hayden 19:42, Season 3 only: tp.ramp is set there): just outside the window a dart lands close to a perfect one, and the spread grows smoothly (smoothstep) to the 3.54 near-miss over tp.ramp ms; past that, unchanged. Never wider than the 3.54 near-miss at the same timing; the drawn ring is unchanged (players time off it). */if(!pf&&tp.ramp>0){const x=Math.min(1,(Math.abs(dt)-tp.P)/tp.ramp),w=x*x*(3-2*x),sp=tp.s0*.6;sg=sp+(sg-sp)*w;lean*=w;}
+ const gs=()=>{const v=gauss();return Math.max(-cap,Math.min(cap,v));};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
 // release error in ms at a pull fraction
 function relErrMs(pull){return (pull-SWEET)*PM();}
