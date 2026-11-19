@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ship a LOW-risk item (art, text, UI, visuals) on the author's own tests (Hayden's 17:03 process, 19 Nov).
-#   tools/ship-low.sh COMMIT "ITEM" [tests] [--dry]
+#   tools/ship-low.sh COMMIT "ITEM" ["tests/a.js tests/b.js"] [--dry]
 # What it does, so the caller types one line:
 #  1. resolves COMMIT and refuses unless a feature-branch CI run (ci.yml, unchanged from src) on that commit is green;
 #  2. refuses unless the commit already contains src (so the suite ran on exactly the tree that ships) and takes its tree;
@@ -11,7 +11,7 @@ set -euo pipefail
 REPO=${REPO:-hdnkelly-max/double-out}
 DRY=; ARGS=(); for a in "$@"; do [ "$a" = --dry ] && DRY=1 || ARGS+=("$a"); done
 [ ${#ARGS[@]} -ge 2 ] || { echo 'usage: tools/ship-low.sh COMMIT "ITEM" [tests] [--dry]'; exit 2; }
-C=${ARGS[0]}; ITEM=${ARGS[1]}; TESTS=${ARGS[2]:-fast suite (tops/fast-suite green)}
+C=${ARGS[0]}; ITEM=${ARGS[1]}; TESTS=${ARGS[2]:-}   # optional item tests for the release recheck: "tests/a.js tests/b.js"
 cd "$(git rev-parse --show-toplevel)"
 git fetch -q origin src
 C=$(git rev-parse --verify "$C^{commit}") || { echo "unknown commit $C (fetch its branch first)"; exit 1; }
