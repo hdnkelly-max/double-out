@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       mode: ${{ steps.gate.outputs.mode }}
+      ci: ${{ steps.gate.outputs.ci }}
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.ver.outputs.tag }}
     steps:
@@ -69,12 +70,13 @@ jobs:
             #     career/money files. The game's UI also lives in game4.js / v*.js, so those can't be fenced by path: R3 there stays
             #     the author's call (Hayden 17:03), and the post-release live check is the backstop.
             PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
-            bad=$(git diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
+            bad=$(git diff -M --no-ext-diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
             [ -z "$bad" ] || { echo "::error::REFUSED (author attest): these need a Q&D pass (R0-R2 path): $(echo $bad)"; exit 1; }
             # (c) a push run of ci.yml on exactly this commit concluded success (the run itself, not a commit status anyone with statuses:write could post).
-            ok=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .event=="push" and .conclusion=="success")]|length') || { echo "::error::REFUSED (author attest): could not read the CI runs for $C (GitHub API error)"; exit 1; }
+            ok=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .event=="push" and .conclusion=="success")|.id]|first // 0') || { echo "::error::REFUSED (author attest): could not read the CI runs for $C (GitHub API error)"; exit 1; }
             [ "${ok:-0}" -gt 0 ] || { echo "::error::REFUSED (author attest): no successful ci (fast suite) push run on $C"; exit 1; }
-            echo "author attest: $C contains src, no protected path changed, fast suite green ($ok run(s))" >> $GITHUB_STEP_SUMMARY
+            echo "ci=$ok" >> $GITHUB_OUTPUT
+            echo "author attest: $C contains src, no protected path changed, fast suite green (ci run ${{ github.server_url }}/${{ github.repository }}/actions/runs/$ok)" >> $GITHUB_STEP_SUMMARY
           fi
           LOG=../site/RELEASES.log; touch $LOG
           if grep -q " live .*tree=${TREE}" $LOG; then echo "mode=noop" >> $GITHUB_OUTPUT; echo "::notice::tree $TREE is already live; nothing to do"; exit 0; fi
@@ -234,7 +236,7 @@ jobs:
     timeout-minutes: 15
     permissions: { contents: write, pages: write, id-token: write }
     environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url }}' }
-    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}', BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}" }
+    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}', CI: '${{ needs.gate_build.outputs.ci }}', BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}" }
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, path: site, fetch-depth: 0 }
@@ -250,7 +252,7 @@ jobs:
           # (cp -r only adds). Only when the build publishes an s3/ folder; an older build leaves main's s3/ alone.
           if [ -d ../out/s3 ]; then git rm -rq --ignore-unmatch -- s3; rm -rf -- ./s3; fi
           cp -r ../out/. .
-          echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK by=$BY run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
+          echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK by=$BY${CI:+ ci=$CI} run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
           git add -A index.html version.json next assets img RELEASES.log
           if [ -d rig ]; then git add -A rig; fi   # rig/: hashed rig files, only ever added; a rollback leaves them (the previous page keeps its own)
           if [ -d s3 ]; then git add -A s3; fi     # s3/: Season 3 art; a rollback to an older page leaves it (unused there)
