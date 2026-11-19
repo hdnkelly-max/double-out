@@ -400,6 +400,39 @@
     const tryAnn = () => { if (!$id('rbApp') || $id('rbApp').hidden) return; if (resetting()) { if (++tries < 40) annT = setTimeout(tryAnn, 400); return; } const c2 = D.st(); if (c2) announce(c2); bestLeg(); };
     annT = setTimeout(tryAnn, 0);
   }
+  /* ---------- EXP-IDLE 1 · first night (behind s3x=1): before the first Circuit match, one screen that says what tonight is, who's first up,
+     what winning pays and how you move up. Shown once per device; Walk on goes on into the match as before. ---------- */
+  const X = (() => { try { if (q.has('s3x')) lsSet('tops_s3x', q.get('s3x') === '1' ? '1' : null); } catch (e) {} return lsGet('tops_s3x') === '1'; })();
+  const FNK = 'tops_s3_firstnight';
+  const CARD = ['anika', 'bigmal', 'deano', 'jonno', 'kev', 'mo', 'pete', 'phil', 'shazza', 'tama'];
+  const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const c = CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
+  function firstNight(go) {
+    const C = CI(), A = API(), k = A._circ && A._circ(); if (!C || !k) return go();
+    if (!k.live) { const v = A.view(), e = v && v.calendar.find(x => x.canAfford); if (!e) return go(); const r = A.book(e.id); if (!r || r.ok === false) return go(); }
+    const v = A.view(), lv = v && v.live; if (!lv) return go();
+    const e = C.eventOf(lv.id), L = C.LEVELS[e.level], n = lv.rounds.length, opp = lv.opp || {};
+    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${C.oppAvg(e.level, i, n, e.field)}</span></li>`).join('');
+    const lad = C.LEVELS.map((x, i) => `<li class="${i === e.level ? 's3-fnnow' : ''}${i === C.LEVELS.length - 1 ? ' s3-fnend' : ''}"><i></i>${SHORT[i]}</li>`).join('');
+    const have = (k.pts && k.pts[L.id]) || 0, art = oppArt(opp.name);
+    const fmt = e.kind === 'groupko' ? `group of 4, then knockout` : `${e.size} players, knockout`;
+    const d = document.createElement('div'); d.id = 's3Fn'; d.className = 's3-fn'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3FnH');
+    d.innerHTML = `<div class="s3-fnart" style="background-image:url(${lvArt(e.level)})"><div class="s3-fntop"><span class="s3-fnk">Your first night</span><h2 class="s3-fnt" id="s3FnH">${esc(e.n)}</h2><span class="s3-fnsub">${esc(e.where)} · ${fmt}</span></div></div>
+      <div class="s3-fnb">
+        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${C.oppAvg(e.level, 0, n, e.field)} · best of ${L.legs} legs</span></div></div>` : ''}
+          <span class="s3-fnl">Win ${n} matches to take it</span><ol class="s3-fndraw">${draw}</ol>
+          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(C.cost(e))}</b><span>entry, paid</span></div></div></div>
+        ${L.need ? `<div class="s3-fnc"><span class="s3-fnl">How you move up</span><ol class="s3-fnlad">${lad}</ol>
+          <div class="s3-fnrow"><span class="s3-fnsm">${esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points')}</span><b>${have} / ${L.need}</b></div><div class="s3-fnbar"><i style="width:${Math.min(100, 100 * have / L.need)}%"></i></div>
+          <span class="s3-fnsm">${esc(L.up.replace(/\.$/, ''))}${C.LEVELS[e.level + 1] ? ', and you\'re up to the ' + esc(C.LEVELS[e.level + 1].n) : ''}.<span class="s3-fnmore"> Each week you pick an event, pay to enter and climb toward the Palace.</span></span></div>` : ''}
+        <button type="button" class="s3-fngo" id="s3FnGo"><b>Walk on</b><small>${esc(roundName(lv.rounds[0]))}${opp.name ? ' · ' + esc(opp.name) : ''}</small></button>
+      </div>`;
+    document.body.appendChild(d); const b = d.querySelector('#s3FnGo'); try { b.focus({ preventScroll: true }); } catch (x) {}
+    b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; lsSet(FNK, '1'); d.remove(); try { window.TOPS_LOG && TOPS_LOG.log && TOPS_LOG.log('s3_firstnight', { id: e.id }); } catch (x) {} go(); };
+  }
+  if (X && typeof playNext === 'function') { const _pn = playNext; playNext = function () { const self = this, args = arguments, go = () => _pn.apply(self, args);
+    try { const k = API()._circ && API()._circ(); if (!lsGet(FNK) && !$id('s3Fn') && k && !(k.history || []).length && !(k.live && (k.live.results || []).length)) return firstNight(go); } catch (e) { console.warn('s3 first night', e); }
+    return go(); }; }
+
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
