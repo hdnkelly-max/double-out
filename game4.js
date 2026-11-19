@@ -1323,7 +1323,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    if(TH.length){o.updateMatrixWorld(true);const Mw=o.matrixWorld;_s3Mi.copy(Mw).invert();
     for(let i=0;i<p.count;i++){if(b[3*i+1]>(R.skinY?R.skinY[2]:-.2))continue;_s3w.fromBufferAttribute(p,i).applyMatrix4(Mw);let moved=false;for(const [a,bb,r,pad] of TH){_s3ab.subVectors(bb,a);const tt=Math.max(0,Math.min(1,_s3c.subVectors(_s3w,a).dot(_s3ab)/_s3ab.lengthSq()));_s3c.copy(a).addScaledVector(_s3ab,tt);_s3dv.subVectors(_s3w,_s3c);const dl=_s3dv.length(),need=r+pad;if(dl<need&&dl>1e-5){_s3w.copy(_s3c).addScaledVector(_s3dv,need/dl);moved=true;}}if(moved){_s3w.applyMatrix4(_s3Mi);p.setXYZ(i,_s3w.x,_s3w.y,_s3w.z);}}}
    p.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere();});}
- function s3SkinAll(){const t=performance.now();if(t-s3SkinT<4)return;s3SkinT=t;for(const f of S3SKINF){if(!s3InScene(f)){S3SKINF.delete(f);continue;}f.updateMatrixWorld(true);if(f.userData.s3v2&&!f.userData.fpv)try{v2PostClear(f,null,true);}catch(e){if(!v2PostClear.w){v2PostClear.w=1;console.warn('v2 clear',e);}}try{s3SkinFig(f);}catch(e){S3SKINF.delete(f);}}}
+ function s3SkinAll(){const t=performance.now();if(t-s3SkinT<4)return;s3SkinT=t;for(const f of S3SKINF){if(!s3InScene(f)){S3SKINF.delete(f);continue;}f.updateMatrixWorld(true);if(f.userData.s3v2&&!(f.userData.fpv&&f.userData.fpvNow!==false))try{v2PostClear(f,null,true);}catch(e){if(!v2PostClear.w){v2PostClear.w=1;console.warn('v2 clear',e);}}try{s3SkinFig(f);}catch(e){S3SKINF.delete(f);}}}
  /* the Lab's clipCheck (Director, s3-clip.js) on a game figure in a game pose: depth of every inner vertex under its cover, in Lab units
     (the frames are the Lab pivots' boxes on the bones). Test-only: tests/s3-clip.js runs it over the match clips. */
  function s3Clip(fig){const R=fig.userData.s3rig;if(!R)return null;fig.updateMatrixWorld(true);s3SkinFig(fig);fig.updateMatrixWorld(true);
@@ -1525,7 +1525,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   try{s3Dress(fig,B,L);}catch(e){console.warn('s3 dress',e);}
   if(!B.RightEye&&B.Head){fig.updateMatrixWorld(true);[['RightEye',-1],['LeftEye',1]].forEach(([n,sx])=>{const e=new T.Object3D();e.name=ck+'_'+n;B.Head.add(e);e.position.set(sx*.032,.1,.085);B[n]=e;});}
   const dt=meFig?myDart(save.flight):oppDart(name);fig.add(dt);dt.matrixAutoUpdate=true;
-  const v2s=fig.userData.s3v2;[0,1].forEach(k=>{const d=oppDart(name);d.scale.setScalar(v2s?S3_DART:1/1.78*3.78*.85*S3_DART);/* v2: the same size as the dart in the throwing hand (the v1 spares were drawn 1.8x, 37 cm on the toy) */
+  const v2s=fig.userData.s3v2;[0,1].forEach(k=>{const d=oppDart(name);d.scale.setScalar(v2s?S3_DART*V2DARTK:1/1.78*3.78*.85*S3_DART);/* v2: the same size as the dart in the throwing hand (the v1 spares were drawn 1.8x, 37 cm on the toy) */
    if(v2s){/* P1 4.05 (Hayden: 'the darts are in his arm'): the v1 spares lay along the hand toward the wrist and ran up the toy forearm. In v2 they
       sit across the closed fist (V2SPARE, hand-bone space): barrels in the curled fingers, points out past the little finger, flights out past
       the thumb, square to the forearm in every pose; v2Grip keeps the fingers closed round them */const q=V2SPARE;d.position.set(q.p[0],q.p[1]+k*q.gap[1],q.p[2]+k*q.gap[2]);d.rotation.set(q.rot[0],q.rot[1]+k*q.fan,q.rot[2]);}
@@ -1564,7 +1564,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function curl(B,side,amts){ // amts: [index,middle,ring,pinky,thumb] radians
   const names=['Index','Middle','Ring','Pinky'];names.forEach((n,i)=>{for(let k=1;k<=3;k++){const b=B[side+'Hand'+n+k];if(!b)continue;b.quaternion.copy(RIG.rest[b.name].lq);b.rotateX(amts[i]*(k===1?.9:1));}});
   for(let k=1;k<=3;k++){const b=B[side+'HandThumb'+k];if(!b)continue;b.quaternion.copy(RIG.rest[b.name].lq);if(k===1){b.rotateZ((side==='Right'?1:-1)*amts[4]*.7);b.rotateX(amts[4]*.5);}else b.rotateX(amts[4]*.7);}}
- function poseRigged(fig,oa,boardTarget,fpv){if(fig.userData.ck&&fig.userData.ck!=='remy'&&!oa.celebrate&&!oa.shush&&oa.phase!=='celebrate'){poseDarts(fig,oa,boardTarget,fpv);return;}const B=fig.userData.B;fig.updateWorldMatrix(true,true);const tp=throwPose(oa);if(fpv){tp.lift-=13;tp.phi+=2;}const rad=Math.PI/180;
+ function poseRigged(fig,oa,boardTarget,fpv){fig.userData.fpvNow=!!fpv;/* the match pane draws fpFig third-person (split view): only a first-person pose skips the v2 clearance */if(fig.userData.ck&&fig.userData.ck!=='remy'&&!oa.celebrate&&!oa.shush&&oa.phase!=='celebrate'){poseDarts(fig,oa,boardTarget,fpv);return;}const B=fig.userData.B;fig.updateWorldMatrix(true,true);const tp=throwPose(oa);if(fpv){tp.lift-=13;tp.phi+=2;}const rad=Math.PI/180;
   // reset posed bones to rest each frame
   ['RightShoulder','RightArm','RightForeArm','RightHand','LeftShoulder','LeftArm','LeftForeArm','LeftHand','Spine','Spine1','Neck','Head'].forEach(n=>{const b=B[n];if(!b)return;b.quaternion.copy(RIG.rest[b.name].lq);});
   const S0=B.RightArm;B.Spine1.rotateX(tp.lean*.8);
@@ -1602,7 +1602,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(tp.celebrate)aimBone(B.RightHand,B.RightHandMiddle1,handDir,0);else aimFrame(B.RightHand,B.RightHandMiddle1,handDir,palmN);
   if(!tp.celebrate&&!tp.shush){const da=(tp.dart||0)*rad;dartDir=new T.Vector3().addScaledVector(fwd,Math.cos(da)).addScaledVector(up,Math.sin(da)).normalize();}}
   {const open=Math.max(0,Math.min(1,(tp.phi-40)/46));const c0=fpv?[.7,.75,1.1,1.3,.8]:[.9,.85,1.3,1.45,.25];curl(B,'Right',tp.celebrate?[1.4,1.4,1.4,1.4,.9]:c0.map((v,i)=>i<4?v*(1-open*.7):v*(1-open*.4)));}
-  if(fig.userData.dt){const dt=fig.userData.dt;const ip=boneW(B.RightHandIndex2),tpos=boneW(fpv?B.RightHandThumb4:B.RightHandThumb3);const mid=fpv?ip.clone().lerp(tpos,.5):boneW(B.RightHandThumb2).lerp(boneW(B.RightHandThumb3),.6);if(fpv&&dartDir)mid.addScaledVector(up,.055).addScaledVector(dartDir,-.06).addScaledVector(right,-.02);else if(dartDir)mid.addScaledVector(palmN,.014);const dd=dartDir||handDir;const w=mid.clone().addScaledVector(dd,fpv?.012:.02);fig.worldToLocal(w);dt.position.copy(w);const m=new T.Matrix4().lookAt(mid.clone().add(dd),mid,up);const fq=fig.getWorldQuaternion(new T.Quaternion()).invert();dt.quaternion.copy(fq.multiply(new T.Quaternion().setFromRotationMatrix(m)));dt.rotateY(Math.PI);{const dk=fig.userData.s3fig?S3_DART:1;dt.scale.set(dk/fig.scale.x,dk/fig.scale.y,dk/fig.scale.z);}}
+  if(fig.userData.dt){const dt=fig.userData.dt;const ip=boneW(B.RightHandIndex2),tpos=boneW(fpv?B.RightHandThumb4:B.RightHandThumb3);const mid=fpv?ip.clone().lerp(tpos,.5):boneW(B.RightHandThumb2).lerp(boneW(B.RightHandThumb3),.6);if(fpv&&dartDir)mid.addScaledVector(up,.055).addScaledVector(dartDir,-.06).addScaledVector(right,-.02);else if(dartDir)mid.addScaledVector(palmN,.014);const dd=dartDir||handDir;const w=mid.clone().addScaledVector(dd,fpv?.012:.02);fig.worldToLocal(w);dt.position.copy(w);const m=new T.Matrix4().lookAt(mid.clone().add(dd),mid,up);const fq=fig.getWorldQuaternion(new T.Quaternion()).invert();dt.quaternion.copy(fq.multiply(new T.Quaternion().setFromRotationMatrix(m)));dt.rotateY(Math.PI);{const dk=fig.userData.s3fig?S3_DART*(fig.userData.s3v2?V2DARTK:1):1;dt.scale.set(dk/fig.scale.x,dk/fig.scale.y,dk/fig.scale.z);}}
   // left arm: spares at the sternum
   const LS=boneW(B.LeftArm);const chest=fig.localToWorld(new T.Vector3(fpv?-.3:-.3,fpv?.86:.86,fpv?.04:.06));const d=Math.min(L1+L2-.01,LS.distanceTo(chest));const u=new T.Vector3().subVectors(chest,LS).normalize();const pole=new T.Vector3().addScaledVector(right,-.7).addScaledVector(fwd,-.7);pole.addScaledVector(u,-pole.dot(u)).normalize();
   const cosA=(L1*L1+d*d-L2*L2)/(2*L1*d);const A=Math.acos(Math.max(-1,Math.min(1,cosA)));const LE=LS.clone().addScaledVector(u,Math.cos(A)*L1).addScaledVector(pole,Math.sin(A)*L1);
@@ -1666,12 +1666,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const rs=RIG.rest[B.LeftHand.name];for(let it=0;it<4&&rs&&v2WristAng(B,'Left')<65;it++){B.LeftHand.quaternion.slerp(rs.lq,.5);B.LeftHand.updateWorldMatrix(false,true);}}
   /* the throwing dart outside the darts arm (a clip: the walk-on, the hero cheer, the pump): poseDarts didn't place it this frame, so it is held in
      the right fist the same way, mirrored, instead of hanging where the last throw pose left it */
-  const dt=u.dt,act=u.act;u._dtFist=false;if(dt&&dt.visible&&!u.fpv&&B.RightHand&&act&&act.isScheduled()&&!(performance.now()-(u._pdT||-1e9)<150)){u._dtFist=true;v2Close(B,'Right');const rs=RIG.rest[B.RightHand.name];B.RightHand.updateWorldMatrix(false,true);
+  const dt=u.dt,act=u.act;u._dtFist=false;if(dt&&dt.visible&&!(u.fpv&&u.fpvNow!==false)&&B.RightHand&&act&&act.isScheduled()&&!(performance.now()-(u._pdT||-1e9)<150)){u._dtFist=true;v2Close(B,'Right');const rs=RIG.rest[B.RightHand.name];B.RightHand.updateWorldMatrix(false,true);
    for(let it=0;it<4&&rs&&v2WristAng(B,'Right')<65;it++){B.RightHand.quaternion.slerp(rs.lq,.5);B.RightHand.updateWorldMatrix(false,true);}v2DtFist(fig);}}
  /* the throwing dart into the right fist (hand-bone space, V2SPARE mirrored); run again after the arm clearance moves the hand */
  function v2DtFist(fig){const u=fig.userData,B=u.B,dt=u.dt;if(!u._dtFist||!dt)return;{
    const q=V2SPARE,m=_v2g[3].compose(_v2g[0].set(-q.p[0],q.p[1],q.p[2]),_v2g[4].setFromEuler(_v2e.set(q.rot[0],-q.rot[1],q.rot[2])),_v2g[1].set(1,1,1));
-   m.premultiply(B.RightHand.matrixWorld).premultiply(_v2fi.copy(fig.matrixWorld).invert());m.decompose(dt.position,dt.quaternion,_v2g[2]);dt.scale.setScalar(S3_DART*(_v2g[2].x||1));dt.updateMatrixWorld(true);}}
+   m.premultiply(B.RightHand.matrixWorld).premultiply(_v2fi.copy(fig.matrixWorld).invert());m.decompose(dt.position,dt.quaternion,_v2g[2]);dt.scale.setScalar(S3_DART*V2DARTK*(_v2g[2].x||1));dt.updateMatrixWorld(true);}}
  const V2TIPS=['Index','Middle','Ring','Pinky','Thumb'].flatMap(f=>[2,3,4].map(j=>f+j));
  /* the shirt's own outline in chest space (the lathe in s3BuildV2): radius x, radius z at height y, or null above the collar / below the hem */
  function v2TorsoR(y,BK){const t=V2P.torso,y0=t.y0-V2P.leg.hipY-.3,h=t.y1-t.y0,v=(y-y0)/h;if(v<0||v>1)return null;let r=.97+.05*Math.sin(v*Math.PI*.9)+(t.belly+BK[2])*Math.sin(v*Math.PI)*2+.06*Math.max(0,1-v/.18);if(v>.78)r*=Math.cos((v-.78)/.22*Math.PI*.42);r=Math.max(.06,r);return [t.rx*BK[0]*r,t.rz*BK[1]*r];}
@@ -1727,6 +1727,49 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(!only){let g2=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;g2+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}u._v2sig=g2;}
   return n;}
  window.TOPS_V2POST=v2PostClear;
+ /* doc 17 must-fix #3 (throw spacing, ChatGPT on Director's base v2): the three throw frames barely differed in the match pane. The hand
+    now follows set positions in the head's frame, in head widths (hw) from the skull centre: [out to the throwing side, up, forward to the
+    board]; the elbow follows its own pole per frame so the silhouette changes:
+      aim       dart at the chin / mouth line, beside and in front of the face
+      draw-back 16% hw back (spec 12-18), lifted and out toward the ear, the elbow up near shoulder height (upper arm near horizontal)
+      release   23% hw forward of the draw-back (spec 18-25), in toward the board line, the elbow down and forward
+      follow    arm extended toward the board, low; fingers open from the release (fly)
+    Between them the game's own timing (pull, throw k, fly k, reset k) blends the frames. Aim maths are untouched: the flight reads the
+    board target, the hand only shows where the dart leaves from. */
+ /* the darts in a v2 toy's hands, x the S3 dart size: at 1.35 the dart read as a toothpick in the 2x toy hand (the poster's dart is chunky); the
+    darts in the air and in the board keep their size */
+ const V2DARTK=1.4;
+ /* the match face-cam swing for v2 throwers (degrees from the board line): 32 showed the throw end-on (aim, draw-back and release overlap in
+    depth); at 50 the face is near front-on like the poster and the throw reads across the frame */
+ const V2CAMA=50;
+ /* round 5 #7 (ChatGPT on Kai v4): draw-back ~21% hw back of the aim (was 16), release ~55% hw forward of the draw-back and ~34% past the aim (was 23 / 7), at the eye line with the elbow out and the forearm tipping to the board */
+ const V2THROW={aim:{h:[.62,-.30,.40],pole:[.9,-1,0]},back:{h:[.77,-.17,.19],pole:[1.0,-.25,-.4]},rel:{h:[.44,-.24,.74],pole:[.8,-.5,0]},end:{h:[.24,-.52,.96],pole:[.6,-.9,0]}};
+ /* v2 wrist and fingers through the throw: the wrist cocks further back on the draw-back and snaps through on the release (degrees added
+    to the game's own wrist), and the fingers start to part over the last of the throw (30%, the dart still in them) and open fully as it leaves (fly), instead of in one frame, wider than v1 (spread, the
+    thumb off the barrel), so the hand reads as letting go */
+ const V2WRIST={back:16,rel:-18,end:-10};
+ const V2OPEN={from:.8,pre:.3,curl:[-.12,-.06,.12,.22],thumb:[-.05,0,-.95]};
+ function v2WristAdd(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),W=V2WRIST;if(ph==='pull')return W.back*p;if(ph==='throw')return W.back+(W.rel-W.back)*Math.pow(k,1.4);if(ph==='fly'||ph==='follow')return W.rel+(W.end-W.rel)*k;if(ph==='reset')return W.end*(1-k);return 0;}
+ function v2Open(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0);if(ph==='throw'){const x=Math.max(0,(k-V2OPEN.from)/(1-V2OPEN.from));return V2OPEN.pre*x*x*(3-2*x);}if(ph==='fly'||ph==='follow'){const x=Math.min(1,k/.3);return V2OPEN.pre+(1-V2OPEN.pre)*x*(2-x);}if(ph==='reset')return Math.max(0,1-k*1.5);return 0;}
+ const _v2t=[];for(let i=0;i<8;i++)_v2t.push(new T.Vector3());
+ function v2ThrowKey(oa){const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),K=V2THROW,e=x=>x*x*(3-2*x);
+  if(ph==='pull')return [K.aim,K.back,1-Math.pow(1-p,1.7)];if(ph==='throw')return [K.back,K.rel,Math.pow(k,1.8)];if(ph==='fly'||ph==='follow')return [K.rel,K.end,1-Math.pow(1-k,2)];
+  if(ph==='reset')return [K.end,K.aim,e(k)];if(ph==='idle'||ph==='aim'||!ph)return [K.aim,K.aim,0];return null;}
+ function v2ThrowArm(fig,B,S,dirU,dirF,b,oa){const kf=v2ThrowKey(oa||{});if(!kf)return false;const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
+  sk.updateWorldMatrix(true,false);const C=sk.getWorldPosition(_v2t[0]),hw=2*V2P.head.r[0]*_v2t[1].setFromMatrixScale(sk.matrixWorld).x;
+  const up=_v2t[2].set(0,1,0),out=_v2t[3].subVectors(S,C);out.y=0;out.addScaledVector(b,-out.dot(b));if(out.lengthSq()<1e-8)out.crossVectors(b,up);out.normalize();
+  const [A,Bk,t]=kf,mix=(a,c)=>a+(c-a)*t;const hx=mix(A.h[0],Bk.h[0]),hy=mix(A.h[1],Bk.h[1]),hz=mix(A.h[2],Bk.h[2]);
+  const H=_v2t[4].copy(C).addScaledVector(out,hx*hw).addScaledVector(up,hy*hw).addScaledVector(b,hz*hw);
+  const L1=boneWTo(_v2t[5],B.RightArm).distanceTo(boneWTo(_v2t[6],B.RightForeArm)),L2=_v2t[6].distanceTo(boneWTo(_v2t[7],B.RightHand)),reach=(L1+L2)*.995;
+  if(H.distanceTo(S)>reach)H.sub(S).setLength(reach).add(S);const d=Math.max(1e-4,H.distanceTo(S)),uu=_v2t[5].subVectors(H,S).divideScalar(d);
+  const pole=_v2t[6].set(0,0,0).addScaledVector(out,mix(A.pole[0],Bk.pole[0])).addScaledVector(up,mix(A.pole[1],Bk.pole[1])).addScaledVector(b,mix(A.pole[2],Bk.pole[2]));pole.addScaledVector(uu,-pole.dot(uu)).normalize();
+  const cA=Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d))),sA=Math.sqrt(1-cA*cA);const E=_v2t[7].copy(S).addScaledVector(uu,cA*L1).addScaledVector(pole,sA*L1);
+  dirU.copy(E).sub(S).normalize();dirF.copy(H).sub(E).normalize();return true;}
+ /* the face-cam looks from the board side, so a dart aimed level points at the camera and shows as a dot: in the set and draw-back the v2
+    dart tips up (degrees added to the game's own), coming level by the release, as on the poster */
+ const V2DARTP={aim:28,back:34,rel:0};
+ function v2DartPitch(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),D=V2DARTP;if(ph==='pull')return D.aim+(D.back-D.aim)*p;if(ph==='throw')return D.back+(D.rel-D.back)*Math.pow(k,1.2);if(ph==='idle'||ph==='aim')return D.aim;if(ph==='reset')return D.aim*k;return 0;}
+ window.TOPS_V2THROW=V2THROW;
  function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.userData._pdT=performance.now();fig.updateWorldMatrix(true,true);
   let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
   for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
@@ -1736,14 +1779,14 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const dirU=_pv[7].copy(b).multiplyScalar(Math.cos(P.lift*rad)).addScaledVector(up,Math.sin(P.lift*rad)).addScaledVector(lat,.32).normalize();
   const ph=P.phi*rad;const dirF=_pv[9].copy(up).multiplyScalar(Math.cos(ph)).addScaledVector(b,Math.sin(ph)).normalize();const pside=_pv[10].copy(b).multiplyScalar(Math.cos(ph)).addScaledVector(up,-Math.sin(ph)).normalize();
   /* Vinyl v2.2: the 2x head. The grip is moved clear of the skull (chin height, in front of the face) and the arm re-solved with the elbow out */
-  if(fig.userData.s3v2&&!fpv&&v2ArmClear(fig,B,S,dirU,dirF,b)){pside.addScaledVector(dirF,-pside.dot(dirF)).normalize();}
+  if(fig.userData.s3v2&&!fpv&&(v2ThrowArm(fig,B,S,dirU,dirF,b,oa)||v2ArmClear(fig,B,S,dirU,dirF,b))){pside.addScaledVector(dirF,-pside.dot(dirF)).normalize();}
   const hinge=_pv[8].crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxisTo(_ra,B.RightArm,up),hinge);
   const DN=_pv[11].set(0,-1,0);setW(B.RightForeArm,dirF,restAxisTo(_ra,B.RightForeArm,DN),pside);
-  const ex=P.ext*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
+  const v2t=fig.userData.s3v2&&!fpv;const ex=(P.ext+(v2t?v2WristAdd(oa):0))*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
   setW(B.RightHand,fing,restAxisTo(_ra,B.RightHand,DN),palm);
   const rel=oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset';
-  for(let f=0;f<4;f++){const nm=PD_RF[f][0],c=rel?PD_RF[f][1]:PD_RF[f][2];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===0?1:.8));}}
-  for(let t=0;t<3;t++){const e=PD_TH[t];const bn=B[e[0]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(_pe.set(e[1],e[2],e[3],'ZYX')));}
+  const vo=v2t?v2Open(oa):0;for(let f=0;f<4;f++){const nm=PD_RF[f][0],c=v2t?PD_RF[f][2]+(V2OPEN.curl[f]-PD_RF[f][2])*vo:rel?PD_RF[f][1]:PD_RF[f][2];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===0?1:.8));if(j===0&&vo)bn.rotateZ((f-1.5)*.09*vo);}}
+  for(let t=0;t<3;t++){const e=PD_TH[t];const bn=B[e[0]];if(!bn)continue;const th=t===0&&vo?V2OPEN.thumb:null;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(th?_pe.set(e[1]+(th[0]-e[1])*vo,e[2]+(th[1]-e[2])*vo,e[3]+(th[2]-e[3])*vo,'ZYX'):_pe.set(e[1],e[2],e[3],'ZYX')));}
   // left arm: hangs, forearm across the stomach with the spares
   if(B.LeftArm&&B.LeftForeArm){setW(B.LeftArm,_pv[14].copy(DN).addScaledVector(fwdC,.24).addScaledVector(rtC,-.26),restAxisTo(_ra,B.LeftArm,up),fwdC);setW(B.LeftForeArm,_pv[15].copy(fwdC).multiplyScalar(.8).addScaledVector(rtC,.52).addScaledVector(up,.12),restAxisTo(_ra,B.LeftForeArm,DN),DN);
    if(B.LeftHand){setW(B.LeftHand,_pv[16].copy(rtC).multiplyScalar(.6).addScaledVector(fwdC,.6).addScaledVector(up,-.15),restAxisTo(_ra,B.LeftHand,DN),_pv[17].copy(fwdC).negate().addScaledVector(up,-.4));
@@ -1751,8 +1794,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   // head steady, eyes on the board
   if(B.Head&&B.HeadTop_End){const HD=boneWTo(_pv[18],B.Head);const look=_pv[19].subVectors(boardTarget,HD).normalize();aimBone(B.Head,B.HeadTop_End,_pv[20].copy(up).addScaledVector(look,.12).normalize(),0);}
   if(fig.userData.s3v2&&!fpv)try{v2PostClear(fig,['Right']);}catch(e){}/* Vinyl v2.2: fingers round the dart clear of the 2x head before the dart is put in them */
-  if(fig.userData.dt){const dt=fig.userData.dt;const mid=boneWTo(_pv[21],B.RightHandIndex2).lerp(boneWTo(_pv[22],B.RightHandThumb3),.5);const dd=_pv[23].copy(b).multiplyScalar(Math.cos(P.dart*rad)).addScaledVector(up,Math.sin(P.dart*rad)).normalize();
-   const w=_pv[18].copy(mid).addScaledVector(palm,.008);fig.worldToLocal(w);dt.position.copy(w);const m=_pm.lookAt(_pv[19].copy(mid).add(dd),mid,up);const iq=fig.getWorldQuaternion(_pq).invert();dt.quaternion.copy(iq.multiply(_pq2.setFromRotationMatrix(m)));dt.rotateY(Math.PI);{const dk=fig.userData.s3fig?S3_DART:1;dt.scale.set(dk/fig.scale.x,dk/fig.scale.y,dk/fig.scale.z);}dt.visible=!rel;}}
+  if(fig.userData.dt){const dt=fig.userData.dt;const mid=boneWTo(_pv[21],B.RightHandIndex2).lerp(boneWTo(_pv[22],B.RightHandThumb3),.5);const dA=(P.dart+(fig.userData.s3v2&&!fpv?v2DartPitch(oa):0))*rad;const dd=_pv[23].copy(b).multiplyScalar(Math.cos(dA)).addScaledVector(up,Math.sin(dA)).normalize();
+   const w=_pv[18].copy(mid).addScaledVector(palm,.008);fig.worldToLocal(w);dt.position.copy(w);const m=_pm.lookAt(_pv[19].copy(mid).add(dd),mid,up);const iq=fig.getWorldQuaternion(_pq).invert();dt.quaternion.copy(iq.multiply(_pq2.setFromRotationMatrix(m)));dt.rotateY(Math.PI);{const dk=fig.userData.s3fig?S3_DART*(fig.userData.s3v2?V2DARTK:1):1;dt.scale.set(dk/fig.scale.x,dk/fig.scale.y,dk/fig.scale.z);}dt.visible=!rel;}}
  function standRigged(fig,kind){const B=fig.userData.B;fig.updateWorldMatrix(true,true);if(kind==='set'){poseRigged(fig,{phase:'idle'},fig.localToWorld(new T.Vector3(0,1.73,-2.4)));return;}
   const fwd=new T.Vector3(0,0,-1).applyQuaternion(fig.getWorldQuaternion(new T.Quaternion())),down=new T.Vector3(0,-1,0);
   const arm=(side,dirU,dirF,handDir)=>{const rt=new T.Vector3(-fwd.z,0,fwd.x);const nrm=new T.Vector3().copy(rt).multiplyScalar(side==='Right'?-1:1);aimBone(B[side+'Arm'],B[side+'ForeArm'],dirU,0);aimFrame(B[side+'ForeArm'],B[side+'Hand'],dirF,nrm);aimFrame(B[side+'Hand'],B[side+'HandMiddle1'],handDir,nrm);curl(B,side,[.35,.4,.45,.5,.2]);};
@@ -2345,7 +2388,7 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
    if(pk>0&&lkPushS){const w=mmToWorld(lkPushS.x,lkPushS.y);cx+=(w.x-cx)*.074*pk;cy+=(w.y-cy)*.074*pk;bfov=bfov/(1+.08*pk);}
    let dkc=null;try{dkc=window.TOPS_DRUNKCAM?TOPS_DRUNKCAM(now):null;}catch(e){}if(dkc){cx+=dkc.x;cy+=dkc.y;bfov*=dkc.f;}boardCam.position.set(cx,cy,BOARD_Z+dist);boardCam.lookAt(cx,cy,BOARD_Z);if(dkc)boardCam.rotateZ(dkc.r);boardCam.fov=bfov;
    // player pane: stable three-quarter thrower; the head target is frozen while pulling/throwing so the shot never moves during a pull
-   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;/* S3: the toy head is bigger and its centre sits higher than the head bone: frame its box (offset + scale measured once per figure) */if(thrower.userData.s3fig){const q=thrower.userData.s3hf||(thrower.userData.s3hf=(()=>{const F=s3HeadFrame(thrower,hw.y+.1);return {dy:F.c-hw.y-.1,f:Math.pow(F.f,.75)};})());hy+=q.dy;s3hfK=q.f;s3hfA=thrower.userData.s3v2?32:0;}else{s3hfK=1;s3hfA=0;}}else{s3hfK=1;s3hfA=0;}
+   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;/* S3: the toy head is bigger and its centre sits higher than the head bone: frame its box (offset + scale measured once per figure) */if(thrower.userData.s3fig){const q=thrower.userData.s3hf||(thrower.userData.s3hf=(()=>{const F=s3HeadFrame(thrower,hw.y+.1);return {dy:F.c-hw.y-.1,f:Math.pow(F.f,.75)};})());hy+=q.dy;s3hfK=q.f;s3hfA=thrower.userData.s3v2?V2CAMA:0;}else{s3hfK=1;s3hfA=0;}}else{s3hfK=1;s3hfA=0;}
    const tz=(thrower&&thrower.position)?thrower.position.z:OCHE_Z;const locked=state.pulling||state.anim||state.flyingOwn;if(!lkFace.set||state.cur!==lkFace.cur){Object.assign(lkFace,{hx,hy,tz,set:true,cur:state.cur});}else if(!locked){lkFace.hx+=(hx-lkFace.hx)*.08;lkFace.hy+=(hy-lkFace.hy)*.08;lkFace.tz+=(tz-lkFace.tz)*.08;}
    const rk=lkReactK(now);const fx=lkFace.hx,fy=lkFace.hy,fz=lkFace.tz;{const an=((window.TOPS_CAMANG!=null?window.TOPS_CAMANG:0)+s3hfA)*Math.PI/180,D=2.3*s3hfK;/* Vinyl v2: the camera swings 32 deg toward the front so the dart fist in front of the 2x head is seen, not hidden behind it */faceCam.position.set(fx-D*Math.cos(an),fy+(vert?.1:.02)+.04*rk,fz+.1-D*Math.sin(an));}faceCam.lookAt(fx+.1,fy+(vert?.03:-.22)+(vert?.04:.16)*rk,fz+.02);faceCam.fov=(vert?21:30)*(1-.2*rk);if(window.GFX_FACECAM){const c=window.GFX_FACECAM;faceCam.position.set(...c.pos);faceCam.lookAt(...c.look);faceCam.fov=c.fov||50;}
    renderer.setScissorTest(false);renderer.setViewport(0,0,W,Hh);renderer.clear();renderer.setScissorTest(true);renderer.autoClear=true;
