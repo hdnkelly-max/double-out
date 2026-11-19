@@ -1,6 +1,6 @@
 # TOPS CI (SHIP-3 phase 1; fast suite for the 17:03 ship process). On every push to a feature branch: build, then the fast
 # suite, then any tests/*.js the push changed. The result is on the commit: this job's check run (green tick / red cross)
-# plus a commit status "tops/fast-suite" ("8/8 passed" or the failing tests), which tools/ship-low.sh requires before a LOW
+# plus a commit status "tops/fast-suite" ("7/7 passed" or the failing tests), which tools/ship-low.sh requires before a LOW
 # (R3) release. Evidence lives in GitHub (job summary), not in chats.
 name: ci
 on:
@@ -34,7 +34,7 @@ jobs:
       - name: Pick tests (the fast suite + any tests/*.js the branch changed)
         id: pick
         run: |
-          FAST="regress.js asset-refs.js s3-welcome.js s3-screens.js s3-match.js s3-creator.js"
+          FAST="checkouts.js regress.js asset-refs.js s3-welcome.js s3-screens.js s3-match.js s3-creator.js"
           # every test the branch added, changed or renamed since it left src (not only this push: ChatGPT P2, 19 Nov)
           git fetch -q origin src; B=$(git merge-base origin/src HEAD)
           CHANGED=$(git diff --name-only --diff-filter=AMR "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' || true)
