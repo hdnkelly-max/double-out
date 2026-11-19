@@ -1600,7 +1600,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  /* P1 4.05: no dart vertex (the spares in the off hand, the dart in the throwing hand) inside its own arm: the forearm (elbow to wrist) and the
     upper arm, as capsules of the v2 arm's radii at the figure's scale. n = vertices inside, mm = the deepest. ang = the smallest angle (deg)
     between a spare and its forearm (the spares sit square to it) */
- function s3DartClear(fig){const u=fig.userData,R3=u.s3rig,B=u.B,out={n:0,mm:0,checked:0,where:'',ang:90};if(!R3||!R3.v2||!B)return out;fig.updateMatrixWorld(true);
+ function s3DartClear(fig,opt){const u=fig.userData,R3=u.s3rig,B=u.B,out={n:0,mm:0,checked:0,where:'',ang:90};if(!R3||!R3.v2||!B)return out;fig.updateMatrixWorld(true);
   const p=new T.Vector3(),q=new T.Vector3(),a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
   const seg=(P,A,Bp,r,where)=>{q.subVectors(Bp,A);const t=Math.max(0,Math.min(1,c.subVectors(P,A).dot(q)/Math.max(1e-9,q.lengthSq())));const d=c.copy(A).addScaledVector(q,t).distanceTo(P);if(d<r){out.n++;const mm=(r-d)*1000;if(mm>out.mm){out.mm=mm;out.where=where;}}};
   const sides=[['Left',R3.aR,B.LeftHand.children.filter(o=>o.userData.spare&&o.visible)],['Right',R3.aL,u.dt&&u.dt.visible?[u.dt]:[]]];
@@ -1611,6 +1611,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   /* and none inside the shirt (the spares at the belt, the dart hand across the stomach): the shirt's lathe in chest space, 1 cm grace */
   {const cb=R3.chest&&R3.chest.userData.box;if(cb){const ci=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1,BK=V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard;out.tn=0;out.tmm=0;
    for(const [,,darts] of sides)for(const d of darts)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(ci);const rr=v2TorsoR(p.y,BK);if(!rr)continue;const e=Math.hypot(p.x/rr[0],p.z/rr[1]);if(e<1-.01/cs/Math.min(rr[0],rr[1])){out.tn++;out.tmm=Math.max(out.tmm,(1-e)*Math.min(rr[0],rr[1])*cs*1000);}}});}}
+  /* Q&D 20 Nov: and the throwing dart clear of the skull (its flight cut through Kai's cheek beside the mouth at throw k .60-.70).
+     Only on request (opt.skull: the throw, where the dart travels past the face; the aim pose holds it 2-3% off the cheek by design, the poster pose, and outside the throw poses the dart is parked). In skull space against the same 1.04 skull as s3HeadClear; a v3 head's shaped surface via the rig's skullF. sn = vertices inside, se = the closest (1 = on the surface) */
+  {let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});const dt=u.dt;out.sn=0;out.se=9;out.smm=0;
+   if(opt&&opt.skull&&sk&&dt&&dt.visible){const r=V2P.head.r,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,SF=R3.skullF,M=1.04,rm=Math.min(r[0],r[1],r[2]);
+    dt.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i++){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);out.checked++;
+     const e=Math.hypot(p.x/r[0],p.y/r[1],p.z/r[2])/(SF?SF(p):1);if(e<out.se)out.se=e;if(e<M){out.sn++;out.smm=Math.max(out.smm,(M-e)*rm*ws*1000);}}});}}
   return out;}
  window.TOPS_S3DARTCLEAR=s3DartClear;
 
@@ -1964,7 +1970,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     depth); at 50 the face is near front-on like the poster and the throw reads across the frame */
  const V2CAMA=50;
  /* round 5 #7 (ChatGPT on Kai v4): draw-back ~21% hw back of the aim (was 16), release ~55% hw forward of the draw-back and ~34% past the aim (was 23 / 7), at the eye line with the elbow out and the forearm tipping to the board */
- const V2THROW={aim:{h:[.62,-.30,.40],pole:[.9,-1,0]},back:{h:[.77,-.17,.19],pole:[1.0,-.25,-.4]},rel:{h:[.44,-.24,.74],pole:[.8,-.5,0]},end:{h:[.24,-.52,.96],pole:[.6,-.9,0]}};
+ /* Q&D 20 Nov: the release sits further out and forward (.44/.74 -> .56/.82 hw): on the way there the dart's flight crossed Kai's cheek for 1-2 frames.
+    Closest throwing dart to the skull (1 = surface) over every base and opponent, throw k in .025 steps: 1.059 (Ray; was .973), Kai 1.126 (was 1.014) */
+ const V2THROW={aim:{h:[.62,-.30,.40],pole:[.9,-1,0]},back:{h:[.77,-.17,.19],pole:[1.0,-.25,-.4]},rel:{h:[.56,-.24,.82],pole:[.8,-.5,0]},end:{h:[.24,-.52,.96],pole:[.6,-.9,0]}};
  /* v2 wrist and fingers through the throw: the wrist cocks further back on the draw-back and snaps through on the release (degrees added
     to the game's own wrist), and the fingers start to part over the last of the throw (30%, the dart still in them) and open fully as it leaves (fly), instead of in one frame, wider than v1 (spread, the
     thumb off the barrel), so the hand reads as letting go */
