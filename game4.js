@@ -1984,15 +1984,15 @@ function driftAt(now,p){const dt=TH.last?Math.min(.1,(now-TH.last)/1000):0;TH.la
 function driftBeat(){}
 // ring radius (mm) for a release dt ms from the tightest moment (+ late)
 /* S3-CURVE (hidden switch ?curve=1, default off; Hayden 08:53/08:54 + 17:03): stats move the throw through sway (Control) and the perfect window
-   (Rhythm), and each Circuit level sets how far a near-miss lands (land, hidden: the drawn ring is exactly 3.54, the player's timing cue never
-   changes, CAR-EASE lesson). win = perfect window +-ms at Rhythm level 0 and 1, sway = mm at Control level 0 and 1 (geometric), land = near-miss
-   landing radius x per level (Pub .. Palace). Season 3 only; off = 3.57/4.0x exactly. */
+   (Rhythm) only. The ring formula is untouched (3.54) and honest: it is drawn with the real window, so what looks tight is perfect, and near-misses
+   land exactly on the drawn ring (ChatGPT 17:40: no hidden landing changes). win = perfect window +-ms at Rhythm level 0 and 1, sway = mm at Control
+   level 0 and 1 (geometric), lvl = window multiplier per Circuit level (Pub .. Palace). Season 3 only; off = 3.57/4.0x exactly. */
 window.TOPS_CURVE=(()=>{try{const q=new URLSearchParams(location.search).get('curve');if(q==='1'||q==='0')localStorage.setItem('tops_curve',q);return localStorage.getItem('tops_curve')==='1';}catch(e){return false;}})();
-const CURVE_TUNE={win:[7,18],sway:[38,15],land:[.6,.55,.6,.7,.65,.62,.7]};
+const CURVE_TUNE={win:[15,30],sway:[30,10],lvl:[1,1.07,.98,.75,.82,.8,.78]};
 function curveOn(){return !!(window.TOPS_CURVE&&window.TOPS_S3FLAG);}
 function curveAt(kind,L){const c=CURVE_TUNE[kind];L=Math.max(0,Math.min(1,+L||0));return c[0]*Math.pow(c[1]/c[0],L);}
 function ringR(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
-function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp)*(Math.abs(dt)<=tp.P?1:(tp.landK||1));/* S3-CURVE: hidden near-miss multiplier */const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
+function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
 // release error in ms at a pull fraction
 function relErrMs(pull){return (pull-SWEET)*PM();}
@@ -2796,7 +2796,7 @@ function tick(now){if(S&&!S.done){const t=(now-S.t0)/1000;const nv=effNerves();
   if(S.pulling){S.pull=pullAt(performance.now());if(S.pull>=1.0)S.over=true;if(S.pull>=1.3)release(null,'auto');}S.inWin=S.pulling&&isPerfect();feelBreathe(now);
   const thr=targetHR();S.hr+=(thr-S.hr)*.02;const period=60000/S.hr;if(now-lastBeat>period){lastBeat=now;if(nv>1.2)sfxHeart();ecgBeat=now;if(!window.TH_LEGACY&&tick._p&&!(S.pulling&&S.lock))driftBeat(now,tick._p);}
   /* #16: this runs every frame. Assigning textContent/hidden counts as a page change even when the value is the same, so it forced a style recalc of the whole page every frame, which costs more as the page grows (~1,240 nodes in match 1, ~1,730 from match 2). Write only when the value changes; the page ends up the same every frame. */setTx($('bpm'),String(Math.round(S.hr)));$('hr').classList.toggle('hot',S.hr>105);{const pc=nervePct();const me=S.p[S.cur];const mine=!me.ai&&!S.mateTurn&&!S.practice;setTx($('hrNote'),mine&&nv>.3?`${nerveCause()} · spread +${pc}%`:(mine?'Settled':''));const bs=$('btnSettle'),hid=!(S.breathe||(mine&&nv>.9&&!S.settled&&!S.pulling&&!S.busy));if(bs&&bs.hidden!==hid)bs.hidden=hid;}ecgDraw(now,S.hr,nv);{const o=Math.round((S.view===1?0:Math.min(.7,Math.max(0,nv-.8)*.22))*100)/100;const ne=$('nerve');if(ne&&ne._o!==o){ne._o=o;ne.style.opacity=o;}}/* #20: write only on change, like setTx */sfxPubAmbience();
-  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp.Pv?Object.assign({},S.lockTp,{P:S.lockTp.Pv}):S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);if(menuCovers.on){/* a match is live: everything shows again */menuCovers.on=false;menuCovers.t=0;try{document.body.classList.remove('tops-covered');}catch(e){}}V.frame(now,S);shownPush(now);ftPush(now);}
+  if(S.fx&&S.fx.length)cardFxTick();S.nerves=nv;S.sigma=(!window.TH_LEGACY&&S.pulling&&S.lockTp)?ringR(relErrMs(S.pull)+(S.relAdd||0)-(S.markerShift||0),S.lockTp)/1.794:currentSigma();S.reader=false;feelPadTick(now);if(menuCovers.on){/* a match is live: everything shows again */menuCovers.on=false;menuCovers.t=0;try{document.body.classList.remove('tops-covered');}catch(e){}}V.frame(now,S);shownPush(now);ftPush(now);}
  else{if(S){S.nerves=0;S.sigma=0;}feelPadTick(now);if(!menuCovers(now))V.frame(now,S);else menuCovers.skipped=(menuCovers.skipped|0)+1;}
  fxTick();requestAnimationFrame(tick);}
 requestAnimationFrame(tick);

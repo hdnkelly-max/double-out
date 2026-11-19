@@ -161,7 +161,7 @@ const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
  tp.A*=(curveOn()?curveAt('sway',Lof('ct')):qc.A)/(q0.A*(b.sway/1.1)*swayMultRaw());/* S3-CURVE: sway from Control */tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
- const Lr=Lof('rh');if(curveOn()){const Pv=tp.P*winMs(Lr)/(q0.P*tolMult()*.85);tp.P*=curveAt('win',Lr)/(q0.P*tolMult()*.85);tp.Pv=Pv;/* the drawn ring keeps the 3.54 window */const ti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);tp.landK=CURVE_TUNE.land[Math.max(0,Math.min(6,ti))]||1;}else tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
+ const Lr=Lof('rh');if(curveOn()){const ti=(S.tier&&TIERS.indexOf(S.tier)>=0)?TIERS.indexOf(S.tier):((career()&&career().tier)|0);tp.P*=curveAt('win',Lr)*(CURVE_TUNE.lvl[Math.max(0,Math.min(6,ti))]||1)/(q0.P*tolMult()*.85);tp.curve=1;}else tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
