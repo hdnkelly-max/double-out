@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 15
     container: { image: 'mcr.microsoft.com/playwright:v1.48.2-jammy', options: '--ipc=host' }
     env: { SITE: 'https://hdnkelly-max.github.io/double-out/' }
+    defaults: { run: { shell: bash } }   # the Playwright image's default shell is sh
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, path: site, fetch-depth: 1 }
