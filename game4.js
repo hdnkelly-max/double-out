@@ -1114,8 +1114,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     the clearance and the dart grip work unchanged. Test-only: ?v3=1 (TOPS_V3FLAG), read before any figure is built; Kai only (V3BASES).
     Kept from the game's v2: materials (v2M, V2SKIN, venue light), the poster shirt texture + collar, fingers on the finger bones, the hair
     kit (V2HAIRS, from hair28) until Director's hair r8 file lands. Phones get a 1536 px head sheet (desktop 2048) and S3_SEGF segments. */
- const V3BASES=['kai'];
- const V3HAIRMAP={quiff:'quiffL'};/* Director's r9 lock builds on v3 heads (doc 24); Ray sweptL and Mia bunL follow with their ports */
+ const V3BASES=['kai','ray','tama'];/* doc 25: Ray and Tama on v3 too; Dazza and Mia stay v2 until their hair ports */
+ const V3HAIRMAP={quiff:'quiffL',swept:'sweptL',curly:'curlyL'};/* Director's r9 lock builds on v3 heads (doc 24); Ray sweptL and Mia bunL follow with their ports */
  function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&!!L.base&&V3BASES.includes(L.base)&&!L.pro;}
  const V3P={H:1.6,head:{c:[0,1.31,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.535,y1:1.015,rx:0.3,rz:0.215,belly:0.05,sh:0.365},
   shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
@@ -1210,7 +1210,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const l=v3EyeOnHead(-1,FP),r=v3EyeOnHead(1,FP);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.013,.013),gm,head,0,l.y+lh*.25,Math.max(l.z,r.z)+.03).castShadow=false;}
   return FP;}
  function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
-  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY[L.body]||V2BODY.standard;
+  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY.standard;/* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
   L._logo={u:.575,v:.76};/* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
@@ -1287,9 +1287,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const outUp=(u,p)=>p.clone().normalize();
   function loft(cp,w,h,N,Sg){const pts=cp.map((c,i)=>S(c[0],c[1],i===0?Math.min(c[2],-.008):c[2]));return sweep(new T.CatmullRomCurve3(pts,false,'centripetal'),w,h,N||16,Sg||10,outUp);}
   function ribbon(pts,w,h,N,Sg,up,twist){return sweep(new T.CatmullRomCurve3(pts,false,'centripetal'),w,h,N||18,Sg||8,up||outUp,twist);}
-  function cluster(th,ph,size,ht,lobes){const parts=[];const n=nrm(th,ph);const base=S(th,ph,.012);const t1=new T.Vector3().crossVectors(n,new T.Vector3(0,1,.001)).normalize(),t2=new T.Vector3().crossVectors(n,t1).normalize();
+  function cluster(th,ph,size,ht,lobes,seg){const parts=[];const n=nrm(th,ph);const base=S(th,ph,.012);const t1=new T.Vector3().crossVectors(n,new T.Vector3(0,1,.001)).normalize(),t2=new T.Vector3().crossVectors(n,t1).normalize();
    const L=lobes||(rnd()<.6?2:3);
-   for(let l=0;l<L;l++){const g=new T.SphereGeometry(1,9,3,0,2*Math.PI,0,Math.PI*.6);const a=rnd()*6.28,off=l===0?0:size*(.22+.12*rnd());
+   for(let l=0;l<L;l++){const g=new T.SphereGeometry(1,seg?seg[0]:9,seg?seg[1]:3,0,2*Math.PI,0,Math.PI*.6);const a=rnd()*6.28,off=l===0?0:size*(.22+.12*rnd());
     const s=size*(l===0?.5:.36+.08*rnd()),hh=ht*(l===0?1:.75+.2*rnd());const c=base.clone().addScaledVector(t1,Math.cos(a)*off).addScaledVector(t2,Math.sin(a)*off);
     const p=g.attributes.position;const nm=[];const ph0=rnd()*6;const sy=(hh*1.3+.016)/1.31;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const az=Math.atan2(x,z);const lump=1+.07*Math.cos(3*az+ph0);
      const N=new T.Vector3().addScaledVector(t1,x/(s*lump)).addScaledVector(t2,-z/(s*.85*lump)).addScaledVector(n,y/sy).normalize();nm.push(N.x,N.y,N.z);
@@ -1374,8 +1374,26 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     {p:[[0.85,1.25],[0.9,1.7],[1.1,2.1],[1.35,2.4]],w:0.055,hk:0.9},{p:[[0.85,-1.35],[0.95,-1.8],[1.2,-2.15],[1.3,-2.3]],w:0.055,hk:0.9}],
    HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x543424,shadow:0x2A1810,hi:0x7A5C4C},
    o:{valley:0.026,wk:0.85,hiLo:0.9,hi:0.35,rough:0.5,cc:0.08,lip:[0.16,2],tone:1.3}};/* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
-  return {envR,envS,groove,KAI};})();
+  const RAY={M:[[-0.018,0.262,0.08,0.188,0.143,0.162,-0.25,0,0],[-0.018,0.19,-0.102,0.274,0.22,0.228,0,0,0],[-0.232,0.138,0.004,0.086,0.132,0.196,0,0,0.1],[0.22,0.138,-0.008,0.068,0.132,0.19,0,0,-0.1],[-0.172,0.262,0.008,0.08,0.1,0.1,0,0,0.3]],
+   GL:[{p:[[0.85,0.05],[0.6,0.08],[0.35,0.12],[0.2,1.2],[0.35,2.9]],w:0.085},{p:[[0.82,-0.38],[0.65,-0.55],[0.5,-1.3],[0.75,-2.3],[1.3,-2.85]],w:0.075},{p:[[0.82,0.45],[0.66,0.62],[0.55,1.35],[0.85,2.3],[1.4,2.8]],w:0.072},
+    {p:[[1.0,-0.95],[1.1,-1.35],[1.3,-2.05],[1.7,-2.55]],w:0.066},{p:[[1.08,1.0],[1.18,1.4],[1.35,2.0],[1.7,2.45]],w:0.05,hk:0.85},{p:[[0.5,2.5],[1.0,2.68],[1.5,2.85],[1.95,3.0],[2.15,3.05]],w:0.072,soft:0.22},
+    {p:[[0.6,-2.6],[1.1,-2.72],[1.6,-2.88],[1.9,-2.98],[2.05,-3.02]],w:0.068,soft:0.22},{p:[[1.6,2.25],[1.88,2.5],[2.12,2.78]],w:0.05,hk:0.8,soft:0.2},{p:[[1.5,-2.15],[1.82,-2.4],[2.05,-2.7]],w:0.05,hk:0.8,soft:0.2},
+    {p:[[1.25,-1.3],[1.35,-1.7],[1.55,-2.1]],w:0.045,hk:0.8},{p:[[0.8,-1.0],[0.85,-1.6],[1.05,-2.2],[1.35,-2.6]],w:0.06,hk:0.9},{p:[[0.82,1.05],[0.9,1.65],[1.1,2.2],[1.4,2.55]],w:0.058,hk:0.9},{p:[[0.3,2.4],[0.65,2.9],[1.15,3.18],[1.7,3.22]],w:0.055,hk:0.9,soft:0.2}],
+   HLP:[[0,0.8],[0.3,0.72],[-0.3,0.72],[0.62,0.68],[-0.62,0.68],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x4e4a47,hi:0xf4f1ec},
+   o:{valley:0.024,wk:1.0,hi:0.6,hiLo:0.84,tone:0.88,lip:[0.3,1.2]}};
+  return {envR,envS,groove,KAI,RAY};})();
  const V2HAIRS={
+  /* r9 Tama (hair28 curly with the r8/r9 rear clusters: bigger, deeper, 2 lobes) for v3 heads */
+  curlyL(h,L,K){K.seed(5);const cols={base:0x1F1A19,shadow:0x0A0909,hi:0x433934};const parts=[];
+   const hl=K.HL([[0,1.0],[.3,1.04],[-.3,1.04],[.6,.98],[-.6,.98],[.9,1.08],[-.9,1.08],...K.sideHL(1,1.55,1.32,1.7),...K.sideHL(-1,1.58,1.32,1.7),[2.45,2.22],[-2.45,2.22],[2.85,2.3],[-2.9,2.28],[Math.PI-.01,2.32]]);parts.push(K.cap(hl,.02,28,6));
+   const C=[[.92,0,.11,.034],[.94,.36,.1,.032],[.95,-.34,.1,.033],[.98,.7,.085,.026],[.99,-.72,.088,.027],[1.1,1.0,.07,.02],[1.1,-1.0,.072,.02],[.55,.15,.13,.04],[.6,-.5,.12,.038],[.62,.8,.12,.036],[.2,0,.14,.042],[.35,1.9,.13,.036],[.4,-1.55,.13,.037],[.42,2.9,.13,.036],[.65,-2.45,.12,.033],
+    [1.1,1.45,.09,.022],[1.05,-1.4,.095,.024],[1.0,2.1,.11,.026],[.98,-2.0,.11,.026],[1.15,2.75,.11,.024],[1.2,-2.85,.11,.024],[1.55,2.35,.09,.014],[1.6,-2.4,.09,.014],[1.7,3.1,.1,.012],[1.4,1.8,.08,.014],[1.42,-1.75,.08,.014],[.85,2.55,.12,.03],[.85,-2.7,.12,.03],[1.3,3.05,.12,.026],[1.35,2.45,.11,.024],[1.35,-2.35,.11,.024],[1.25,2.0,.1,.022],[1.22,-2.05,.1,.022],[.75,1.45,.11,.03],[.78,-1.2,.11,.03]];
+   const RK=[1.06,1.85,.3,1.45,2.3,.82];for(let i=0;i<C.length;i++){const c=C[i];const front=i<7,rear=Math.abs(c[1])>1.9,top=c[0]<.5;const deep=Math.abs(c[1])>=RK[4]&&c[0]>=RK[2]&&c[0]<=RK[3];
+    const sz=c[2]*1.3*(c[0]>1.15?1.25:1)*(front?1.1:1)*(deep?RK[0]:(rear&&c[0]<1.2?.88:1)),ht=c[3]*1.8*(top?RK[5]:1)*(front?1.05:1)*(deep?RK[1]:1);parts.push(...K.cluster(c[0],c[1]+(K.rnd()-.5)*.06,sz,ht,deep?2:(c[0]>1.15?2:0),deep?[11,4]:null));}
+   K.done(h,parts,L.hairC!=null&&L.hairC!==0x1a1210?K.colsFrom(L.hairC):cols,{top:.07,hiAmt:.85},[.58,.03]);},
+  /* r9 Ray (sweptL): his poster-fitted masses and groove locks, verbatim from hair28.js */
+  sweptL(h,L,K){const G=V2GROOVE,Q=G.RAY;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   const c=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols;G.groove(h,L,K,Q.M,Q.GL,c,hl,Q.o);},
   quiffL(h,L,K){const G=V2GROOVE,Q=G.KAI;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-0.01,2.35]]);
    const c=L.hairC!=null&&L.hairC!==0x7a3e22&&L.hairC!==0x5a2e1a?K.colsFrom(L.hairC):Q.cols;G.groove(h,L,K,Q.M,Q.GL,c,hl,Q.o);},/* r9 Kai lock shell (v3 heads; the player's own hair colour re-tints it) */
   quiff(h,L,K){K.seed(11);const cols={base:0x743823,shadow:0x3A1C12,hi:0xAC6542};const parts=[],W=K.W,loft=K.loft;
