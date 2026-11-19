@@ -8,11 +8,11 @@ const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blockl
 await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript(()=>{window.TOPS_S3FLAG=true;try{localStorage.setItem('tops_s3','1');}catch(e){}});
 await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
 await p.evaluate(()=>{TOPS_LOADCHAR('leonard');V.loadAnims();});await p.waitForFunction(()=>TOPS_RIGS().ids.includes('leonard')&&V._qa.animNames().length>0,null,{timeout:180000});
-const res=await p.evaluate(()=>{const Q=V._qa;const specs=[...TOPS_S3_BASES.map(b=>[b.look,'You',true,b.id]),[{},'Big Mal',false,'opp:Big Mal'],[{},'Shazza',false,'opp:Shazza'],[{},'Deano',false,'opp:Deano']];
- const clips=Q.animNames();const fails=[];let n=0,figs=0;const worst={};const per={};
+const res=await p.evaluate((QUICK)=>{const Q=V._qa;const specs=[...TOPS_S3_BASES.map(b=>[b.look,'You',true,b.id]),[{},'Big Mal',false,'opp:Big Mal'],[{},'Shazza',false,'opp:Shazza'],[{},'Deano',false,'opp:Deano']];
+ const clips=QUICK?Q.animNames().slice(0,4):Q.animNames();if(QUICK)specs.splice(2,specs.length-4);const fails=[];let n=0,figs=0;const worst={};const per={};
  for(const [look,name,me,id] of specs){const f=Q.makeFigure(look,name,0);if(!f.userData.s3rig){fails.push(id+': not an S3 figure');continue;}figs++;Q.scene.add(f);
   for(const c of clips){const a=Q.playClip(f,c,{t:0});if(!a)continue;const dur=a.getClip().duration;for(const k of [0,.17,.34,.5,.67,.84]){a.time=dur*k;f.userData.mixer.update(0);const r=TOPS_S3CLIP(f);if(!r)continue;n+=r.checked;
     for(const key of ['pants','arm','cuff','collar','trim','head','fist'])if(r[key]){fails.push(`${id}/${c}@${k} ${key}:${r[key]} ${r.ex.slice(0,2).join(' ')}`);per[key]=(per[key]||0)+1;}for(const w in r.worst)worst[w]=Math.min(worst[w]??1,r.worst[w]);}}
   Q.scene.remove(f);Q.dispose(f);}
- return {figs,clips:clips.length,n,worst,per,nf:fails.length,fails:fails.slice(0,30)};});
-console.log(JSON.stringify(res));if(pe.length)console.log('page errors',JSON.stringify(pe.slice(0,3)));const bad=res.nf||pe.length||!res.n||res.figs<8;console.log(bad?'S3-CLIP-GAME FAIL':'S3-CLIP-GAME PASS ('+res.figs+' figures, '+res.clips+' clips, '+res.n+' checks)');await b.close();srv.close();process.exit(bad?1:0);})();
+ return {figs,clips:clips.length,n,worst,per,nf:fails.length,fails:fails.slice(0,30)};},!!process.env.QUICK);
+console.log(JSON.stringify(res));if(pe.length)console.log('page errors',JSON.stringify(pe.slice(0,3)));const bad=res.nf||pe.length||!res.n||res.figs<(process.env.QUICK?4:8);console.log(bad?'S3-CLIP-GAME FAIL':'S3-CLIP-GAME PASS ('+res.figs+' figures, '+res.clips+' clips, '+res.n+' checks)');await b.close();srv.close();process.exit(bad?1:0);})();
