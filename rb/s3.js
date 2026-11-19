@@ -348,6 +348,11 @@
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
   /* Engine's Season 3 creator (s3Creator: the PLAYER portrait row, writes save.vlook) replaces this row. When it's in the build this
      wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
+  /* Engine's PLAYER row draws each base as a live 3D portrait, which shows plain white busts on phones (Q&D). Fill each slot first with the
+     painted Vinyl head (s3/assets/creator/head_<id>.png): Engine's portrait pass skips a slot that already has a picture. */
+  const heads = () => { try { document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { if (i.querySelector('img.s3-head')) return; const u = swap('assets/creator/head_' + i.dataset.pt + '.png');
+      if (!/^s3\//.test(u)) return; i.innerHTML = `<img class="s3-head" src="${u}" alt="">`; }); } catch (e) {} };
+  if (typeof s3Creator === 'function') { const _s3c = s3Creator; s3Creator = function () { const r = _s3c.apply(this, arguments); heads(); return r; }; }
   const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {
     const _sc = showCreator;
