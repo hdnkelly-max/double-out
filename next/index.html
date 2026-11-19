@@ -1,5 +1,5 @@
 <meta charset="utf-8"><base href="../">
-<script>window.TOPS_BUILD="1795077793021";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795079378432";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -11849,7 +11849,9 @@ function driftAt(now,p){const dt=TH.last?Math.min(.1,(now-TH.last)/1000):0;TH.la
 function driftBeat(){}
 // ring radius (mm) for a release dt ms from the tightest moment (+ late)
 function ringR(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
-function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
+function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);let sg=r/1.794;let lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const cap=pf?1.4:Infinity;
+ /* CAR-RAMP (Hayden 19:42, Season 3 only: tp.ramp is set there): just outside the window a dart lands close to a perfect one, and the spread grows smoothly (smoothstep) to the 3.54 near-miss over tp.ramp ms; past that, unchanged. Never wider than the 3.54 near-miss at the same timing; the drawn ring is unchanged (players time off it). */if(!pf&&tp.ramp>0){const x=Math.min(1,(Math.abs(dt)-tp.P)/tp.ramp),w=x*x*(3-2*x),sp=tp.s0*.6;sg=sp+(sg-sp)*w;lean*=w;}
+ const gs=()=>{const v=gauss();return Math.max(-cap,Math.min(cap,v));};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
 // release error in ms at a pull fraction
 function relErrMs(pull){return (pull-SWEET)*PM();}
@@ -14131,7 +14133,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.09';
+window.TOPS_VER='4.10';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -14375,11 +14377,13 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 /* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
 function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
 window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
+/* CAR-PULL (Overseer 18:42, value 19:38 option B): the full pull in ms for every Season 3 player, the starter-Rhythm pull every Season 3 career has played so far (3.54/Season 2 ran 660 at Rhythm 20 down to 560 at 95, so a player re-learned his timing as Rhythm rose) */const S3_PULL_MS=660;window.TOPS_S3_PULL=S3_PULL_MS;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=(window.TOPS_S3FLAG?S3_PULL_MS:qr.D)/q0.D;/* CAR-PULL: Season 3 has one pull length for everyone at every Rhythm (S3_PULL_MS); Rhythm only widens the perfect window */
  const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
+ /* CAR-TUNE (Season 3): the tier's window scale and near-miss ramp, frozen at match start (TOPS_TUNE, tops_tune) */if(window.TOPS_S3FLAG&&S.tune){tp.P*=S.tune.win;tp.ramp=S.tune.ramp;}
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
  if(tr==='machine'&&S.dart>1&&tgt.m===3&&S.visit&&S.visit.length&&S.visit[S.visit.length-1].label===tgt.label)m*=.94;
@@ -14429,7 +14433,7 @@ function showStatScreen(kick,sub,html,later,done){const P=$('perk');P.classList.
 function fxLine(id,v0,v1){const L=v=>Math.max(0,Math.min(1,(v+kitPts()[id]-20)/75));const a=ttAt(L(v0)),b=ttAt(L(v1));
  if(id==='sc'||id==='fi')return `${id==='sc'?'Spread':'Spread on doubles'} ${a.s0.toFixed(1)} → ${b.s0.toFixed(1)} mm`;
  if(id==='ct')return `Sway ${Math.round(a.A)} → ${Math.round(b.A)} mm`;
- if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */return `Perfect window ${f(winMs(L(v0)))} → ${f(winMs(L(v1)))} ms`;}
+ if(id==='rh'){const f=w=>String(Math.round(w*10)/10);/* V4-R: the same table the throw uses; one decimal, steps are small near the start */let ws=1;try{if(window.TOPS_S3FLAG&&window.TOPS_TUNE&&career())ws=TOPS_TUNE.snap(career().tier|0).win;}catch(e){}/* CAR-TUNE: the card shows this tier's window, as the throw uses it */return `Perfect window ${f(winMs(L(v0))*ws)} → ${f(winMs(L(v1))*ws)} ms`;}
  const p=v=>Math.round(Math.max(0,100-((v+kitPts().co-20)/7.5)*.28/2*100));return `Pressure felt ${p(v0)}% → ${p(v1)}%`;}
 function showStatPick(done,Lm){syncPts();const s=st();const cap=Math.min(85,capNow());const lit=(Lm&&Lm.formLit)||[];
  const litH=lit.length?`<div class="label">Lit this match</div><div class="st2lit">${lit.map(f=>`<span>🔥 ${SN(f.id)}${f.up?' +1':''}${f.why?' · '+f.why:''}</span>`).join('')}</div>`:'';
@@ -16708,7 +16712,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
       S.earned=r.prize||0;if(r.up&&r.up.to>was)S.after='promo';if(r.up&&r.up.champion)S.after='champion';}
     S.s3res=r;persist();setTimeout(()=>{try{lbPost();}catch(e){}},1500);
     const me0=S.p[0],op0=S.p[1],lv=id=>{try{return window.TOPS_LofT?Math.round(TOPS_LofT(id)*75+20):null;}catch(e){return null;}};
-    L('s3_result',{avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
+    L('s3_result',{tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
     try{window.dispatchEvent(new CustomEvent('tops:s3',{detail:r}));}catch(e){}
   };}
 
@@ -16736,6 +16740,35 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
   window.TOPS_S3={on,view,book,play,advance,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
+  // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
+  // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are
+  // the baked fallback. beginMatch freezes the values for that match, so a late read or a change applies from the next match.
+  // win_scale is the one difficulty lever per tier: it scales the perfect window and the near-miss ramp together (the whole forgiving
+  // zone), so a 10% step moves results about as much as Hayden expects. ramp_ms sets the shape (Hayden 19:42: gentle past the window). Baked from the sim (mid-skill profile, entry->exit win %, target 50->65-70):
+  // ramp 0 (3.54) Pub 46->60, Club 38->48, DPNZ 44->70; ramp 40 Pub 67->85, Club 63->76, DPNZ 75->91; ramp 20 Pub 59->71. So 20 ms up to the
+  // Pro Tour, and 40 at the Palace, where it gives the ~100 average Hayden wants (97->103). The table moves any tier without a release.
+  // Each value is checked on its own (win_scale .5-1.5, ramp_ms 0-120, tier 0-6); anything else keeps the baked value.
+  const TUNE_BAKED=Object.freeze({win:Object.freeze([1,1,1,1,1,1,1]),ramp:Object.freeze([20,20,20,20,20,20,40])});
+  const TUNE={win:TUNE_BAKED.win.slice(),ramp:TUNE_BAKED.ramp.slice(),src:'baked',at:null,rows:0};
+  /* ChatGPT P2-1: only real numbers (or numeric strings, as PostgREST sends numeric) count; null, '', booleans and duplicate tiers are refused */
+  const num=v=>(typeof v==='number')?v:(typeof v==='string'&&v.trim()!==''&&!isNaN(v))?Number(v):NaN;
+  const okW=v=>Number.isFinite(v)&&v>=.5&&v<=1.5,okR=v=>Number.isFinite(v)&&v>=0&&v<=120;
+  /* ChatGPT P2-2: the read gives up after 6 s (baked values stay); every match records which values it used (s3_result tw/tr/tsrc/tat) */
+  const TUNE_TIMEOUT=6000;
+  const restT=async(path)=>{const ac=typeof AbortController==='function'?new AbortController():null;const tm=setTimeout(()=>{try{ac&&ac.abort();}catch(e){}},TUNE_TIMEOUT);
+    try{const r=await fetch(LB.url+'/rest/v1/'+path,{headers:{'apikey':LB.key,'Authorization':'Bearer '+LB.key},signal:ac?ac.signal:undefined});if(!r.ok)throw new Error(path.split('?')[0]+' '+r.status);return await r.json();}finally{clearTimeout(tm);}};
+  async function tuneLoad(){try{const rows=await restT('tops_tune?select=tier,win_scale,ramp_ms,updated_at&order=tier.asc');if(!Array.isArray(rows))throw new Error('not a list');
+      const w=TUNE_BAKED.win.slice(),r=TUNE_BAKED.ramp.slice();let n=0,last=null;const seen=new Set();
+      for(const x of rows){if(!x||typeof x!=='object')continue;const t=num(x.tier);if(!Number.isInteger(t)||t<0||t>6||seen.has(t))continue;seen.add(t);const ws=num(x.win_scale),rm=num(x.ramp_ms);if(okW(ws))w[t]=ws;if(okR(rm))r[t]=rm;n++;if(typeof x.updated_at==='string'&&(!last||x.updated_at>last))last=x.updated_at;}
+      if(!n)throw new Error('no rows');TUNE.win=w;TUNE.ramp=r;TUNE.src='db';TUNE.at=last;TUNE.rows=n;L('tune_load',{win:w,ramp:r,at:last});
+    }catch(e){L('tune_fail',{m:String(e&&e.message||e).slice(0,80)});}}
+  const tierIx=t=>{t=Number(t);return Number.isInteger(t)&&t>=0&&t<=6?t:0;};
+  window.TOPS_TUNE={snap(t){t=tierIx(t);return Object.freeze({tier:t,win:TUNE.win[t],ramp:TUNE.ramp[t]*TUNE.win[t],src:TUNE.src,at:TUNE.at});},state:()=>JSON.parse(JSON.stringify(TUNE)),baked:TUNE_BAKED,load:tuneLoad};
+  if(on())tuneLoad();
+  /* ChatGPT P1-1: the snapshot is taken before the game builds the match (from the match's own tier), then attached as soon as S exists;
+     throw parameters are first computed at the first press (startPull), after this. Every career entry (Circuit, hub, money match) passes mode 'career'. */
+  if(typeof beginMatch==='function'){const _bmt=beginMatch;beginMatch=function(o){let snap=null;try{if(on()&&o&&o.mode==='career'){const t=Number.isInteger(o.tier)?o.tier:((career()&&career().tier)|0);snap=TOPS_TUNE.snap(t);}}catch(e){}
+    const r=_bmt.apply(this,arguments);try{const s=SS();if(s)s.tune=snap;}catch(e){}return r;};}
   window.TOPS_BESTLEG=BESTLEG;window.TOPS_HISTORY=HISTORY;
 })();
 </script><script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',0.85)</script>
