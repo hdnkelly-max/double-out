@@ -1191,11 +1191,21 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*.3);/* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
    [-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024,sh*E.ry/640,0,0,7);x.fill();});}
   const rt=new T.CanvasTexture(rm);return [col,rt];}
+ /* doc 27 #6: dark skin's shadow side read slightly grey at the match cam. A small warm term only where the direct light is low
+    (no blanket brightening), scaled by how dark the skin is: full on Tama's tone, zero on the light skins. TOPS_V3SHWU.value is the
+    shared linear radiance (pre tone map), tuned so Tama's shadow cheek gains ~+5 R / +3 G in the pane */
+ const V3SHWU=window.TOPS_V3SHWU={value:new T.Vector3(.0095,.0032,0)};
+ function v3Warm(m,ref){const c=(ref||m).color.clone();if(window.GFX_LIN)c.convertLinearToSRGB();const g=Math.max(1,c.r,c.g,c.b);c.multiplyScalar(1/g);
+  const lum=.299*c.r+.587*c.g+.114*c.b,k=Math.max(0,Math.min(1,(.55-lum)/.18));if(k<=0)return m;
+  const prev=Object.prototype.hasOwnProperty.call(m,'onBeforeCompile')?m.onBeforeCompile:null,pk=m.customProgramCacheKey?m.customProgramCacheKey():'';const uk={value:k};
+  m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);sh.uniforms.uShW=V3SHWU;sh.uniforms.uShK=uk;
+   sh.fragmentShader=sh.fragmentShader.replace('void main() {','uniform vec3 uShW;uniform float uShK;\nvoid main() {').replace('#include <lights_fragment_end>','#include <lights_fragment_end>\n{float dl=dot(reflectedLight.directDiffuse,vec3(.299,.587,.114))/max(1e-4,dot(diffuseColor.rgb,vec3(.299,.587,.114)));reflectedLight.indirectDiffuse+=uShW*uShK*(1.-smoothstep(.03,.28,dl));}');};
+  m.customProgramCacheKey=()=>pk+'|v3shw';m.userData.v3shw=k;m.needsUpdate=true;return m;}
  function v3Head(head,L,skin,hairM){const R=V3P.head.r,mesh=v2mesh,ell=v2ell,FP=v3FaceOf(L);
   /* the skull carries the face: canvas painted in the skin colour the material system chose (V2SKIN or the HSL rule), the material keeps
      only the linear gain above 1 and the pane lift (v2fk), so the painted skin and the body skin match */
   const lc=skin.color.clone(),gn=Math.max(1,lc.r,lc.g,lc.b),cc=lc.clone().multiplyScalar(1/gn),skHex='#'+cc.getHexString();
-  const [map,rmap]=v3HeadMaps(L,skHex,V2MAT.skin[0]);const hm=skin.clone();hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;
+  const [map,rmap]=v3HeadMaps(L,skHex,V2MAT.skin[0]);const hm=skin.clone();hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;v3Warm(hm,skin);
   const sg=new T.SphereGeometry(1,Math.round(64*S3_SEGF),Math.round(48*S3_SEGF));{const p=sg.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).normalize();const q=v3HeadPoint(v,FP.cheek,FP);p.setXYZ(i,q.x,q.y,q.z);}sg.computeVertexNormals();}
   const sk=mesh(sg,hm,head);sk.userData.tag='skull';sk.castShadow=false;
   {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),skin,head,0,np.y,np.z-0.022).castShadow=false;}
@@ -1211,7 +1221,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   return FP;}
  function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
   const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY.standard;/* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
-  L._logo={u:.575,v:.76};/* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
+  L._logo={u:.575,v:.76};/* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');v3Warm(skin);const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
   /* collar and placket as the shipped poster shirt, sized to the v3 neck (ChatGPT round 8: the collar read a little big) */
