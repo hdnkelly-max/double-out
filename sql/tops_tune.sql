@@ -1,5 +1,5 @@
 -- CAR-TUNE (Overseer 19:45, Hayden): Season 3 per-tier perfect-window scale and near-miss ramp, changeable without a code release.
--- The game reads tier, win_scale, ramp_ms once at load (baked fallback in tc/s3.js: win 1, ramp 40 at every tier).
+-- The game reads tier, win_scale, ramp_ms once at load (baked fallback in tc/s3.js: win 1, ramp 20 ms Pub..Pro Tour, 40 at the Palace).
 -- win_scale scales the perfect window AND the ramp (the whole forgiving zone): the one difficulty lever per tier. ramp_ms is the shape and freezes them per match,
 -- so a change applies from each player's next match after their next app load. Players can only read; the service role writes.
 -- Every insert/update is logged in tops_tune_log by the trigger (old and new values, note, role, time).
@@ -44,5 +44,5 @@ create policy tops_tune_read on public.tops_tune for select to anon, authenticat
 revoke execute on function public.tops_tune_touch() from public, anon, authenticated;
 -- seed = the baked fallback (tc/s3.js TUNE_BAKED), so turning the table on changes nothing
 insert into public.tops_tune(tier, win_scale, ramp_ms, note)
-  select t, 1, 40, 'seed = baked fallback (CAR-TUNE)' from generate_series(0, 6) t
+  select t, 1, case when t = 6 then 40 else 20 end, 'seed = baked fallback (CAR-TUNE)' from generate_series(0, 6) t
 on conflict (tier) do nothing;
