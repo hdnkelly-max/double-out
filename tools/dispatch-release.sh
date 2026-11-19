@@ -20,7 +20,10 @@ if [ "$RISK" = R0 ]; then
       t=$(gh api repos/$R/actions/runs/$id --jq .display_title)
       # cancel only if the run name gives back every input (ChatGPT P1): 8 fields (9 with attest=, since 19 Nov), commit and tree present
       n=$(awk -F'|' '{print NF}' <<<"$t"); c=$(sed -n 's/.*| commit=\([^ |]*\) |.*/\1/p' <<<"$t"); tr=$(sed -n 's/.*| tree=\([^ |]*\) |.*/\1/p' <<<"$t")
-      if { [ "$n" != 8 ] && [ "$n" != 9 ]; } || [ -z "$c" ] || [ -z "$tr" ]; then echo "R0 jump: NOT cancelling run $id (its inputs can't be read back from: $t)"; continue; fi
+      # a 9-field name must say attest=qa or attest=author; anything else (attest=invalid) is left alone: it refuses itself,
+      # and re-dispatching it would wrongly give it a valid attest
+      a9=$(sed -n 's/.*| attest=\([a-z]*\) *$/\1/p' <<<"$t")
+      if { [ "$n" != 8 ] && [ "$n" != 9 ]; } || { [ "$n" = 9 ] && [ "$a9" != qa ] && [ "$a9" != author ]; } || [ -z "$c" ] || [ -z "$tr" ]; then echo "R0 jump: NOT cancelling run $id (its inputs can't be read back from: $t)"; continue; fi
       gh api -X POST "repos/$R/actions/runs/$id/cancel" >/dev/null && { echo "R0 jump: cancelled $st run $id: $t"; JUMPED+=("$t"); }
     done
   done
