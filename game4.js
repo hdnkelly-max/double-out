@@ -1179,11 +1179,15 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   return c;}
  /* the face sheet drawn into the skull's own equirect map (one surface, no decal layer: r6), and a matching roughness map that keeps
     the painted eyes glossy (V2EYEGLOSS) on a skin-rough face */
+ function v3EyeOnHead(s,FP){const F=V3P.face,ph=Math.PI/2+s*V3EYE.dx/1024*F.phi[1],th=F.theta[0]+V3EYE.v*F.theta[1];return v3HeadPoint(new T.Vector3(-Math.cos(ph)*Math.sin(th),Math.cos(th),Math.sin(ph)*Math.sin(th)),FP.cheek,FP);}
+ /* the v3 skull is the ellipsoid pushed out (cheeks, muzzle, brow) and in (flat top and back): skullF(l) = its radius over the ellipsoid's
+    in the direction of the skull-space point l, so the clearance and the clip check test the real surface, not the ellipsoid x1.04 */
+ function v3SkullF(FP){const R=V3P.head.r,d=new T.Vector3();return l=>{d.set(l.x/R[0],l.y/R[1],l.z/R[2]);const n=d.length();if(n<1e-6)return 1;d.multiplyScalar(1/n);const p=v3HeadPoint(d,FP.cheek,FP);return Math.hypot(p.x/R[0],p.y/R[1],p.z/R[2]);};}
  function v3HeadMaps(L,sk,rough){const big=S3G==='full'?2048:1536,FW=big,FH=big/2,F0=V3P.face,face=v3FaceSheet(L,sk);
   const at=(x,W,H)=>[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
   const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));});
   const rm=document.createElement('canvas');rm.width=512;rm.height=256;{const x=rm.getContext('2d'),W=512,H=256,g=Math.round(255*rough),[ox,oy,sw,sh]=at(x,W,H),E=V3EYE;
-   x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*V2EYEGLOSS.rough);x.fillStyle=`rgb(${e},${e},${e})`;
+   x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*.3);/* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
    [-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024,sh*E.ry/640,0,0,7);x.fill();});}
   const rt=new T.CanvasTexture(rm);return [col,rt];}
  function v3Head(head,L,skin,hairM){const R=V3P.head.r,mesh=v2mesh,ell=v2ell,FP=v3FaceOf(L);
@@ -1198,24 +1202,29 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   [-1,1].forEach(s=>{const ex=s*R[0]*1.07;const e=mesh(ell(0.032,0.082,0.058,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012,0.055,0.036,12,9),earIn,head,ex+s*0.022,-0.02,-0.005);ie.rotation.y=s*0.32;
    if(L.earring)mesh(new T.TorusGeometry(.032,.008,6,16),v2M(L.earring,'trim'),head,s*R[0],-.11,0).rotation.y=Math.PI/2;});
   const bc=L.beardC||L.hairC||0x3a2010;if(L.face==='full'||L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
-  v2Hair(head,Object.assign({},L,{_v3:true}),hairM);}
+  v2Hair(head,Object.assign({},L,{_v3:true}),hairM);
+  sk.userData.eyeAt=s=>v3EyeOnHead(s,FP);
+  if(L.glasses){/* lenses centred on the painted v3 eyes (on the shaped skull), sized from the v3 eye; no temple arms */const gm=v2M(0x111111,'shoe'),F=V3P.face;const lr=V3EYE.rx/1024*F.phi[1]*R[0]*1.35,lh=V3EYE.ry/640*F.theta[1]*R[1]*1.12;
+   [-1,1].forEach(s=>{const e=v3EyeOnHead(s,FP);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(1,.16,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});
+   const l=v3EyeOnHead(-1,FP),r=v3EyeOnHead(1,FP);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.013,.013),gm,head,0,l.y+lh*.25,Math.max(l.z,r.z)+.03).castShadow=false;}
+  return FP;}
  function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
   const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY[L.body]||V2BODY.standard;
   L._logo={u:.575,v:.76};/* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
   /* collar and placket as the shipped poster shirt, sized to the v3 neck (ChatGPT round 8: the collar read a little big) */
-  const cy=t.y1-P.leg.hipY-CH-.025;{/* v3: the visible neck shows the collar from above, so its leaf turns down steeply (no flat red disc under the chin) */const cr=new T.LatheGeometry([[1.05,-.04],[.99,0],[.97,.042],[.995,.062],[1.04,.058],[1.08,.03],[1.1,.0]].map(([r,y])=>new T.Vector2(r,y)),Math.round(28*S3_SEGF));cr.scale(.155,1,.13);const trimD=trim2.clone();trimD.side=T.DoubleSide;tag(mesh(cr,trimD,chest,0,cy,.01),'collar');
+  const cy=t.y1-P.leg.hipY-CH-.025;{/* v3: the visible neck shows the collar from above, so its leaf turns down steeply (no flat red disc under the chin) *//* the stand hugs the neck (r ~.1, the neck is .08) and the leaf turns down to the shoulders, absolute metres [radius, y] */const cr=new T.LatheGeometry([[.16,-.04],[.15,0],[.118,.032],[.1,.056],[.103,.072],[.122,.06],[.138,.034],[.145,.018]].map(([r,y])=>new T.Vector2(r,y)),Math.round(28*S3_SEGF));cr.scale(1,1,.87);const trimD=trim2.clone();trimD.side=T.DoubleSide;tag(mesh(cr,trimD,chest,0,cy,.01),'collar');
    const C=V2SHIRT.collar,[fw,fl,fr]=C.flap;[-1,1].forEach(s=>{const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(fw,0);sh.quadraticCurveTo(fw*.95,-fl*.55,fr,-fl);sh.quadraticCurveTo(fr*.2,-fl*.98,0,-fl*.8);sh.lineTo(0,0);
     const g=new T.ExtrudeGeometry(sh,{depth:.01,bevelEnabled:true,bevelThickness:.006,bevelSize:.006,bevelSegments:2,curveSegments:5});if(s<0)g.scale(-1,1,1);g.scale(.9,.9,1);g.computeVertexNormals();
     const o=mesh(g,trim2,chest,s*C.gap,cy+.015,t.rz*.8*BK[1]);o.rotation.set(C.tilt,s*C.turn,s*C.splay);tag(o,'fold');});
    const pl=mesh(new T.BoxGeometry(.05,.1,.01),shirtPlain,chest,0,cy-.075,t.rz*.93*BK[1]);pl.rotation.x=-.3;tag(pl,'placket');}
   const neck=pivot(chest,0,t.y1-P.leg.hipY-CH,0);mesh(cap(0.078,0.084,0.09),skin,neck,0,0.07,0.01);
-  const head=pivot(neck,0,P.head.c[1]-t.y1,P.head.c[2]);v3Head(head,L,skin,hairM);
+  const head=pivot(neck,0,P.head.c[1]-t.y1,P.head.c[2]);const FP=v3Head(head,L,skin,hairM);
   const arm=s=>{const sh=pivot(chest,s*(P.shoulder.x*BK[0]+BK[2]),P.shoulder.y-P.leg.hipY-CH,0);
    /* the v3 sleeve: a tapered tube buried in the sloped shoulder, the fitted red cuff on its end (one group, so they move together) */
-   const sg=new T.Group();sg.position.set(s*.012,.03,0);sg.rotation.z=s*.12;sh.add(sg);tag(mesh(cap(0.118,0.104,0.18),shirtPlain,sg),'sleeve');
-   const CF=V2SHIRT.cuff,cr0=.108,cr1=.103,cuff=new T.LatheGeometry([new T.Vector2(cr0-.006,CF.h/2),new T.Vector2(cr0,CF.h/2-.004),new T.Vector2((cr0+cr1)/2+.002,0),new T.Vector2(cr1,-CF.h/2+.004),new T.Vector2(cr1-.006,-CF.h/2)],Math.round(16*S3_SEGF));tag(mesh(cuff,trim2,sg,0,-.158,0),'cuff');
+   const sg=new T.Group();sg.position.set(s*.012,-.005,0);sg.rotation.z=s*.12;sh.add(sg);tag(mesh(cap(0.112,0.104,0.15),shirtPlain,sg),'sleeve');/* the root sits lower than vinyl3's (+.03): the game's clips raise the arm beside the low v3 head and the buried top swung into the jaw */
+   const CF=V2SHIRT.cuff,cr0=.108,cr1=.103,cuff=new T.LatheGeometry([new T.Vector2(cr0-.006,CF.h/2),new T.Vector2(cr0,CF.h/2-.004),new T.Vector2((cr0+cr1)/2+.002,0),new T.Vector2(cr1,-CF.h/2+.004),new T.Vector2(cr1-.006,-CF.h/2)],Math.round(16*S3_SEGF));tag(mesh(cuff,trim2,sg,0,-.128,0),'cuff');
    tag(mesh(cap(P.arm.r0,P.arm.r1,P.arm.upper),skin,sh,0,-0.07,0),'upperarm');const el=pivot(sh,0,-P.arm.upper-0.04,0);mesh(cap(P.arm.r1*0.98,P.arm.r2,P.arm.fore),skin,el,0,0,0);
    const wr=pivot(el,0,-P.arm.fore-0.01,0);const k=(fem?.9:1)*1.2;/* v3 hands ~20% bigger (vinyl3 palm 2.05x); the fingers scale with rig.handK */mesh(ell(.088*k,.078*k,.06*k,14,10),skin,wr,0,-.06*k,.008);
    if(L.band&&s<0){const b=new T.TorusGeometry(.078,.024,8,20);b.rotateX(Math.PI/2);mesh(b,v2M(L.shirt==null?0xd81e2a:L.shirt,'trim'),el,0,-P.arm.fore+.01,0);}
@@ -1225,7 +1234,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const an=pivot(kn,0,-P.leg.len*.5,0);const S=P.shoe;const g=new T.SphereGeometry(1,Math.round(24*S3_SEGF),Math.round(14*S3_SEGF),0,Math.PI*2,0,Math.PI*.62);{const p=g.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);p.setX(i,p.getX(i)*(1+0.18*v3smf(-0.3,0.6,z)));}}g.computeVertexNormals();g.scale(S.w/2,S.h,S.len/2);mesh(g,shoeM,an,0,-S.h+.045,S.toe);
    const sole=new T.CylinderGeometry(1,1,.045,Math.round(24*S3_SEGF));{const p=sole.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);p.setX(i,p.getX(i)*(1+0.18*v3smf(-0.3,0.6,z)));}}sole.computeVertexNormals();sole.scale(S.w/2*1.04,1,S.len/2*1.04);mesh(sole,v2M(0x3a3634,'dark'),an,0,-S.h+.03,S.toe);return {th,kn,an};};
   const lL=leg(-1),lR=leg(1);tag(mesh(ell(.22*BK[0],.1,.16*BK[1]),pantM,hips,0,-.01,0),'pants');
-  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[tor],skinY:[-.05,-.25,-.18],thighs:[lL,lR].map(l=>[l.th,P.leg.r*1.02,P.leg.len*.5]),v2:true,v3:true,P,torsoR:v3TorsoR,headM:1.1,handK:1.2,skinM:skin,fem};}
+  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[tor],skinY:[-.05,-.25,-.18],thighs:[lL,lR].map(l=>[l.th,P.leg.r*1.02,P.leg.len*.5]),v2:true,v3:true,P,torsoR:v3TorsoR,headM:1.08,skullF:v3SkullF(FP),armM:1.25,handK:1.2,skinM:skin,fem};}
  window.TOPS_V3={P:V3P,want:v3Want,bases:V3BASES};
  function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head).userData.tag='skull';
   const F=V2P.face;const fg=new T.SphereGeometry(1,Math.round(28*S3_SEGF),Math.round(18*S3_SEGF),Math.PI/2-F.phi[1]/2,F.phi[1],F.theta[0],F.theta[1]);fg.scale(R[0]*1.008,R[1]*1.008,R[2]*1.008);
@@ -1489,8 +1498,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     margin Director's check uses). Measured in the skull mesh's own space, so the figure's scale and the head bone's pose are both in it.
     n = vertices inside; mm = the deepest one, in metres x1000 at the figure's scale */
  function s3HeadClear(fig){const R=fig.userData.s3rig,out={n:0,mm:0,checked:0,where:''};if(!R||!R.v2)return out;fig.updateMatrixWorld(true);let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});if(!sk)return out;
-  const r=V2P.head.r,M=R.headM||1.04,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,p=new T.Vector3(),l=new T.Vector3();
-  const test=(q,where)=>{out.checked++;l.copy(q).applyMatrix4(inv);const e=Math.hypot(l.x/r[0],l.y/r[1],l.z/r[2]);if(e<M){const mm=(M-e)*Math.min(r[0],r[1],r[2])*ws*1000;out.n++;if(mm>out.mm){out.mm=mm;out.where=where;}}};
+  const r=V2P.head.r,M0=1.04,SF=R.skullF,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,p=new T.Vector3(),l=new T.Vector3();
+  const test=(q,where)=>{out.checked++;l.copy(q).applyMatrix4(inv);const e=Math.hypot(l.x/r[0],l.y/r[1],l.z/r[2]),M=SF?M0*SF(l):M0;if(e<M){const mm=(M-e)*Math.min(r[0],r[1],r[2])*ws*1000;out.n++;if(mm>out.mm){out.mm=mm;out.where=where;}}};
   [['L',R.aR],['R',R.aL]].forEach(([sd,A])=>[['sh','arm'],['el','forearm'],['wr','hand']].forEach(([k,nm])=>{const pv=A&&A[k],b=pv&&pv.userData.box;if(!b)return;b.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);test(p,sd+' '+(o.userData.tag||nm));}});}));
   fig.traverse(o=>{if(!o.isSkinnedMesh||o.userData.tag!=='fingers')return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i);o.boneTransform(i,p);p.applyMatrix4(o.matrixWorld);test(p,'fingers');}});
   return out;}
@@ -1800,9 +1809,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   /* a figure whose pose hasn't moved since it was last cleared (the frozen bar extras, a held hero pose) costs one comparison */
   if(!fresh)fig.updateMatrixWorld(true);  if(!only)v2Grip(fig);/* the off hand closes on the spares after every clip (the clips open it) */
   const sigB=[B.RightHand,B.LeftHand,B.Head,B.LeftHandMiddle2];let sig=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;sig+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}if(!only&&u._v2sig===sig)return 0;
-  _v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1],HM=R3.headM||1.04,TR=R3.torsoR||v2TorsoR;const cm=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1;
+  _v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1],SF=R3.skullF,HMk=SF?1.05:1.04,TR=R3.torsoR||v2TorsoR,AM=R3.armM||1;let HM=HMk;const cm=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1;
   /* e < 1: the point (with margin m, metres) is inside the skull x1.04 (vol 0) or the shirt (vol 1) */
-  const evS=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;return Math.hypot(l.x/(r[0]*HM+g),l.y/(r[1]*HM+g),l.z/(r[2]*HM+g));};
+  const evS=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;if(SF)HM=HMk*SF(l);return Math.hypot(l.x/(r[0]*HM+g),l.y/(r[1]*HM+g),l.z/(r[2]*HM+g));};
   /* the shirt's lower part follows the hips (s3SkinFig): a chest-space point is taken back to the shirt's rest space first (one step of the
      inverse of that blend), so a fist at the belt is tested against the shirt where it is drawn */
   const hb3=R3.hips&&R3.hips.userData.box,Mr=hb3&&R3.bind?new T.Matrix4().copy(cm).multiply(hb3.matrixWorld).multiply(R3.bind):null,SY=R3.skinY||[-.1,-.3],sw=y=>{const q=(SY[0]-y)/(SY[0]-SY[1]);return y>SY[0]?0:y<SY[1]?1:q*q*(3-2*q);},_d=new T.Vector3();
@@ -1814,7 +1823,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    if(e<1e-3){l.z+=rr[1]+g;}else{l.x*=1.01/e;l.z*=1.01/e;}if(rest)fromRest(l);return out.copy(l).applyMatrix4(cb.matrixWorld);};
   /* where a point with margin m must go: out sideways and forward at its own height (the skull: radially only near the crown) */
   /* above the mouth (arms up: the hero cheer, a hand to the head) the arm goes out to its own side, past the ear, rather than across the face (Director: forearms outside the ears) */
-  const pushS=(P,m,out,sg)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws,rx=r[0]*HM+g,ry=r[1]*HM+g,rz=r[2]*HM+g;const yy=(l.y/ry)**2,hh=(l.x/rx)**2+(l.z/rz)**2;
+  const pushS=(P,m,out,sg)=>{l.copy(P).applyMatrix4(_v2m);if(SF)HM=HMk*SF(l);const g=m/ws,rx=r[0]*HM+g,ry=r[1]*HM+g,rz=r[2]*HM+g;const yy=(l.y/ry)**2,hh=(l.x/rx)**2+(l.z/rz)**2;
    if(sg&&l.y>-.2*ry&&yy+(l.z/rz)**2<.97){l.x=sg*rx*Math.sqrt(1-yy-(l.z/rz)**2)*1.004;}
    else if(yy<.9&&hh>1e-6){const k=Math.sqrt((1-yy)/hh)*1.004;l.x*=k;l.z*=k;}else l.multiplyScalar(1.004/Math.max(1e-3,Math.sqrt(yy+hh)));return out.copy(l).applyMatrix4(sk.matrixWorld);};
   const fwd=_v2p[2].set(0,0,-1).applyQuaternion(fig.getWorldQuaternion(_v2q)).setY(0).normalize(),hc=_v2p[3].set(0,0,0).applyMatrix4(sk.matrixWorld);let n=0;
@@ -1833,7 +1842,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     /* the fist itself, vertex by vertex (what the clip check measures): none inside the skull or the shirt */
     if(near)for(const d of dl)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=4){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,.004,.006);}});
     if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,0,.008);}}
-    let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m)<1)armIn=true;});
+    let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m*AM)<1)armIn=true;});
     if(!wp&&!armIn)break;if(!pass)n++;
     const sg=Math.sign(l.copy(S).applyMatrix4(_v2m).x)||1;
     const out=_v2p[8].subVectors(S,hc);out.y=0;if(out.lengthSq()<1e-8)out.set(sd==='Right'?1:-1,0,0);out.normalize();

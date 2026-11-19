@@ -25,7 +25,7 @@ const res=await p.evaluate(()=>{const Q=V._qa,T=Q.T;const specs=[...TOPS_S3_BASE
   if(!sk||!gs.length){gl.push({id:bs.id,err:'no '+(sk?'lenses':'skull')});Q.dispose(f);continue;}const ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x;const inv=new T.Matrix4().copy(sk.matrixWorld).invert();
   /* the lenses may be merged into one mesh: each lens centre = the mean of the rim vertices on its side of the face, in skull space */
   const side=[[0,0,0,0],[0,0,0,0]],v=new T.Vector3();gs.forEach(o=>{const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){v.fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);const k=v.x<0?0:1;side[k][0]+=v.x;side[k][1]+=v.y;side[k][2]+=v.z;side[k][3]++;}});
-  const d=[-1,1].map((s,i)=>{const e=TOPS_V2EYE(s),c=side[i];if(!c[3])return 999;return Math.hypot(c[0]/c[3]-e.x,c[1]/c[3]-e.y)*ws*1000;});gl.push({id:bs.id,mm:d.map(v=>+v.toFixed(1))});Q.dispose(f);}
+  const d=[-1,1].map((s,i)=>{const e=(sk.userData.eyeAt||TOPS_V2EYE)(s),c=side[i];/* a v3 head paints its eyes on the shaped skull (its own eyeAt) */if(!c[3])return 999;return Math.hypot(c[0]/c[3]-e.x,c[1]/c[3]-e.y)*ws*1000;});gl.push({id:bs.id,mm:d.map(v=>+v.toFixed(1))});Q.dispose(f);}
  return {figs,poses:poses.length,clips:clips.length,n,per:Object.fromEntries(Object.entries(per).map(([k,v])=>[k,+v.toFixed(1)])),worst:Object.fromEntries(Object.entries(worst).map(([k,v])=>[k,+v.toFixed(1)])),nf:fails.length,fails:fails.slice(0,30),glasses:gl,spareAngMin:+angMin.toFixed(0)};});
 console.log(JSON.stringify(res));const remy=reqs.filter(u=>/rig\/remy-/.test(u));console.log('remy fetches:',remy.length);
 if(pe.length)console.log('page errors',JSON.stringify(pe.slice(0,3)));const gbad=res.glasses.some(g=>g.err||g.mm.some(v=>v>20));
