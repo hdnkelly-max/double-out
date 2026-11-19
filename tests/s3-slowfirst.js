@@ -51,7 +51,8 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applic
   console.log(JSON.stringify(out, null, 1));
   const fails = [];
   if (rigLanded === null) fails.push('the S3 rig (chars/leonard.glb) never landed');
-  if (!before.length) fails.push('no figure was built before the S3 rig landed (the slow window was not exercised)');
+  // with the S3 rig requested first it may land before any figure is built (191e53f): then the first match must start Vinyl
+  if (!before.length && !(rigLanded !== null && matchEarly.opp && matchEarly.opp.s3)) fails.push('no figure was built before the S3 rig landed and the first match did not start Vinyl');
   if (!after.length && !(matchLate.opp && matchLate.opp.s3)) fails.push('no figure checked after the S3 rig landed');
   if (lifelike.length) fails.push(`${lifelike.length} lifelike figure(s) built (at ${lifelike.map(r => r.t + ' s').join(', ')}; rig landed at ${rigLanded} s)`);
   for (const [k, v] of Object.entries({ matchEarly, matchLate })) for (const w of ['opp', 'me']) if (v[w] && !v[w].s3) fails.push(`${k}: the ${w === 'me' ? 'player' : 'opponent'} figure is not the Vinyl build`);
