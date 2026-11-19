@@ -57,6 +57,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON(needs.pick.outputs.shards) }}
     name: fast ${{ matrix.shard.n }} (${{ matrix.shard.tests }})
+    defaults: { run: { shell: bash } }   # the Playwright image's default shell is sh
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
