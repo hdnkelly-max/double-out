@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<script>window.TOPS_BUILD="1795082264236";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795084795485";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -13709,7 +13709,7 @@ function xpBreakdown(m,ranked,side){const t=tierOf(),mul=XPMUL[t];const L=[];con
  (S.featsNew||[]).forEach(f=>add('Feat: '+f.n,80*mul)); if(m.won&&S.rival)add('Beat your rival',75);if(m.won&&S.revenge)add('Revenge',75);
  if(S.after==='promo')add('Promotion',350);if(S.after==='champion')add('Title',250);
  return L;}
-function gainLevels(v,xp){const ups=[];v.xp+=xp;while(v.lv<100&&v.xp>=lvNeed(v.lv)){v.xp-=lvNeed(v.lv);v.lv++;const r=Object.assign({lv:v.lv},rewardAt(v.lv));if(r.k==='cash'){r.v=CASHR[tierOf()];r.n=`${money(r.v)} bonus`;career().bank+=r.v;}if(r.k==='title')v.title=r.v;v.unl.push(r);ups.push(r);}applyUnlocks();return ups;}
+function gainLevels(v,xp,noCash){const ups=[];v.xp+=xp;while(v.lv<100&&v.xp>=lvNeed(v.lv)){v.xp-=lvNeed(v.lv);v.lv++;const r=Object.assign({lv:v.lv},rewardAt(v.lv));if(r.k==='cash'){if(noCash){r.v=0;r.n='Level up';r.s3=1;}else{r.v=CASHR[tierOf()];r.n=`${money(r.v)} bonus`;career().bank+=r.v;}}if(r.k==='title')v.title=r.v;v.unl.push(r);ups.push(r);}applyUnlocks();return ups;}
 // ----- after every career match -----
 let pre=null;
 const _cam=careerAfterMatch;careerAfterMatch=function(){const c=career();const v=V3();if(!v||S.practice||S.drill){return _cam.apply(this,arguments);}
@@ -13933,7 +13933,15 @@ window.TOPS_LUX={items:()=>{const L=luxRead();return LUX.map(x=>Object.assign({}
  owns:id=>{const L=luxRead();return !!(L&&L.owned.includes(id));},badges:()=>{const L=luxRead();return L?LUX.filter(x=>x.badge&&L.owned.includes(x.id)).map(x=>x.badge):[];},
  sets:()=>{const L=luxRead();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxRead();return L&&L.edition||null;},kitAtRisk,
  shop:luxShop,provide:k=>{if(Object.values(LUX_FX).some(a=>a.includes(k)))LUX_LIVE.add(k);},effects:()=>JSON.parse(JSON.stringify(LUX_FX)),live:()=>[...LUX_LIVE],pool:poolInfo};
-window.C3={pending:()=>!!pre,/* ENG-RESET: a reward card still to show (its achievement payout runs when it opens) */conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
+/* CAR-XP (Overseer 21:58, David 'almost no XP'): a Season 3 Circuit match skips the Season 2 league wrapper above, which also skipped the
+   player XP and levels (and so the stat points and level unlocks). s3MatchXP is the same match XP as Season 2 (xpBreakdown, ranked, tier
+   multiplier, promotion/title), called by tc/s3.js after the Circuit result. Season 3 money stays the Circuit's: no contract or pool payouts
+   and no level-up cash (noCash), so the Circuit purses are still the only prize money. */
+function s3MatchXP(){const v=V3();if(!v)return null;/* ChatGPT P1-2: once per match object (S is new for every match); the XP, the Circuit result and the counters are saved in the same persist() */if(S&&S._s3xpDone)return S.s3xp||null;if(S)S._s3xpDone=1;if(!v.s3xp){try{s3CatchUp({won:!!(S&&S.won)});}catch(e){}}/* a match played before any hub view: catch up first, without this match */const before={lv:v.lv,xp:v.xp};const L=xpBreakdown(summary(),true,false);const xp=L.reduce((a,b)=>a+b[1],0);const ups=gainLevels(v,xp,true);if(v&&S&&S.p&&S.p[0]){const a=avg(S.p[0]);if(a>v.best)v.best=+a.toFixed(1);}return {xp,L,ups,before,after:{lv:v.lv,xp:v.xp}};}
+/* CAR-XP catch-up, once per Season 3 career: the matches already played without XP get the base match XP (played 60 + win 100, x the
+   Pub multiplier); tons, checkouts and quick legs from those matches aren't recorded, so they aren't counted. No cash. */
+function s3CatchUp(cur){const c=career(),v=V3();if(!c||c.run||!c.circuit||!v||v.s3xp)return null;v.s3xp=1;const mul=XPMUL[0];/* ChatGPT P2-1: past matches' levels aren't kept per match, so the catch-up uses the Pub multiplier (never overpays) */ /* cur: the match being scored now is already in wins/losses, and gets its own full XP */const w=Math.max(0,(c.wins|0)-(cur&&cur.won?1:0)),l=Math.max(0,(c.losses|0)-(cur&&!cur.won?1:0));const xp=Math.round((w*160+l*60)*mul);if(xp<=0)return {xp:0};const ups=gainLevels(v,xp,true);return {xp,w,l,ups};}
+window.C3={pending:()=>!!pre,s3MatchXP,s3CatchUp,/* ENG-RESET: a reward card still to show (its achievement payout runs when it opens) */conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
 <script>
@@ -14241,7 +14249,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.11';
+window.TOPS_VER='4.12';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -16774,7 +16782,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   // ---- a brand new Season 3 career: the Pub, the starter bank, the Circuit state (full reset, Hayden 07:45)
   if(typeof newCareer==='function'){const _nc=newCareer;newCareer=function(){const r=_nc.apply(this,arguments);try{if(on()){const c=career();if(c&&!c.run){c.circuit=C().newCareer({bank:START_BANK});c.bank=START_BANK;c.tier=0;c.stage='circuit';c.s3=1;persist();L('s3_new_career',{bank:START_BANK});}}}catch(e){}return r;};}
 
-  function view(){const k=circ();if(!k)return null;const c=career();k.bank=c.bank||0;const E=C(),Lv=E.LEVELS[k.level];
+  function view(){const k=circ();if(!k)return null;/* CAR-XP: matches played before the XP fix get their base XP once */try{const cu=window.C3&&C3.s3CatchUp?C3.s3CatchUp():null;if(cu&&cu.xp){L('s3_xp_catchup',{xp:cu.xp,w:cu.w,l:cu.l,lv:C3.V3().lv});persist();}}catch(e){}const c=career();k.bank=c.bank||0;const E=C(),Lv=E.LEVELS[k.level];
     const played=k.history.filter(h=>h.level===k.level).length;
     const cal=E.calendar(k).map(e=>{const prizes={},points={};E.FIN.forEach(f=>{prizes[f]=E.prizeFor(e,f);points[f]=E.pointsFor(e,f);});return {id:e.id,n:e.n,where:e.where,kind:e.kind,size:e.size,entry:e.entry,travel:e.travel,cost:e.cost,purse:e.purse,pts:e.pts,every:e.every,jump:!!e.jump,canAfford:e.canAfford,prizes,points};});
     let live=null;if(k.live){const e=E.eventOf(k.live.id),o=E.nextOpp(k);live={id:e.id,n:e.n,where:e.where,round:k.live.round,roundName:E.FIN_NAME[o.round]||o.round,rounds:k.live.rounds.slice(),results:(k.live.results||[]).slice(),group:k.live.g?{w:k.live.g.w,p:k.live.g.p}:null,opp:{name:oppName(k),avg:o.avg,legs:o.legs}};}
@@ -16818,9 +16826,10 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     if(r.done){/* trophy records from day one (Overseer 08:12, for the trophy cabinet later): every finished event keeps its date; wins and finals also go in titles */
       try{const k=c.circuit,h=k.history[k.history.length-1];if(h){h.date=new Date().toISOString();h.season=3;}if(r.fin==='W'||r.fin==='F'){const e=C().eventOf(S.s3.id);(k.titles=k.titles||[]).push({ev:e.id,n:e.n,level:e.level,season:3,finish:r.fin,prize:r.prize||0,date:new Date().toISOString()});}}catch(e){}
       S.earned=r.prize||0;if(r.up&&r.up.to>was)S.after='promo';if(r.up&&r.up.champion)S.after='champion';}
+    try{S.s3xp=(window.C3&&C3.s3MatchXP)?C3.s3MatchXP():null;}catch(e){S.s3xp=null;}/* CAR-XP: player XP + levels, no cash (career3.js) */
     S.s3res=r;persist();setTimeout(()=>{try{lbPost();}catch(e){}},1500);
     const me0=S.p[0],op0=S.p[1],lv=id=>{try{return window.TOPS_LofT?Math.round(TOPS_LofT(id)*75+20):null;}catch(e){return null;}};
-    L('s3_result',{tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
+    L('s3_result',{xp:S.s3xp?S.s3xp.xp:null,lv:S.s3xp?S.s3xp.after.lv:null,tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
     try{window.dispatchEvent(new CustomEvent('tops:s3',{detail:r}));}catch(e){}
   };}
 
