@@ -1988,7 +1988,7 @@ function driftBeat(){}
    changes, CAR-EASE lesson). win = perfect window +-ms at Rhythm level 0 and 1, sway = mm at Control level 0 and 1 (geometric), land = near-miss
    landing radius x per level (Pub .. Palace). Season 3 only; off = 3.57/4.0x exactly. */
 window.TOPS_CURVE=(()=>{try{const q=new URLSearchParams(location.search).get('curve');if(q==='1'||q==='0')localStorage.setItem('tops_curve',q);return localStorage.getItem('tops_curve')==='1';}catch(e){return false;}})();
-const CURVE_TUNE={win:[7,18],sway:[38,15],land:[1,1,1,1,1,1,1]};
+const CURVE_TUNE={win:[7,18],sway:[38,15],land:[.6,.55,.6,.7,.65,.62,.7]};
 function curveOn(){return !!(window.TOPS_CURVE&&window.TOPS_S3FLAG);}
 function curveAt(kind,L){const c=CURVE_TUNE[kind];L=Math.max(0,Math.min(1,+L||0));return c[0]*Math.pow(c[1]/c[0],L);}
 function ringR(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
