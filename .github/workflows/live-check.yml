@@ -21,9 +21,15 @@ permissions: { contents: read, statuses: write }
 jobs:
   live:
     # a finished, successful real release or deploy (a dry run or the rollback test changes nothing live)
+    # ChatGPT P1-2: only our own release.yml / deploy.yml, run on main in this repo (a same-named workflow on a branch, a fork or a
+    # dry run from a branch never triggers it); this job only reads code and posts a status (contents: read, statuses: write)
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.repository.id == github.event.workflow_run.head_repository.id &&
+       github.event.workflow_run.repository.full_name == github.repository &&
+       contains(fromJSON('[".github/workflows/release.yml", ".github/workflows/deploy.yml"]'), github.event.workflow_run.path) &&
        !contains(github.event.workflow_run.display_title, 'mode=dry_run') &&
        !contains(github.event.workflow_run.display_title, 'mode=test_rollback'))
     runs-on: ubuntu-latest
