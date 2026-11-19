@@ -31,14 +31,13 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null
       - name: Build (tests/setup.sh)
         run: bash tests/setup.sh
-      - name: Pick tests (the fast suite + any tests/*.js this push changed)
+      - name: Pick tests (the fast suite + any tests/*.js the branch changed)
         id: pick
-        env: { BEFORE: '${{ github.event.before }}' }
         run: |
           FAST="regress.js asset-refs.js s3-welcome.js s3-screens.js s3-match.js s3-creator.js"
-          # what this push changed: against the previous push, or for a new branch against where it left src
-          if [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then B=$BEFORE; else git fetch -q origin src; B=$(git merge-base origin/src HEAD); fi
-          CHANGED=$(git diff --name-only --diff-filter=AM "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' || true)
+          # every test the branch added, changed or renamed since it left src (not only this push: ChatGPT P2, 19 Nov)
+          git fetch -q origin src; B=$(git merge-base origin/src HEAD)
+          CHANGED=$(git diff --name-only --diff-filter=AMR "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' || true)
           ALL=$FAST; for t in $CHANGED; do case " $ALL " in *" $t "*) ;; *) ALL="$ALL $t";; esac; done
           echo "list=$ALL" >> $GITHUB_OUTPUT; echo "changed=$(echo $CHANGED)" >> $GITHUB_OUTPUT
           echo "tests: $ALL"
