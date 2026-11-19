@@ -2270,6 +2270,14 @@ function driftAt(now,p){const dt=TH.last?Math.min(.1,(now-TH.last)/1000):0;TH.la
  let x=p.A*Math.sin(th),y=.55*p.A*Math.sin(2*th);if(p.dl){x+=p.dl*1.2*Math.sin(.37*th+1);y+=p.dl*.9*Math.sin(.29*th+2);}return {x,y};}
 function driftBeat(){}
 // ring radius (mm) for a release dt ms from the tightest moment (+ late)
+/* S3-CURVE (hidden switch ?curve=1, default off; Hayden 08:53/08:54 + 17:03): stats move the throw through sway (Control) and the perfect window
+   (Rhythm) only. The ring formula is untouched (3.54) and honest: it is drawn with the real window, so what looks tight is perfect, and near-misses
+   land exactly on the drawn ring (ChatGPT 17:40: no hidden landing changes). win = perfect window +-ms at Rhythm level 0 and 1, sway = mm at Control
+   level 0 and 1 (geometric), lvl = window multiplier per Circuit level (Pub .. Palace). Season 3 only; off = 3.57/4.0x exactly. */
+window.TOPS_CURVE=(()=>{try{const q=new URLSearchParams(location.search).get('curve');if(q==='1'||q==='0')localStorage.setItem('tops_curve',q);return localStorage.getItem('tops_curve')==='1';}catch(e){return false;}})();
+const CURVE_TUNE={win:[15,30],sway:[30,10],lvl:[1,1.07,.98,.75,.82,.8,.78]};
+function curveOn(){return !!(window.TOPS_CURVE&&window.TOPS_S3FLAG);}
+function curveAt(kind,L){const c=CURVE_TUNE[kind];L=Math.max(0,Math.min(1,+L||0));return c[0]*Math.pow(c[1]/c[0],L);}
 function ringR(dt,tp){const Rmin=1.794*tp.s0;const e=Math.max(0,Math.abs(dt)-tp.P);const k=Math.pow(e/Math.max(80,tp.D-tp.P),.5);return Math.min(70,Rmin+Math.max(0,tp.R0-Rmin)*k*(dt>0?1.3:1)*(tp.kv||1));}
 function landFrom(lock,tp,dt){const e=Math.sign(dt)*Math.min(200,Math.max(0,Math.abs(dt)-tp.P));const r=ringR(dt,tp);const sg=r/1.794;const lean=Math.sign(dt)*.35*(r-1.794*tp.s0);/* v0.32: a perfect release never throws a wild one: scatter capped at 1.4 sigma */const pf=Math.abs(dt)<=tp.P;const gs=()=>{const v=gauss();return pf?Math.max(-1.4,Math.min(1.4,v)):v;};return {x:lock.x+gs()*sg*.95,y:lock.y+lean+gs()*sg*.85,e};}
 function PM(){return (S&&S.pullMs)||PULL_MS;}
