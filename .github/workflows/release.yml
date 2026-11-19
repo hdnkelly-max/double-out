@@ -6,14 +6,14 @@
 # releases only if all pass. Items that touch sql/ need migration=applied. main is the release record
 # (RELEASES.log: prepared -> live|failed); rollback runs inside this run and redeploys the last *live* release's ref.
 name: release
-run-name: "${{ inputs.risk }} | ${{ inputs.item }} | commit=${{ inputs.commit }} | tree=${{ inputs.tree }} | base=${{ inputs.base }} | tests=${{ inputs.tests }} | migration=${{ inputs.migration }} | mode=${{ inputs.mode }}"
+run-name: "${{ inputs.risk }} | ${{ inputs.item }} | commit=${{ inputs.commit }} | tree=${{ inputs.tree }} | base=${{ inputs.base }} | tests=${{ inputs.tests }} | migration=${{ inputs.migration }} | mode=${{ inputs.mode }} | attest=${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}"
 on:
   workflow_dispatch:
     inputs:
       commit: { description: 'QA-passed commit (sha on this repo)', required: true }
       tree:   { description: 'QA-tested source tree hash (pre-bump)', required: true }
       risk:   { description: 'R0, R1, R2 or R3 (from the QA PASS line)', required: true }
-      attest: { description: 'Type exactly: QA PASS names this tree', required: true }
+      attest: { description: "Type exactly: QA PASS names this tree (any risk), or AUTHOR TESTS PASS names this tree (R3 / LOW only: art, text, UI, visuals)", required: true }
       base:   { description: 'src commit QA merged onto (needed only if src has moved since the pass)', required: false, default: '' }
       tests:  { description: 'Item tests for the new-combination check, space-separated paths (regress.js 2 always runs)', required: false, default: '' }
       migration: { description: 'none, or applied (required when the release changes sql/)', required: false, default: 'none' }
@@ -38,7 +38,13 @@ jobs:
         env: { RISK: '${{ inputs.risk }}', ATTEST: '${{ inputs.attest }}', MIG: '${{ inputs.migration }}', TESTS: '${{ inputs.tests }}' }
         run: |
           case "$RISK" in R0|R1|R2|R3) ;; *) echo "::error::REFUSED: risk '$RISK' is not R0-R3"; exit 1;; esac
-          [ "$ATTEST" = "QA PASS names this tree" ] || { echo "::error::REFUSED: attest input missing or wrong"; exit 1; }
+          # Hayden 17:03: LOW items (R3: art, text, UI, visuals) ship on the author's own tests; R0-R2 (throw, aim, money, saves,
+          # difficulty) still need a Q&D pass. The attest names which, and the release log records it (by=qa|author).
+          case "$ATTEST" in
+            "QA PASS names this tree") ;;
+            "AUTHOR TESTS PASS names this tree") [ "$RISK" = R3 ] || { echo "::error::REFUSED: $RISK needs a Q&D pass (attest 'QA PASS names this tree'); author tests are enough only for R3 / LOW"; exit 1; } ;;
+            *) echo "::error::REFUSED: attest must be exactly 'QA PASS names this tree' or (R3 only) 'AUTHOR TESTS PASS names this tree'"; exit 1 ;;
+          esac
           case "$MIG" in none|applied) ;; *) echo "::error::REFUSED: migration must be none or applied"; exit 1;; esac
           case "${{ inputs.item }}" in *'|'*) echo "::error::REFUSED: item name must not contain '|' (the run name carries the inputs)"; exit 1;; esac
           for t in $TESTS; do echo "$t" | grep -qE '^tests/[A-Za-z0-9_.-]+\.js$' || { echo "::error::REFUSED: test '$t' is not tests/<name>.js"; exit 1; }; done
@@ -212,7 +218,7 @@ jobs:
     timeout-minutes: 15
     permissions: { contents: write, pages: write, id-token: write }
     environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url }}' }
-    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}' }
+    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}', BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}" }
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, path: site, fetch-depth: 0 }
@@ -228,7 +234,7 @@ jobs:
           # (cp -r only adds). Only when the build publishes an s3/ folder; an older build leaves main's s3/ alone.
           if [ -d ../out/s3 ]; then git rm -rq --ignore-unmatch -- s3; rm -rf -- ./s3; fi
           cp -r ../out/. .
-          echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
+          echo "$(date -u +%FT%TZ) prepared version=$V tag=$TAG tree=$QTREE commit=$QCOMMIT risk=$RISK by=$BY run=${{ github.run_id }} item=$ITEM" >> RELEASES.log
           git add -A index.html version.json next assets img RELEASES.log
           if [ -d rig ]; then git add -A rig; fi   # rig/: hashed rig files, only ever added; a rollback leaves them (the previous page keeps its own)
           if [ -d s3 ]; then git add -A s3; fi     # s3/: Season 3 art; a rollback to an older page leaves it (unused there)
