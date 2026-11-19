@@ -1,5 +1,5 @@
 <meta charset="utf-8"><base href="../">
-<script>window.TOPS_BUILD="1795065891500";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795073545158";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -9008,7 +9008,7 @@ version 0.6.9
 	THREE.EXRLoader = EXRLoader;
 
 } )();
-</script><script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',0.16)</script>
+</script><script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',0.15)</script>
 <script>// This file is part of meshoptimizer library and is distributed under the terms of MIT License.
 // Copyright (C) 2016-2020, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
 var MeshoptDecoder = (function() {
@@ -14084,7 +14084,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.06';
+window.TOPS_VER='4.07';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -20090,6 +20090,45 @@ window.TC_CAB3D = (function () {
 
 /* creator PLAYER row: the painted Vinyl head, framed on the face (the PNGs are head and shoulders) */
 .s3-on #s3Cre .s3c-base img.s3-head{object-fit:cover;transform:scale(1.75);transform-origin:50% 6%}
+
+/* EXP-IDLE 1 · first night (behind s3x=1) */
+/* the shell's tokens live inside #rbApp (CSS nesting); this screen sits on <body>, so it carries its own */
+.s3-on .s3-fn{--bg:#121517;--card:#1a1e21;--card2:#22272b;--line:#343a3e;--ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--good:#7fd19a;--d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;--b:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;position:fixed;inset:0;z-index:95;background:#08090b;color:var(--ink);font:14px/1.4 var(--b);display:flex;flex-direction:column;overflow:auto}
+.s3-on .s3-fnart{position:relative;height:clamp(170px,32vh,280px);flex:none;background:#2a1416 center 40%/cover no-repeat}
+.s3-on .s3-fnart::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,9,11,.05) 25%,rgba(8,9,11,.75) 70%,#08090b)}
+.s3-on .s3-fntop{position:absolute;z-index:1;left:16px;right:16px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+.s3-on .s3-fnk{align-self:flex-start;height:24px;padding:0 10px;border-radius:12px;background:var(--red);color:#fff;font:800 12px/24px var(--d);letter-spacing:1.2px;text-transform:uppercase}
+.s3-on .s3-fnt{font:800 italic 34px/.92 var(--d);text-transform:uppercase;letter-spacing:.3px;margin:0}
+.s3-on .s3-fnsub{font-size:13px;color:var(--ink2)}
+.s3-on .s3-fnb{flex:1;padding:6px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;max-width:440px;width:100%;margin:0 auto;box-sizing:border-box}
+.s3-on .s3-fnl{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3)}
+.s3-on .s3-fnc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.s3-on .s3-fnrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.s3-on .s3-fndraw{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;counter-reset:r}
+.s3-on .s3-fndraw li{position:relative;background:var(--card2);border-radius:10px;padding:8px 8px 9px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.s3-on .s3-fndraw li b{font:800 18px/1 var(--d);text-transform:uppercase}
+.s3-on .s3-fndraw li span{font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s3-on .s3-fndraw li.s3-fnon{outline:2px solid var(--red);outline-offset:-2px}
+.s3-on .s3-fndraw li.s3-fnon span{color:var(--ink2)}
+.s3-on .s3-fndraw li.s3-fnwin{background:linear-gradient(180deg,#3a2a08,#22272b)}
+.s3-on .s3-fndraw li.s3-fnwin b{color:#f1c64b}
+.s3-on .s3-fnkv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.s3-on .s3-fnkv div{background:var(--card2);border-radius:10px;padding:8px}
+.s3-on .s3-fnkv b{display:block;font:800 21px/1.05 var(--d)}
+.s3-on .s3-fnkv span{display:block;font-size:11px;color:var(--ink3);line-height:1.25}
+.s3-on .s3-fnlad{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.s3-on .s3-fnlad li{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--ink3);text-align:center;line-height:1.1}
+.s3-on .s3-fnlad i{display:block;width:100%;height:6px;border-radius:3px;background:var(--card2)}
+.s3-on .s3-fnlad .s3-fnnow i{background:var(--red)}.s3-on .s3-fnlad .s3-fnnow{color:var(--ink);font-weight:700}
+.s3-on .s3-fnlad .s3-fnend i{background:#f1c64b}.s3-on .s3-fnlad .s3-fnend{color:#f1c64b}
+.s3-on .s3-fnbar{height:8px;border-radius:4px;background:var(--card2);overflow:hidden}.s3-on .s3-fnbar i{display:block;height:100%;width:0;background:var(--red)}
+.s3-on .s3-fnsm{font-size:13px;color:var(--ink2)}
+.s3-on .s3-fngo{margin-top:auto;position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -14px 24px 6px #08090b;height:58px;border:0;border-radius:12px;background:var(--red);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;flex:none}
+.s3-on .s3-fngo b{font:800 22px/1 var(--d);letter-spacing:.6px;text-transform:uppercase}.s3-on .s3-fngo small{font-size:12px;opacity:.85}
+.s3-on .s3-fnopp{display:flex;align-items:center;gap:12px}
+.s3-on .s3-fnopp img{width:56px;height:56px;border-radius:12px;object-fit:cover;object-position:50% 20%;background:var(--card2);flex:none}
+.s3-on .s3-fnopp b{display:block;font:800 22px/1 var(--d);text-transform:uppercase}.s3-on .s3-fnopp span{font-size:12px;color:var(--ink3)}
+@media (max-height:700px){.s3-on .s3-fnart{height:150px}.s3-on .s3-fnmore{display:none}.s3-on .s3-fnt{font-size:28px}.s3-on .s3-fnb{gap:9px}.s3-on .s3-fnc{padding:10px 12px;gap:8px}.s3-on .s3-fnkv b{font-size:18px}}
 </style>
 <script>window.TOPS_S3_HAVE=["assets/cards/art/anderson.webp","assets/cards/art/anika.webp","assets/cards/art/bagofnails.webp","assets/cards/art/barneveld.webp","assets/cards/art/bigmal.webp","assets/cards/art/bounceout.webp","assets/cards/art/bust.webp","assets/cards/art/chalker.webp","assets/cards/art/club.webp","assets/cards/art/comeback.webp","assets/cards/art/db_16.webp","assets/cards/art/db_161.webp","assets/cards/art/db_164.webp","assets/cards/art/db_167.webp","assets/cards/art/db_4.webp","assets/cards/art/db_8.webp","assets/cards/art/db_bnb.webp","assets/cards/art/db_bull.webp","assets/cards/art/db_marker.webp","assets/cards/art/db_shotgun.webp","assets/cards/art/db_threebed.webp","assets/cards/art/db_top.webp","assets/cards/art/deano.webp","assets/cards/art/dpnz.webp","assets/cards/art/green.webp","assets/cards/art/humphries.webp","assets/cards/art/jonno.webp","assets/cards/art/kauri.webp","assets/cards/art/kev.webp","assets/cards/art/kw_jandals.webp","assets/cards/art/kw_jug.webp","assets/cards/art/kw_karaoke.webp","assets/cards/art/kw_leaner.webp","assets/cards/art/kw_pokies.webp","assets/cards/art/kw_quiz.webp","assets/cards/art/kw_smoko.webp","assets/cards/art/kw_tab.webp","assets/cards/art/lastorders.webp","assets/cards/art/madhouse.webp","assets/cards/art/matchdart.webp","assets/cards/art/mo.webp","assets/cards/art/nuke.webp","assets/cards/art/oche.webp","assets/cards/art/palace.webp","assets/cards/art/papakura.webp","assets/cards/art/pete.webp","assets/cards/art/phil.webp","assets/cards/art/power.webp","assets/cards/art/pr_bouncer.webp","assets/cards/art/pr_bump.webp","assets/cards/art/pr_cooker.webp","assets/cards/art/pr_flash.webp","assets/cards/art/pr_heckle.webp","assets/cards/art/pr_horn.webp","assets/cards/art/pr_nan.webp","assets/cards/art/pr_orders.webp","assets/cards/art/pr_vape.webp","assets/cards/art/pr_wobble.webp","assets/cards/art/price.webp","assets/cards/art/raffle.webp","assets/cards/art/rd_bigscreen.webp","assets/cards/art/rd_caller.webp","assets/cards/art/rd_crowd.webp","assets/cards/art/rd_draw.webp","assets/cards/art/rd_handshake.webp","assets/cards/art/rd_hotel.webp","assets/cards/art/rd_practice.webp","assets/cards/art/rd_qschool.webp","assets/cards/art/rd_sponsor.webp","assets/cards/art/rd_tourcard.webp","assets/cards/art/rd_travel.webp","assets/cards/art/regional.webp","assets/cards/art/robbed.webp","assets/cards/art/robin.webp","assets/cards/art/rsa.webp","assets/cards/art/shazza.webp","assets/cards/art/sherlock.webp","assets/cards/art/smith.webp","assets/cards/art/tama.webp","assets/cards/art/the170.webp","assets/cards/art/tl_airport.webp","assets/cards/art/tl_autograph.webp","assets/cards/art/tl_champ.webp","assets/cards/art/tl_physio.webp","assets/cards/art/tl_press.webp","assets/cards/art/tl_ref.webp","assets/cards/art/tl_ritual.webp","assets/cards/art/tl_rival.webp","assets/cards/art/tl_tunnel2.webp","assets/cards/art/tn_407.webp","assets/cards/art/tn_5am.webp","assets/cards/art/tn_biter.webp","assets/cards/art/tn_cruiser.webp","assets/cards/art/tn_daisy.webp","assets/cards/art/tn_donkey.webp","assets/cards/art/tn_hotsauce.webp","assets/cards/art/tn_king.webp","assets/cards/art/tn_maddog.webp","assets/cards/art/tn_pie.webp","assets/cards/art/tn_sammo.webp","assets/cards/art/tn_stickers.webp","assets/cards/art/tn_stu.webp","assets/cards/art/tn_tard.webp","assets/cards/art/tn_tow.webp","assets/cards/art/tn_warship.webp","assets/cards/art/transtasman.webp","assets/cards/art/tunnel.webp","assets/cards/art/water.webp","assets/cards/art/whitewash.webp","assets/cards/art/wigan.webp","assets/cards/art/wobble.webp","assets/cards/art/wright.webp","assets/cards/art/wrongdouble.webp","assets/creator/full_dazza.png","assets/creator/full_kai.png","assets/creator/full_mia.png","assets/creator/full_ray.png","assets/creator/full_tama.png","assets/creator/head_dazza.png","assets/creator/head_kai.png","assets/creator/head_mia.png","assets/creator/head_ray.png","assets/creator/head_tama.png","assets/crowd.webp","assets/rb/backroom.jpg","assets/rb/lk_f.jpg","assets/rb/lk_f_mask.png","assets/rb/lk_m.jpg","assets/rb/lk_m_mask.png","assets/rb/opp_bigmal.jpg","assets/rb/result_loss.jpg","assets/rb/result_win.jpg","assets/rb/t_arena.webp","assets/rb/t_hero.webp","assets/rb/tn_t0.jpg","assets/rb/tn_t0f.jpg","assets/rb/tn_t1.jpg","assets/rb/tn_t1f.jpg","assets/rb/tn_t2.jpg","assets/rb/tn_t2f.jpg","assets/rb/tn_t3.jpg","assets/rb/tn_t3f.jpg","assets/rb/tn_t4.jpg","assets/rb/tn_t4f.jpg","assets/rb/tn_t5.jpg","assets/rb/tn_t5f.jpg","assets/rb/tn_t6.jpg","assets/rb/tn_t6f.jpg","assets/rb/venue_t0.jpg","assets/rb/venue_t1.jpg","assets/rb/venue_t2.jpg","assets/rb/venue_t3.jpg","assets/rb/venue_t4.jpg","assets/rb/venue_t5.jpg","assets/rb/venue_t6.jpg","assets/rb/w_win_t0.jpg","assets/rb/w_win_t1.jpg","assets/rb/w_win_t2.jpg","assets/rb/w_win_t3.jpg","assets/rb/w_win_t4.jpg","assets/rb/w_win_t5.jpg","assets/rb/w_win_t6.jpg","assets/ui/bg_club.webp","assets/ui/bg_pub.webp","assets/ui/bg_stage.webp","assets/ui/card_crowd.webp","assets/ui/card_gang.webp","assets/ui/card_heckle.webp","assets/ui/card_invasion.webp","assets/ui/card_pass.webp","assets/ui/card_stare.webp","assets/ui/card_steady.webp","assets/ui/card_tap.webp","assets/ui/card_turns.webp","assets/ui/card_wing.webp","assets/ui/th_backroom.webp","assets/ui/th_local.webp","assets/ui/th_practice.webp","assets/venue/club_brew.webp","assets/venue/club_raffle.webp","assets/venue/club_team.webp","assets/venue/club_throw.webp","assets/venue/plate_5.webp","assets/venue/pub_1.webp","assets/venue/pub_2.webp","assets/venue/pub_3.webp","assets/venue/pub_4.webp","img/bets/hot.jpg","img/bets/steady.jpg","img/bets/tight.jpg","img/menu.jpg","img/menu_0.jpg","img/menu_1.jpg","img/menu_2.jpg","img/menu_3.jpg","img/splash.jpg","img/v0.jpg","img/v1.jpg","img/v2.jpg","img/v3.jpg","img/v4.jpg","img/v5.jpg","img/v6.jpg","plates/club_oche.webp","plates/club_walk.webp","plates/dpnz_oche.webp","plates/dpnz_walk.webp","plates/opens_oche.webp","plates/opens_walk.webp","plates/palace_oche.webp","plates/palace_walk.webp","plates/pub_oche.webp","plates/pub_walk.webp","plates/tc_oche.webp","plates/tc_walk.webp","plates/tt_oche.webp","plates/tt_walk.webp"];
 // TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
@@ -20494,6 +20533,39 @@ window.TC_CAB3D = (function () {
     const tryAnn = () => { if (!$id('rbApp') || $id('rbApp').hidden) return; if (resetting()) { if (++tries < 40) annT = setTimeout(tryAnn, 400); return; } const c2 = D.st(); if (c2) announce(c2); bestLeg(); };
     annT = setTimeout(tryAnn, 0);
   }
+  /* ---------- EXP-IDLE 1 · first night (behind s3x=1): before the first Circuit match, one screen that says what tonight is, who's first up,
+     what winning pays and how you move up. Shown once per device; Walk on goes on into the match as before. ---------- */
+  const X = (() => { try { if (q.has('s3x')) lsSet('tops_s3x', q.get('s3x') === '1' ? '1' : null); } catch (e) {} return lsGet('tops_s3x') === '1'; })();
+  const FNK = 'tops_s3_firstnight';
+  const CARD = ['anika', 'bigmal', 'deano', 'jonno', 'kev', 'mo', 'pete', 'phil', 'shazza', 'tama'];
+  const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const c = CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
+  function firstNight(go) {
+    const C = CI(), A = API(), k = A._circ && A._circ(); if (!C || !k) return go();
+    if (!k.live) { const v = A.view(), e = v && v.calendar.find(x => x.canAfford); if (!e) return go(); const r = A.book(e.id); if (!r || r.ok === false) return go(); }
+    const v = A.view(), lv = v && v.live; if (!lv) return go();
+    const e = C.eventOf(lv.id), L = C.LEVELS[e.level], n = lv.rounds.length, opp = lv.opp || {};
+    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${C.oppAvg(e.level, i, n, e.field)}</span></li>`).join('');
+    const lad = C.LEVELS.map((x, i) => `<li class="${i === e.level ? 's3-fnnow' : ''}${i === C.LEVELS.length - 1 ? ' s3-fnend' : ''}"><i></i>${SHORT[i]}</li>`).join('');
+    const have = (k.pts && k.pts[L.id]) || 0, art = oppArt(opp.name);
+    const fmt = e.kind === 'groupko' ? `group of 4, then knockout` : `${e.size} players, knockout`;
+    const d = document.createElement('div'); d.id = 's3Fn'; d.className = 's3-fn'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3FnH');
+    d.innerHTML = `<div class="s3-fnart" style="background-image:url(${lvArt(e.level)})"><div class="s3-fntop"><span class="s3-fnk">Your first night</span><h2 class="s3-fnt" id="s3FnH">${esc(e.n)}</h2><span class="s3-fnsub">${esc(e.where)} · ${fmt}</span></div></div>
+      <div class="s3-fnb">
+        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${C.oppAvg(e.level, 0, n, e.field)} · best of ${L.legs} legs</span></div></div>` : ''}
+          <span class="s3-fnl">Win ${n} matches to take it</span><ol class="s3-fndraw">${draw}</ol>
+          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(C.cost(e))}</b><span>entry, paid</span></div></div></div>
+        ${L.need ? `<div class="s3-fnc"><span class="s3-fnl">How you move up</span><ol class="s3-fnlad">${lad}</ol>
+          <div class="s3-fnrow"><span class="s3-fnsm">${esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points')}</span><b>${have} / ${L.need}</b></div><div class="s3-fnbar"><i style="width:${Math.min(100, 100 * have / L.need)}%"></i></div>
+          <span class="s3-fnsm">${esc(L.up.replace(/\.$/, ''))}${C.LEVELS[e.level + 1] ? ', and you\'re up to the ' + esc(C.LEVELS[e.level + 1].n) : ''}.<span class="s3-fnmore"> Each week you pick an event, pay to enter and climb toward the Palace.</span></span></div>` : ''}
+        <button type="button" class="s3-fngo" id="s3FnGo"><b>Walk on</b><small>${esc(roundName(lv.rounds[0]))}${opp.name ? ' · ' + esc(opp.name) : ''}</small></button>
+      </div>`;
+    document.body.appendChild(d); const b = d.querySelector('#s3FnGo'); try { b.focus({ preventScroll: true }); } catch (x) {}
+    b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; lsSet(FNK, '1'); d.remove(); try { window.TOPS_LOG && TOPS_LOG.log && TOPS_LOG.log('s3_firstnight', { id: e.id }); } catch (x) {} go(); };
+  }
+  if (X && typeof playNext === 'function') { const _pn = playNext; playNext = function () { const self = this, args = arguments, go = () => _pn.apply(self, args);
+    try { const k = API()._circ && API()._circ(); if (!lsGet(FNK) && !$id('s3Fn') && k && !(k.history || []).length && !(k.live && (k.live.results || []).length)) return firstNight(go); } catch (e) { console.warn('s3 first night', e); }
+    return go(); }; }
+
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
