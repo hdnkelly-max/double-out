@@ -120,7 +120,7 @@ jobs:
           # ChatGPT P1-1: green only if every selected test is in the shards' own results exactly once, as PASS
           miss=""; for t in $ALL; do c=$(cat results/shard-*.txt 2>/dev/null | grep -c "^$t PASS$" || true); [ "$c" = 1 ] || miss="$miss $t"; done
           extra=$(cat results/shard-*.txt 2>/dev/null | awk '{print $1}' | sort | uniq -d | tr '\n' ' ')
-          if [ "$PICK" = success ] && [ "$FAST" = success ] && [ -z "$miss" ] && [ -z "$extra" ] && [ "$N" -gt 0 ]; then st=success; d="$N/$N passed"; elif [ "$PICK" = success ] && [ "$FAST" = success ]; then st=failure; d="not every test reported a pass:${miss}${extra:+ dup: $extra}"; else st=failure; d="${F:+failing: $F}"; [ -z "$d" ] && d="setup failed (pick=$PICK fast=$FAST)"; fi
+          if [ "$PICK" = success ] && [ "$FAST" = success ] && [ -z "$miss" ] && [ -z "$extra" ] && [ "$N" -gt 0 ]; then st=success; d="$N/$N passed"; elif [ "$PICK" = success ] && [ -n "$miss$extra" ]; then st=failure; d="$(( N - $(echo $miss | wc -w) ))/$N passed; failed or missing:${miss}${extra:+ dup: $extra}"; else st=failure; d="${F:+failing: $F}"; [ -z "$d" ] && d="setup failed (pick=$PICK fast=$FAST)"; fi
           gh api -X POST "repos/${{ github.repository }}/statuses/${{ github.sha }}" -f state=$st -f context=tops/fast-suite -f description="${d:0:139}" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
           echo "### TOPS fast suite: $d · commit \`${GITHUB_SHA::7}\` · branch \`${GITHUB_REF_NAME}\` (per-test times in each shard's summary)" >> "$GITHUB_STEP_SUMMARY"
           [ $st = success ]
