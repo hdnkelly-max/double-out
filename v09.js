@@ -157,10 +157,11 @@ function lastLegs(){const me=S.p[0],op=S.p[1];const need=Math.ceil((S.bestOf||3)
 /* CAR-WIN (Hayden 19:32, proposal D): flatter, wider at the bottom and narrower at the top (live 3.11-3.49: 10/12/16.5/21/26) */const WIN_PTS=[[0,15],[.265,16],[.5,18],[.75,20],[1,22]];
 function winMs(L){L=Math.max(0,Math.min(1,+L||0));let i=0;while(i<WIN_PTS.length-2&&WIN_PTS[i+1][0]<L)i++;const a=WIN_PTS[i],b=WIN_PTS[i+1];return a[1]+(b[1]-a[1])*(L-a[0])/(b[0]-a[0]);}
 window.TOPS_WIN=winMs;window.TOPS_FXLINE=(...a)=>fxLine(...a);
+/* CAR-PULL (Overseer 18:42): the full pull in ms for every Season 3 player (3.54/Season 2 ran 660 at Rhythm 20 down to 560 at 95, so a player re-learned his timing as Rhythm rose) */const S3_PULL_MS=560;window.TOPS_S3_PULL=S3_PULL_MS;
 const _tp9=throwParams;throwParams=function(){const tp=_tp9.apply(this,arguments);if(!on()||!S)return tp;try{
  const nv=effNerves();const b=S.barrel||barrel();const tgt=scoreAt(S.aim.x,S.aim.y);const fin=tgt.dbl||tgt.label==='BULL';
  const q0=ttAt(tp.L),qc=ttAt(Lof('ct')),qr=ttAt(Lof('rh')),qs=ttAt(Lof(fin?'fi':'sc'));
- tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=qr.D/q0.D;
+ tp.A*=qc.A/(q0.A*(b.sway/1.1)*swayMultRaw());tp.w*=q0.T/qc.T;tp.tr*=qr.tr/(q0.tr*Math.max(.4,1+SK().jit));tp.D*=(window.TOPS_S3FLAG?S3_PULL_MS:qr.D)/q0.D;/* CAR-PULL: Season 3 has one pull length for everyone at every Rhythm (S3_PULL_MS); Rhythm only widens the perfect window */
  const Lr=Lof('rh');tp.P*=winMs(Lr)/(q0.P*tolMult()*.85);
  let m=1;const tr=trait();const me=S.p[S.cur];
  if(tr==='heavy'&&S.dart===1&&!fin)m*=.96;
