@@ -7,7 +7,8 @@
 // e.g. node tests/live-check.js https://hdnkelly-max.github.io/double-out/ 4.07 live-shots
 const { chromium, devices } = require('playwright'); const fs = require('fs'), path = require('path');
 const [url0, want, outDir = 'live-shots', devs = 'iPhone 13,Pixel 7'] = process.argv.slice(2);
-if (!url0) { console.error('usage: node tests/live-check.js <site url> <expected version|-> [out dir] [devices]'); process.exit(2); }
+// no URL = nothing to check (CI's fast suite runs every new test with no site; live-check.yml gives it the live URL)
+if (!url0) { console.log('live-check SKIP: no site url (usage: node tests/live-check.js <site url> <expected version|-> [out dir] [devices])'); process.exit(0); }
 const URL0 = url0.endsWith('/') || /\.html?$/.test(url0) ? url0 : url0 + '/'; const origin = new URL(URL0).origin;
 fs.mkdirSync(outDir, { recursive: true });
 // files the game asks for that may be absent by design (it handles their 404): add here only with a reason
