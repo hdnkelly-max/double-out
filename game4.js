@@ -993,7 +993,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(S3G==='full')m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,g[0]-.08*g[1])}));m.userData.s3v=true;return m;}
  const v2hex=h=>'#'+new T.Color(h).getHexString();
  function v2cv(w,h,f){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');f(x,w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;}
- function v2FaceTex(L){return v2cv(512,320,(x,W,H)=>{x.scale(.5,.5);W*=2;H*=2;const ex=[W*.5-175,W*.5+175],ey=H*.43;
+ function v2FaceTex(L){return v2cv(512,320,(x,W,H)=>{x.scale(.5,.5);W*=2;H*=2;const ex=[W*.5-V2EYE.dx,W*.5+V2EYE.dx],ey=H*V2EYE.v;
    [ex[0]-20,ex[1]+20].forEach(cx=>{const g=x.createRadialGradient(cx,ey+125,0,cx,ey+125,80);g.addColorStop(0,'rgba(240,110,100,.35)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-90,ey+30,180,180);});
    ex.forEach((cx,i)=>{x.save();x.translate(cx,ey);x.fillStyle='#ffffff';x.beginPath();x.ellipse(0,0,74,92,0,0,7);x.fill();x.fillStyle=v2hex(L.eye||0x3a2416);x.beginPath();x.ellipse(i?-5:5,8,62,78,0,0,7);x.fill();
     x.fillStyle='#0d0806';x.beginPath();x.ellipse(i?-5:5,12,36,46,0,0,7);x.fill();x.fillStyle='#ffffff';x.beginPath();x.ellipse(i?-28:-16,-28,20,24,0,0,7);x.fill();x.beginPath();x.ellipse(i?14:26,36,9,10,0,0,7);x.fill();
@@ -1042,7 +1042,15 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const hs=L.hair,bc=L.beardC||L.hairC||0x3a2010;
   if(L.face==='full'||L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
   v2Hair(head,L,hairM);
-  if(L.glasses){const gm=v2M(0x111111,'shoe');[-1,1].forEach(s=>{const o=mesh(new T.TorusGeometry(.075,.012,8,24),gm,head,s*.105,.04,R[2]*1.0);o.scale.set(1.15,.85,1);});mesh(new T.BoxGeometry(.06,.014,.014),gm,head,0,.05,R[2]*1.02);[-1,1].forEach(s=>mesh(new T.BoxGeometry(.014,.014,.2),gm,head,s*R[0]*.93,.04,0));}}
+  if(L.glasses){/* Vinyl v2.2 (Director, Q&D: the old frames sat 71 mm above the eyes): each lens is centred on its painted eye, from the decal's own
+     constants (V2EYE + the face shell's angles), sized from the eye, the bridge just above the eye line; no temple arms (from the front they read as stubs) */
+   const gm=v2M(0x111111,'shoe'),F=V2P.face;const lr=V2EYE.rx/1024*F.phi[1]*R[0]*1.35,lh=V2EYE.ry/640*F.theta[1]*R[1]*1.12;
+   [-1,1].forEach(s=>{const e=v2EyeOnHead(s);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(1,.16,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});
+   const l=v2EyeOnHead(-1),r=v2EyeOnHead(1);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.013,.013),gm,head,0,l.y+lh*.25,R[2]*1.03).castShadow=false;}}
+ /* eye centres on the face decal (sheet px from the centre at 1024 wide, fraction down): v2FaceTex draws them here and glasses sit on them */
+ const V2EYE={dx:175,v:.43,rx:74,ry:92};
+ function v2EyeOnHead(s){const R=V2P.head.r,F=V2P.face;const ph=Math.PI/2+s*V2EYE.dx/1024*F.phi[1],th=F.theta[0]+V2EYE.v*F.theta[1];return new T.Vector3(-Math.cos(ph)*Math.sin(th)*R[0],Math.cos(th)*R[1],Math.sin(ph)*Math.sin(th)*R[2]);}
+ window.TOPS_V2EYE=s=>v2EyeOnHead(s);
  function v2Blobs(par,mat,list){list.forEach(b=>{const o=v2mesh(v2ell(b[3],b[4]||b[3],b[5]||b[3],16,12),mat,par,b[0],b[1],b[2]);if(b[6])o.rotation.set(b[6][0],b[6][1],b[6][2]);});}
  function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';if(L.cap)st=st?'capped':null;
   const capG=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.27);capG.scale(R[0]*1.06,R[1]*1.08,R[2]*1.07);
@@ -1139,7 +1147,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    if(TH.length){o.updateMatrixWorld(true);const Mw=o.matrixWorld;_s3Mi.copy(Mw).invert();
     for(let i=0;i<p.count;i++){if(b[3*i+1]>(R.skinY?R.skinY[2]:-.2))continue;_s3w.fromBufferAttribute(p,i).applyMatrix4(Mw);let moved=false;for(const [a,bb,r,pad] of TH){_s3ab.subVectors(bb,a);const tt=Math.max(0,Math.min(1,_s3c.subVectors(_s3w,a).dot(_s3ab)/_s3ab.lengthSq()));_s3c.copy(a).addScaledVector(_s3ab,tt);_s3dv.subVectors(_s3w,_s3c);const dl=_s3dv.length(),need=r+pad;if(dl<need&&dl>1e-5){_s3w.copy(_s3c).addScaledVector(_s3dv,need/dl);moved=true;}}if(moved){_s3w.applyMatrix4(_s3Mi);p.setXYZ(i,_s3w.x,_s3w.y,_s3w.z);}}}
    p.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere();});}
- function s3SkinAll(){const t=performance.now();if(t-s3SkinT<4)return;s3SkinT=t;for(const f of S3SKINF){if(!s3InScene(f)){S3SKINF.delete(f);continue;}f.updateMatrixWorld(true);try{s3SkinFig(f);}catch(e){S3SKINF.delete(f);}}}
+ function s3SkinAll(){const t=performance.now();if(t-s3SkinT<4)return;s3SkinT=t;for(const f of S3SKINF){if(!s3InScene(f)){S3SKINF.delete(f);continue;}f.updateMatrixWorld(true);if(f.userData.s3v2)try{v2PostClear(f);}catch(e){}try{s3SkinFig(f);}catch(e){S3SKINF.delete(f);}}}
  /* the Lab's clipCheck (Director, s3-clip.js) on a game figure in a game pose: depth of every inner vertex under its cover, in Lab units
     (the frames are the Lab pivots' boxes on the bones). Test-only: tests/s3-clip.js runs it over the match clips. */
  function s3Clip(fig){const R=fig.userData.s3rig;if(!R)return null;fig.updateMatrixWorld(true);s3SkinFig(fig);fig.updateMatrixWorld(true);
@@ -1163,7 +1171,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     v1 checks don't apply as written. Checked instead, in every clip: trousers above the hem stay under the shirt (pants), the upper arm stays
     under the puffed sleeve (arm), the skull never sinks into the shirt (head: no neck, so a nod could push it in), the fists never go inside
     the torso (fist). Depths in v2 units (metres at k=1). */
- function s3ClipV2(fig){const R=fig.userData.s3rig;fig.updateMatrixWorld(true);try{s3SkinFig(fig);}catch(e){}fig.updateMatrixWorld(true);const out={pants:0,arm:0,head:0,fist:0,checked:0,worst:{},ex:[],cuff:0,collar:0,trim:0};const bx=pv=>pv.userData.box;const chest=bx(R.chest),hips=bx(R.hips);if(!chest||!hips)return out;const kw=new T.Vector3().setFromMatrixScale(chest.matrixWorld).x;
+ function s3ClipV2(fig){const R=fig.userData.s3rig;fig.updateMatrixWorld(true);/* as drawn: s3SkinAll runs the v2 head clearance, then the shirt skin */try{v2PostClear(fig);}catch(e){}try{s3SkinFig(fig);}catch(e){}fig.updateMatrixWorld(true);const out={pants:0,arm:0,head:0,fist:0,checked:0,worst:{},ex:[],cuff:0,collar:0,trim:0};const bx=pv=>pv.userData.box;const chest=bx(R.chest),hips=bx(R.hips);if(!chest||!hips)return out;const kw=new T.Vector3().setFromMatrixScale(chest.matrixWorld).x;
   const byTag=t=>{const r=[];fig.traverse(o=>{if(o.isMesh&&o.userData.tag===t)r.push(o);});return r;};const prox=o=>{const m=new T.Mesh(o.geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));m.matrixWorld.copy(o.matrixWorld);m.matrixAutoUpdate=false;return m;};
   const rc=new T.Raycaster(),p=new T.Vector3(),l=new T.Vector3(),ax=new T.Vector3(),d=new T.Vector3(),inv=new T.Matrix4(),Y=new T.Vector3();
   const depth=(p,frame,covers)=>{inv.copy(frame.matrixWorld).invert();l.copy(p).applyMatrix4(inv);ax.set(0,l.y,0).applyMatrix4(frame.matrixWorld);d.copy(p).sub(ax);const dist=d.length();if(dist<1e-4)return 1;d.normalize();Y.set(0,1,0).transformDirection(frame.matrixWorld);rc.far=dist+.6*kw;rc.set(ax,d);const h=rc.intersectObjects(covers,false);if(!h.length)return -1;return (h[h.length-1].distance-dist)/kw;};
@@ -1176,7 +1184,18 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   byTag('skull').forEach(o=>verts(o,3,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.002){out.head++;ex('head',dp);}worst('head',-dp);}));
   /* fists vs torso: no fist vertex inside the shirt */
   [R.aL,R.aR].forEach(A=>{const wb=bx(A.wr);if(!wb)return;wb.children.forEach(o=>verts(o,4,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.01){out.fist++;ex('fist',dp);}/* a fist resting on the belly (up to 1 cm) reads fine on a toy; deeper is a clip */worst('fist',-dp);}));});
+  {const hc=s3HeadClear(fig);out.skull=hc.n;out.checked+=hc.checked;out.worst.skull=-hc.mm/1000;if(hc.n&&out.ex.length<8)out.ex.push('skull '+hc.where+' '+hc.mm.toFixed(1)+'mm');}
   return out;}
+ /* Vinyl v2.2 (Director's v2-clear.js on the game rig): no arm, sleeve, fist or finger vertex inside the skull ellipsoid (radii x1.04, the
+    margin Director's check uses). Measured in the skull mesh's own space, so the figure's scale and the head bone's pose are both in it.
+    n = vertices inside; mm = the deepest one, in metres x1000 at the figure's scale */
+ function s3HeadClear(fig){const R=fig.userData.s3rig,out={n:0,mm:0,checked:0,where:''};if(!R||!R.v2)return out;fig.updateMatrixWorld(true);let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});if(!sk)return out;
+  const r=V2P.head.r,M=1.04,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,p=new T.Vector3(),l=new T.Vector3();
+  const test=(q,where)=>{out.checked++;l.copy(q).applyMatrix4(inv);const e=Math.hypot(l.x/r[0],l.y/r[1],l.z/r[2]);if(e<M){const mm=(M-e)*Math.min(r[0],r[1],r[2])*ws*1000;out.n++;if(mm>out.mm){out.mm=mm;out.where=where;}}};
+  [['R',R.aR],['L',R.aL]].forEach(([sd,A])=>[['sh','arm'],['el','forearm'],['wr','hand']].forEach(([k,nm])=>{const pv=A&&A[k],b=pv&&pv.userData.box;if(!b)return;b.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);test(p,sd+' '+(o.userData.tag||nm));}});}));
+  fig.traverse(o=>{if(!o.isSkinnedMesh||o.userData.tag!=='fingers')return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i);o.boneTransform(i,p);p.applyMatrix4(o.matrixWorld);test(p,'fingers');}});
+  return out;}
+ window.TOPS_S3HEADCLEAR=s3HeadClear;
  window.TOPS_S3CLIP=f=>f&&f.userData&&f.userData.s3rig&&f.userData.s3rig.v2?s3ClipV2(f):s3Clip(f);
  window.TOPS_S3FIG={look:s3Look,build:s3Build,dress:s3Dress,skin:s3SkinFig,skinAll:s3SkinAll};scene.onBeforeRender=()=>{if(S3SKINF.size)s3SkinAll();};
  function faceKit(fig,B,look,ck){if(!look||!B.Head)return;if(ck==='pete')look=Object.assign({hair2:'short',beard2:1},Object.fromEntries(Object.entries(look).filter(([k,v])=>v!=null)));if(window.GFX_HEADDBG){[[1,0,0,0xff0000],[0,1,0,0x00ff00],[0,0,1,0x0000ff]].forEach(([x,y,z,c])=>{const m=new T.Mesh(new T.SphereGeometry(.015),new T.MeshBasicMaterial({color:c}));m.position.set(x*.13,y*.13,z*.13);B.Head.add(m);});}const L=look;const R=RIG.rest;const headH=(B.HeadTop_End&&R[B.HeadTop_End.name]&&R[B.Head.name])?R[B.HeadTop_End.name].p.distanceTo(R[B.Head.name].p):.24;
@@ -1209,8 +1228,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;if(o.material&&o.material.map&&/Top/i.test(o.material.name||o.name))RIG.shirtImg=o.material.map.image;if(o.material&&/Hair|Eyelash/i.test(o.material.name)){o.material.transparent=true;o.material.alphaTest=.4;o.material.side=T.DoubleSide;}}});
    keepAssets(root);RIG.base=root;RIG.rest=rest;RIG.ready=true;RIG.waiting.forEach(f=>f());RIG.waiting.length=0;};const fail=e=>console.warn('rig load failed',e);
   const go=()=>{if(window.RIG_B64_URL){fetch(window.RIG_B64_URL).then(r=>r.text()).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));L.parse(bin.buffer,'',onLoaded,fail);}).catch(fail);}else if(window.RIG_URL&&!/^data:/.test(window.RIG_URL))rigFetch(window.RIG_URL).then(buf=>L.parse(buf,'',onLoaded,fail)).catch(fail);else L.load(window.RIG_URL||'remy.glb',onLoaded,e=>{try{if(window.TOPS_LOAD&&e&&e.total)TOPS_LOAD.part('rig',e.loaded/e.total);}catch(x){}},fail);};
-  /* S3 (Delivery QA 13:01): the 685 KB S3 rig first, with the whole connection; the 2.4 MB in-page rig file after it lands (or fails, or 20 s) */
-  if(window.TOPS_S3FLAG&&!RIGS[S3_RIG]){loadChar(S3_RIG);const t0=Date.now();const w=()=>{if(RIGS[S3_RIG]||!RIG_WAIT[S3_RIG]||Date.now()-t0>20000)go();else setTimeout(w,150);};setTimeout(w,150);}else go();}
+  /* S3 (Delivery QA 13:01; Overseer 16:09): the 685 KB S3 rig is the only rig file. Every S3 figure is built on it, so the 2.4 MB in-page rig
+     file is fetched only as a fallback, if the S3 rig fails or is still not in after 20 s; once the S3 rig is in, it is never fetched */
+  if(window.TOPS_S3FLAG){const rd=()=>{try{if(window.TOPS_LOAD)TOPS_LOAD.part('rig',1);}catch(e){}};if(RIGS[S3_RIG]){rd();return;}loadChar(S3_RIG);const t0=Date.now();
+   const w=()=>{if(RIGS[S3_RIG]){rd();return;}if(!RIG_WAIT[S3_RIG]||Date.now()-t0>20000)go();else setTimeout(w,150);};setTimeout(w,150);}else go();}
  /* ENG-RIGCACHE: the player model is its own file named by its content (rig/remy-<hash>.glb). Kept in Cache Storage: a relaunch or the fresh
     start between matches reads it from there with no download; the first download shows its progress on the loader; two retries on a bad
     network; models from older builds are dropped from the cache once the new one is in. Without Cache Storage (or if it fails) it downloads. */
@@ -1362,7 +1383,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   }else{
   const inw=fpv?-.03:-.12,inf=fpv?.06:-.05;dirU=new T.Vector3().addScaledVector(fwd,Math.cos(tp.lift*rad)).addScaledVector(up,Math.sin(tp.lift*rad)).addScaledVector(right,inw).normalize();
   E=S.clone().addScaledVector(dirU,L1);dirF=new T.Vector3().addScaledVector(up,Math.cos(tp.phi*rad)).addScaledVector(fwd,Math.sin(tp.phi*rad)).addScaledVector(right,inf).normalize();
-  H=E.clone().addScaledVector(dirF,L2);
+  H=E.clone().addScaledVector(dirF,L2);if(fig.userData.s3v2&&!fpv)v2ArmClear(fig,B,S,dirU,dirF,fwd);/* Vinyl v2.2: the celebrating fist clears the 2x head too */
   // hand frame in the throwing plane: fingers = forearm rotated by the wrist angle; palm faces the board/down (pronated rear grip), thumb under the barrel
   // address: palm to the ceiling, fingers pointing at the board and slightly up with the dart lying on them; backswing cocks the wrist (fingers rise); after release the hand pronates and points at the target
   // address (from the player's own description): palm to the ceiling, back of the wrist toward the board, fingers across the face, thumb pointing back under the barrel, dart on the thumb pointing at the board with index/middle tips resting on it.
@@ -1404,15 +1425,66 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   _M1.makeBasis(lr,ly,lz);_M2.makeBasis(rw,y,wz);_M2.multiply(_M1.transpose());_Qa.setFromRotationMatrix(_M2);bone.parent.getWorldQuaternion(_Qb);bone.quaternion.copy(_Qb.invert().multiply(_Qa));bone.updateWorldMatrix(true,false);}
  const _pq=new T.Quaternion(),_pq2=new T.Quaternion(),_pm=new T.Matrix4(),_pe=new T.Euler(),_ra=new T.Vector3(),_pv=[];for(let i=0;i<24;i++)_pv.push(new T.Vector3());
  const PD_SKIP=/UpLeg|Leg$|Foot|Toe|Hips/,PD_RF=['Index','Middle','Ring','Pinky'].map((k,i)=>[[1,2,3].map(j=>'RightHand'+k+j),[.15,.2,.5,.6][i],[.35,.45,.9,1][i]]),PD_LF=['Index','Middle','Ring','Pinky'].map(k=>[1,2,3].map(j=>'LeftHand'+k+j)),PD_TH=[['RightHandThumb1',-.3,0,-.5],['RightHandThumb2',.3,0,0],['RightHandThumb3',.2,0,0]];
+ /* Vinyl v2.2 (Director spec 11, Throw pose): with a skull ~0.59 m wide, the game's darts arm put the grip inside the head. Given the arm the
+    pose asks for (upper arm dirU, forearm dirF from shoulder S), the hand is moved out of the skull ellipsoid grown by V2CLR.m (radii x1.04, as
+    Director's v2-clear.js, plus the reach of the fingers round the dart), sideways and forward at its own height, so a hand under the eye lands at chin
+    height beside and in front of the face; if the arm can't reach that, the hand slides out to the side instead. The arm is then re-solved as two bones with
+    the elbow swung out to the side (V2CLR.out), the poster's elbow-out throw. dirU and dirF are set in place; returns true. */
+ const V2CLR={m:.12,out:.9,back:.15};/* m: finger reach round the dart (m); out/back: elbow pole, to the side and slightly back */const _v2c=[];for(let i=0;i<8;i++)_v2c.push(new T.Vector3());const _v2m=new T.Matrix4();
+ function v2ArmClear(fig,B,S,dirU,dirF,b,side){const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
+  side=side||'Right';const A=B[side+'Arm'],F=B[side+'ForeArm'],Hb=B[side+'Hand'];if(!A||!F||!Hb)return false;sk.updateWorldMatrix(true,false);
+  const L1=boneWTo(_v2c[0],A).distanceTo(boneWTo(_v2c[1],F)),L2=_v2c[1].distanceTo(boneWTo(_v2c[2],Hb)),reach=(L1+L2)*.995;
+  const ws=_v2c[3].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,g=V2CLR.m/ws,rx=r[0]*1.04+g,ry=r[1]*1.04+g,rz=r[2]*1.04+g;_v2m.copy(sk.matrixWorld).invert();
+  const H=_v2c[4].copy(S).addScaledVector(dirU,L1).addScaledVector(dirF,L2),l=_v2c[5],sp=B.Spine2||B.Spine1||B.Spine;
+  const out=_v2c[6].copy(S);if(sp)out.sub(boneWTo(_v2c[7],sp));out.y=0;out.addScaledVector(b,-out.dot(b));if(out.lengthSq()<1e-8)out.set(1,0,0);out.normalize();
+  for(let it=0;it<8;it++){l.copy(H).applyMatrix4(_v2m);const e=Math.hypot(l.x/rx,l.y/ry,l.z/rz);const d=H.distanceTo(S);if(e>=1&&d<=reach)break;
+   if(e<1){const yy=(l.y/ry)*(l.y/ry),hh=(l.x/rx)*(l.x/rx)+(l.z/rz)*(l.z/rz);/* out sideways and forward at the same height (chin height stays chin height); radially only near the crown */
+    if(yy<.9&&hh>1e-6){const k=Math.sqrt((1-yy)/hh)*1.002;l.x*=k;l.z*=k;}else l.multiplyScalar(1.002/e);l.applyMatrix4(sk.matrixWorld);H.copy(l);}if(H.distanceTo(S)>reach){H.sub(S).setLength(reach).add(S);if(it>1)H.addScaledVector(out,.03);}}
+  const d=Math.max(1e-4,H.distanceTo(S)),uu=_v2c[5].copy(H).sub(S).divideScalar(d);const pole=_v2c[7].set(0,-1,0).addScaledVector(out,V2CLR.out).addScaledVector(b,-V2CLR.back);pole.addScaledVector(uu,-pole.dot(uu)).normalize();
+  const cA=Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d))),sA=Math.sqrt(1-cA*cA);const E=_v2c[3].copy(S).addScaledVector(uu,cA*L1).addScaledVector(pole,sA*L1);
+  dirU.copy(E).sub(S).normalize();dirF.copy(H).sub(E).normalize();return true;}
+ window.TOPS_V2CLR=V2CLR;
+ /* the same rule after any clip (walk-on hero cheer, bar extras drinking or arguing, the celebration pump): Mixamo clips were made for a
+    small head. Run on each v2 figure just before it is drawn (s3SkinAll), after the clip or poseDarts has set the bones: an arm whose hand, a
+    fingertip, the forearm or the upper arm is inside the grown skull gets the hand moved out (as above, a little further each try) and the two bones turned to
+    the new elbow and hand. The bones are turned, not rebuilt, so the clip's twist and the hand pose stay; an arm already clear is not touched */
+ const _v2p=[];for(let i=0;i<12;i++)_v2p.push(new T.Vector3());const _v2q=new T.Quaternion(),_v2q2=new T.Quaternion();
+ function v2Turn(bone,from,to){bone.getWorldQuaternion(_v2q2);_v2q.setFromUnitVectors(from,to).multiply(_v2q2);bone.parent.getWorldQuaternion(_v2q2);bone.quaternion.copy(_v2q2.invert().multiply(_v2q));bone.updateWorldMatrix(false,true);}
+ const V2TIPS=['Index','Middle','Ring','Pinky','Thumb'].flatMap(f=>[2,3,4].map(j=>f+j));
+ function v2PostClear(fig,only){const u=fig.userData,B=u.B;if(!B||!u.s3v2)return 0;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return 0;
+  fig.updateMatrixWorld(true);_v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1];
+  /* e < 1: the point (with margin m, metres) is inside the skull x1.04 */
+  const ev=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;return Math.hypot(l.x/(r[0]*1.04+g),l.y/(r[1]*1.04+g),l.z/(r[2]*1.04+g));};
+  /* where a point with margin m must go: out sideways and forward at its own height (radially only near the crown) */
+  const pushTo=(P,m,out)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws,rx=r[0]*1.04+g,ry=r[1]*1.04+g,rz=r[2]*1.04+g;const yy=(l.y/ry)**2,hh=(l.x/rx)**2+(l.z/rz)**2;
+   if(yy<.9&&hh>1e-6){const k=Math.sqrt((1-yy)/hh)*1.004;l.x*=k;l.z*=k;}else l.multiplyScalar(1.004/Math.max(1e-3,Math.sqrt(yy+hh)));return out.copy(l).applyMatrix4(sk.matrixWorld);};
+  const fwd=_v2p[2].set(0,0,-1).applyQuaternion(fig.getWorldQuaternion(_v2q)).setY(0).normalize(),hc=_v2p[3].set(0,0,0).applyMatrix4(sk.matrixWorld);let n=0;
+  for(const sd of only||['Right','Left']){const A=B[sd+'Arm'],F=B[sd+'ForeArm'],Hb=B[sd+'Hand'];if(!A||!F||!Hb)continue;const tips=V2TIPS.map(k=>B[sd+'Hand'+k]).filter(Boolean);
+   /* a clip that shrugs the shoulder up (the hero cheer) lifts the puffed sleeve into the jaw: the collarbone goes back to its rest */
+   {const SH=B[sd+'Shoulder'],rs=SH&&RIG.rest[SH.name];if(rs&&ev(boneWTo(_v2p[4],A),.12)<1){SH.quaternion.copy(rs.lq);SH.updateWorldMatrix(false,true);}}
+   for(let pass=0;pass<8;pass++){const S=boneWTo(_v2p[4],A),E=boneWTo(_v2p[5],F),H=boneWTo(_v2p[6],Hb),P=_v2p[7];
+    let we=1,wp=null,wm=0;const hp=(Q,m)=>{const e=ev(Q,m);if(e<we){we=e;wp=Q.clone();wm=m;}};hp(H,.07);tips.forEach(t=>hp(boneWTo(P,t),.032));
+    let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(ev(P.lerpVectors(a,b2,t),m)<1)armIn=true;});
+    if(!wp&&!armIn)break;if(!pass)n++;
+    const out=_v2p[8].subVectors(S,hc);out.y=0;if(out.lengthSq()<1e-8)out.set(sd==='Right'?1:-1,0,0);out.normalize();
+    const L1=S.distanceTo(E),L2=E.distanceTo(H),reach=(L1+L2)*.995;const d0U=_v2p[9].subVectors(E,S).normalize(),d0F=_v2p[10].subVectors(H,E).normalize();
+    const NH=_v2p[11].copy(H);if(wp)NH.add(pushTo(wp,wm,P).sub(wp)).addScaledVector(out,.01);if(armIn)NH.addScaledVector(out,.05*(pass+1));if(NH.distanceTo(S)>reach)NH.sub(S).setLength(reach).add(S);
+    const d=Math.max(1e-4,NH.distanceTo(S)),uu=P.subVectors(NH,S).divideScalar(d),pole=_v2p[1].set(0,-1,0).addScaledVector(out,V2CLR.out+pass*.3).addScaledVector(fwd,-V2CLR.back);pole.addScaledVector(uu,-pole.dot(uu)).normalize();
+    const cA=Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)));E.copy(S).addScaledVector(uu,cA*L1).addScaledVector(pole,Math.sqrt(1-cA*cA)*L1);
+    v2Turn(A,d0U,P.subVectors(E,S).normalize());const nF=boneWTo(_v2p[5],F),nH=boneWTo(_v2p[6],Hb);v2Turn(F,d0F.subVectors(nH,nF).normalize(),P.subVectors(NH,nF).normalize());fig.updateMatrixWorld(true);}}
+  return n;}
+ window.TOPS_V2POST=v2PostClear;
  function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.updateWorldMatrix(true,true);
   let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
   for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
   const P=dartPhase(oa);if(fpv){P.lift-=4;}
   {const sp=B.Spine1||B.Spine;if(sp&&!fpv){const ph=oa.phase||'idle',kk=oa.k||0,tt=performance.now()/1000;const lean=5+(ph==='pull'?-.6*(oa.pull||0):ph==='throw'?1.2*kk:ph==='fly'||ph==='follow'?1.6:ph==='reset'?1.6*(1-kk):.35*Math.sin(tt*1.5));const fq0=fig.getWorldQuaternion(_pq);const rt0=_pv[0].set(1,0,0).applyQuaternion(fq0);sp.rotateOnWorldAxis(rt0,-lean*rad);fig.updateWorldMatrix(true,true);}}const up=_pv[1].set(0,1,0);const fq=fig.getWorldQuaternion(_pq);const fwdC=_pv[2].set(0,0,-1).applyQuaternion(fq),rtC=_pv[3].set(1,0,0).applyQuaternion(fq);
   const S=boneWTo(_pv[4],B.RightArm);const b=_pv[5].subVectors(boardTarget,S);b.y=0;b.normalize();const lat=_pv[6].crossVectors(up,b).normalize();
-  const dirU=_pv[7].copy(b).multiplyScalar(Math.cos(P.lift*rad)).addScaledVector(up,Math.sin(P.lift*rad)).addScaledVector(lat,fig.userData.s3v2?.62:.32).normalize();/* Vinyl v2: the 2x head would hide a hand held under the eye; the elbow opens out so the fist sits beside the face, as on the poster */
-  const hinge=_pv[8].crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxisTo(_ra,B.RightArm,up),hinge);
+  const dirU=_pv[7].copy(b).multiplyScalar(Math.cos(P.lift*rad)).addScaledVector(up,Math.sin(P.lift*rad)).addScaledVector(lat,.32).normalize();
   const ph=P.phi*rad;const dirF=_pv[9].copy(up).multiplyScalar(Math.cos(ph)).addScaledVector(b,Math.sin(ph)).normalize();const pside=_pv[10].copy(b).multiplyScalar(Math.cos(ph)).addScaledVector(up,-Math.sin(ph)).normalize();
+  /* Vinyl v2.2: the 2x head. The grip is moved clear of the skull (chin height, in front of the face) and the arm re-solved with the elbow out */
+  if(fig.userData.s3v2&&!fpv&&v2ArmClear(fig,B,S,dirU,dirF,b)){pside.addScaledVector(dirF,-pside.dot(dirF)).normalize();}
+  const hinge=_pv[8].crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxisTo(_ra,B.RightArm,up),hinge);
   const DN=_pv[11].set(0,-1,0);setW(B.RightForeArm,dirF,restAxisTo(_ra,B.RightForeArm,DN),pside);
   const ex=P.ext*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
   setW(B.RightHand,fing,restAxisTo(_ra,B.RightHand,DN),palm);
@@ -1425,6 +1497,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     for(let f=0;f<4;f++){const nm=PD_LF[f];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX((.75+f*.08)*(j===0?1:.85));}}}}
   // head steady, eyes on the board
   if(B.Head&&B.HeadTop_End){const HD=boneWTo(_pv[18],B.Head);const look=_pv[19].subVectors(boardTarget,HD).normalize();aimBone(B.Head,B.HeadTop_End,_pv[20].copy(up).addScaledVector(look,.12).normalize(),0);}
+  if(fig.userData.s3v2&&!fpv)try{v2PostClear(fig,['Right']);}catch(e){}/* Vinyl v2.2: fingers round the dart clear of the 2x head before the dart is put in them */
   if(fig.userData.dt){const dt=fig.userData.dt;const mid=boneWTo(_pv[21],B.RightHandIndex2).lerp(boneWTo(_pv[22],B.RightHandThumb3),.5);const dd=_pv[23].copy(b).multiplyScalar(Math.cos(P.dart*rad)).addScaledVector(up,Math.sin(P.dart*rad)).normalize();
    const w=_pv[18].copy(mid).addScaledVector(palm,.008);fig.worldToLocal(w);dt.position.copy(w);const m=_pm.lookAt(_pv[19].copy(mid).add(dd),mid,up);const iq=fig.getWorldQuaternion(_pq).invert();dt.quaternion.copy(iq.multiply(_pq2.setFromRotationMatrix(m)));dt.rotateY(Math.PI);{const dk=fig.userData.s3fig?S3_DART:1;dt.scale.set(dk/fig.scale.x,dk/fig.scale.y,dk/fig.scale.z);}dt.visible=!rel;}}
  function standRigged(fig,kind){const B=fig.userData.B;fig.updateWorldMatrix(true,true);if(kind==='set'){poseRigged(fig,{phase:'idle'},fig.localToWorld(new T.Vector3(0,1.73,-2.4)));return;}
