@@ -69,10 +69,10 @@ jobs:
             #     career/money files. The game's UI also lives in game4.js / v*.js, so those can't be fenced by path: R3 there stays
             #     the author's call (Hayden 17:03), and the post-release live check is the backstop.
             PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
-            bad=$(git diff --name-status origin/src "$C" | awk -v P="$PROT" '{f=$NF} f ~ P || ($1 !~ /^A/ && $2 ~ /^tests\//) {print $1" "$2}')
+            bad=$(git diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
             [ -z "$bad" ] || { echo "::error::REFUSED (author attest): these need a Q&D pass (R0-R2 path): $(echo $bad)"; exit 1; }
             # (c) a push run of ci.yml on exactly this commit concluded success (the run itself, not a commit status anyone with statuses:write could post).
-            ok=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and (.path|split("@")[0])==".github/workflows/ci.yml" and .conclusion=="success")]|length') || { echo "::error::REFUSED (author attest): could not read the CI runs for $C (GitHub API error)"; exit 1; }
+            ok=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .event=="push" and .conclusion=="success")]|length') || { echo "::error::REFUSED (author attest): could not read the CI runs for $C (GitHub API error)"; exit 1; }
             [ "${ok:-0}" -gt 0 ] || { echo "::error::REFUSED (author attest): no successful ci (fast suite) push run on $C"; exit 1; }
             echo "author attest: $C contains src, no protected path changed, fast suite green ($ok run(s))" >> $GITHUB_STEP_SUMMARY
           fi
