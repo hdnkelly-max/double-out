@@ -1415,12 +1415,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const RK=[1.1,1.65,.3,1.45,2.3,.82],CK=window.TOPS_TAMA_CROWN||[1.18,.6],RT=[1.0,.95,2.0];/* r13 (doc 31): crown x1.18, no rear-top boost, flatter rear fill */for(let i=0;i<C.length;i++){const c=C[i];const front=i<7,rear=Math.abs(c[1])>1.9,top=c[0]<.5;const deep=Math.abs(c[1])>=RK[4]&&c[0]>=RK[2]&&c[0]<=RK[3];
     const crown=!front&&c[0]<CK[1],rtop=!front&&!crown&&c[0]<RT[1]&&Math.abs(c[1])>=RT[2];/* non-front crown curls x CK (r13 1.18; TOPS_TAMA_CROWN=[k,.6] overrides), the top-centre curl capped at 1.3; the front row is untouched */
     const sz=c[2]*1.3*(c[0]>1.15?1.25:1)*(front?1.2:1)*(1+.36*(((i*7919)%97)/97-.5))*(deep?RK[0]:(rear&&c[0]<1.2?.88:1)),ht=c[3]*1.8*(top?RK[5]:1)*(front?1.1:1)*(deep?RK[1]:1)*(crown?(c[0]<.3?Math.min(CK[0],1.3):CK[0]):1)*(rtop?RT[0]:1);/* r13 hierarchy: front curls x1.2 size / x1.1 height, every curl's width varies by a fixed +-18% */parts.push(...K.cluster(c[0],c[1]+(K.rnd()-.5)*.06,sz,ht,deep?2:(c[0]>1.15?2:0),deep?[11,4]:null));}
-   K.done(h,parts,L.hairC!=null&&L.hairC!==0x1a1210?K.colsFrom(L.hairC):cols,{top:.07,hiAmt:.85},[.58,.03]);},
+   const OV=(window.TOPS_V3HAIRO||{}).tama||{};K.done(h,parts,L.hairC!=null&&L.hairC!==0x1a1210?K.colsFrom(L.hairC):cols,Object.assign({top:.07,hiAmt:.85},OV.po),OV.mr||[.58,.03]);},
   /* r9 Ray (sweptL): his poster-fitted masses and groove locks, verbatim from hair28.js */
   sweptL(h,L,K){const G=V2GROOVE,Q=G.RAY;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
-   const c=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols;G.groove(h,L,K,Q.M,Q.GL,c,hl,Q.o);},
+   const OV=(window.TOPS_V3HAIRO||{}).ray||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},
   quiffL(h,L,K){const G=V2GROOVE,Q=G.KAI;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-0.01,2.35]]);
-   const c=L.hairC!=null&&L.hairC!==0x7a3e22&&L.hairC!==0x5a2e1a?K.colsFrom(L.hairC):Q.cols;G.groove(h,L,K,Q.M,Q.GL,c,hl,Q.o);},/* r9 Kai lock shell (v3 heads; the player's own hair colour re-tints it) */
+   const OV=(window.TOPS_V3HAIRO||{}).kai||{},c0=L.hairC!=null&&L.hairC!==0x7a3e22&&L.hairC!==0x5a2e1a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},/* r9 Kai lock shell (v3 heads; the player's own hair colour re-tints it) */
   quiff(h,L,K){K.seed(11);const cols={base:0x743823,shadow:0x3A1C12,hi:0xAC6542};const parts=[],W=K.W,loft=K.loft;
    const hl=K.HL([[0,1.0],[.32,.92],[-.38,.94],[.72,.92],[-.74,.93],...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-.01,2.35]]);
    parts.push(K.cap(hl,.016,28,6));
