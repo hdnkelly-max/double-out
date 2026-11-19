@@ -1732,7 +1732,15 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  /* the match face-cam swing for v2 throwers (degrees from the board line): 32 showed the throw end-on (aim, draw-back and release overlap in
     depth); at 50 the face is near front-on like the poster and the throw reads across the frame */
  const V2CAMA=50;
- const V2THROW={aim:{h:[.62,-.30,.40],pole:[.9,-1,0]},back:{h:[.74,-.20,.24],pole:[1.0,-.3,-.35]},rel:{h:[.50,-.34,.47],pole:[.5,-.9,.25]},end:{h:[.30,-.66,.64],pole:[.45,-1,.1]}};
+ /* round 5 #7 (ChatGPT on Kai v4): draw-back ~21% hw back of the aim (was 16), release ~55% hw forward of the draw-back and ~34% past the aim (was 23 / 7), at the eye line with the elbow out and the forearm tipping to the board */
+ const V2THROW={aim:{h:[.62,-.30,.40],pole:[.9,-1,0]},back:{h:[.77,-.17,.19],pole:[1.0,-.25,-.4]},rel:{h:[.44,-.24,.74],pole:[.8,-.5,0]},end:{h:[.24,-.52,.96],pole:[.6,-.9,0]}};
+ /* v2 wrist and fingers through the throw: the wrist cocks further back on the draw-back and snaps through on the release (degrees added
+    to the game's own wrist), and the fingers start to part over the last of the throw (30%, the dart still in them) and open fully as it leaves (fly), instead of in one frame, wider than v1 (spread, the
+    thumb off the barrel), so the hand reads as letting go */
+ const V2WRIST={back:16,rel:-18,end:-10};
+ const V2OPEN={from:.8,pre:.3,curl:[-.12,-.06,.12,.22],thumb:[-.05,0,-.95]};
+ function v2WristAdd(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),W=V2WRIST;if(ph==='pull')return W.back*p;if(ph==='throw')return W.back+(W.rel-W.back)*Math.pow(k,1.4);if(ph==='fly'||ph==='follow')return W.rel+(W.end-W.rel)*k;if(ph==='reset')return W.end*(1-k);return 0;}
+ function v2Open(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0);if(ph==='throw'){const x=Math.max(0,(k-V2OPEN.from)/(1-V2OPEN.from));return V2OPEN.pre*x*x*(3-2*x);}if(ph==='fly'||ph==='follow'){const x=Math.min(1,k/.3);return V2OPEN.pre+(1-V2OPEN.pre)*x*(2-x);}if(ph==='reset')return Math.max(0,1-k*1.5);return 0;}
  const _v2t=[];for(let i=0;i<8;i++)_v2t.push(new T.Vector3());
  function v2ThrowKey(oa){const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),K=V2THROW,e=x=>x*x*(3-2*x);
   if(ph==='pull')return [K.aim,K.back,1-Math.pow(1-p,1.7)];if(ph==='throw')return [K.back,K.rel,Math.pow(k,1.8)];if(ph==='fly'||ph==='follow')return [K.rel,K.end,1-Math.pow(1-k,2)];
@@ -1764,11 +1772,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(fig.userData.s3v2&&!fpv&&(v2ThrowArm(fig,B,S,dirU,dirF,b,oa)||v2ArmClear(fig,B,S,dirU,dirF,b))){pside.addScaledVector(dirF,-pside.dot(dirF)).normalize();}
   const hinge=_pv[8].crossVectors(dirU,up).normalize();setW(B.RightArm,dirU,restAxisTo(_ra,B.RightArm,up),hinge);
   const DN=_pv[11].set(0,-1,0);setW(B.RightForeArm,dirF,restAxisTo(_ra,B.RightForeArm,DN),pside);
-  const ex=P.ext*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
+  const v2t=fig.userData.s3v2&&!fpv;const ex=(P.ext+(v2t?v2WristAdd(oa):0))*rad;const fing=_pv[12].copy(dirF).multiplyScalar(Math.cos(ex)).addScaledVector(pside,-Math.sin(ex)).normalize();const palm=_pv[13].copy(pside).multiplyScalar(Math.cos(ex)).addScaledVector(dirF,Math.sin(ex)).normalize();
   setW(B.RightHand,fing,restAxisTo(_ra,B.RightHand,DN),palm);
   const rel=oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset';
-  for(let f=0;f<4;f++){const nm=PD_RF[f][0],c=rel?PD_RF[f][1]:PD_RF[f][2];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===0?1:.8));}}
-  for(let t=0;t<3;t++){const e=PD_TH[t];const bn=B[e[0]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(_pe.set(e[1],e[2],e[3],'ZYX')));}
+  const vo=v2t?v2Open(oa):0;for(let f=0;f<4;f++){const nm=PD_RF[f][0],c=v2t?PD_RF[f][2]+(V2OPEN.curl[f]-PD_RF[f][2])*vo:rel?PD_RF[f][1]:PD_RF[f][2];for(let j=0;j<3;j++){const bn=B[nm[j]];if(!bn)continue;bn.quaternion.copy(R[bn.name].lq);bn.rotateX(c*(j===0?1:.8));if(j===0&&vo)bn.rotateZ((f-1.5)*.09*vo);}}
+  for(let t=0;t<3;t++){const e=PD_TH[t];const bn=B[e[0]];if(!bn)continue;const th=t===0&&vo?V2OPEN.thumb:null;bn.quaternion.copy(R[bn.name].lq).multiply(_Qa.setFromEuler(th?_pe.set(e[1]+(th[0]-e[1])*vo,e[2]+(th[1]-e[2])*vo,e[3]+(th[2]-e[3])*vo,'ZYX'):_pe.set(e[1],e[2],e[3],'ZYX')));}
   // left arm: hangs, forearm across the stomach with the spares
   if(B.LeftArm&&B.LeftForeArm){setW(B.LeftArm,_pv[14].copy(DN).addScaledVector(fwdC,.24).addScaledVector(rtC,-.26),restAxisTo(_ra,B.LeftArm,up),fwdC);setW(B.LeftForeArm,_pv[15].copy(fwdC).multiplyScalar(.8).addScaledVector(rtC,.52).addScaledVector(up,.12),restAxisTo(_ra,B.LeftForeArm,DN),DN);
    if(B.LeftHand){setW(B.LeftHand,_pv[16].copy(rtC).multiplyScalar(.6).addScaledVector(fwdC,.6).addScaledVector(up,-.15),restAxisTo(_ra,B.LeftHand,DN),_pv[17].copy(fwdC).negate().addScaledVector(up,-.4));
