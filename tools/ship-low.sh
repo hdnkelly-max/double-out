@@ -17,7 +17,7 @@ git fetch -q origin src
 C=$(git rev-parse --verify "$C^{commit}") || { echo "unknown commit $C (fetch its branch first)"; exit 1; }
 # same checks release.yml's gate makes (it is the one that counts; these fail early with a clearer message)
 PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
-bad=$(git diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
+bad=$(git diff -M --no-ext-diff --name-status origin/src "$C" | awk -F'\t' -v P="$PROT" '$2 ~ P || $NF ~ P || ($1 != "A" && ($2 ~ /^tests\// || $NF ~ /^tests\//)) {print $1" "$2($3 ? "->"$3 : "")}')
 [ -z "$bad" ] || { echo "REFUSED: these need a Q&D pass (R0-R2 path), so not ship-low: $(echo $bad)"; exit 1; }
 runs=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .event=="push")]|map(.status+"/"+(.conclusion//"")+" "+(.id|tostring))|join(", ")')
 case ", $runs" in
