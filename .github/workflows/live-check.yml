@@ -1,0 +1,65 @@
+# TOPS live check after every release (DQ-IDLE-1; Hayden 17:03: LOW items ship on the author's tests, Q&D checks live afterwards).
+# Runs when a release (release.yml, mode=release) or a hand deploy (deploy.yml) finishes, and on demand. Against the LIVE site:
+#   1. file sweep: every file the live page names, and every file in s3/manifest.json, must be served (200);
+#   2. iPhone 13 and Pixel 7, each a brand-new device: the page is the released version, the loader lifts, a career match
+#      starts, three darts thrown by touch on the pull pad land, no page errors, no failed file.
+# Result: this run's check (red/green), a commit status "tops/live-check" on the released main commit, the job summary, and the
+# screenshots as an artifact. A red run names the version; roll back with release.yml (Overseer).
+# The test itself is tests/live-check.js on src (checked out from src, so it can improve without touching main).
+name: live-check
+run-name: "live check ${{ github.event_name == 'workflow_run' && format('after {0} ({1})', github.event.workflow_run.name, github.event.workflow_run.display_title) || 'on demand' }}"
+on:
+  workflow_run:
+    workflows: [release, deploy]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version: { description: 'Expected live version (empty = main''s version.json)', required: false, default: '' }
+      test_ref: { description: 'Branch holding tests/live-check.js (default src)', required: false, default: 'src' }
+  # TEMPORARY for the first proof run from this branch (a workflow_dispatch needs the file on main); removed before handover
+  push: { branches: [qa-live-wf] }
+concurrency: { group: tops-live-check, cancel-in-progress: false }
+permissions: { contents: read, statuses: write }
+jobs:
+  live:
+    # a finished, successful real release or deploy (a dry run or the rollback test changes nothing live)
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event_name == 'push' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       !contains(github.event.workflow_run.display_title, 'mode=dry_run') &&
+       !contains(github.event.workflow_run.display_title, 'mode=test_rollback'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: { image: 'mcr.microsoft.com/playwright:v1.48.2-jammy', options: '--ipc=host' }
+    env: { SITE: 'https://hdnkelly-max.github.io/double-out/' }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: site, fetch-depth: 1 }
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.test_ref || (github.event_name == 'push' && 'qa-ci-speed') || 'src' }}", path: src, fetch-depth: 1, sparse-checkout: tests }
+      - name: What should be live
+        id: v
+        env: { WANT: '${{ inputs.version }}' }
+        run: |
+          V=${WANT:-$(node -e "console.log(require('./site/version.json').v)")}
+          echo "v=$V" >> $GITHUB_OUTPUT; echo "sha=$(git -C site rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "expected live version $V (main $(git -C site rev-parse --short HEAD))"
+      - name: Live check (file sweep + iPhone 13 + Pixel 7)
+        id: check
+        working-directory: src
+        run: |
+          npm i --no-save playwright@1.48.2 >/dev/null
+          set +e; node tests/live-check.js "$SITE" "${{ steps.v.outputs.v }}" ../shots | tee ../live.txt; rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> $GITHUB_OUTPUT; exit $rc
+      - name: Summary + status
+        if: always()
+        env: { GH_TOKEN: '${{ github.token }}', V: '${{ steps.v.outputs.v }}', SHA: '${{ steps.v.outputs.sha }}', RC: '${{ steps.check.outputs.rc }}' }
+        run: |
+          if [ "$RC" = 0 ]; then st=success; d="v$V live: files + iPhone 13 + Pixel 7 PASS"; else st=failure; d="v$V live check FAILED: see run (roll back?)"; echo "::error::LIVE CHECK FAILED on v$V: $(grep -E '^(FAIL|  )' live.txt | head -3 | tr '\n' ' ')"; fi
+          { echo "### $d"; echo '```'; cat live.txt 2>/dev/null; echo '```'; echo "Screenshots: artifact live-shots-$V"; } >> "$GITHUB_STEP_SUMMARY"
+          [ -n "$SHA" ] && curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d "{\"state\":\"$st\",\"context\":\"tops/live-check\",\"description\":\"${d:0:139}\",\"target_url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" >/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: 'live-shots-${{ steps.v.outputs.v }}', path: shots, retention-days: 14 }
