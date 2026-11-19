@@ -822,12 +822,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     from the name (same look every meeting). Only with TOPS_S3FLAG. */
  let s3MeBuild=false; const S3_RIG='leonard';/* S3: the darts in the toy fists are drawn bigger (Overseer 09:38: the game-size dart read as a toothpick in the toy hand); thrown and board darts keep their size */const S3_DART=1.35;
  const S3B={skinny:{sh:.27,chest:.19,waist:.155,hip:.165,depth:.62,arm:.78,leg:.8,neck:.072},standard:{sh:.31,chest:.235,waist:.205,hip:.2,depth:.64,arm:1,leg:1,neck:.086},female:{sh:.27,chest:.215,waist:.165,hip:.215,depth:.66,arm:.8,leg:.96,neck:.068,bust:1},heavy:{sh:.33,chest:.27,waist:.29,hip:.26,depth:.8,arm:1.22,leg:1.28,neck:.1,belly:.2},muscle:{sh:.37,chest:.3,waist:.2,hip:.2,depth:.6,arm:1.42,leg:1.18,neck:.108,pecs:1}};
- const S3L={
-  ray:{name:'Ray',tag:'The Veteran',body:'heavy',dep:1.1,legK:.95,skin:0xe2a17e,shirt:0x7a1f2b,trim:0xf2f2f2,hair:'horseshoe',hairC:0x75706a,face:'walrus',beardC:0xa8a29a,brow:0x8d8780,glasses:true,nose:1.25,jaw:1.15,shW:.92,fore:1.1,big:true},
-  kai:{name:'Kai',tag:'The Young Gun',body:'skinny',armK:.92,legK:1.04,skin:0xa8693f,shirt:0x0e7c86,trim:0xf2f2f2,hair:'quiff',hairC:0x141010,face:'clean',brow:0x141010,nose:.9,jaw:.92,shW:.96,fore:.95},
-  tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0x7f4d30,shirt:0x2a2b33,trim:0xd9252e,hair:'buzz',hairC:0x120d0b,face:'goatee',beardC:0x120d0b,brow:0x120d0b,nose:1.1,jaw:1.18,shW:1.15,chW:1.16,fore:1.05,waistK:.92},
-  dazza:{name:'Dazza',tag:'The Showman',body:'standard',legK:1.06,skin:0xe8b08a,shirt:0xe0a21c,trim:0x1c1c22,hair:'mullet',hairC:0x8f6326,face:'full',beardC:0x8c5f2a,brow:0x9a6c36,nose:1.05,jaw:1.0,band:true,shW:1.06,waistK:.9},
-  mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xc98e64,shirt:0x5b2a86,trim:0xf2f2f2,hair:'ponytail',hairC:0x3a2416,face:'clean',brow:0x2e1c11,nose:.78,jaw:.84,shW:.92,fore:.88,soft:true,handK:.9}};
+ const S3L={/* Vinyl v2 bases (Director vinyl2.js LOOKS): black TOPS shirts with red swooshes, warm saturated skin */
+  ray:{name:'Ray',tag:'The Veteran',body:'heavy',skin:0xeeb08a,shirt:0x141416,hair:'horseshoe',hairC:0xc8c4c0,brow:0x9a9590,eye:0x3a2a20,face:'clean',glasses:true},
+  kai:{name:'Kai',tag:'The Young Gun',body:'standard',skin:0xeea472,shirt:0x141416,hair:'quiff',hairC:0x5a2e1a,brow:0x3a1e10,eye:0x4a2a16,face:'clean'},
+  tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0xb06a3e,shirt:0x141416,hair:'curly',hairC:0x1a1210,brow:0x1a1210,eye:0x2a1a10,face:'clean'},
+  dazza:{name:'Dazza',tag:'The Showman',body:'standard',skin:0xeca676,shirt:0x141416,hair:'short',hairC:0x4a2a18,brow:0x3a2010,eye:0x3a2416,face:'full',beardC:0x5a3420,cap:true,capC:0xd21e28},
+  mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xf3b486,shirt:0x141416,hair:'ponytail',hairC:0xf0c040,brow:0x9a6a2a,eye:0x3a2416,face:'clean',soft:true,lash:true,earring:0xf2b632}};
  window.TOPS_S3_LABLOOKS=S3L;
  /* S3 pro look-alikes (Overseer 10:15; Director's set, S3 Art s3/pros/pros.json): a named real pro (van Gerwen, Littler, Humphries, Price,
     Anderson, van Barneveld, Taylor, Wright, Smith, Aspinall, Cross, Clayton, Bunting, Heta, Noppert, Dobey) is built from their own look on the
@@ -840,19 +840,19 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const s3ProKey=n=>{const k=String(n||'').toLowerCase().replace(/[^a-z]/g,'');for(const id in S3PRO){const nm=String(S3PRO[id].name||'').toLowerCase().replace(/[^a-z]/g,'');if(nm&&nm===k)return id;}return null;};
  window.TOPS_S3_PROS=()=>S3PRO;window.TOPS_S3_PROS_ON=()=>S3PROS_ON;
  setTimeout(()=>{try{const h=window.TOPS_S3V&&TOPS_S3V['s3/pros/pros.json'];if(!window.TOPS_S3FLAG||!S3PROS_ON||!h)return;fetch('s3/pros/pros.json?v='+h).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object'&&Object.keys(j).length){S3PRO=j;try{window.TOPS_LOG&&TOPS_LOG.log('s3_pros',{n:Object.keys(j).length});}catch(e){}}}).catch(()=>{});}catch(e){}},0);
- window.TOPS_S3_OPTIONS={base:Object.keys(S3L),body:Object.keys(S3B),hair:['short','buzz','quiff','mullet','horseshoe','ponytail','bald'],face:['clean','stubble','full','goatee','walrus'],skin:['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'],hairC:['#141010','#3a2416','#5a3a22','#8f6326','#b8863b','#75706a','#c9c4bc','#c9352d'],accessories:['glasses','band','cap'],save:'save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[glasses|band|cap],shirt,capC,at}'};
+ window.TOPS_S3_OPTIONS={base:Object.keys(S3L),body:Object.keys(S3B),hair:['short','buzz','quiff','curly','mullet','horseshoe','ponytail','bald'],face:['clean','stubble','full','goatee','walrus'],skin:['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'],hairC:['#141010','#3a2416','#5a3a22','#8f6326','#b8863b','#75706a','#c9c4bc','#c9352d'],accessories:['glasses','band','cap'],save:'save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[glasses|band|cap],shirt,capC,at}'};
  const s3h=s=>{let h=2166136261;for(const c of String(s||'x'))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
  /* the player's S3 look: Career's save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[],shirt,capC,at} (top level of the S3 save); a look passed
     with .s3 (creator preview, TOPS_S3_LOOK) wins. acc: 'glasses','band','cap'. */
  function s3Norm(v){if(!v||typeof v!=='object')return {};const o={};['base','body','skin','hair','hairC','face','beardC','shirt','capC'].forEach(k=>{if(v[k]!=null&&v[k]!=='')o[k]=v[k];});if(v.faceC)o.beardC=v.faceC;
-  if(Array.isArray(v.acc)){o.glasses=v.acc.includes('glasses');o.band=v.acc.includes('band');o.cap=v.acc.includes('cap');}['glasses','band','cap'].forEach(k=>{if(typeof v[k]==='boolean')o[k]=v[k];});return o;}
+  if(Array.isArray(v.acc)&&(v.accSet||v.acc.length)){/* an untouched acc:[] keeps the base's own extras (Ray's glasses, Dazza's cap) */o.glasses=v.acc.includes('glasses');o.band=v.acc.includes('band');o.cap=v.acc.includes('cap');}['glasses','band','cap'].forEach(k=>{if(typeof v[k]==='boolean')o[k]=v[k];});return o;}
  function s3Look(look,name,isMe){look=look||{};const mine=isMe||(typeof save!=='undefined'&&save&&look===save.look);/* LIVE P1 4.00: for the player, the creator's save.vlook is the look (it used to lose to look.s3, the base pick Experience stamps into save.look, so no creator change reached the preview) */const o=s3Norm((mine&&save.vlook)||look.s3||null);const has=!!(o.base||Object.keys(o).length);let L;
   if(o.base&&S3L[o.base])L=Object.assign({},S3L[o.base],{base:o.base});
   else if(mine&&!has)L=Object.assign({},S3L.dazza);
   else if(!mine&&S3PROS_ON&&s3ProKey(name)){const P=S3PRO[s3ProKey(name)];L=Object.assign({body:'standard',trim:0xf2f2f2},P);if(L.hair==='none'||L.hair==='bald')L.hair=null;L.pro=s3ProKey(name);}
   else{const h=s3h(name);const pk=(a,k)=>a[(h>>>k)%a.length];const fem=look.sex==='f'||!!CHAR_F[charKey(look,name)];const hc=look.hair||pk(['#141010','#3a2416','#5a3a22','#8f6326','#75706a'],5);
    L={body:fem?'female':pk(['standard','skinny','heavy','muscle','standard','heavy'],3),skin:(look.skin==='#5b3b2a'?'#6a4330':look.skin)||pk(S3_OPTS_SKIN,7),shirt:look.shirt||pk(['#7a1f2b','#0e7c86','#2a2b33','#e0a21c','#274a7a','#3f7f3f','#c9352d','#5b2a86'],9),trim:pk([0xf2f2f2,0x1c1c22,0xd9252e],11),
-    hair:fem?pk(['ponytail','short'],13):(look.hairStyle==='bald'?'bald':pk(['short','buzz','quiff','mullet','horseshoe','short','buzz'],13)),hairC:hc,face:fem?'clean':(look.beard?pk(['full','goatee','walrus','stubble'],16):pk(['clean','clean','stubble'],16)),beardC:hc,brow:hc,glasses:((h>>>19)%7)===0,band:!fem&&((h>>>21)%6)===0,cap:(h>>>29)===0,
+    hair:fem?pk(['ponytail','short'],13):(look.hairStyle==='bald'?'bald':pk(['short','buzz','quiff','mullet','horseshoe','curly','buzz'],13)),hairC:hc,face:fem?'clean':(look.beard?pk(['full','goatee','walrus','stubble'],16):pk(['clean','clean','stubble'],16)),beardC:hc,brow:hc,glasses:((h>>>19)%7)===0,band:!fem&&((h>>>21)%6)===0,cap:(h>>>29)===0,
     nose:.85+((h>>>23)%40)/100,jaw:.86+((h>>>25)%32)/100,shW:.93+((h>>>27)%18)/100,soft:fem,handK:fem?.9:1,legK:.97+((h>>>2)%8)/100};}
   ['body','skin','hair','hairC','face','beardC','glasses','band','cap','capC','shirt'].forEach(k=>{if(o[k]!=null)L[k]=o[k];});if(L.hair==='bald')L.hair=null;if(o.hairC&&o.beardC==null)L.beardC=o.hairC;if(o.hairC)L.brow=o.hairC;return L;}
  const S3_OPTS_SKIN=['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'];
@@ -976,7 +976,96 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  /* put the Lab figure on the game skeleton: joints placed where the Lab has them (scaled to the skeleton's height), limb lengths
     matched, every part a rigid piece parented to its bone, rotated so it lies along that bone at rest. The Lab faces +z; aL (x<0) is
     the figure's right arm (it holds the dart), lL its right leg. */
- function s3Dress(fig,B,L){const rig=s3Build(L);rig.root.updateMatrixWorld(true);fig.updateMatrixWorld(true);
+ /* ===== S3 VINYL v2 (Director spec 11 + reference vinyl2.js, Overseer 14:32): the Season 3 poster figure on the game skeleton =====
+    Head ~2x on the collar (no neck), short thick limbs, big fists and shoes, painted decal face (calm eyes, clear grin), sRGB colours,
+    envMapIntensity .32. Same rig contract as the Lab build (hips/chest/neck/head, arms sh/el/wr, legs th/kn/an), so s3Dress carries it.
+    Creator options map onto it: hair short/buzz/quiff/mullet/horseshoe(swept)/ponytail(bun)/curly/bald, face clean/stubble/full/goatee/
+    walrus, glasses/sweatband/cap, shirt colour, build. */
+ const S3_V2=true;
+ const V2P={head:{c:[0,1.44,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.62,y1:1.17,rx:0.255,rz:0.19,belly:0.03},shoulder:{x:0.255,y:1.09},arm:{upper:0.17,fore:0.17,r0:0.072,r1:0.06},leg:{hipX:0.12,hipY:0.62,len:0.40,r:0.11},shoe:{len:0.42,w:0.22,h:0.21,toe:0.08}};
+ const V2BODY={skinny:[.9,.9,0],standard:[1,1,0],heavy:[1.1,1.1,.03],muscle:[1.12,1.02,-.01],female:[.93,.92,0]};
+ let v2EnvT=null;function v2Env(){if(v2EnvT!==null)return v2EnvT;v2EnvT=undefined;try{const sc=new T.Scene();const g=new T.SphereGeometry(10,24,12);const c=[];const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i)/10;const a=new T.Color(0x3a3230).lerp(new T.Color(0xfff4ea),Math.pow(Math.max(0,y),.6));if(y<-.1)a.set(0x221c1a);c.push(a.r,a.g,a.b);}g.setAttribute('color',new T.Float32BufferAttribute(c,3));
+  sc.add(new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide})));[[6,5,4,0xffffff],[-7,3,2,0xfff0e0],[0,4,-8,0xe8eeff],[0,9,0,0xffffff]].forEach(([x,y,z,col])=>{const q=new T.Mesh(new T.PlaneGeometry(6,4),new T.MeshBasicMaterial({color:col,side:T.DoubleSide}));q.position.set(x,y,z);q.lookAt(0,0,0);sc.add(q);});
+  const pm=new T.PMREMGenerator(renderer);v2EnvT=pm.fromScene(sc,.04).texture;pm.dispose();g.dispose();}catch(e){v2EnvT=undefined;}return v2EnvT;}
+ const V2MAT={skin:[.42,.45,.22],hair:[.32,.7,.12],shirt:[.55,.25,.35],trim:[.45,.35,.3],pants:[.22,.9,.08],shoe:[.12,1,.04],dark:[.6,0,.5]};
+ function v2M(c,part,o){const g=V2MAT[part]||[.38,.55,.18];const col=new T.Color(c);if(part==='skin'){const h={};col.getHSL(h);col.setHSL(h.h,h.s*.82,Math.min(.92,h.l*1.04));}/* the game has no ACES tone mapping: skin a little softer so it doesn't burn orange under the warm venue light */col.convertSRGBToLinear();const base=Object.assign({color:col,metalness:0,envMap:v2Env()||null,envMapIntensity:.32},o||{});let m;
+  /* phones: standard material (no clearcoat pass), a touch smoother to keep the gloss; full finish: the spec's physical clearcoat */
+  if(S3G==='full')m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,g[0]-.08*g[1])}));m.userData.s3v=true;return m;}
+ const v2hex=h=>'#'+new T.Color(h).getHexString();
+ function v2cv(w,h,f){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');f(x,w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;}
+ function v2FaceTex(L){return v2cv(512,320,(x,W,H)=>{x.scale(.5,.5);W*=2;H*=2;const ex=[W*.5-175,W*.5+175],ey=H*.43;
+   [ex[0]-20,ex[1]+20].forEach(cx=>{const g=x.createRadialGradient(cx,ey+125,0,cx,ey+125,80);g.addColorStop(0,'rgba(240,110,100,.35)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-90,ey+30,180,180);});
+   ex.forEach((cx,i)=>{x.save();x.translate(cx,ey);x.fillStyle='#ffffff';x.beginPath();x.ellipse(0,0,74,92,0,0,7);x.fill();x.fillStyle=v2hex(L.eye||0x3a2416);x.beginPath();x.ellipse(i?-5:5,8,62,78,0,0,7);x.fill();
+    x.fillStyle='#0d0806';x.beginPath();x.ellipse(i?-5:5,12,36,46,0,0,7);x.fill();x.fillStyle='#ffffff';x.beginPath();x.ellipse(i?-28:-16,-28,20,24,0,0,7);x.fill();x.beginPath();x.ellipse(i?14:26,36,9,10,0,0,7);x.fill();
+    x.strokeStyle='#1a0f0a';x.lineWidth=7;x.beginPath();x.ellipse(0,0,74,92,0,Math.PI*1.08,Math.PI*1.92);x.stroke();
+    if(L.lash){x.lineWidth=8;x.lineCap='round';[[-46,-40,-66,-62],[-30,-56,-44,-82],[i?40:-12,-62,i?52:-14,-90]].forEach(([a,b,c,d])=>{const s=i?-1:1;x.beginPath();x.moveTo(a*s,b);x.lineTo(c*s,d);x.stroke();});}x.restore();});
+   x.fillStyle=v2hex(L.brow||L.hairC||0x3a2010);ex.forEach((cx,i)=>{const s=i?1:-1;x.beginPath();x.moveTo(cx-92*s,ey-108);x.quadraticCurveTo(cx-10*s,ey-200,cx+90*s,ey-136);x.quadraticCurveTo(cx+5*s,ey-128,cx-92*s,ey-76);x.closePath();x.fill();});
+   if(L.face!=='full'&&L.face!=='walrus'||true){const my=H*.77,mw=215;const path=()=>{x.beginPath();x.moveTo(W/2-mw,my-18);x.quadraticCurveTo(W/2,my-34,W/2+mw,my-18);x.quadraticCurveTo(W/2+mw*.85,my+110,W/2,my+112);x.quadraticCurveTo(W/2-mw*.85,my+110,W/2-mw,my-18);};
+    x.fillStyle='#4a1414';path();x.fill();x.save();path();x.clip();x.fillStyle='#ffffff';x.fillRect(W/2-mw,my-40,mw*2,78);x.fillStyle='#e06a6a';x.beginPath();x.ellipse(W/2,my+108,95,42,0,0,7);x.fill();x.restore();
+    x.strokeStyle='#5a2418';x.lineWidth=6;x.lineCap='round';path();x.stroke();[-1,1].forEach(s=>{x.beginPath();x.arc(W/2+s*(mw+8),my-14,16,s<0?-0.4:Math.PI-1.2,s<0?1.2:Math.PI+0.4);x.stroke();});}});}
+ function v2ShirtTex(L){const sc=L.shirt==null?0x141416:L.shirt;const st=L.stripe!=null?L.stripe:(new T.Color(sc).getHSL({}).l>.6||Math.abs(new T.Color(sc).getHSL({}).h-0)<.03&&new T.Color(sc).getHSL({}).s>.5?0x141416:0xd81e2a);L._stripe=st;
+  return v2cv(512,256,(x,W,H)=>{x.scale(.5,.5);W*=2;H*=2;x.fillStyle=v2hex(sc);x.fillRect(0,0,W,H);x.fillStyle=v2hex(st);const sw=(y0,th)=>{x.beginPath();x.moveTo(W*.18,H-y0);x.lineTo(W*.82,H-(y0+150));x.lineTo(W*.82,H-(y0+150+th));x.lineTo(W*.18,H-(y0+th));x.closePath();x.fill();};sw(40,46);sw(118,26);
+   x.fillStyle=new T.Color(sc).getHSL({}).l>.7?'#141416':'#f4f4f4';x.font='bold 46px Arial, Helvetica, sans-serif';x.textAlign='center';x.textBaseline='middle';x.save();x.translate(W*.565,H*.74);x.scale(1,1.15);x.fillText('TOPS',0,0);x.restore();x.fillStyle=v2hex(st);x.fillRect(W*.245,0,10,H);x.fillRect(W*.745,0,10,H);});}
+ function v2ell(rx,ry,rz,ws,hs){const g=new T.SphereGeometry(1,ws||Math.round(24*S3_SEGF),hs||Math.round(16*S3_SEGF));g.scale(rx,ry,rz);return g;}
+ function v2cap(r0,r1,len,seg){const pts=[];const n=8;for(let i=0;i<=n;i++){const a=-Math.PI/2+i/n*Math.PI/2;pts.push(new T.Vector2(Math.cos(a)*r1,-len+Math.sin(a)*r1*.9+r1*.9));}for(let i=0;i<=n;i++){const a=i/n*Math.PI/2;pts.push(new T.Vector2(Math.cos(a)*r0,Math.sin(a)*r0*.9));}return new T.LatheGeometry(pts.sort((a,b)=>a.y-b.y),seg||Math.round(16*S3_SEGF));}
+ function v2mesh(g,m,par,x,y,z){const o=new T.Mesh(g,m);o.position.set(x||0,y||0,z||0);o.castShadow=o.receiveShadow=true;if(par)par.add(o);return o;}
+ function v2pivot(par,x,y,z){const g=new T.Group();g.position.set(x,y,z);par.add(g);return g;}
+ function s3BuildV2(L0){const L=Object.assign({},L0);const P=V2P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
+  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY[L.body]||V2BODY.standard;
+  const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(L.shirt==null?0x141416:L.shirt,'shirt');
+  const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;/* chest pivot 0.3 above the hips: the spine bends mid-torso */const chest=pivot(hips,0,CH,0);
+  {const t=P.torso,pts=[];const h=t.y1-t.y0;const n=20;for(let i=0;i<=n;i++){const v=i/n;let r=.97+.05*Math.sin(v*Math.PI*.9)+(t.belly+BK[2])*Math.sin(v*Math.PI)*2;if(v>.78)r*=Math.cos((v-.78)/.22*Math.PI*.42);pts.push(new T.Vector2(Math.max(.06,r),t.y0-P.leg.hipY-CH+v*h));}
+   pts.push(new T.Vector2(.024,t.y1-P.leg.hipY-CH+.01));const g=new T.LatheGeometry(pts,Math.round(32*S3_SEGF));g.scale(t.rx*BK[0],1,t.rz*BK[1]);g.rotateY(Math.PI);tag(mesh(g,shirtM,chest),'shirt');
+   const hb=new T.TorusGeometry(1,.018,8,Math.round(32*S3_SEGF));hb.rotateX(Math.PI/2);hb.scale(t.rx*BK[0]*.99,1,t.rz*BK[1]*.99);tag(mesh(hb,shirtPlain,chest,0,t.y0-P.leg.hipY-CH+.012,0),'hem');
+   const cy=t.y1-P.leg.hipY-CH-.025;const cr=new T.TorusGeometry(1,.04,10,Math.round(24*S3_SEGF));cr.rotateX(Math.PI/2);cr.scale(.17,1,.14);tag(mesh(cr,trim2,chest,0,cy,0),'collar');
+   [-1,1].forEach(s=>{const f=new T.SphereGeometry(1,14,8,0,Math.PI*2,0,Math.PI/2);f.scale(.085,.02,.07);const o=mesh(f,trim2,chest,s*.07,cy-.035,.13);o.rotation.set(-1.0,0,s*.55);tag(o,'fold');});
+   const pl=mesh(new T.BoxGeometry(.05,.1,.01),shirtPlain,chest,0,cy-.08,.185*BK[1]);pl.rotation.x=-.25;tag(pl,'placket');}
+  const neck=pivot(chest,0,P.torso.y1-P.leg.hipY-CH,0);const head=pivot(neck,0,P.head.c[1]-P.torso.y1,P.head.c[2]);v2Head(head,L,skin,hairM);
+  const arm=s=>{const sh=pivot(chest,s*P.shoulder.x*BK[0],P.shoulder.y-P.leg.hipY-CH,0);tag(mesh(ell(.095,.11,.1),shirtPlain,sh,s*.01,-.04,0),'sleeve');
+   const cuff=new T.TorusGeometry(.083,.02,8,Math.round(16*S3_SEGF));cuff.rotateX(Math.PI/2);tag(mesh(cuff,trim2,sh,s*.01,-.12,0),'cuff');tag(mesh(cap(P.arm.r0,P.arm.r1,P.arm.upper),skin,sh,0,-.06,0),'upperarm');
+   const el=pivot(sh,0,-P.arm.upper-.02,0);mesh(cap(P.arm.r1,P.arm.r1*.92,P.arm.fore),skin,el,0,0,0);const wr=pivot(el,0,-P.arm.fore-.02,0);
+   const k=fem?.9:1;mesh(ell(.105*k,.115*k,.1*k),skin,wr,0,-.08*k,.01);for(let i=0;i<4;i++)mesh(ell(.034*k,.034*k,.034*k,12,9),skin,wr,(i-1.5)*.042*k,-.125*k,.06*k);const th=mesh(ell(.032*k,.055*k,.032*k,12,9),skin,wr,s*-.07*k,-.06*k,.07*k);th.rotation.z=s*.5;
+   if(L.band&&s<0){const b=new T.TorusGeometry(.066,.022,8,20);b.rotateX(Math.PI/2);mesh(b,v2M(L.shirt==null?0xd81e2a:L.shirt,'trim'),el,0,-P.arm.fore+.01,0);}
+   wr.traverse(o=>{if(o.isMesh)o.castShadow=false;});return {sh,el,wr};};
+  const aL=arm(-1),aR=arm(1);/* aL = the arm at x<0 (the figure's right), as the Lab rig */
+  const leg=s=>{const th=pivot(hips,s*P.leg.hipX*BK[0],0,0);tag(mesh(cap(P.leg.r*1.05,P.leg.r,P.leg.len*.62),pantM,th,0,.02,0),'pants');const kn=pivot(th,0,-P.leg.len*.5,0);mesh(cap(P.leg.r*.99,P.leg.r*.95,P.leg.len*.58),pantM,kn,0,.02,0);
+   const an=pivot(kn,0,-P.leg.len*.5,0);const S=P.shoe;const g=new T.SphereGeometry(1,Math.round(20*S3_SEGF),Math.round(12*S3_SEGF),0,Math.PI*2,0,Math.PI*.62);g.scale(S.w/2,S.h,S.len/2);mesh(g,shoeM,an,0,-S.h+.04,S.toe);
+   const sole=new T.CylinderGeometry(1,1,.035,Math.round(20*S3_SEGF));sole.scale(S.w/2*1.02,1,S.len/2*1.02);mesh(sole,v2M(0x1e1e20,'dark'),an,0,-S.h+.03,S.toe);return {th,kn,an};};
+  const lL=leg(-1),lR=leg(1);tag(mesh(ell(.2*BK[0],.1,.16*BK[1]),pantM,hips,0,.02,0),'pants');
+  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[],thighs:[],v2:true};}
+ function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head);
+  const F=V2P.face;const fg=new T.SphereGeometry(1,Math.round(28*S3_SEGF),Math.round(18*S3_SEGF),Math.PI/2-F.phi[1]/2,F.phi[1],F.theta[0],F.theta[1]);fg.scale(R[0]*1.008,R[1]*1.008,R[2]*1.008);
+  const fm=new T.MeshStandardMaterial({map:v2FaceTex(L),transparent:true,roughness:.3,metalness:0,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,envMap:v2Env()||null,envMapIntensity:.32});fm.userData.s3v=true;const fc=mesh(fg,fm,head);fc.renderOrder=2;fc.castShadow=false;fc.userData.tag='face';
+  mesh(ell(.048*(L.nose||1),.04,.04,14,10),skin,head,0,-R[1]*.36,R[2]*.93);
+  [-1,1].forEach(s=>{const e=mesh(ell(.045,.07,.04,12,9),skin,head,s*R[0]*.98,-.02,-.01);e.rotation.y=s*.3;if(L.earring)mesh(new T.TorusGeometry(.032,.008,6,16),v2M(L.earring,'trim',{metalness:.9}),head,s*R[0],-.11,0).rotation.y=Math.PI/2;});
+  const hs=L.hair,bc=L.beardC||L.hairC||0x3a2010;
+  if(L.face==='full'||L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
+  v2Hair(head,L,hairM);
+  if(L.glasses){const gm=v2M(0x111111,'shoe');[-1,1].forEach(s=>{const o=mesh(new T.TorusGeometry(.075,.012,8,24),gm,head,s*.105,.04,R[2]*1.0);o.scale.set(1.15,.85,1);});mesh(new T.BoxGeometry(.06,.014,.014),gm,head,0,.05,R[2]*1.02);[-1,1].forEach(s=>mesh(new T.BoxGeometry(.014,.014,.2),gm,head,s*R[0]*.93,.04,0));}}
+ function v2Blobs(par,mat,list){list.forEach(b=>{const o=v2mesh(v2ell(b[3],b[4]||b[3],b[5]||b[3],16,12),mat,par,b[0],b[1],b[2]);if(b[6])o.rotation.set(b[6][0],b[6][1],b[6][2]);});}
+ function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';if(L.cap)st=st?'capped':null;
+  const capG=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.27);capG.scale(R[0]*1.06,R[1]*1.08,R[2]*1.07);
+  const back=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,Math.PI*.95,Math.PI*1.1,0,Math.PI*.6);back.scale(R[0]*1.05,R[1]*1.06,R[2]*1.06);
+  if(st&&st!=='swept'&&st!=='capped'){mesh(capG,m,head,0,.01,-.005);mesh(back,m,head,0,0,-.01);}
+  if(st==='swept'){const b2=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,Math.PI*.95,Math.PI*1.1,Math.PI*.18,Math.PI*.42);b2.scale(R[0]*1.05,R[1]*1.06,R[2]*1.06);mesh(b2,m,head,0,0,-.01);}
+  if(st&&st!=='bun'&&st!=='capped'&&st!=='buzz')[-1,1].forEach(s=>mesh(ell(.03,.07,.05,10,8),m,head,s*R[0]*.97,.02,.05));
+  if(st==='buzz'){head.children[head.children.length-2].scale.set(.985,.985,.985);}
+  if(st==='quiff')v2Blobs(head,m,[[0,.25,.12,.2,.13,.14,[-.6,0,0]],[.09,.27,.03,.17,.12,.14,[-.3,0,-.35]],[-.1,.26,.02,.16,.11,.14,[-.3,0,.35]],[0,.27,-.08,.19,.1,.15],[.16,.19,.13,.1,.08,.09],[-.17,.18,.13,.1,.08,.09],[.03,.3,.16,.1,.07,.08,[-.9,0,0]]]);
+  if(st==='short')v2Blobs(head,m,[[0,.24,.06,.2,.08,.17,[-.25,0,0]],[.12,.2,.08,.1,.07,.1],[-.12,.2,.08,.1,.07,.1]]);
+  if(st==='mullet')v2Blobs(head,m,[[0,.24,.06,.2,.08,.17,[-.25,0,0]],[0,-.12,-.2,.2,.16,.09,[.3,0,0]],[.15,-.1,-.15,.08,.14,.08],[-.15,-.1,-.15,.08,.14,.08]]);
+  if(st==='bun')v2Blobs(head,m,[[0,.31,-.06,.1,.09,.1],[0,.2,.1,.18,.08,.12,[-.4,0,0]],[.17,.05,.12,.08,.14,.07,[0,0,-.25]],[-.17,.05,.12,.08,.14,.07,[0,0,.25]],[.22,-.1,.02,.07,.14,.08],[-.22,-.1,.02,.07,.14,.08]]);
+  if(st==='curly'){const c=[];for(let i=0;i<64;i++){const a=i*2.399,y=1-(i/63)*1.2;const r=Math.sqrt(Math.max(0,1-y*y));if(Math.cos(a)*r>.55&&y<.55)continue;c.push([Math.sin(a)*r*R[0]*1.1,.03+y*R[1]*1.12,Math.cos(a)*r*R[2]*1.1,.058]);}v2Blobs(head,m,c.filter(b=>b[1]>-.06||b[2]<0));}
+  if(st==='swept')v2Blobs(head,m,[[.02,.21,.08,.18,.07,.12,[-.3,0,-.2]],[-.1,.19,.1,.11,.06,.1],[.14,.16,.08,.1,.07,.1]]);
+  if(L.cap){const cm=v2M(L.capC!=null?L.capC:(L.base==='dazza'?0xd21e28:(L.shirt==null?0xd21e28:L.shirt)),'trim');const cg=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.5);cg.scale(R[0]*1.08,R[1],R[2]*1.08);mesh(cg,cm,head,0,.06,-.01);
+   const bill=new T.CylinderGeometry(.2,.2,.02,Math.round(16*S3_SEGF),1,false,0,Math.PI);bill.scale(1,1,.75);const b=mesh(bill,cm,head,0,.08,-R[2]*.95);b.rotation.set(.15,Math.PI,0);mesh(new T.SphereGeometry(.025,10,8),cm,head,0,.06+R[1],-.01);if(L.hair)mesh(back,m,head,0,-.02,-.01);}}
+ function v2Beard(head,kind,col){const R=V2P.head.r,m=v2M(col,'hair',{side:T.DoubleSide});const W=.5;
+  const shell=(p0,pl,t0,tl,mx)=>{const g=new T.SphereGeometry(1,Math.round(20*S3_SEGF),12,p0,pl,t0,tl);const p=g.attributes.position;const v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const th=Math.acos(Math.max(-1,Math.min(1,v.y)));const ph=Math.atan2(v.z,-v.x);
+    const lo=Math.max(0,(th-Math.PI*.55)/(Math.PI*.45));const side=Math.min(Math.abs(ph),Math.abs(Math.PI-ph))/(Math.PI/2);const edge=Math.min(1,Math.min(th-t0,t0+tl-th)/.12,Math.min(Math.abs(ph-p0),Math.abs(p0+pl-ph))/.12);
+    const thick=(.01+mx*Math.sin(Math.min(1,lo*1.5)*Math.PI/2)*(.6+.4*side))*Math.max(.25,Math.min(1,edge));p.setXYZ(i,v.x*(R[0]+thick),v.y*(R[1]+thick*1.2),v.z*(R[2]+thick));}g.computeVertexNormals();return v2mesh(g,m,head,0,0,.004);};
+  if(kind==='full'||kind==='stubble'){const mx=kind==='stubble'?.004:.055;shell(0,Math.PI/2-W,Math.PI*.56,Math.PI*.44,mx);shell(Math.PI/2+W,Math.PI/2-W,Math.PI*.56,Math.PI*.44,mx);shell(Math.PI/2-W-.02,2*W+.04,Math.PI*.8,Math.PI*.2,mx);}
+  if(kind==='goatee')shell(Math.PI/2-W*.6,W*1.2,Math.PI*.8,Math.PI*.2,.045);
+  if(kind==='full'||kind==='goatee'||kind==='walrus')v2Blobs(head,m,[[-.07,-R[1]*.47,R[2]*.87,.075,.03,.04,[0,0,.3]],[.07,-R[1]*.47,R[2]*.87,.075,.03,.04,[0,0,-.3]]]);}
+ function s3Dress(fig,B,L){const rig=S3_V2?s3BuildV2(L):s3Build(L);rig.root.updateMatrixWorld(true);fig.updateMatrixWorld(true);
   const W=o=>o.getWorldPosition(new T.Vector3());const fi=new T.Matrix4().copy(fig.matrixWorld).invert();const F=o=>W(o).applyMatrix4(fi);/* fig space */
   const facePlus=F(B.LeftUpLeg).x>F(B.RightUpLeg).x;const Rf=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),facePlus?0:Math.PI);
   const k=.93*F(B.Head).y/W(rig.head).y;/* a touch smaller than the old figures: the toy head is 1.4x, and the match cameras frame a lifelike head */const lab=o=>W(o).applyQuaternion(Rf).multiplyScalar(k);/* Lab joint -> fig space */
@@ -1410,7 +1499,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function setPlayerLook0(look,flight,name,tier){lastMe=[look,flight,name,tier];if(me){scene.remove(me);disposeTree(me);}if(fpFig){scene.remove(fpFig);disposeTree(fpFig);fpFig=null;}if(RIG.ready){fpFig=makeRigged(look,name,tier);fpFig.visible=false;fpFig.traverse(o=>{if(o.isMesh)o.castShadow=false;});fpFig.userData.B.LeftHand.children.forEach(c=>{c.visible=false;});scene.add(fpFig);fpFig.remove(fpFig.userData.dt);const fd=myDart(flight);fpFig.add(fd);fpFig.userData.dt=fd;}me=makeFigure(look,name,tier);me.visible=false;scene.add(me);sleeveMat.color.set(look.shirt);skin.color.set(look.skin);
   fpArm.remove(hand);freeHand(hand);hand=makeHand(1,skin,null,'throw');hand.scale.setScalar(1.08);fpArm.add(hand);fpDart=myDart(flight);hand.add(fpDart);fpDart.position.set(-.026,.004,.074);fpDart.rotation.set(-.04,Math.PI,0);fpDart.scale.setScalar(1.6);if(previewOn)preview(true);else if(idleOn)idle(true);}
  const prevLight=new T.PointLight(0xfff1dd,1.1,6);prevLight.visible=false;scene.add(prevLight);const prevFill=new T.PointLight(0x9ab8ff,.5,6);prevFill.visible=false;scene.add(prevFill);
- let previewOn=false;function preview(on){previewOn=on;prevLight.visible=on;prevFill.visible=on;if(me){me.visible=on||idleOn;if(!on&&idleOn){idle(true);return;}me.position.set(0,0,OCHE_Z+1.5);me.rotation.y=-.35;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},me.localToWorld(new T.Vector3(.1,1.6,-3)));me.userData.dt.visible=true;}if(on){prevLight.position.set(1.0,2.4,OCHE_Z-.4);prevFill.position.set(-1.4,1.3,OCHE_Z+.6);}}
+ /* Vinyl v2 creator light rig (Director spec 11): warm hemisphere, warm key, pink fill, two red rims behind; only while an S3 figure is previewed */
+ const v2L={hemi:new T.HemisphereLight(0xfff0e6,0x3a1a1a,.4),key:new T.DirectionalLight(0xffe2c4,1.1),fill:new T.DirectionalLight(0xffd6d0,.35),r1:new T.SpotLight(0xff3a30,1.4,8,.7,.6),r2:new T.SpotLight(0xff3a30,1.3,8,.7,.6)};
+ Object.values(v2L).forEach(l=>{l.visible=false;scene.add(l);if(l.target)scene.add(l.target);});
+ let previewOn=false;function preview(on){previewOn=on;const v2=!!(on&&me&&me.userData.s3fig&&S3_V2);prevLight.visible=on&&!v2;prevFill.visible=on&&!v2;Object.values(v2L).forEach(l=>{l.visible=v2;});if(v2){const c=new T.Vector3(0,0,OCHE_Z+1.5),rot=-.35;const at=(x,y,z)=>new T.Vector3(x*Math.cos(rot)+z*Math.sin(rot),y,-x*Math.sin(rot)+z*Math.cos(rot)).add(c);/* the rig is in the figure's frame (it faces -z in the game: z flipped) */v2L.key.position.copy(at(-1.6,3.2,-3.4));v2L.key.target.position.copy(at(0,1.1,0));v2L.fill.position.copy(at(2.2,1.4,-2.6));v2L.fill.target.position.copy(at(0,1.1,0));v2L.r1.position.copy(at(-2.2,2.6,2.4));v2L.r2.position.copy(at(2.2,2.4,2.4));v2L.r1.target.position.copy(at(0,1.1,0));v2L.r2.target.position.copy(at(0,1.1,0));}if(me){me.visible=on||idleOn;if(!on&&idleOn){idle(true);return;}me.position.set(0,0,OCHE_Z+1.5);me.rotation.y=-.35;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},me.localToWorld(new T.Vector3(.1,1.6,-3)));me.userData.dt.visible=true;}if(on){prevLight.position.set(1.0,2.4,OCHE_Z-.4);prevFill.position.set(-1.4,1.3,OCHE_Z+.6);}}
  let idleOn=false,titleOn=false;function title(on){titleOn=on;if(me&&idleOn&&!previewOn)me.visible=!on;}function idle(on){idleOn=on;if(me&&!previewOn){me.visible=on&&!titleOn;if(on){me.position.set(-.06,0,OCHE_Z+.08);me.rotation.y=1.0;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},boardC);}}}
  // --- crowd
  let crowd=null,SIDE_C=null;
@@ -2375,7 +2467,7 @@ function swatches(id,list,cur,fn){const w=$(id);w.innerHTML='';list.forEach(v=>{
 /* S3 CREATOR (Overseer 08:40): under TOPS_S3FLAG the Look step builds a Vinyl player: pick one of the 5 bases (Ray, Kai, Tama, Dazza, Mia),
    then skin tone, build, hair style + colour, facial hair, accessories (glasses, sweatband, cap) and shirt colour. Saved as Career's
    save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[],shirt,at}; a new base clears the changes made on the old one. The old fields hide. */
-const S3C_HAIR=[['short','Short'],['buzz','Buzz'],['quiff','Quiff'],['mullet','Mullet'],['horseshoe','Receding'],['ponytail','Ponytail'],['bald','Bald']],
+const S3C_HAIR=[['short','Short'],['buzz','Buzz'],['quiff','Quiff'],['curly','Curly'],['mullet','Mullet'],['horseshoe','Swept'],['ponytail','Bun'],['bald','Bald']],
  S3C_FACE=[['clean','Clean'],['stubble','Stubble'],['full','Full beard'],['goatee','Goatee'],['walrus','Moustache']],
  S3C_BODY=[['skinny','Slim'],['standard','Standard'],['heavy','Big'],['muscle','Muscle'],['female','Female']],
  S3C_ACC=[['glasses','Glasses'],['band','Sweatband'],['cap','Cap']],
@@ -2385,7 +2477,7 @@ function s3Creator(refresh){const sec=document.querySelector('#creator .cx-sec[d
  [...sec.querySelectorAll(':scope > .field')].forEach(f=>{if(!f.querySelector('#cName'))f.hidden=true;});
  let box=$('s3Cre');if(!box){box=document.createElement('div');box.id='s3Cre';sec.appendChild(box);}box.hidden=false;
  const V3=s3vlook(),B=(window.TOPS_S3_LABLOOKS||{})[V3.base]||{};const hex=c=>c==null?null:(typeof c==='number'?'#'+c.toString(16).padStart(6,'0'):String(c)).toLowerCase();
- const cur={skin:hex(V3.skin??B.skin),hair:V3.hair||B.hair||'bald',hairC:hex(V3.hairC??B.hairC),face:V3.face||B.face||'clean',body:V3.body||B.body,shirt:hex(V3.shirt??B.shirt),acc:V3.acc.length||V3.accSet?V3.acc:[B.glasses&&'glasses',B.band&&'band'].filter(Boolean)};
+ const cur={skin:hex(V3.skin??B.skin),hair:V3.hair||B.hair||'bald',hairC:hex(V3.hairC??B.hairC),face:V3.face||B.face||'clean',body:V3.body||B.body,shirt:hex(V3.shirt??B.shirt),acc:V3.acc.length||V3.accSet?V3.acc:[B.glasses&&'glasses',B.band&&'band',B.cap&&'cap'].filter(Boolean)};
  const set=(k,v)=>{const o=s3vlook();o[k]=v;if(k==='hairC'&&o.faceC==null)o.faceC=v;o.at=Date.now();persist();refresh();};
  const seg=(lab,opts,val,fn,extra)=>`<div class="field"><span class="label">${lab}</span><div class="seg char-pick${extra||''}">`+opts.map(([v,t])=>`<button type="button" data-f="${fn}" data-v="${v}" aria-pressed="${Array.isArray(val)?val.includes(v):String(val)===String(v)}">${t}</button>`).join('')+'</div></div>';
  const sw=(lab,list,val,fn)=>`<div class="field"><span class="label">${lab}</span><div class="swatches">`+list.map(c=>`<button type="button" class="sw" data-f="${fn}" data-v="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${String(val).toLowerCase()===c.toLowerCase()}"></button>`).join('')+'</div></div>';
