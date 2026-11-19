@@ -2,7 +2,7 @@
 # Ship a LOW-risk item (art, text, UI, visuals) on the author's own tests (Hayden's 17:03 process, 19 Nov).
 #   tools/ship-low.sh COMMIT "ITEM" [tests] [--dry]
 # What it does, so the caller types one line:
-#  1. resolves COMMIT and refuses unless its feature-branch CI (commit status tops/fast-suite) is green;
+#  1. resolves COMMIT and refuses unless a feature-branch CI run (ci.yml, unchanged from src) on that commit is green;
 #  2. refuses unless the commit already contains src (so the suite ran on exactly the tree that ships) and takes its tree;
 #  3. dispatches release.yml as R3 with the attest 'AUTHOR TESTS PASS names this tree' via tools/dispatch-release.sh.
 # R0-R2 (throw, aim, money, saves, difficulty) are NOT for this: they still need a Q&D PASS line and tools/dispatch-release.sh.
@@ -15,11 +15,13 @@ C=${ARGS[0]}; ITEM=${ARGS[1]}; TESTS=${ARGS[2]:-fast suite (tops/fast-suite gree
 cd "$(git rev-parse --show-toplevel)"
 git fetch -q origin src
 C=$(git rev-parse --verify "$C^{commit}") || { echo "unknown commit $C (fetch its branch first)"; exit 1; }
-st=$(gh api "repos/$REPO/commits/$C/statuses" --jq 'first(.[]|select(.context=="tops/fast-suite")) | .state+" "+.description' 2>/dev/null || true)
-case "$st" in
-  success*) echo "fast suite: $st" ;;
-  "") echo "REFUSED: $C has no tops/fast-suite result (push it to a feature branch and wait for CI)"; exit 1 ;;
-  *) echo "REFUSED: tops/fast-suite on ${C:0:7} is '$st', not green"; exit 1 ;;
+# same checks release.yml's gate makes (it is the one that counts; these fail early with a clearer message)
+git diff --quiet origin/src "$C" -- .github/workflows/ci.yml || { echo "REFUSED: ${C:0:7} changes .github/workflows/ci.yml; that needs a Q&D pass"; exit 1; }
+runs=$(gh api "repos/$REPO/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .path==".github/workflows/ci.yml")]|map(.status+"/"+(.conclusion//"")+" "+(.id|tostring))|join(", ")')
+case ", $runs" in
+  *", completed/success "*) echo "fast suite green (ci runs: $runs)" ;;
+  ", ") echo "REFUSED: no ci (fast suite) push run on ${C:0:7}: push it to a feature branch and wait"; exit 1 ;;
+  *) echo "REFUSED: no green fast-suite run on ${C:0:7} yet (ci runs: $runs)"; exit 1 ;;
 esac
 # the green fast suite must have run on exactly what ships: so the commit must already contain src (then release.yml's merge is a no-op)
 git merge-base --is-ancestor origin/src "$C" || { echo "REFUSED: ${C:0:7} does not contain src $(git rev-parse --short origin/src); rebase onto src, push, wait for the fast suite, then ship"; exit 1; }

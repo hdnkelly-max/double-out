@@ -24,7 +24,7 @@ concurrency:
   group: tops-production-release
   queue: max
   cancel-in-progress: false
-permissions: { contents: read }
+permissions: { contents: read, actions: read }   # actions: read = the author-attest check reads the commit's CI run
 jobs:
   gate_build:
     runs-on: ubuntu-latest
@@ -54,12 +54,23 @@ jobs:
         with: { ref: src, path: src, fetch-depth: 0 }
       - name: Gate (QA tree, inside the lock, against the current remote src)
         id: gate
-        env: { COMMIT: '${{ inputs.commit }}', TREE: '${{ inputs.tree }}', BASE: '${{ inputs.base }}', MIG: '${{ inputs.migration }}' }
+        env: { COMMIT: '${{ inputs.commit }}', TREE: '${{ inputs.tree }}', BASE: '${{ inputs.base }}', MIG: '${{ inputs.migration }}', ATTEST: '${{ inputs.attest }}', GH_TOKEN: '${{ github.token }}' }
         run: |
           cd src
           git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
           git fetch -q origin "$COMMIT" || { echo "::error::REFUSED: commit $COMMIT not found on this repo"; exit 1; }
           C=$(git rev-parse "$COMMIT"); T=$(git rev-parse "$C^{tree}")
+          if [ "$ATTEST" = "AUTHOR TESTS PASS names this tree" ]; then
+            # the author path is checked HERE, not only in tools/ship-low.sh, so a direct dispatch can't skip it:
+            # (a) the commit already contains src, so the tree that ships is exactly the tree CI tested (no merge);
+            git merge-base --is-ancestor origin/src "$C" || { echo "::error::REFUSED (author attest): $C does not contain src $(git rev-parse --short origin/src); rebase onto src, push, let CI pass"; exit 1; }
+            # (b) CI ran src's own ci.yml (a branch can't ship on a weakened copy of the suite);
+            git diff --quiet origin/src "$C" -- .github/workflows/ci.yml || { echo "::error::REFUSED (author attest): the commit changes .github/workflows/ci.yml; that needs a Q&D pass"; exit 1; }
+            # (c) a push run of ci.yml on exactly this commit concluded success (the run itself, not a commit status anyone with statuses:write could post).
+            ok=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .path==".github/workflows/ci.yml" and .conclusion=="success")]|length' 2>/dev/null || echo 0)
+            [ "${ok:-0}" -gt 0 ] || { echo "::error::REFUSED (author attest): no successful ci (fast suite) push run on $C"; exit 1; }
+            echo "author attest: $C contains src, ci.yml unchanged, fast suite green ($ok run(s))" >> $GITHUB_STEP_SUMMARY
+          fi
           LOG=../site/RELEASES.log; touch $LOG
           if grep -q " live .*tree=${TREE}" $LOG; then echo "mode=noop" >> $GITHUB_OUTPUT; echo "::notice::tree $TREE is already live; nothing to do"; exit 0; fi
           if git merge-base --is-ancestor origin/src "$C"; then
