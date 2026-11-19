@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<script>window.TOPS_BUILD="1795051093124";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795055514736";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -13797,7 +13797,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.01';
+window.TOPS_VER='4.02';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -20150,17 +20150,23 @@ window.TC_CAB3D = (function () {
 
   /* ---------- creator (W4): pick one of Engine's 5 Vinyl base looks, then the game's own hair / colour / skin / extras / shirt pickers ---------- */
   // Engine: TOPS_S3_BASES [{id, name, tag, look}] and TOPS_S3_LOOK(id). The 8-model "Character" row is hidden in Season 3 (the bases replace it).
+  /* Engine's Season 3 creator (s3Creator: the PLAYER portrait row, writes save.vlook) replaces this row. When it's in the build this
+     wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
+  const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {
     const _sc = showCreator;
     showCreator = function (editing) {
       const B = window.TOPS_S3_BASES;
+      /* first open: start on the first base (as 4.01 does; Engine's creator then opens on Ray) */
       if (B && B.length && save && save.look && !save.look.s3base) { const L = window.TOPS_S3_LOOK(B[0].id); if (L) { save.look = Object.assign({}, save.look, L, { s3base: B[0].id }); try { persist(); } catch (e) {} } }
+      if (engineCre()) { const r = _sc.apply(this, arguments); const old = $id('s3Base'); if (old) old.remove(); return r; }
       const r = _sc.apply(this, arguments);
       try { if (B && B.length) baseRow(editing); } catch (e) { console.warn('s3 creator', e); }
       return r;
     };
   }
   function baseRow(editing) {
+    if (engineCre()) { const old = $id('s3Base'); if (old) old.remove(); return; }
     const B = window.TOPS_S3_BASES, ch = $id('segChar'), f = ch && ch.closest('.field'); if (!f) return;
     f.hidden = true;
     let row = $id('s3Base'); if (!row) { row = document.createElement('div'); row.className = 'field'; row.id = 's3Base'; f.parentNode.insertBefore(row, f); }
