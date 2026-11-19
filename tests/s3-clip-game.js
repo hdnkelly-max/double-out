@@ -5,7 +5,7 @@
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]);const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':/\.webp$/.test(u)?'image/webp':'application/octet-stream'});r.end(d);});}).listen(0);
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const ctx=await b.newContext({...devices['iPhone 13']});const p=await ctx.newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
-await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript(()=>{window.TOPS_S3FLAG=true;try{localStorage.setItem('tops_s3','1');}catch(e){}});
+await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript((V2)=>{window.TOPS_S3FLAG=true;try{localStorage.setItem('tops_s3','1');localStorage.setItem('tops_v2',V2);}catch(e){}},process.env.V2==='0'?'0':'1');
 await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
 await p.evaluate(()=>{TOPS_LOADCHAR('leonard');V.loadAnims();});await p.waitForFunction(()=>TOPS_RIGS().ids.includes('leonard')&&V._qa.animNames().length>0,null,{timeout:180000});
 const res=await p.evaluate(([QUICK,CL])=>{const Q=V._qa;const specs=[...TOPS_S3_BASES.map(b=>[b.look,'You',true,b.id]),[{},'Big Mal',false,'opp:Big Mal'],[{},'Shazza',false,'opp:Shazza'],[{},'Deano',false,'opp:Deano']];

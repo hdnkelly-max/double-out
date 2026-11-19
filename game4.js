@@ -5,6 +5,8 @@
 /* release = flip S3_DEFAULT to true (one line). Rollback without a new build: ?s3=0 or the Menu switch stores '0' and the game is 3.55 again on the Season 2 save */
 const S3_DEFAULT=true;
 window.TOPS_S3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1'||q==='0')localStorage.setItem('tops_s3',q);const v=localStorage.getItem('tops_s3');return v==='1'||(v!=='0'&&S3_DEFAULT);}catch(e){return S3_DEFAULT;}})();
+/* Vinyl v2 switch (Overseer 17:05, ship hidden): ?v2=1 turns it on and sticks (localStorage tops_v2), ?v2=0 turns it off; off = the 4.02 figures exactly */
+window.TOPS_V2FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('v2');if(q==='1'||q==='0')localStorage.setItem('tops_v2',q);return localStorage.getItem('tops_v2')==='1';}catch(e){return false;}})();
 window.TOPS_SAVE_NS=TOPS_S3FLAG?{key:'doubleout_s3',table:'tops_saves_s3',rpc:'tops_save3_put',bak:'tops_career_bak_s3',lb:'tops_players_s3',lbRpc:'tops_upsert3',season:3}:{key:'doubleout2',table:'tops_saves',rpc:'tops_save_put',bak:'tops_career_bak',lb:'tops_players',lbRpc:'tops_upsert',season:2};
 ENGINE
 // ===== DATA =====
@@ -822,12 +824,21 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     from the name (same look every meeting). Only with TOPS_S3FLAG. */
  let s3MeBuild=false; const S3_RIG='leonard';/* S3: the darts in the toy fists are drawn bigger (Overseer 09:38: the game-size dart read as a toothpick in the toy hand); thrown and board darts keep their size */const S3_DART=1.35;
  const S3B={skinny:{sh:.27,chest:.19,waist:.155,hip:.165,depth:.62,arm:.78,leg:.8,neck:.072},standard:{sh:.31,chest:.235,waist:.205,hip:.2,depth:.64,arm:1,leg:1,neck:.086},female:{sh:.27,chest:.215,waist:.165,hip:.215,depth:.66,arm:.8,leg:.96,neck:.068,bust:1},heavy:{sh:.33,chest:.27,waist:.29,hip:.26,depth:.8,arm:1.22,leg:1.28,neck:.1,belly:.2},muscle:{sh:.37,chest:.3,waist:.2,hip:.2,depth:.6,arm:1.42,leg:1.18,neck:.108,pecs:1}};
- const S3L={/* Vinyl v2 bases (Director vinyl2.js LOOKS): black TOPS shirts with red swooshes, warm saturated skin */
+/* Vinyl v2 switch (Overseer 17:05, ship hidden): ?v2=1 turns it on and sticks (localStorage tops_v2), ?v2=0 turns it off; off = the 4.02 figures exactly */
+ const V2ON=!!window.TOPS_V2FLAG;/* set with TOPS_S3FLAG at the top of the file */
+ const S3L_V2={/* Vinyl v2 bases (Director vinyl2.js LOOKS): black TOPS shirts with red swooshes, warm saturated skin */
   ray:{name:'Ray',tag:'The Veteran',body:'heavy',skin:0xeeb08a,shirt:0x141416,hair:'horseshoe',hairC:0xc8c4c0,brow:0x9a9590,eye:0x3a2a20,face:'clean',glasses:true},
   kai:{name:'Kai',tag:'The Young Gun',body:'standard',skin:0xeea472,shirt:0x141416,hair:'quiff',hairC:0x7a3e22,brow:0x3a1e10,eye:0x4a2a16,face:'clean'},
   tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0xb06a3e,shirt:0x141416,hair:'curly',hairC:0x1a1210,brow:0x1a1210,eye:0x2a1a10,face:'clean'},
   dazza:{name:'Dazza',tag:'The Showman',body:'standard',skin:0xeca676,shirt:0x141416,hair:'short',hairC:0x4a2a18,brow:0x3a2010,eye:0x3a2416,face:'full',beardC:0x5a3420,cap:true,capC:0xd21e28},
   mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xf3b486,shirt:0x141416,hair:'ponytail',hairC:0xf0c040,brow:0x9a6a2a,eye:0x3a2416,face:'clean',soft:true,lash:true,earring:0xf2b632}};
+ const S3L_V1={
+  ray:{name:'Ray',tag:'The Veteran',body:'heavy',dep:1.1,legK:.95,skin:0xe2a17e,shirt:0x7a1f2b,trim:0xf2f2f2,hair:'horseshoe',hairC:0x75706a,face:'walrus',beardC:0xa8a29a,brow:0x8d8780,glasses:true,nose:1.25,jaw:1.15,shW:.92,fore:1.1,big:true},
+  kai:{name:'Kai',tag:'The Young Gun',body:'skinny',armK:.92,legK:1.04,skin:0xa8693f,shirt:0x0e7c86,trim:0xf2f2f2,hair:'quiff',hairC:0x141010,face:'clean',brow:0x141010,nose:.9,jaw:.92,shW:.96,fore:.95},
+  tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0x7f4d30,shirt:0x2a2b33,trim:0xd9252e,hair:'buzz',hairC:0x120d0b,face:'goatee',beardC:0x120d0b,brow:0x120d0b,nose:1.1,jaw:1.18,shW:1.15,chW:1.16,fore:1.05,waistK:.92},
+  dazza:{name:'Dazza',tag:'The Showman',body:'standard',legK:1.06,skin:0xe8b08a,shirt:0xe0a21c,trim:0x1c1c22,hair:'mullet',hairC:0x8f6326,face:'full',beardC:0x8c5f2a,brow:0x9a6c36,nose:1.05,jaw:1.0,band:true,shW:1.06,waistK:.9},
+  mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xc98e64,shirt:0x5b2a86,trim:0xf2f2f2,hair:'ponytail',hairC:0x3a2416,face:'clean',brow:0x2e1c11,nose:.78,jaw:.84,shW:.92,fore:.88,soft:true,handK:.9}};
+ const S3L=V2ON?S3L_V2:S3L_V1;
  window.TOPS_S3_LABLOOKS=S3L;
  /* S3 pro look-alikes (Overseer 10:15; Director's set, S3 Art s3/pros/pros.json): a named real pro (van Gerwen, Littler, Humphries, Price,
     Anderson, van Barneveld, Taylor, Wright, Smith, Aspinall, Cross, Clayton, Bunting, Heta, Noppert, Dobey) is built from their own look on the
@@ -840,19 +851,19 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const s3ProKey=n=>{const k=String(n||'').toLowerCase().replace(/[^a-z]/g,'');for(const id in S3PRO){const nm=String(S3PRO[id].name||'').toLowerCase().replace(/[^a-z]/g,'');if(nm&&nm===k)return id;}return null;};
  window.TOPS_S3_PROS=()=>S3PRO;window.TOPS_S3_PROS_ON=()=>S3PROS_ON;
  setTimeout(()=>{try{const h=window.TOPS_S3V&&TOPS_S3V['s3/pros/pros.json'];if(!window.TOPS_S3FLAG||!S3PROS_ON||!h)return;fetch('s3/pros/pros.json?v='+h).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object'&&Object.keys(j).length){S3PRO=j;try{window.TOPS_LOG&&TOPS_LOG.log('s3_pros',{n:Object.keys(j).length});}catch(e){}}}).catch(()=>{});}catch(e){}},0);
- window.TOPS_S3_OPTIONS={base:Object.keys(S3L),body:Object.keys(S3B),hair:['short','buzz','quiff','curly','mullet','horseshoe','ponytail','bald'],face:['clean','stubble','full','goatee','walrus'],skin:['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'],hairC:['#141010','#3a2416','#5a3a22','#8f6326','#b8863b','#75706a','#c9c4bc','#c9352d'],accessories:['glasses','band','cap'],save:'save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[glasses|band|cap],shirt,capC,at}'};
+ window.TOPS_S3_OPTIONS={base:Object.keys(S3L),body:Object.keys(S3B),hair:V2ON?['short','buzz','quiff','curly','mullet','horseshoe','ponytail','bald']:['short','buzz','quiff','mullet','horseshoe','ponytail','bald'],face:['clean','stubble','full','goatee','walrus'],skin:['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'],hairC:['#141010','#3a2416','#5a3a22','#8f6326','#b8863b','#75706a','#c9c4bc','#c9352d'],accessories:['glasses','band','cap'],save:'save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[glasses|band|cap],shirt,capC,at}'};
  const s3h=s=>{let h=2166136261;for(const c of String(s||'x'))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
  /* the player's S3 look: Career's save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[],shirt,capC,at} (top level of the S3 save); a look passed
     with .s3 (creator preview, TOPS_S3_LOOK) wins. acc: 'glasses','band','cap'. */
  function s3Norm(v){if(!v||typeof v!=='object')return {};const o={};['base','body','skin','hair','hairC','face','beardC','shirt','capC'].forEach(k=>{if(v[k]!=null&&v[k]!=='')o[k]=v[k];});if(v.faceC)o.beardC=v.faceC;
-  if(Array.isArray(v.acc)&&(v.accSet||v.acc.length)){/* an untouched acc:[] keeps the base's own extras (Ray's glasses, Dazza's cap) */o.glasses=v.acc.includes('glasses');o.band=v.acc.includes('band');o.cap=v.acc.includes('cap');}['glasses','band','cap'].forEach(k=>{if(typeof v[k]==='boolean')o[k]=v[k];});return o;}
+  if(Array.isArray(v.acc)&&(!V2ON||v.accSet||v.acc.length)){/* an untouched acc:[] keeps the base's own extras (Ray's glasses, Dazza's cap) */o.glasses=v.acc.includes('glasses');o.band=v.acc.includes('band');o.cap=v.acc.includes('cap');}['glasses','band','cap'].forEach(k=>{if(typeof v[k]==='boolean')o[k]=v[k];});return o;}
  function s3Look(look,name,isMe){look=look||{};const mine=isMe||(typeof save!=='undefined'&&save&&look===save.look);/* LIVE P1 4.00: for the player, the creator's save.vlook is the look (it used to lose to look.s3, the base pick Experience stamps into save.look, so no creator change reached the preview) */const o=s3Norm((mine&&save.vlook)||look.s3||null);const has=!!(o.base||Object.keys(o).length);let L;
   if(o.base&&S3L[o.base])L=Object.assign({},S3L[o.base],{base:o.base});
   else if(mine&&!has)L=Object.assign({},S3L.dazza);
   else if(!mine&&S3PROS_ON&&s3ProKey(name)){const P=S3PRO[s3ProKey(name)];L=Object.assign({body:'standard',trim:0xf2f2f2},P);if(L.hair==='none'||L.hair==='bald')L.hair=null;L.pro=s3ProKey(name);}
   else{const h=s3h(name);const pk=(a,k)=>a[(h>>>k)%a.length];const fem=look.sex==='f'||!!CHAR_F[charKey(look,name)];const hc=look.hair||pk(['#141010','#3a2416','#5a3a22','#8f6326','#75706a'],5);
    L={body:fem?'female':pk(['standard','skinny','heavy','muscle','standard','heavy'],3),skin:(look.skin==='#5b3b2a'?'#6a4330':look.skin)||pk(S3_OPTS_SKIN,7),shirt:look.shirt||pk(['#7a1f2b','#0e7c86','#2a2b33','#e0a21c','#274a7a','#3f7f3f','#c9352d','#5b2a86'],9),trim:pk([0xf2f2f2,0x1c1c22,0xd9252e],11),
-    hair:fem?pk(['ponytail','short'],13):(look.hairStyle==='bald'?'bald':pk(['short','buzz','quiff','mullet','horseshoe','curly','buzz'],13)),hairC:hc,face:fem?'clean':(look.beard?pk(['full','goatee','walrus','stubble'],16):pk(['clean','clean','stubble'],16)),beardC:hc,brow:hc,glasses:((h>>>19)%7)===0,band:!fem&&((h>>>21)%6)===0,cap:(h>>>29)===0,
+    hair:fem?pk(['ponytail','short'],13):(look.hairStyle==='bald'?'bald':pk(V2ON?['short','buzz','quiff','mullet','horseshoe','curly','buzz']:['short','buzz','quiff','mullet','horseshoe','short','buzz'],13)),hairC:hc,face:fem?'clean':(look.beard?pk(['full','goatee','walrus','stubble'],16):pk(['clean','clean','stubble'],16)),beardC:hc,brow:hc,glasses:((h>>>19)%7)===0,band:!fem&&((h>>>21)%6)===0,cap:(h>>>29)===0,
     nose:.85+((h>>>23)%40)/100,jaw:.86+((h>>>25)%32)/100,shW:.93+((h>>>27)%18)/100,soft:fem,handK:fem?.9:1,legK:.97+((h>>>2)%8)/100};}
   ['body','skin','hair','hairC','face','beardC','glasses','band','cap','capC','shirt'].forEach(k=>{if(o[k]!=null)L[k]=o[k];});if(L.hair==='bald')L.hair=null;if(o.hairC&&o.beardC==null)L.beardC=o.hairC;if(o.hairC)L.brow=o.hairC;return L;}
  const S3_OPTS_SKIN=['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'];
@@ -981,7 +992,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     envMapIntensity .32. Same rig contract as the Lab build (hips/chest/neck/head, arms sh/el/wr, legs th/kn/an), so s3Dress carries it.
     Creator options map onto it: hair short/buzz/quiff/mullet/horseshoe(swept)/ponytail(bun)/curly/bald, face clean/stubble/full/goatee/
     walrus, glasses/sweatband/cap, shirt colour, build. */
- const S3_V2=true;
+ const S3_V2=V2ON;
  const V2P={head:{c:[0,1.44,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.585,/* hem a little lower than the reference (0.62): the game's pelvis tilts in idle and the thigh tops showed above it */y1:1.17,rx:0.255,rz:0.19,belly:0.03},shoulder:{x:0.255,y:1.09},arm:{upper:0.17,fore:0.17,r0:0.072,r1:0.06},leg:{hipX:0.12,hipY:0.62,len:0.40,r:0.11},shoe:{len:0.42,w:0.22,h:0.21,toe:0.08}};
  const V2BODY={skinny:[.9,.9,0],standard:[1,1,0],heavy:[1.1,1.1,.03],muscle:[1.12,1.02,-.01],female:[.93,.92,0]};
  let v2EnvT=null;function v2Env(){if(v2EnvT!==null)return v2EnvT;v2EnvT=undefined;try{const sc=new T.Scene();const g=new T.SphereGeometry(10,24,12);const c=[];const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i)/10;const a=new T.Color(0x3a3230).lerp(new T.Color(0xfff4ea),Math.pow(Math.max(0,y),.6));if(y<-.1)a.set(0x221c1a);c.push(a.r,a.g,a.b);}g.setAttribute('color',new T.Float32BufferAttribute(c,3));
@@ -1233,8 +1244,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const go=()=>{if(window.RIG_B64_URL){fetch(window.RIG_B64_URL).then(r=>r.text()).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));L.parse(bin.buffer,'',onLoaded,fail);}).catch(fail);}else if(window.RIG_URL&&!/^data:/.test(window.RIG_URL))rigFetch(window.RIG_URL).then(buf=>L.parse(buf,'',onLoaded,fail)).catch(fail);else L.load(window.RIG_URL||'remy.glb',onLoaded,e=>{try{if(window.TOPS_LOAD&&e&&e.total)TOPS_LOAD.part('rig',e.loaded/e.total);}catch(x){}},fail);};
   /* S3 (Delivery QA 13:01; Overseer 16:09): the 685 KB S3 rig is the only rig file. Every S3 figure is built on it, so the 2.4 MB in-page rig
      file is fetched only as a fallback, if the S3 rig fails or is still not in after 20 s; once the S3 rig is in, it is never fetched */
-  if(window.TOPS_S3FLAG){const rd=()=>{try{if(window.TOPS_LOAD)TOPS_LOAD.part('rig',1);}catch(e){}};if(RIGS[S3_RIG]){rd();return;}loadChar(S3_RIG);const t0=Date.now();
-   const w=()=>{if(RIGS[S3_RIG]){rd();return;}if(!RIG_WAIT[S3_RIG]||Date.now()-t0>20000)go();else setTimeout(w,150);};setTimeout(w,150);}else go();}
+  if(window.TOPS_S3FLAG&&V2ON){const rd=()=>{try{if(window.TOPS_LOAD)TOPS_LOAD.part('rig',1);}catch(e){}};if(RIGS[S3_RIG]){rd();return;}loadChar(S3_RIG);const t0=Date.now();
+   const w=()=>{if(RIGS[S3_RIG]){rd();return;}if(!RIG_WAIT[S3_RIG]||Date.now()-t0>20000)go();else setTimeout(w,150);};setTimeout(w,150);}
+  /* off (4.02): the 685 KB S3 rig first, with the whole connection; the 2.4 MB in-page rig file after it lands (or fails, or 20 s) */
+  else if(window.TOPS_S3FLAG&&!RIGS[S3_RIG]){loadChar(S3_RIG);const t0=Date.now();const w=()=>{if(RIGS[S3_RIG]||!RIG_WAIT[S3_RIG]||Date.now()-t0>20000)go();else setTimeout(w,150);};setTimeout(w,150);}else go();}
  /* ENG-RIGCACHE: the player model is its own file named by its content (rig/remy-<hash>.glb). Kept in Cache Storage: a relaunch or the fresh
     start between matches reads it from there with no download; the first download shows its progress on the loader; two retries on a bad
     network; models from older builds are dropped from the cache once the new one is in. Without Cache Storage (or if it fails) it downloads. */
@@ -1638,7 +1651,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const prevLight=new T.PointLight(0xfff1dd,1.1,6);prevLight.visible=false;scene.add(prevLight);const prevFill=new T.PointLight(0x9ab8ff,.5,6);prevFill.visible=false;scene.add(prevFill);
  /* Vinyl v2 creator light rig (Director spec 11): warm hemisphere, warm key, pink fill, two red rims behind; only while an S3 figure is previewed */
  const v2L={hemi:new T.HemisphereLight(0xfff0e6,0x3a1a1a,.5),key:new T.DirectionalLight(0xffe2c4,1.35),fill:new T.DirectionalLight(0xffd6d0,.35),r1:new T.SpotLight(0xff3a30,1.4,8,.7,.6),r2:new T.SpotLight(0xff3a30,1.3,8,.7,.6)};
- Object.values(v2L).forEach(l=>{l.visible=false;scene.add(l);if(l.target)scene.add(l.target);});
+ if(V2ON)Object.values(v2L).forEach(l=>{l.visible=false;scene.add(l);if(l.target)scene.add(l.target);});/* off: not in the scene at all */
  let previewOn=false;function preview(on){previewOn=on;const v2=!!(on&&me&&me.userData.s3fig&&S3_V2);prevLight.visible=on&&!v2;prevFill.visible=on&&!v2;Object.values(v2L).forEach(l=>{l.visible=v2;});if(v2){const c=new T.Vector3(0,0,OCHE_Z+1.5),rot=-.35;const at=(x,y,z)=>new T.Vector3(x*Math.cos(rot)+z*Math.sin(rot),y,-x*Math.sin(rot)+z*Math.cos(rot)).add(c);/* the rig is in the figure's frame (it faces -z in the game: z flipped) */v2L.key.position.copy(at(-1.6,3.2,-3.4));v2L.key.target.position.copy(at(0,1.1,0));v2L.fill.position.copy(at(2.2,1.4,-2.6));v2L.fill.target.position.copy(at(0,1.1,0));v2L.r1.position.copy(at(-2.2,2.6,2.4));v2L.r2.position.copy(at(2.2,2.4,2.4));v2L.r1.target.position.copy(at(0,1.1,0));v2L.r2.target.position.copy(at(0,1.1,0));}if(me){me.visible=on||idleOn;if(!on&&idleOn){idle(true);return;}me.position.set(0,0,OCHE_Z+1.5);me.rotation.y=-.35;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},me.localToWorld(new T.Vector3(.1,1.6,-3)));me.userData.dt.visible=true;}if(on){prevLight.position.set(1.0,2.4,OCHE_Z-.4);prevFill.position.set(-1.4,1.3,OCHE_Z+.6);}}
  let idleOn=false,titleOn=false;function title(on){titleOn=on;if(me&&idleOn&&!previewOn)me.visible=!on;}function idle(on){idleOn=on;if(me&&!previewOn){me.visible=on&&!titleOn;if(on){me.position.set(-.06,0,OCHE_Z+.08);me.rotation.y=1.0;stance(me);me.updateWorldMatrix(true,true);poseFigure(me,{phase:'idle'},boardC);}}}
  // --- crowd
@@ -2604,7 +2617,7 @@ function swatches(id,list,cur,fn){const w=$(id);w.innerHTML='';list.forEach(v=>{
 /* S3 CREATOR (Overseer 08:40): under TOPS_S3FLAG the Look step builds a Vinyl player: pick one of the 5 bases (Ray, Kai, Tama, Dazza, Mia),
    then skin tone, build, hair style + colour, facial hair, accessories (glasses, sweatband, cap) and shirt colour. Saved as Career's
    save.vlook={v:1,base,skin,hair,hairC,face,faceC,acc:[],shirt,at}; a new base clears the changes made on the old one. The old fields hide. */
-const S3C_HAIR=[['short','Short'],['buzz','Buzz'],['quiff','Quiff'],['curly','Curly'],['mullet','Mullet'],['horseshoe','Swept'],['ponytail','Bun'],['bald','Bald']],
+const S3C_HAIR=window.TOPS_V2FLAG?[['short','Short'],['buzz','Buzz'],['quiff','Quiff'],['curly','Curly'],['mullet','Mullet'],['horseshoe','Swept'],['ponytail','Bun'],['bald','Bald']]:[['short','Short'],['buzz','Buzz'],['quiff','Quiff'],['mullet','Mullet'],['horseshoe','Receding'],['ponytail','Ponytail'],['bald','Bald']],
  S3C_FACE=[['clean','Clean'],['stubble','Stubble'],['full','Full beard'],['goatee','Goatee'],['walrus','Moustache']],
  S3C_BODY=[['skinny','Slim'],['standard','Standard'],['heavy','Big'],['muscle','Muscle'],['female','Female']],
  S3C_ACC=[['glasses','Glasses'],['band','Sweatband'],['cap','Cap']],
@@ -2614,7 +2627,7 @@ function s3Creator(refresh){const sec=document.querySelector('#creator .cx-sec[d
  [...sec.querySelectorAll(':scope > .field')].forEach(f=>{if(!f.querySelector('#cName'))f.hidden=true;});
  let box=$('s3Cre');if(!box){box=document.createElement('div');box.id='s3Cre';sec.appendChild(box);}box.hidden=false;
  const V3=s3vlook(),B=(window.TOPS_S3_LABLOOKS||{})[V3.base]||{};const hex=c=>c==null?null:(typeof c==='number'?'#'+c.toString(16).padStart(6,'0'):String(c)).toLowerCase();
- const cur={skin:hex(V3.skin??B.skin),hair:V3.hair||B.hair||'bald',hairC:hex(V3.hairC??B.hairC),face:V3.face||B.face||'clean',body:V3.body||B.body,shirt:hex(V3.shirt??B.shirt),acc:V3.acc.length||V3.accSet?V3.acc:[B.glasses&&'glasses',B.band&&'band',B.cap&&'cap'].filter(Boolean)};
+ const cur={skin:hex(V3.skin??B.skin),hair:V3.hair||B.hair||'bald',hairC:hex(V3.hairC??B.hairC),face:V3.face||B.face||'clean',body:V3.body||B.body,shirt:hex(V3.shirt??B.shirt),acc:V3.acc.length||V3.accSet?V3.acc:[B.glasses&&'glasses',B.band&&'band',window.TOPS_V2FLAG&&B.cap&&'cap'].filter(Boolean)};
  const set=(k,v)=>{const o=s3vlook();o[k]=v;if(k==='hairC'&&o.faceC==null)o.faceC=v;o.at=Date.now();persist();refresh();};
  const seg=(lab,opts,val,fn,extra)=>`<div class="field"><span class="label">${lab}</span><div class="seg char-pick${extra||''}">`+opts.map(([v,t])=>`<button type="button" data-f="${fn}" data-v="${v}" aria-pressed="${Array.isArray(val)?val.includes(v):String(val)===String(v)}">${t}</button>`).join('')+'</div></div>';
  const sw=(lab,list,val,fn)=>`<div class="field"><span class="label">${lab}</span><div class="swatches">`+list.map(c=>`<button type="button" class="sw" data-f="${fn}" data-v="${c}" style="background:${c}" aria-label="${c}" aria-pressed="${String(val).toLowerCase()===c.toLowerCase()}"></button>`).join('')+'</div></div>';
