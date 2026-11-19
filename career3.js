@@ -79,7 +79,7 @@ function xpBreakdown(m,ranked,side){const t=tierOf(),mul=XPMUL[t];const L=[];con
  (S.featsNew||[]).forEach(f=>add('Feat: '+f.n,80*mul)); if(m.won&&S.rival)add('Beat your rival',75);if(m.won&&S.revenge)add('Revenge',75);
  if(S.after==='promo')add('Promotion',350);if(S.after==='champion')add('Title',250);
  return L;}
-function gainLevels(v,xp){const ups=[];v.xp+=xp;while(v.lv<100&&v.xp>=lvNeed(v.lv)){v.xp-=lvNeed(v.lv);v.lv++;const r=Object.assign({lv:v.lv},rewardAt(v.lv));if(r.k==='cash'){r.v=CASHR[tierOf()];r.n=`${money(r.v)} bonus`;career().bank+=r.v;}if(r.k==='title')v.title=r.v;v.unl.push(r);ups.push(r);}applyUnlocks();return ups;}
+function gainLevels(v,xp,noCash){const ups=[];v.xp+=xp;while(v.lv<100&&v.xp>=lvNeed(v.lv)){v.xp-=lvNeed(v.lv);v.lv++;const r=Object.assign({lv:v.lv},rewardAt(v.lv));if(r.k==='cash'){if(noCash){r.v=0;r.n='Level up';r.s3=1;}else{r.v=CASHR[tierOf()];r.n=`${money(r.v)} bonus`;career().bank+=r.v;}}if(r.k==='title')v.title=r.v;v.unl.push(r);ups.push(r);}applyUnlocks();return ups;}
 // ----- after every career match -----
 let pre=null;
 const _cam=careerAfterMatch;careerAfterMatch=function(){const c=career();const v=V3();if(!v||S.practice||S.drill){return _cam.apply(this,arguments);}
@@ -303,6 +303,14 @@ window.TOPS_LUX={items:()=>{const L=luxRead();return LUX.map(x=>Object.assign({}
  owns:id=>{const L=luxRead();return !!(L&&L.owned.includes(id));},badges:()=>{const L=luxRead();return L?LUX.filter(x=>x.badge&&L.owned.includes(x.id)).map(x=>x.badge):[];},
  sets:()=>{const L=luxRead();return L?LUX.filter(x=>x.set&&L.owned.includes(x.id)).map(x=>x.set):[];},edition:()=>{const L=luxRead();return L&&L.edition||null;},kitAtRisk,
  shop:luxShop,provide:k=>{if(Object.values(LUX_FX).some(a=>a.includes(k)))LUX_LIVE.add(k);},effects:()=>JSON.parse(JSON.stringify(LUX_FX)),live:()=>[...LUX_LIVE],pool:poolInfo};
-window.C3={pending:()=>!!pre,/* ENG-RESET: a reward card still to show (its achievement payout runs when it opens) */conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
+/* CAR-XP (Overseer 21:58, David 'almost no XP'): a Season 3 Circuit match skips the Season 2 league wrapper above, which also skipped the
+   player XP and levels (and so the stat points and level unlocks). s3MatchXP is the same match XP as Season 2 (xpBreakdown, ranked, tier
+   multiplier, promotion/title), called by tc/s3.js after the Circuit result. Season 3 money stays the Circuit's: no contract or pool payouts
+   and no level-up cash (noCash), so the Circuit purses are still the only prize money. */
+function s3MatchXP(){const v=V3();if(!v)return null;/* ChatGPT P1-2: once per match object (S is new for every match); the XP, the Circuit result and the counters are saved in the same persist() */if(S&&S._s3xpDone)return S.s3xp||null;if(S)S._s3xpDone=1;if(!v.s3xp){try{s3CatchUp({won:!!(S&&S.won)});}catch(e){}}/* a match played before any hub view: catch up first, without this match */const before={lv:v.lv,xp:v.xp};const L=xpBreakdown(summary(),true,false);const xp=L.reduce((a,b)=>a+b[1],0);const ups=gainLevels(v,xp,true);if(v&&S&&S.p&&S.p[0]){const a=avg(S.p[0]);if(a>v.best)v.best=+a.toFixed(1);}return {xp,L,ups,before,after:{lv:v.lv,xp:v.xp}};}
+/* CAR-XP catch-up, once per Season 3 career: the matches already played without XP get the base match XP (played 60 + win 100, x the
+   Pub multiplier); tons, checkouts and quick legs from those matches aren't recorded, so they aren't counted. No cash. */
+function s3CatchUp(cur){const c=career(),v=V3();if(!c||c.run||!c.circuit||!v||v.s3xp)return null;v.s3xp=1;const mul=XPMUL[0];/* ChatGPT P2-1: past matches' levels aren't kept per match, so the catch-up uses the Pub multiplier (never overpays) */ /* cur: the match being scored now is already in wins/losses, and gets its own full XP */const w=Math.max(0,(c.wins|0)-(cur&&cur.won?1:0)),l=Math.max(0,(c.losses|0)-(cur&&!cur.won?1:0));const xp=Math.round((w*160+l*60)*mul);if(xp<=0)return {xp:0};const ups=gainLevels(v,xp,true);return {xp,w,l,ups};}
+window.C3={pending:()=>!!pre,s3MatchXP,s3CatchUp,/* ENG-RESET: a reward card still to show (its achievement payout runs when it opens) */conList,poolLive,makePool,_poolAfter:(m,L)=>poolAfter(m,L||[]),gainLevels,lvNeed,rewardAt,V3,fillContracts,renderPlay,rIco,lvFlights,showRewardTest:p=>{pre=p;showReward();}};
 })();
 </script>
