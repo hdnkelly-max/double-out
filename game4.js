@@ -824,7 +824,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const S3B={skinny:{sh:.27,chest:.19,waist:.155,hip:.165,depth:.62,arm:.78,leg:.8,neck:.072},standard:{sh:.31,chest:.235,waist:.205,hip:.2,depth:.64,arm:1,leg:1,neck:.086},female:{sh:.27,chest:.215,waist:.165,hip:.215,depth:.66,arm:.8,leg:.96,neck:.068,bust:1},heavy:{sh:.33,chest:.27,waist:.29,hip:.26,depth:.8,arm:1.22,leg:1.28,neck:.1,belly:.2},muscle:{sh:.37,chest:.3,waist:.2,hip:.2,depth:.6,arm:1.42,leg:1.18,neck:.108,pecs:1}};
  const S3L={/* Vinyl v2 bases (Director vinyl2.js LOOKS): black TOPS shirts with red swooshes, warm saturated skin */
   ray:{name:'Ray',tag:'The Veteran',body:'heavy',skin:0xeeb08a,shirt:0x141416,hair:'horseshoe',hairC:0xc8c4c0,brow:0x9a9590,eye:0x3a2a20,face:'clean',glasses:true},
-  kai:{name:'Kai',tag:'The Young Gun',body:'standard',skin:0xeea472,shirt:0x141416,hair:'quiff',hairC:0x5a2e1a,brow:0x3a1e10,eye:0x4a2a16,face:'clean'},
+  kai:{name:'Kai',tag:'The Young Gun',body:'standard',skin:0xeea472,shirt:0x141416,hair:'quiff',hairC:0x7a3e22,brow:0x3a1e10,eye:0x4a2a16,face:'clean'},
   tama:{name:'Tama',tag:'The Bruiser',body:'muscle',skin:0xb06a3e,shirt:0x141416,hair:'curly',hairC:0x1a1210,brow:0x1a1210,eye:0x2a1a10,face:'clean'},
   dazza:{name:'Dazza',tag:'The Showman',body:'standard',skin:0xeca676,shirt:0x141416,hair:'short',hairC:0x4a2a18,brow:0x3a2010,eye:0x3a2416,face:'full',beardC:0x5a3420,cap:true,capC:0xd21e28},
   mia:{name:'Mia',tag:'The Ace',body:'female',skin:0xf3b486,shirt:0x141416,hair:'ponytail',hairC:0xf0c040,brow:0x9a6a2a,eye:0x3a2416,face:'clean',soft:true,lash:true,earring:0xf2b632}};
@@ -988,7 +988,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   sc.add(new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide})));[[6,5,4,0xffffff],[-7,3,2,0xfff0e0],[0,4,-8,0xe8eeff],[0,9,0,0xffffff]].forEach(([x,y,z,col])=>{const q=new T.Mesh(new T.PlaneGeometry(6,4),new T.MeshBasicMaterial({color:col,side:T.DoubleSide}));q.position.set(x,y,z);q.lookAt(0,0,0);sc.add(q);});
   const pm=new T.PMREMGenerator(renderer);v2EnvT=pm.fromScene(sc,.04).texture;pm.dispose();g.dispose();}catch(e){v2EnvT=undefined;}return v2EnvT;}
  const V2MAT={skin:[.42,.45,.22],hair:[.32,.7,.12],shirt:[.55,.25,.35],trim:[.45,.35,.3],pants:[.22,.9,.08],shoe:[.12,1,.04],dark:[.6,0,.5]};
- function v2M(c,part,o){const g=V2MAT[part]||[.38,.55,.18];const col=new T.Color(c);if(part==='skin'){const h={};col.getHSL(h);col.setHSL(h.h,h.s*.82,Math.min(.92,h.l*1.04));}/* skin a little softer so it doesn't burn orange under the warm venue light */col.convertSRGBToLinear();const base=Object.assign({color:col,metalness:0,envMap:v2Env()||null,envMapIntensity:.32},o||{});let m;
+ function v2M(c,part,o){const g=V2MAT[part]||[.38,.55,.18];const col=new T.Color(c);if(part==='skin'||part==='hair'){const h={};col.getHSL(h);col.setHSL(h.h,h.s*(part==='skin'?.8:.95),Math.min(.92,h.l+(1-h.l)*(part==='skin'?.1:.06)));}/* skin a little softer so it doesn't burn orange under the warm venue light */col.convertSRGBToLinear();const base=Object.assign({color:col,metalness:0,envMap:v2Env()||null,envMapIntensity:.32},o||{});let m;
   /* phones: standard material (no clearcoat pass), a touch smoother to keep the gloss; full finish: the spec's physical clearcoat */
   if(S3G==='full')m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,g[0]-.08*g[1])}));m.userData.s3v=true;return m;}
  const v2hex=h=>'#'+new T.Color(h).getHexString();
@@ -1024,15 +1024,15 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const arm=s=>{const sh=pivot(chest,s*P.shoulder.x*BK[0],P.shoulder.y-P.leg.hipY-CH,0);tag(mesh(ell(.095,.11,.1),shirtPlain,sh,s*.01,-.04,0),'sleeve');
    const cuff=new T.TorusGeometry(.083,.02,8,Math.round(16*S3_SEGF));cuff.rotateX(Math.PI/2);tag(mesh(cuff,trim2,sh,s*.01,-.12,0),'cuff');tag(mesh(cap(P.arm.r0,P.arm.r1,P.arm.upper),skin,sh,0,-.06,0),'upperarm');
    const el=pivot(sh,0,-P.arm.upper-.02,0);mesh(cap(P.arm.r1,P.arm.r1*.92,P.arm.fore),skin,el,0,0,0);const wr=pivot(el,0,-P.arm.fore-.02,0);
-   const k=fem?.9:1;mesh(ell(.105*k,.115*k,.1*k),skin,wr,0,-.08*k,.01);for(let i=0;i<4;i++)mesh(ell(.034*k,.034*k,.034*k,12,9),skin,wr,(i-1.5)*.042*k,-.125*k,.06*k);const th=mesh(ell(.032*k,.055*k,.032*k,12,9),skin,wr,s*-.07*k,-.06*k,.07*k);th.rotation.z=s*.5;
+   const k=fem?.9:1;/* Hayden 14:57: real toy hands. A chunky palm here; 4 fingers + thumb are built on the skeleton's finger bones in s3Dress (v2Fingers), so they curl round the dart and open when relaxed */mesh(ell(.088*k,.078*k,.06*k,14,10),skin,wr,0,-.06*k,.008);
    if(L.band&&s<0){const b=new T.TorusGeometry(.066,.022,8,20);b.rotateX(Math.PI/2);mesh(b,v2M(L.shirt==null?0xd81e2a:L.shirt,'trim'),el,0,-P.arm.fore+.01,0);}
    wr.traverse(o=>{if(o.isMesh)o.castShadow=false;});return {sh,el,wr};};
   const aL=arm(-1),aR=arm(1);/* aL = the arm at x<0 (the figure's right), as the Lab rig */
-  const leg=s=>{const th=pivot(hips,s*P.leg.hipX*BK[0],0,0);tag(mesh(cap(P.leg.r*1.05,P.leg.r,P.leg.len*.62),pantM,th,0,.02,0),'pants');const kn=pivot(th,0,-P.leg.len*.5,0);mesh(cap(P.leg.r*.99,P.leg.r*.95,P.leg.len*.58),pantM,kn,0,.02,0);
+  const leg=s=>{const th=pivot(hips,s*P.leg.hipX*BK[0],0,0);tag(mesh(cap(P.leg.r*1.05,P.leg.r,P.leg.len*.6),pantM,th,0,-.035,0),'pants');/* top tucked under the hem (clip check: it poked 2-11 mm out of the shirt in idle) */const kn=pivot(th,0,-P.leg.len*.5,0);mesh(cap(P.leg.r*.99,P.leg.r*.95,P.leg.len*.58),pantM,kn,0,.02,0);
    const an=pivot(kn,0,-P.leg.len*.5,0);const S=P.shoe;const g=new T.SphereGeometry(1,Math.round(20*S3_SEGF),Math.round(12*S3_SEGF),0,Math.PI*2,0,Math.PI*.62);g.scale(S.w/2,S.h,S.len/2);mesh(g,shoeM,an,0,-S.h+.04,S.toe);
    const sole=new T.CylinderGeometry(1,1,.035,Math.round(20*S3_SEGF));sole.scale(S.w/2*1.02,1,S.len/2*1.02);mesh(sole,v2M(0x1e1e20,'dark'),an,0,-S.h+.03,S.toe);return {th,kn,an};};
-  const lL=leg(-1),lR=leg(1);tag(mesh(ell(.2*BK[0],.1,.16*BK[1]),pantM,hips,0,.02,0),'pants');
-  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[],thighs:[],v2:true};}
+  const lL=leg(-1),lR=leg(1);tag(mesh(ell(.19*BK[0],.085,.15*BK[1]),pantM,hips,0,-.03,0),'pants');
+  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[],thighs:[],v2:true,skinM:skin,fem};}
  function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head).userData.tag='skull';
   const F=V2P.face;const fg=new T.SphereGeometry(1,Math.round(28*S3_SEGF),Math.round(18*S3_SEGF),Math.PI/2-F.phi[1]/2,F.phi[1],F.theta[0],F.theta[1]);fg.scale(R[0]*1.008,R[1]*1.008,R[2]*1.008);
   const fm=new T.MeshStandardMaterial({map:v2FaceTex(L),transparent:true,roughness:.3,metalness:0,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,envMap:v2Env()||null,envMapIntensity:.32});fm.userData.s3v=true;const fc=mesh(fg,fm,head);fc.renderOrder=2;fc.castShadow=false;fc.userData.tag='face';
@@ -1065,6 +1065,21 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   if(kind==='full'||kind==='stubble'){const mx=kind==='stubble'?.004:.055;shell(0,Math.PI/2-W,Math.PI*.56,Math.PI*.44,mx);shell(Math.PI/2+W,Math.PI/2-W,Math.PI*.56,Math.PI*.44,mx);shell(Math.PI/2-W-.02,2*W+.04,Math.PI*.8,Math.PI*.2,mx);}
   if(kind==='goatee')shell(Math.PI/2-W*.6,W*1.2,Math.PI*.8,Math.PI*.2,.045);
   if(kind==='full'||kind==='goatee'||kind==='walrus')v2Blobs(head,m,[[-.07,-R[1]*.47,R[2]*.87,.075,.03,.04,[0,0,.3]],[.07,-R[1]*.47,R[2]*.87,.075,.03,.04,[0,0,-.3]]]);}
+ /* Vinyl v2 hands (Hayden 14:57): 4 separate chunky fingers + a thumb on each hand, riding the skeleton's finger bones (lengthened 1.6x for toy
+    proportions), so the game's own finger poses wrap them round the dart in the throw and the clips open them when relaxed. All 30 finger
+    segments of a figure are ONE skinned mesh (rigid weights, 1 draw call), 8-sided capsules so phones don't pay for them. */
+ function v2Fingers(fig,B,rig,k){const sides=['Right','Left'],F=['Index','Middle','Ring','Pinky'];const fem=rig.fem;fig.updateMatrixWorld(true);
+  sides.forEach(sd=>{F.forEach((f,fi)=>{for(let j=1;j<=4;j++){const b=B[sd+'Hand'+f+j];if(!b)continue;b.position.multiplyScalar(j===1?1.15:1.6);}const b1=B[sd+'Hand'+f+'1'];if(b1)b1.position.x*=1.25;});for(let j=1;j<=4;j++){const b=B[sd+'HandThumb'+j];if(b)b.position.multiplyScalar(j===1?1.2:1.55);}});
+  fig.updateMatrixWorld(true);const bones=[],pos=[],nor=[],si=[],sw=[],idx=[];const fi=new T.Matrix4().copy(fig.matrixWorld).invert();const up=new T.Vector3(0,-1,0),tmpQ=new T.Quaternion(),tmpM=new T.Matrix4(),nm=new T.Matrix3();
+  const seg=(bone,child,rW)=>{if(!bone||!child)return;let bi=bones.indexOf(bone);if(bi<0){bi=bones.length;bones.push(bone);}const len=child.position.length();if(len<1e-5)return;const bs=bone.getWorldScale(new T.Vector3()).x||1;const r=rW/bs;
+   const g=v2cap(r,r*.9,len+r*.6,8);/* along -y from 0 to -len */const dir=child.position.clone().normalize();tmpQ.setFromUnitVectors(up,dir);const m=new T.Matrix4().compose(new T.Vector3(0,0,0),tmpQ,new T.Vector3(1,1,1));
+   const toFig=new T.Matrix4().copy(fi).multiply(bone.matrixWorld).multiply(m);nm.getNormalMatrix(toFig);const base=pos.length/3;const p=g.attributes.position,n=g.attributes.normal,v=new T.Vector3(),nv=new T.Vector3();
+   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(toFig);nv.fromBufferAttribute(n,i).applyMatrix3(nm).normalize();pos.push(v.x,v.y,v.z);nor.push(nv.x,nv.y,nv.z);si.push(bi,0,0,0);sw.push(1,0,0,0);}
+   const ix=g.index.array;for(let i=0;i<ix.length;i++)idx.push(base+ix[i]);g.dispose();};
+  const rr=(fem?.9:1)*.026*k;sides.forEach(sd=>{F.forEach((f,fi2)=>{const rf=rr*(fi2===3?.85:1);for(let j=1;j<=3;j++)seg(B[sd+'Hand'+f+j],B[sd+'Hand'+f+(j+1)]||null,rf*(j===3?.92:1));if(!B[sd+'Hand'+f+'4']){const b3=B[sd+'Hand'+f+'3'];if(b3)seg(b3,{position:B[sd+'Hand'+f+'2'].position.clone().multiplyScalar(.8)},rf*.92);}});
+   for(let j=1;j<=3;j++)seg(B[sd+'HandThumb'+j],B[sd+'HandThumb'+(j+1)]||(j===3?{position:B[sd+'HandThumb2'].position.clone().multiplyScalar(.8)}:null),rr*1.05);});
+  if(!bones.length)return;const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute(si,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(sw,4));g.setIndex(idx);
+  const mat=rig.skinM.clone();mat.skinning=true;mat.userData.s3v=true;const sm=new T.SkinnedMesh(g,mat);sm.name='v2fingers';sm.frustumCulled=false;sm.castShadow=false;fig.add(sm);sm.updateMatrixWorld(true);sm.bind(new T.Skeleton(bones),sm.matrixWorld);sm.userData.tag='fingers';sm.userData.s3keep=true;}
  function s3Dress(fig,B,L){const rig=S3_V2?s3BuildV2(L):s3Build(L);rig.root.updateMatrixWorld(true);fig.updateMatrixWorld(true);
   const W=o=>o.getWorldPosition(new T.Vector3());const fi=new T.Matrix4().copy(fig.matrixWorld).invert();const F=o=>W(o).applyMatrix4(fi);/* fig space */
   const facePlus=F(B.LeftUpLeg).x>F(B.RightUpLeg).x;const Rf=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),facePlus?0:Math.PI);
@@ -1097,7 +1112,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
      8-9 mm gap at the back of the collar (tests/s3-clip-game.js). It rides on the neck box instead, so it hugs the neck in every clip. */
   {const cb=rig.chest.userData.box,nb=rig.neck.userData.box;if(cb&&nb){fig.updateMatrixWorld(true);cb.children.filter(o=>o.userData.tag==='collar').forEach(o=>nb.attach(o));}}
   {const skinSet=new Set(rig.SKIN);fig.traverse(o=>{if(o.name==='s3part')s3Merge(o,skinSet);});}
-  fig.traverse(o=>{if(o.isSkinnedMesh)o.visible=false;});fig.userData.s3fig=true;fig.userData.s3look=L;if(rig.v2)fig.userData.s3v2=true;
+  fig.traverse(o=>{if(o.isSkinnedMesh)o.visible=false;});fig.userData.s3fig=true;fig.userData.s3look=L;if(rig.v2){fig.userData.s3v2=true;try{v2Fingers(fig,B,rig,k);}catch(e){console.warn('v2 fingers',e);}}
   /* shirt skin (Lab skinShirt): bind = the hips->chest frame at rest; each frame the lower shirt blends to follow the hips */
   fig.updateMatrixWorld(true);{const cb=rig.chest.userData.box,hb=rig.hips.userData.box;if(cb&&hb){rig.bind=new T.Matrix4().copy(hb.matrixWorld).invert().multiply(cb.matrixWorld);fig.userData.s3rig=rig;
    rig.SKIN.forEach(o=>{o.userData.base=o.geometry.attributes.position.array.slice();o.onBeforeRender=()=>{S3SKINF.add(fig);};});S3SKINF.add(fig);}}
@@ -1159,7 +1174,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   /* skull vs shirt: a skull vertex at a height the shirt spans must be outside it (the ray from the torso axis reaches the shirt first) */
   byTag('skull').forEach(o=>verts(o,3,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.002){out.head++;ex('head',dp);}worst('head',-dp);}));
   /* fists vs torso: no fist vertex inside the shirt */
-  [R.aL,R.aR].forEach(A=>{const wb=bx(A.wr);if(!wb)return;wb.children.forEach(o=>verts(o,4,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.004){out.fist++;ex('fist',dp);}worst('fist',-dp);}));});
+  [R.aL,R.aR].forEach(A=>{const wb=bx(A.wr);if(!wb)return;wb.children.forEach(o=>verts(o,4,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.01){out.fist++;ex('fist',dp);}/* a fist resting on the belly (up to 1 cm) reads fine on a toy; deeper is a clip */worst('fist',-dp);}));});
   return out;}
  window.TOPS_S3CLIP=f=>f&&f.userData&&f.userData.s3rig&&f.userData.s3rig.v2?s3ClipV2(f):s3Clip(f);
  window.TOPS_S3FIG={look:s3Look,build:s3Build,dress:s3Dress,skin:s3SkinFig,skinAll:s3SkinAll};scene.onBeforeRender=()=>{if(S3SKINF.size)s3SkinAll();};
@@ -1946,7 +1961,7 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
  const lkEase=k=>k<=0?0:k>=1?1:k*k*(3-2*k);
  function lkPushK(now){if(!lkPushS)return 0;const t=now-lkPushS.t0;if(t>=350){lkPushS=null;return 0;}return t<140?lkEase(t/140):1-lkEase((t-140)/210);}
  function lkReactK(now){if(!lkReactS)return 0;const t=now-lkReactS.t0,d=lkReactS.dur;if(t>=d){lkReactS=null;return 0;}return t<120?lkEase(t/120):t>d-160?1-lkEase((t-(d-160))/160):1;}
- const lkFace={hx:0,hy:1.62,tz:OCHE_Z,set:false};let s3hfK=1;
+ const lkFace={hx:0,hy:1.62,tz:OCHE_Z,set:false};let s3hfK=1,s3hfA=0;
  // lighting pass: one warm key on the board from above-left, venue ~1.5 stops under the thrower, rim on the thrower, restrained distance fade
  function lkRelight(t){const phone=lkPhone();let key=null,pool=null;lights.children.forEach(L=>{if(L.isSpotLight&&(L.userData.boardKey||L.target===board))key=L;else if(L.isSpotLight&&!pool)pool=L;});
   if(key){key.position.set(-.95,3.05,BOARD_Z+1.55);key.color.set(0xffe4c4);key.angle=.46;key.penumbra=.65;key.decay=1;key.intensity=Math.max(key.intensity,1.6);key.castShadow=!phone;}
@@ -2003,9 +2018,9 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
    if(pk>0&&lkPushS){const w=mmToWorld(lkPushS.x,lkPushS.y);cx+=(w.x-cx)*.074*pk;cy+=(w.y-cy)*.074*pk;bfov=bfov/(1+.08*pk);}
    let dkc=null;try{dkc=window.TOPS_DRUNKCAM?TOPS_DRUNKCAM(now):null;}catch(e){}if(dkc){cx+=dkc.x;cy+=dkc.y;bfov*=dkc.f;}boardCam.position.set(cx,cy,BOARD_Z+dist);boardCam.lookAt(cx,cy,BOARD_Z);if(dkc)boardCam.rotateZ(dkc.r);boardCam.fov=bfov;
    // player pane: stable three-quarter thrower; the head target is frozen while pulling/throwing so the shot never moves during a pull
-   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;/* S3: the toy head is bigger and its centre sits higher than the head bone: frame its box (offset + scale measured once per figure) */if(thrower.userData.s3fig){const q=thrower.userData.s3hf||(thrower.userData.s3hf=(()=>{const F=s3HeadFrame(thrower,hw.y+.1);return {dy:F.c-hw.y-.1,f:Math.pow(F.f,.75)};})());hy+=q.dy;s3hfK=q.f;}else s3hfK=1;}else s3hfK=1;
+   const thrower=(state.p[state.cur].ai||state.mateTurn)?opp:fpFig;let hx=0,hy=1.62;if(thrower&&thrower.userData&&thrower.userData.B&&thrower.userData.B.Head){const hw=boneW(thrower.userData.B.Head);hx=hw.x;hy=hw.y;/* S3: the toy head is bigger and its centre sits higher than the head bone: frame its box (offset + scale measured once per figure) */if(thrower.userData.s3fig){const q=thrower.userData.s3hf||(thrower.userData.s3hf=(()=>{const F=s3HeadFrame(thrower,hw.y+.1);return {dy:F.c-hw.y-.1,f:Math.pow(F.f,.75)};})());hy+=q.dy;s3hfK=q.f;s3hfA=thrower.userData.s3v2?32:0;}else{s3hfK=1;s3hfA=0;}}else{s3hfK=1;s3hfA=0;}
    const tz=(thrower&&thrower.position)?thrower.position.z:OCHE_Z;const locked=state.pulling||state.anim||state.flyingOwn;if(!lkFace.set||state.cur!==lkFace.cur){Object.assign(lkFace,{hx,hy,tz,set:true,cur:state.cur});}else if(!locked){lkFace.hx+=(hx-lkFace.hx)*.08;lkFace.hy+=(hy-lkFace.hy)*.08;lkFace.tz+=(tz-lkFace.tz)*.08;}
-   const rk=lkReactK(now);const fx=lkFace.hx,fy=lkFace.hy,fz=lkFace.tz;{const an=(window.TOPS_CAMANG!=null?window.TOPS_CAMANG:0)*Math.PI/180,D=2.3*s3hfK;faceCam.position.set(fx-D*Math.cos(an),fy+(vert?.1:.02)+.04*rk,fz+.1-D*Math.sin(an));}faceCam.lookAt(fx+.1,fy+(vert?.03:-.22)+(vert?.04:.16)*rk,fz+.02);faceCam.fov=(vert?21:30)*(1-.2*rk);if(window.GFX_FACECAM){const c=window.GFX_FACECAM;faceCam.position.set(...c.pos);faceCam.lookAt(...c.look);faceCam.fov=c.fov||50;}
+   const rk=lkReactK(now);const fx=lkFace.hx,fy=lkFace.hy,fz=lkFace.tz;{const an=((window.TOPS_CAMANG!=null?window.TOPS_CAMANG:0)+s3hfA)*Math.PI/180,D=2.3*s3hfK;/* Vinyl v2: the camera swings 32 deg toward the front so the dart fist in front of the 2x head is seen, not hidden behind it */faceCam.position.set(fx-D*Math.cos(an),fy+(vert?.1:.02)+.04*rk,fz+.1-D*Math.sin(an));}faceCam.lookAt(fx+.1,fy+(vert?.03:-.22)+(vert?.04:.16)*rk,fz+.02);faceCam.fov=(vert?21:30)*(1-.2*rk);if(window.GFX_FACECAM){const c=window.GFX_FACECAM;faceCam.position.set(...c.pos);faceCam.lookAt(...c.look);faceCam.fov=c.fov||50;}
    renderer.setScissorTest(false);renderer.setViewport(0,0,W,Hh);renderer.clear();renderer.setScissorTest(true);renderer.autoClear=true;
    renderer.setViewport(BP.x,Hh-(BP.y+BP.h),BP.w,BP.h);renderer.setScissor(BP.x,Hh-(BP.y+BP.h),BP.w,BP.h);
    boardCam.aspect=BP.w/BP.h;boardCam.updateProjectionMatrix();if(fpFig)fpFig.visible=false;const hid=_fHid;hid.length=0;for(let i=0;i<flights.length;i++){const f=flights[i];if(f.d.position.distanceTo(boardCam.position)<.5){f.d.visible=false;hid.push(f.d);}}renderer.render(scene,boardCam);for(let i=0;i<hid.length;i++)hid[i].visible=true;hid.length=0;
