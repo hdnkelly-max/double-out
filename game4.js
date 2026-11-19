@@ -1333,6 +1333,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const _gv=new T.Vector3();
   const envS=(M,dx,dy,dz,k)=>{k=k||0.012;let mx=0;const ts=[];for(const m of M){const t=envR([m],dx,dy,dz);if(t>0){ts.push(t);if(t>mx)mx=t;}}if(!ts.length)return 0;let s=0;for(const t of ts)s+=Math.exp((t-mx)/k);return mx+k*Math.log(s)-k*0.55;};
   function groove(h,L,K,M,Ls,cols,hl,o){o=o||{};const sm=K.sm,dir=K.dir,val=o.valley||0.03,U=Math.round((o.U||76)*(o.dens||1)),Vn=Math.round((o.V||29)*(o.dens||1));/* dens: the game camera needs the valleys in the geometry, not smoothed away by a coarse grid (doc 25, clay capture) */
+   /* fix 3 (hair28 r10/r11, Director 20 Nov): low-pass the side hairline (hlSmooth), columns packed toward the face (frontDense),
+      a rounded front roll face (round), the shell tucked onto the real v3 skull, texture in (phi, theta) */
+   if(hl&&o.hlSmooth){const h0=hl,w=o.hlSmooth;hl=ph=>{let t=0,n=0;for(let k=-3;k<=3;k++){const wt=1-Math.abs(k)/4;t+=h0(ph+k*w/3)*wt;n+=wt;}const k=sm(0.45,0.85,Math.abs(K.wrap(ph)));return h0(ph)*(1-k)+t/n*k;};}
+   const FD=o.frontDense||0,PHU=u=>{const s=2*u-1;return Math.PI*(s-FD*Math.sin(Math.PI*s)/Math.PI);};
+   const FPg=L._v3?v3FaceOf(L):null,_sd=new T.Vector3(),SKR=(th,ph)=>{const p0=K.S(th,ph,0).length();if(!FPg)return p0;const st=Math.sin(th);_sd.set(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));return Math.max(p0,v3HeadPoint(_sd,FPg.cheek,FPg).length());};
+   let TMX=0;for(let i=0;i<=64;i++)TMX=Math.max(TMX,hl?hl(-Math.PI+2*Math.PI*i/64):1.6);TMX+=0.05;
    /* each lock: its flow line as 29 unit vectors, flattened to numbers */
    const LK=Ls.map(lk=>{const n=28,P=[];if(lk.v){const cv=new T.CatmullRomCurve3(lk.v.map(q=>new T.Vector3(q[0],q[1],q[2]).normalize()),!!lk.closed,'centripetal');for(let i=0;i<=n;i++)P.push(cv.getPoint(i/n).normalize());}
     else{const cv=new T.CatmullRomCurve3(lk.p.map(q=>new T.Vector3(q[0],q[1],0)),false,'centripetal');for(let i=0;i<=n;i++){const q=cv.getPoint(i/n);P.push(dir(q.x,q.y));}}
@@ -1346,10 +1352,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;return out;};
    const thOf=(tj,thE)=>0.015+(thE-0.015)*(tj<0.85?tj/0.85*0.97:0.97+0.03*(tj-0.85)/0.15);const LP=o.lip;
    const pos=[],uv=[],idx=[];
-   for(let j=0;j<=Vn;j++)for(let i=0;i<=U;i++){const ph=-Math.PI+2*Math.PI*i/U,thE=hl?hl(ph):1.6,tj=j/Vn,th=thOf(tj,thE);const fr=LP?Math.pow(Math.max(0,Math.cos(ph)),LP[1]||2):0;
+   for(let j=0;j<=Vn;j++)for(let i=0;i<=U;i++){const ph=PHU(i/U),thE=hl?hl(ph):1.6,tj=j/Vn;let th=thOf(tj,thE),eR=-1;const fr=LP?Math.pow(Math.max(0,Math.cos(ph)),LP[1]||2):0;
+    if(o.round){const span=0.03+o.round*Math.pow(Math.max(0,Math.cos(ph)),2),tR=0.72;if(tj<=tR)th=0.015+(thE-span-0.015)*tj/tR;else{eR=(tj-tR)/(1-tR);th=thE-span+span*Math.sin(eR*Math.PI/2);}}/* the last rows wrap a quarter circle down to the hairline: a thick rounded roll face, no overhang */
     let thL=th;if(LP&&tj>0.8){const e=(tj-0.8)/0.2;thL=th+LP[0]*fr*Math.sin(Math.PI*Math.min(1,e*1.25))*(1-0.6*e);}
-    const d=dir(thL,ph),sk=K.S(thL,ph,0).length(),dm=dir(Math.min(th,thL),ph);const b=field(dm.x,dm.y,dm.z)[0];const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;let r=Math.max(sk+0.004,envS(M,dm.x,dm.y,dm.z)-vv*(1-b));
-    if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}pos.push(d.x*r,d.y*r,d.z*r);uv.push(i/U,1-tj);}
+    const d=dir(thL,ph),sk=SKR(thL,ph),tm=Math.min(th,thL),dm=dir(tm,ph);const b=field(dm.x,dm.y,dm.z)[0];const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;let r=Math.max(sk+0.004,envS(M,dm.x,dm.y,dm.z)-vv*(1-b));
+    if(eR>=0)r=sk-0.003+(r-sk+0.003)*Math.sqrt(Math.max(0,1-eR*eR));else if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}pos.push(d.x*r,d.y*r,d.z*r);uv.push((ph+Math.PI)/(2*Math.PI),1-tm/TMX);}
    for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i;idx.push(a,a+U+1,a+1,a+1,a+U+1,a+U+2);}
    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();
    {const Nn=g.attributes.normal;for(let j=0;j<=Vn;j++){const a0=j*(U+1),a1=a0+U;const x=Nn.getX(a0)+Nn.getX(a1),y=Nn.getY(a0)+Nn.getY(a1),z=Nn.getZ(a0)+Nn.getZ(a1),l=Math.hypot(x,y,z)||1;Nn.setXYZ(a0,x/l,y/l,z/l);Nn.setXYZ(a1,x/l,y/l,z/l);}
@@ -1357,7 +1364,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    /* the baked lock colour: valley shadow -> base -> highlight along each crown, mixed in sRGB (the lab's numbers) */
    const TW=S3G==='full'?512:384,TH=TW/2,cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
    const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
-   for(let y=0;y<TH;y++){const tj=(y+0.5)/TH;for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW,thE=hl?hl(ph):1.6,th=thOf(tj,thE),st=Math.sin(th);const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
+   for(let y=0;y<TH;y++){const th=(y+0.5)/TH*TMX,st=Math.sin(th);for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW;const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
      const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));const hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
      const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
    cx.putImageData(im,0,0);const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
@@ -1365,22 +1372,22 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const mesh=new T.Mesh(g,m);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.hair=true;mesh.userData.tag='hair';h.add(mesh);return mesh;}
   /* Kai r9 (quiffL): the r8 poster-fitted masses and the 16 groove locks, verbatim */
   const KAI={M:[[-0.058,0.292,0.076,0.232,0.168,0.232,-0.1,0,0.08],[-0.27,0.218,-0.042,0.138,0.15,0.2,0,0,0.35],[0.188,0.222,0.046,0.13,0.13,0.15,0,0,-0.3],[-0.006,0.204,-0.128,0.238,0.262,0.23,0.2,0,0],[0.01,0.21,0.163,0.2,0.118,0.103,-0.5,0,0],[-0.25,0.252,0.11,0.14,0.13,0.13,0,0,0.3]],
-   GL:[{p:[[1.0,-0.15],[0.75,-0.1],[0.45,0.05],[0.25,0.4],[0.3,1.6]],w:0.085,soft:0.3},{p:[[0.98,0.35],[0.78,0.45],[0.55,0.7],[0.45,1.4],[0.6,2.1]],w:0.068,hk:0.9,soft:0.18},
-    {p:[[0.98,-0.55],[0.82,-0.75],[0.65,-1.2],[0.7,-1.9],[0.95,-2.4]],w:0.075,soft:0.18},{p:[[1.05,0.85],[0.95,1.1],[0.9,1.6],[1.05,2.2]],w:0.058,hk:0.9},
+   GL:[{p:[[1.0,-0.15],[0.75,-0.1],[0.45,0.05],[0.25,0.4],[0.3,1.6]],w:0.1},{p:[[0.98,0.35],[0.78,0.45],[0.55,0.7],[0.45,1.4],[0.6,2.1]],w:0.068,hk:0.9},
+    {p:[[0.98,-0.55],[0.82,-0.75],[0.65,-1.2],[0.7,-1.9],[0.95,-2.4]],w:0.075},{p:[[1.05,0.85],[0.95,1.1],[0.9,1.6],[1.05,2.2]],w:0.058,hk:0.9},
     {p:[[1.12,-1.0],[1.1,-1.35],[1.2,-1.9],[1.45,-2.3]],w:0.052,hk:0.85},{p:[[1.15,1.15],[1.18,1.5],[1.3,1.95],[1.5,2.35]],w:0.048,hk:0.85},
     {p:[[0.3,-0.5],[0.25,-1.6],[0.45,-2.6],[0.8,-3.0]],w:0.072,hk:0.95},{p:[[0.55,2.2],[0.9,2.4],[1.35,2.65],[1.8,2.9]],w:0.075},{p:[[0.5,2.95],[0.95,3.05],[1.45,3.3],[1.9,3.5]],w:0.08},
-    {p:[[0.6,-2.35],[1.05,-2.55],[1.5,-2.65],[1.75,-2.9]],w:0.07},{p:[[1.05,-0.33],[0.9,-0.4],[0.7,-0.55],[0.55,-0.95]],w:0.048,hk:0.8,soft:0.18},
+    {p:[[0.6,-2.35],[1.05,-2.55],[1.5,-2.65],[1.75,-2.9]],w:0.07},{p:[[1.05,-0.33],[0.9,-0.4],[0.7,-0.55],[0.55,-0.95]],w:0.048,hk:0.8},
     {p:[[1.45,2.15],[1.7,2.42],[2.02,2.7]],w:0.058,hk:0.85,n:20},{p:[[1.4,-2.1],[1.75,-2.32],[2.05,-2.5]],w:0.056,hk:0.85},{p:[[1.75,2.95],[2.0,3.08],[2.25,3.15]],w:0.052,hk:0.8},
     {p:[[0.85,1.25],[0.9,1.7],[1.1,2.1],[1.35,2.4]],w:0.055,hk:0.9},{p:[[0.85,-1.35],[0.95,-1.8],[1.2,-2.15],[1.3,-2.3]],w:0.055,hk:0.9}],
    HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x5F311E,shadow:0x31170F,hi:0x8D533A},/* doc 25 fix 4: ChatGPT's poster browns (r9 had 0x543424 / 0x2A1810 / 0x7A5C4C) */
-   o:{valley:0.026,wk:0.85,hiLo:0.92,hi:0.2,rough:0.5,cc:0.03,lip:[0.16,2],dens:1.6,floor:0.1,seam:0.4}};/* fix 4: no tone lift (it greyed the browns); the bake is written as the sRGB hex, the material white *//* doc 25 fix 2 (lock separation): darker valley floor and seams, a narrow highlight on each crown only, clearcoat .03, a 1.6x finer shell *//* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
-  const RAY={M:[[-0.018,0.262,0.08,0.188,0.143,0.162,-0.25,0,0],[-0.018,0.19,-0.102,0.274,0.22,0.228,0,0,0],[-0.232,0.138,0.004,0.086,0.132,0.196,0,0,0.1],[0.22,0.138,-0.008,0.068,0.132,0.19,0,0,-0.1],[-0.172,0.262,0.008,0.08,0.1,0.1,0,0,0.3]],
+   o:{valley:0.03,wk:0.7,pw:0.6,frontDense:0.5,U:84,round:0.12,hiLo:0.92,hi:0.2,rough:0.5,cc:0.03,floor:0.1,seam:0.4}};/* fix 3 (Director, hair28 r11): no lip, rounded roll face, 3 cm valleys, narrower locks, rounder crests, columns packed to the face (4,872 tris, lab density); the bake and material keep Engine's fix 2 numbers *//* fix 4: no tone lift (it greyed the browns); the bake is written as the sRGB hex, the material white *//* doc 25 fix 2 (lock separation): darker valley floor and seams, a narrow highlight on each crown only, clearcoat .03, a 1.6x finer shell *//* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
+  const RAY={M:[[-0.018,0.262,0.08,0.188,0.143,0.162,-0.25,0,0],[-0.018,0.19,-0.102,0.274,0.22,0.228,0,0,0],[-0.232,0.138,0.004,0.086,0.132,0.196,0,0,0.1],[0.22,0.138,-0.008,0.068,0.132,0.19,0,0,-0.1],[-0.172,0.262,0.008,0.08,0.1,0.1,0,0,0.3],[0,0.19,0.18,0.17,0.085,0.1,-0.5,0,0],[-0.19,0.16,0.12,0.08,0.09,0.1,0,0,0.3]],/* fix 3: + front roll mass and his-right temple mass */
    GL:[{p:[[0.85,0.05],[0.6,0.08],[0.35,0.12],[0.2,1.2],[0.35,2.9]],w:0.085},{p:[[0.82,-0.38],[0.65,-0.55],[0.5,-1.3],[0.75,-2.3],[1.3,-2.85]],w:0.075},{p:[[0.82,0.45],[0.66,0.62],[0.55,1.35],[0.85,2.3],[1.4,2.8]],w:0.072},
     {p:[[1.0,-0.95],[1.1,-1.35],[1.3,-2.05],[1.7,-2.55]],w:0.066},{p:[[1.08,1.0],[1.18,1.4],[1.35,2.0],[1.7,2.45]],w:0.05,hk:0.85},{p:[[0.5,2.5],[1.0,2.68],[1.5,2.85],[1.95,3.0],[2.15,3.05]],w:0.072,soft:0.22},
     {p:[[0.6,-2.6],[1.1,-2.72],[1.6,-2.88],[1.9,-2.98],[2.05,-3.02]],w:0.068,soft:0.22},{p:[[1.6,2.25],[1.88,2.5],[2.12,2.78]],w:0.05,hk:0.8,soft:0.2},{p:[[1.5,-2.15],[1.82,-2.4],[2.05,-2.7]],w:0.05,hk:0.8,soft:0.2},
     {p:[[1.25,-1.3],[1.35,-1.7],[1.55,-2.1]],w:0.045,hk:0.8},{p:[[0.8,-1.0],[0.85,-1.6],[1.05,-2.2],[1.35,-2.6]],w:0.06,hk:0.9},{p:[[0.82,1.05],[0.9,1.65],[1.1,2.2],[1.4,2.55]],w:0.058,hk:0.9},{p:[[0.3,2.4],[0.65,2.9],[1.15,3.18],[1.7,3.22]],w:0.055,hk:0.9,soft:0.2}],
-   HLP:[[0,0.8],[0.3,0.72],[-0.3,0.72],[0.62,0.68],[-0.62,0.68],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x4e4a47,hi:0xf4f1ec},
-   o:{valley:0.024,wk:1.0,hi:0.6,hiLo:0.84,tone:0.88,lip:[0.3,1.2]}};
+   HLP:[[0,0.94],[0.3,0.846],[-0.3,0.846],[0.62,0.764],[-0.62,0.764],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x4e4a47,hi:0xf4f1ec},/* fix 3: front hairline 0.14 rad lower (RAY_HLF) */
+   o:{hlSmooth:0.22,valley:0.028,wk:0.9,pw:0.6,frontDense:0.5,U:84,round:0.12,hi:0.6,hiLo:0.84,tone:0.88}};
   return {envR,envS,groove,KAI,RAY};})();
  const V2HAIRS={
   /* r9 Tama (hair28 curly with the r8/r9 rear clusters: bigger, deeper, 2 lobes) for v3 heads */
