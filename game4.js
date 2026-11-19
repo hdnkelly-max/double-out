@@ -1981,10 +1981,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v2WristAdd(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),W=V2WRIST;if(ph==='pull')return W.back*p;if(ph==='throw')return W.back+(W.rel-W.back)*Math.pow(k,1.4);if(ph==='fly'||ph==='follow')return W.rel+(W.end-W.rel)*k;if(ph==='reset')return W.end*(1-k);return 0;}
  function v2Open(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0);if(ph==='throw'){const x=Math.max(0,(k-V2OPEN.from)/(1-V2OPEN.from));return V2OPEN.pre*x*x*(3-2*x);}if(ph==='fly'||ph==='follow'){const x=Math.min(1,k/.3);return V2OPEN.pre+(1-V2OPEN.pre)*x*(2-x);}if(ph==='reset')return Math.max(0,1-k*1.5);return 0;}
  const _v2t=[];for(let i=0;i<8;i++)_v2t.push(new T.Vector3());
- function v2ThrowKey(oa){const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),K=V2THROW,e=x=>x*x*(3-2*x);
+ function v2ThrowKey(oa,K){K=K||V2THROW;const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),e=x=>x*x*(3-2*x);
   if(ph==='pull')return [K.aim,K.back,1-Math.pow(1-p,1.7)];if(ph==='throw')return [K.back,K.rel,Math.pow(k,1.8)];if(ph==='fly'||ph==='follow')return [K.rel,K.end,1-Math.pow(1-k,2)];
   if(ph==='reset')return [K.end,K.aim,e(k)];if(ph==='idle'||ph==='aim'||!ph)return [K.aim,K.aim,0];return null;}
- function v2ThrowArm(fig,B,S,dirU,dirF,b,oa){const kf=v2ThrowKey(oa||{});if(!kf)return false;const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
+ function v2ThrowArm(fig,B,S,dirU,dirF,b,oa){const kf=v2ThrowKey(oa||{},fig.userData.s3rig&&fig.userData.s3rig.v3?V3THROW:V2THROW);if(!kf)return false;const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
   sk.updateWorldMatrix(true,false);const C=sk.getWorldPosition(_v2t[0]),hw=2*V2P.head.r[0]*_v2t[1].setFromMatrixScale(sk.matrixWorld).x;
   const up=_v2t[2].set(0,1,0),out=_v2t[3].subVectors(S,C);out.y=0;out.addScaledVector(b,-out.dot(b));if(out.lengthSq()<1e-8)out.crossVectors(b,up);out.normalize();
   const [A,Bk,t]=kf,mix=(a,c)=>a+(c-a)*t;const hx=mix(A.h[0],Bk.h[0]),hy=mix(A.h[1],Bk.h[1]),hz=mix(A.h[2],Bk.h[2]);
@@ -1999,6 +1999,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const V2DARTP={aim:28,back:34,rel:0};
  function v2DartPitch(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),D=V2DARTP;if(ph==='pull')return D.aim+(D.back-D.aim)*p;if(ph==='throw')return D.back+(D.rel-D.back)*Math.pow(k,1.2);if(ph==='idle'||ph==='aim')return D.aim;if(ph==='reset')return D.aim*k;return 0;}
  window.TOPS_V2THROW=V2THROW;
+ /* v3 heads (?v3=1): the fuller v3 cheeks sit in the release path, so the release goes further out and forward again (same aim, draw-back, follow-through): closest throwing dart to the 1.04 skull, Kai 1.10, Ray 1.10, Tama 1.08 (was .95) */
+ const V3THROW=Object.assign({},V2THROW,{rel:{h:[.70,-.24,.86],pole:[.8,-.5,0]}});window.TOPS_V3THROW=V3THROW;
  function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.userData._pdT=performance.now();fig.updateWorldMatrix(true,true);
   let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
   for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
