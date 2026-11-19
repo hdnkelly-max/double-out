@@ -1,7 +1,13 @@
-# TOPS CI (SHIP-3 phase 1; fast suite for the 17:03 ship process). On every push to a feature branch: build, then the fast
-# suite, then any tests/*.js the push changed. The result is on the commit: this job's check run (green tick / red cross)
-# plus a commit status "tops/fast-suite" ("7/7 passed" or the failing tests), which tools/ship-low.sh requires before a LOW
-# (R3) release. Evidence lives in GitHub (job summary), not in chats.
+# TOPS CI (SHIP-3 fast suite for Hayden's 17:03 ship process; DQ-IDLE-1 speed-up). On every push to a feature branch: build, then the
+# fast suite, then any tests/*.js the branch added or changed since src. The result is on the commit: this workflow's check runs
+# (green tick / red cross) plus a commit status "tops/fast-suite" ("7/7 passed" or the failing tests). release.yml's author (R3) path
+# requires a successful push run of this workflow on the exact commit. Evidence lives in GitHub (job summaries), not in chats.
+#
+# Speed (19 Nov, 7/7 run 44457680977: 10.5 min = install 2.8 + tests 7.2 one after another):
+#  - the tests run in 4 parallel jobs (public repo: 4-core runners, no minute cost), packed by measured time, so the wall time is
+#    roughly the slowest test (s3-creator / s3-screens, ~130 s) rather than the sum;
+#  - each job runs in the Playwright image for the exact Playwright version the tests use, so Chromium and its system libraries are
+#    already there (no 2.8 min browser + apt install).
 name: ci
 on:
   push:
@@ -10,40 +16,60 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-permissions: { contents: read, statuses: write }
+permissions: { contents: read, statuses: write, actions: read }
+env:
+  # measured seconds per test (CI run 44457680977); a test not listed counts as 60 s. Used only to balance the shards.
+  TEST_SECS: "checkouts.js:1 regress.js:80 asset-refs.js:1 s3-welcome.js:29 s3-screens.js:129 s3-match.js:65 s3-creator.js:130"
+  FAST: "checkouts.js regress.js asset-refs.js s3-welcome.js s3-screens.js s3-match.js s3-creator.js"
+  SHARDS: 4
 jobs:
-  fast:
+  pick:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    outputs:
+      shards: ${{ steps.pick.outputs.shards }}
+      all: ${{ steps.pick.outputs.all }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: actions/checkout@v4
-        with: { ref: main, path: _site, fetch-depth: 1 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
       - name: Pending status
         env: { GH_TOKEN: '${{ github.token }}' }
         run: gh api -X POST "repos/${{ github.repository }}/statuses/${{ github.sha }}" -f state=pending -f context=tops/fast-suite -f description="fast suite running" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
-      - name: Install three + Playwright Chromium
-        run: |
-          npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
-      - name: Build (tests/setup.sh)
-        run: bash tests/setup.sh
-      - name: Pick tests (the fast suite + any tests/*.js the branch changed)
+      - name: Pick tests (the fast suite + any tests/*.js the branch changed) and pack them into shards
         id: pick
         run: |
-          FAST="checkouts.js regress.js asset-refs.js s3-welcome.js s3-screens.js s3-match.js s3-creator.js"
-          # every test the branch added, changed or renamed since it left src (not only this push: ChatGPT P2, 19 Nov)
+          # every test the branch added, changed or renamed since it left src (not only this push)
           git fetch -q origin src; B=$(git merge-base origin/src HEAD)
           CHANGED=$(git diff --name-only --diff-filter=AMR "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' || true)
-          ALL=$FAST; for t in $CHANGED; do case " $ALL " in *" $t "*) ;; *) ALL="$ALL $t";; esac; done
-          echo "list=$ALL" >> $GITHUB_OUTPUT; echo "changed=$(echo $CHANGED)" >> $GITHUB_OUTPUT
-          echo "tests: $ALL"
-      - name: Run
+          ALL=""; for t in $FAST $CHANGED; do [ -f "tests/$t" ] || continue; case " $ALL " in *" $t "*) ;; *) ALL="$ALL $t";; esac; done
+          echo "tests:$ALL"
+          # longest first onto the least-loaded shard
+          SH=$(for t in $ALL; do s=60; for kv in $TEST_SECS; do [ "${kv%%:*}" = "$t" ] && s=${kv##*:}; done; echo "$s $t"; done | sort -rn | awk -v n="$SHARDS" '
+            { best=0; for(i=1;i<n;i++) if(load[i]<load[best]) best=i; load[best]+=$1; list[best]=list[best]" "$2 }
+            END { printf "["; c=0; for(i=0;i<n;i++) if(list[i]!=""){ printf "%s{\"n\":%d,\"tests\":\"%s\",\"secs\":%d}", (c++?",":""), i+1, substr(list[i],2), load[i] } printf "]" }')
+          echo "shards=$SH" >> $GITHUB_OUTPUT; echo "all=$(echo $ALL)" >> $GITHUB_OUTPUT; echo "shards: $SH"
+  fast:
+    needs: pick
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: { image: 'mcr.microsoft.com/playwright:v1.48.2-jammy', options: '--ipc=host' }
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.pick.outputs.shards) }}
+    name: fast ${{ matrix.shard.n }} (${{ matrix.shard.tests }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: main, path: _site, fetch-depth: 1 }
+      - name: Install three + the matching Playwright package (Chromium is in the image)
+        run: |
+          git config --global --add safe.directory '*'
+          npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null
+      - name: Build (tests/setup.sh)
+        run: bash tests/setup.sh
+      - name: Run ${{ matrix.shard.tests }}
         id: run
-        env: { LIST: '${{ steps.pick.outputs.list }}' }
+        env: { LIST: '${{ matrix.shard.tests }}' }
         run: |
           set +e; pass=0; n=0; failed=""; : > ci.log
           for t in $LIST; do
@@ -60,13 +86,25 @@ jobs:
             if [ $rc = 0 ]; then pass=$((pass+1)); r=PASS; else r="FAIL($rc)"; failed="$failed $t"; fi
             printf '%-16s %-8s %4ss  %s\n' "${t%.js}" "$r" "$(( $(date +%s)-s ))" "$last" | tee -a ci.log
           done
-          echo "pass=$pass" >> $GITHUB_OUTPUT; echo "n=$n" >> $GITHUB_OUTPUT; echo "failed=$(echo $failed)" >> $GITHUB_OUTPUT
           for t in $failed; do echo "::group::$t (last 40 lines)"; tail -40 "out_$t.log"; echo "::endgroup::"; done
+          { echo "### shard ${{ matrix.shard.n }}: $pass/$n passed"; echo '```'; cat ci.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           [ $pass = $n ] && [ $n -gt 0 ]
+  status:
+    needs: [pick, fast]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
       - name: Status + summary
-        if: always()
-        env: { GH_TOKEN: '${{ github.token }}', PASS: '${{ steps.run.outputs.pass }}', N: '${{ steps.run.outputs.n }}', FAILED: '${{ steps.run.outputs.failed }}', OUTCOME: '${{ steps.run.outcome }}' }
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          FAST: '${{ needs.fast.result }}'
+          PICK: '${{ needs.pick.result }}'
+          ALL: '${{ needs.pick.outputs.all }}'
         run: |
-          if [ "$OUTCOME" = success ]; then st=success; d="$PASS/$N passed"; else st=failure; d="${PASS:-0}/${N:-?} passed${FAILED:+; failed: $FAILED}"; [ -z "$N" ] && d="build or setup failed"; fi
+          N=$(echo $ALL | wc -w)
+          # the failing shards, from the shard jobs' own names ("fast 2 (s3-screens.js)") and results
+          F=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=50" --jq '[.jobs[]|select(.name|startswith("fast "))|select(.conclusion!="success")|.name|capture("\\((?<t>.*)\\)").t]|join(" ")' 2>/dev/null || true)
+          if [ "$PICK" = success ] && [ "$FAST" = success ]; then st=success; d="$N/$N passed"; else st=failure; d="${F:+failing: $F}"; [ -z "$d" ] && d="setup failed (pick=$PICK fast=$FAST)"; fi
           gh api -X POST "repos/${{ github.repository }}/statuses/${{ github.sha }}" -f state=$st -f context=tops/fast-suite -f description="${d:0:139}" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
-          { echo "### TOPS fast suite: $d"; echo; echo "commit \`${GITHUB_SHA::7}\` · tree \`$(git rev-parse --short HEAD^{tree})\` · branch \`${GITHUB_REF_NAME}\`"; echo; echo '```'; cat ci.log 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "### TOPS fast suite: $d · commit \`${GITHUB_SHA::7}\` · branch \`${GITHUB_REF_NAME}\` (per-test times in each shard's summary)" >> "$GITHUB_STEP_SUMMARY"
+          [ $st = success ]
