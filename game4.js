@@ -1198,6 +1198,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   byTag('skull').forEach(o=>verts(o,3,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.002){out.head++;ex('head',dp);}worst('head',-dp);}));
   /* fists vs torso: no fist vertex inside the shirt */
   [R.aL,R.aR].forEach(A=>{const wb=bx(A.wr);if(!wb)return;wb.children.forEach(o=>verts(o,4,q=>{const y=l.copy(q).applyMatrix4(ci).y;if(y>.22||y<yHem)return;out.checked++;const dp=depth(q,chest,shirt);if(dp>.01){out.fist++;ex('fist y='+y.toFixed(3)+' xz='+l.x.toFixed(3)+','+l.z.toFixed(3),dp);}/* a fist resting on the belly (up to 1 cm) reads fine on a toy; deeper is a clip */worst('fist',-dp);}));});
+  {const dc=s3DartClear(fig);out.dart=dc.n+(dc.tn||0);out.checked+=dc.checked;out.worst.dart=-dc.mm/1000;if(dc.n&&out.ex.length<8)out.ex.push('dart in '+dc.where+' '+dc.mm.toFixed(1)+'mm');}
   {const hc=s3HeadClear(fig);out.skull=hc.n;out.checked+=hc.checked;out.worst.skull=-hc.mm/1000;if(hc.n&&out.ex.length<8)out.ex.push('skull '+hc.where+' '+hc.mm.toFixed(1)+'mm');}
   return out;}
  /* Vinyl v2.2 (Director's v2-clear.js on the game rig): no arm, sleeve, fist or finger vertex inside the skull ellipsoid (radii x1.04, the
@@ -1210,6 +1211,23 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   fig.traverse(o=>{if(!o.isSkinnedMesh||o.userData.tag!=='fingers')return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i);o.boneTransform(i,p);p.applyMatrix4(o.matrixWorld);test(p,'fingers');}});
   return out;}
  window.TOPS_S3HEADCLEAR=s3HeadClear;
+ /* P1 4.05: no dart vertex (the spares in the off hand, the dart in the throwing hand) inside its own arm: the forearm (elbow to wrist) and the
+    upper arm, as capsules of the v2 arm's radii at the figure's scale. n = vertices inside, mm = the deepest. ang = the smallest angle (deg)
+    between a spare and its forearm (the spares sit square to it) */
+ function s3DartClear(fig){const u=fig.userData,R3=u.s3rig,B=u.B,out={n:0,mm:0,checked:0,where:'',ang:90};if(!R3||!R3.v2||!B)return out;fig.updateMatrixWorld(true);
+  const p=new T.Vector3(),q=new T.Vector3(),a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
+  const seg=(P,A,Bp,r,where)=>{q.subVectors(Bp,A);const t=Math.max(0,Math.min(1,c.subVectors(P,A).dot(q)/Math.max(1e-9,q.lengthSq())));const d=c.copy(A).addScaledVector(q,t).distanceTo(P);if(d<r){out.n++;const mm=(r-d)*1000;if(mm>out.mm){out.mm=mm;out.where=where;}}};
+  const sides=[['Left',R3.aR,B.LeftHand.children.filter(o=>o.userData.spare&&o.visible)],['Right',R3.aL,u.dt&&u.dt.visible?[u.dt]:[]]];
+  for(const [sd,A,darts] of sides){if(!darts.length||!A)continue;const sb=A.sh&&A.sh.userData.box,eb=A.el&&A.el.userData.box;const ks=eb?new T.Vector3().setFromMatrixScale(eb.matrixWorld).x:1,ku=sb?new T.Vector3().setFromMatrixScale(sb.matrixWorld).x:ks;
+   const S=B[sd+'Arm'].getWorldPosition(new T.Vector3()),E=B[sd+'ForeArm'].getWorldPosition(new T.Vector3()),H=B[sd+'Hand'].getWorldPosition(new T.Vector3());const rF=V2P.arm.r1*ks,rU=V2P.arm.r0*ku;
+   for(const d of darts){if(sd==='Left'){a.set(0,0,1).transformDirection(d.matrixWorld);b.subVectors(H,E).normalize();out.ang=Math.min(out.ang,Math.acos(Math.min(1,Math.abs(a.dot(b))))*180/Math.PI);}
+    d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);out.checked++;seg(p,E,H,rF,sd+' forearm');seg(p,S,E,rU,sd+' upper arm');}});}}
+  /* and none inside the shirt (the spares at the belt, the dart hand across the stomach): the shirt's lathe in chest space, 1 cm grace */
+  {const cb=R3.chest&&R3.chest.userData.box;if(cb){const ci=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1,BK=V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard;out.tn=0;out.tmm=0;
+   for(const [,,darts] of sides)for(const d of darts)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(ci);const rr=v2TorsoR(p.y,BK);if(!rr)continue;const e=Math.hypot(p.x/rr[0],p.z/rr[1]);if(e<1-.01/cs/Math.min(rr[0],rr[1])){out.tn++;out.tmm=Math.max(out.tmm,(1-e)*Math.min(rr[0],rr[1])*cs*1000);}}});}}
+  return out;}
+ window.TOPS_S3DARTCLEAR=s3DartClear;
+
  window.TOPS_S3CLIP=f=>f&&f.userData&&f.userData.s3rig&&f.userData.s3rig.v2?s3ClipV2(f):s3Clip(f);
  window.TOPS_S3FIG={look:s3Look,build:s3Build,dress:s3Dress,skin:s3SkinFig,skinAll:s3SkinAll};scene.onBeforeRender=()=>{if(S3SKINF.size)s3SkinAll();};
  function faceKit(fig,B,look,ck){if(!look||!B.Head)return;if(ck==='pete')look=Object.assign({hair2:'short',beard2:1},Object.fromEntries(Object.entries(look).filter(([k,v])=>v!=null)));if(window.GFX_HEADDBG){[[1,0,0,0xff0000],[0,1,0,0x00ff00],[0,0,1,0x0000ff]].forEach(([x,y,z,c])=>{const m=new T.Mesh(new T.SphereGeometry(.015),new T.MeshBasicMaterial({color:c}));m.position.set(x*.13,y*.13,z*.13);B.Head.add(m);});}const L=look;const R=RIG.rest;const headH=(B.HeadTop_End&&R[B.HeadTop_End.name]&&R[B.Head.name])?R[B.HeadTop_End.name].p.distanceTo(R[B.Head.name].p):.24;
@@ -1342,7 +1360,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   try{s3Dress(fig,B,L);}catch(e){console.warn('s3 dress',e);}
   if(!B.RightEye&&B.Head){fig.updateMatrixWorld(true);[['RightEye',-1],['LeftEye',1]].forEach(([n,sx])=>{const e=new T.Object3D();e.name=ck+'_'+n;B.Head.add(e);e.position.set(sx*.032,.1,.085);B[n]=e;});}
   const dt=meFig?myDart(save.flight):oppDart(name);fig.add(dt);dt.matrixAutoUpdate=true;
-  [0,1].forEach(k=>{const d=oppDart(name);d.scale.setScalar(1/1.78*3.78*.85*S3_DART);d.position.set(-.01+k*.03,.09,.0);d.rotation.set(1.6,0,0);d.userData.spare=1;B.LeftHand.add(d);});
+  const v2s=fig.userData.s3v2;[0,1].forEach(k=>{const d=oppDart(name);d.scale.setScalar(v2s?S3_DART:1/1.78*3.78*.85*S3_DART);/* v2: the same size as the dart in the throwing hand (the v1 spares were drawn 1.8x, 37 cm on the toy) */
+   if(v2s){/* P1 4.05 (Hayden: 'the darts are in his arm'): the v1 spares lay along the hand toward the wrist and ran up the toy forearm. In v2 they
+      sit across the closed fist (V2SPARE, hand-bone space): barrels in the curled fingers, points out past the little finger, flights out past
+      the thumb, square to the forearm in every pose; v2Grip keeps the fingers closed round them */const q=V2SPARE;d.position.set(q.p[0],q.p[1]+k*q.gap[1],q.p[2]+k*q.gap[2]);d.rotation.set(q.rot[0],q.rot[1]+k*q.fan,q.rot[2]);}
+   else{d.position.set(-.01+k*.03,.09,.0);d.rotation.set(1.6,0,0);}d.userData.spare=1;B.LeftHand.add(d);});
   fig.userData={rigged:true,B,dt,hand:B.RightHand,hips:[],ck,stand:false,noSp:false,s3fig:true,s3look:L,s3rig:fig.userData.s3rig,s3v2:fig.userData.s3v2};return fig;}
  function makeRigged(look,name,tier){if(window.TOPS_S3FLAG){if(!RIGS[S3_RIG])loadChar(S3_RIG);if(RIGS[S3_RIG]||RIGS.remy){const f=s3Rigged(look,name,tier);if(!RIGS[S3_RIG])f.userData.stand=true;/* swapped for the S3-rig build when it lands, like any stand-in */return f;}}/* S3 perf: until the one S3 rig file is in, the stand-in (in the page) and never the 3.55 character files (1.3 MB not used in S3, and fetched again on every fresh page); the hub swaps in the Lab figure when the rig lands */const ck=window.TOPS_S3FLAG?'remy':charKey(look,name);if(ck!=='remy'&&!RIGS[ck])loadChar(ck);const R=RIGS[ck]||RIGS.remy||{base:RIG.base};const isRemy=ck==='remy'||!RIGS[ck];
   const fig=THREE.SkeletonUtils.clone(R.base);fig.userData.rigged=true;const B={};fig.traverse(o=>{if(o.isBone)B[o.name.replace(/^[a-z]+_/,'')]=o;});
@@ -1419,7 +1441,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   // left arm: spares at the sternum
   const LS=boneW(B.LeftArm);const chest=fig.localToWorld(new T.Vector3(fpv?-.3:-.3,fpv?.86:.86,fpv?.04:.06));const d=Math.min(L1+L2-.01,LS.distanceTo(chest));const u=new T.Vector3().subVectors(chest,LS).normalize();const pole=new T.Vector3().addScaledVector(right,-.7).addScaledVector(fwd,-.7);pole.addScaledVector(u,-pole.dot(u)).normalize();
   const cosA=(L1*L1+d*d-L2*L2)/(2*L1*d);const A=Math.acos(Math.max(-1,Math.min(1,cosA)));const LE=LS.clone().addScaledVector(u,Math.cos(A)*L1).addScaledVector(pole,Math.sin(A)*L1);
-  const ln=new T.Vector3().copy(fwd).negate().addScaledVector(up,.3);aimBone(B.LeftArm,B.LeftForeArm,new T.Vector3().subVectors(LE,LS),0);aimFrame(B.LeftForeArm,B.LeftHand,new T.Vector3().subVectors(chest,LE),ln);aimFrame(B.LeftHand,B.LeftHandMiddle1,new T.Vector3().addScaledVector(right,.6).add(up).normalize(),ln);curl(B,'Left',[1.2,1.3,1.3,1.3,.8]);
+  const ln=new T.Vector3().copy(fwd).negate().addScaledVector(up,.3);aimBone(B.LeftArm,B.LeftForeArm,new T.Vector3().subVectors(LE,LS),0);aimFrame(B.LeftForeArm,B.LeftHand,new T.Vector3().subVectors(chest,LE),ln);aimFrame(B.LeftHand,B.LeftHandMiddle1,fig.userData.s3v2?new T.Vector3().subVectors(chest,LE).normalize():new T.Vector3().addScaledVector(right,.6).add(up).normalize(),ln)/* v2: a straight wrist, so the spares across the fist stay square to the forearm */;curl(B,'Left',[1.2,1.3,1.3,1.3,.8]);
   // head looks at the board
   const HD=boneW(B.Head);const look=new T.Vector3().subVectors(boardTarget,HD).normalize();aimBone(B.Head,B.HeadTop_End,new T.Vector3(0,1,0).addScaledVector(look,.12).normalize(),0);
   if(fig.userData.dt)fig.userData.dt.visible=!(oa.phase==='fly'||oa.phase==='follow'||oa.phase==='reset');}
@@ -1466,6 +1488,25 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     the new elbow and hand. The bones are turned, not rebuilt, so the clip's twist and the hand pose stay; an arm already clear is not touched */
  const _v2p=[];for(let i=0;i<12;i++)_v2p.push(new T.Vector3());const _v2q=new T.Quaternion(),_v2q2=new T.Quaternion();
  function v2Turn(bone,from,to){bone.getWorldQuaternion(_v2q2);_v2q.setFromUnitVectors(from,to).multiply(_v2q2);bone.parent.getWorldQuaternion(_v2q2);bone.quaternion.copy(_v2q2.invert().multiply(_v2q));bone.updateWorldMatrix(false,true);}
+ /* the spare darts in the off hand (hand-bone space, metres): barrel centre, the second dart's offset, turn (point toward +x = the little
+    finger side), a small fan between the two; the fingers' curl (radians at the first joint, then x curl2 at the next two) that closes on them */
+ const V2SPARE={p:[.004,.118,.032],gap:[.006,.0,.022],rot:[0,-Math.PI/2,0],fan:.1,curl:[1.3,1.38,1.46,1.52],curl2:.92};
+ const _v2g=[new T.Vector3(),new T.Vector3(),new T.Vector3(),new T.Matrix4(),new T.Quaternion(),new T.Vector3()],_v2fi=new T.Matrix4(),_v2e=new T.Euler();
+ function v2Close(B,sd){['Index','Middle','Ring','Pinky'].forEach((f,i)=>{for(let j=1;j<=3;j++){const b=B[sd+'Hand'+f+j],rs=b&&RIG.rest[b.name];if(!rs)continue;b.quaternion.copy(rs.lq);b.rotateX(V2SPARE.curl[i]*(j===1?1:V2SPARE.curl2));}});}
+ /* the angle (deg) between the hand's across-the-knuckles axis (where the darts lie) and its forearm */
+ function v2WristAng(B,sd){const H=B[sd+'Hand'],F=B[sd+'ForeArm'];const x=_v2g[0].set(1,0,0).transformDirection(H.matrixWorld),f=_v2g[1].subVectors(H.getWorldPosition(_v2g[2]),F.getWorldPosition(_v2g[5])).normalize();return Math.acos(Math.min(1,Math.abs(x.dot(f))))*180/Math.PI;}
+ function v2Grip(fig){const u=fig.userData,B=u.B;if(!B||!B.LeftHand)return;let has=false;for(const c of B.LeftHand.children)if(c.userData.spare&&c.visible){has=true;break;}
+  if(has){v2Close(B,'Left');B.LeftHand.updateWorldMatrix(false,true);
+   /* a clip that bends the wrist hard (the hero cheer) would lay the darts back along the forearm: the wrist eases toward straight until they are 65 deg clear */
+   const rs=RIG.rest[B.LeftHand.name];for(let it=0;it<4&&rs&&v2WristAng(B,'Left')<65;it++){B.LeftHand.quaternion.slerp(rs.lq,.5);B.LeftHand.updateWorldMatrix(false,true);}}
+  /* the throwing dart outside the darts arm (a clip: the walk-on, the hero cheer, the pump): poseDarts didn't place it this frame, so it is held in
+     the right fist the same way, mirrored, instead of hanging where the last throw pose left it */
+  const dt=u.dt,act=u.act;u._dtFist=false;if(dt&&dt.visible&&!u.fpv&&B.RightHand&&act&&act.isScheduled()&&!(performance.now()-(u._pdT||-1e9)<150)){u._dtFist=true;v2Close(B,'Right');const rs=RIG.rest[B.RightHand.name];B.RightHand.updateWorldMatrix(false,true);
+   for(let it=0;it<4&&rs&&v2WristAng(B,'Right')<65;it++){B.RightHand.quaternion.slerp(rs.lq,.5);B.RightHand.updateWorldMatrix(false,true);}v2DtFist(fig);}}
+ /* the throwing dart into the right fist (hand-bone space, V2SPARE mirrored); run again after the arm clearance moves the hand */
+ function v2DtFist(fig){const u=fig.userData,B=u.B,dt=u.dt;if(!u._dtFist||!dt)return;{
+   const q=V2SPARE,m=_v2g[3].compose(_v2g[0].set(-q.p[0],q.p[1],q.p[2]),_v2g[4].setFromEuler(_v2e.set(q.rot[0],-q.rot[1],q.rot[2])),_v2g[1].set(1,1,1));
+   m.premultiply(B.RightHand.matrixWorld).premultiply(_v2fi.copy(fig.matrixWorld).invert());m.decompose(dt.position,dt.quaternion,_v2g[2]);dt.scale.setScalar(S3_DART*(_v2g[2].x||1));dt.updateMatrixWorld(true);}}
  const V2TIPS=['Index','Middle','Ring','Pinky','Thumb'].flatMap(f=>[2,3,4].map(j=>f+j));
  /* the shirt's own outline in chest space (the lathe in s3BuildV2): radius x, radius z at height y, or null above the collar / below the hem */
  function v2TorsoR(y,BK){const t=V2P.torso,y0=t.y0-V2P.leg.hipY-.3,h=t.y1-t.y0,v=(y-y0)/h;if(v<0||v>1)return null;let r=.97+.05*Math.sin(v*Math.PI*.9)+(t.belly+BK[2])*Math.sin(v*Math.PI)*2+.06*Math.max(0,1-v/.18);if(v>.78)r*=Math.cos((v-.78)/.22*Math.PI*.42);r=Math.max(.06,r);return [t.rx*BK[0]*r,t.rz*BK[1]*r];}
@@ -1473,7 +1514,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v2PostClear(fig,only,fresh){/* fresh: the caller has just updated the figure's world matrices */const u=fig.userData,B=u.B,R3=u.s3rig;if(!B||!u.s3v2||!R3)return 0;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}const cb=R3.chest&&R3.chest.userData.box;if(!sk||!cb)return 0;
   const BK=V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard;
   /* a figure whose pose hasn't moved since it was last cleared (the frozen bar extras, a held hero pose) costs one comparison */
-  if(!fresh)fig.updateMatrixWorld(true);  const sigB=[B.RightHand,B.LeftHand,B.Head];let sig=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;sig+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}if(!only&&u._v2sig===sig)return 0;
+  if(!fresh)fig.updateMatrixWorld(true);  if(!only)v2Grip(fig);/* the off hand closes on the spares after every clip (the clips open it) */
+  const sigB=[B.RightHand,B.LeftHand,B.Head,B.LeftHandMiddle2];let sig=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;sig+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}if(!only&&u._v2sig===sig)return 0;
   _v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1];const cm=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1;
   /* e < 1: the point (with margin m, metres) is inside the skull x1.04 (vol 0) or the shirt (vol 1) */
   const evS=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;return Math.hypot(l.x/(r[0]*1.04+g),l.y/(r[1]*1.04+g),l.z/(r[2]*1.04+g));};
@@ -1501,9 +1543,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    {const SH=B[sd+'Shoulder'],rs=SH&&RIG.rest[SH.name];if(rs&&evS(boneWTo(_v2p[4],A),.12)<1){SH.quaternion.copy(rs.lq);SH.updateWorldMatrix(false,true);}}
    for(let pass=0;pass<8;pass++){const S=boneWTo(_v2p[4],A),E=boneWTo(_v2p[5],F),H=boneWTo(_v2p[6],Hb),P=_v2p[7];
     let we=1,wp=null,wm=0,wv=0;const hp=(Q,ms,mt)=>{let e=evS(Q,ms);if(e<we){we=e;wp=Q.clone();wm=ms;wv=0;}e=evT(Q,mt);if(e<we){we=e;wp=Q.clone();wm=mt;wv=1;}};
-    hp(H,.07,.04);const near=evS(H,.24)<1||evT(H,.17)<1;/* the fingers and the fist's vertices are only looked at when the hand is near the head or the body */
+    const dl=sd==='Left'?B.LeftHand.children.filter(c=>c.userData.spare&&c.visible):(u._dtFist&&u.dt?[u.dt]:[]);/* the darts held in this hand move with it */
+    hp(H,.07,.04);const near=evS(H,dl.length?.34:.24)<1||evT(H,dl.length?.3:.17)<1;/* the fingers and the fist's vertices are only looked at when the hand is near the head or the body */
     if(near){if(kn)hp(boneWTo(P,kn),.06,.045);tips.forEach(t=>hp(boneWTo(P,t),.032,.022));}
     /* the fist itself, vertex by vertex (what the clip check measures): none inside the skull or the shirt */
+    if(near)for(const d of dl)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=4){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,.004,.006);}});
     if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,0,.008);}}
     let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m)<1)armIn=true;});
     if(!wp&&!armIn)break;if(!pass)n++;
@@ -1514,10 +1558,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     const d=Math.max(1e-4,NH.distanceTo(S)),uu=P.subVectors(NH,S).divideScalar(d),pole=_v2p[1].set(0,-1,0).addScaledVector(out,V2CLR.out+pass*.3).addScaledVector(fwd,-V2CLR.back);pole.addScaledVector(uu,-pole.dot(uu)).normalize();
     const cA=Math.max(-1,Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)));E.copy(S).addScaledVector(uu,cA*L1).addScaledVector(pole,Math.sqrt(1-cA*cA)*L1);
     v2Turn(A,d0U,P.subVectors(E,S).normalize());const nF=boneWTo(_v2p[5],F),nH=boneWTo(_v2p[6],Hb);v2Turn(F,d0F.subVectors(nH,nF).normalize(),P.subVectors(NH,nF).normalize());fig.updateMatrixWorld(true);}}
+  if(!only)v2DtFist(fig);
   if(!only){let g2=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;g2+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}u._v2sig=g2;}
   return n;}
  window.TOPS_V2POST=v2PostClear;
- function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.updateWorldMatrix(true,true);
+ function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.userData._pdT=performance.now();fig.updateWorldMatrix(true,true);
   let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
   for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
   const P=dartPhase(oa);if(fpv){P.lift-=4;}
