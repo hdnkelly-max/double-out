@@ -16,8 +16,10 @@ cd "$(git rev-parse --show-toplevel)"
 git fetch -q origin src
 C=$(git rev-parse --verify "$C^{commit}") || { echo "unknown commit $C (fetch its branch first)"; exit 1; }
 # same checks release.yml's gate makes (it is the one that counts; these fail early with a clearer message)
-git diff --quiet origin/src "$C" -- .github/workflows/ci.yml || { echo "REFUSED: ${C:0:7} changes .github/workflows/ci.yml; that needs a Q&D pass"; exit 1; }
-runs=$(gh api "repos/$REPO/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and .path==".github/workflows/ci.yml")]|map(.status+"/"+(.conclusion//"")+" "+(.id|tostring))|join(", ")')
+PROT='^(\.github/|tools/|sql/|env/|tests/setup\.sh$|build\.js$|ship\.sh$|package(-lock)?\.json$|\.gitignore$|engine\.js$|dartgeo\.json$|career3\.js$)'
+bad=$(git diff --name-status origin/src "$C" | awk -v P="$PROT" '{f=$NF} f ~ P || ($1 !~ /^A/ && $2 ~ /^tests\//) {print $1" "$2}')
+[ -z "$bad" ] || { echo "REFUSED: these need a Q&D pass (R0-R2 path), so not ship-low: $(echo $bad)"; exit 1; }
+runs=$(gh api "repos/$REPO/actions/runs?head_sha=$C&event=push&per_page=50" --jq '[.workflow_runs[]|select(.head_sha=="'"$C"'" and (.path|split("@")[0])==".github/workflows/ci.yml")]|map(.status+"/"+(.conclusion//"")+" "+(.id|tostring))|join(", ")')
 case ", $runs" in
   *", completed/success "*) echo "fast suite green (ci runs: $runs)" ;;
   ", ") echo "REFUSED: no ci (fast suite) push run on ${C:0:7}: push it to a feature branch and wait"; exit 1 ;;
