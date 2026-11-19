@@ -6,7 +6,7 @@
 # releases only if all pass. Items that touch sql/ need migration=applied. main is the release record
 # (RELEASES.log: prepared -> live|failed); rollback runs inside this run and redeploys the last *live* release's ref.
 name: release
-run-name: "${{ inputs.risk }} | ${{ inputs.item }} | commit=${{ inputs.commit }} | tree=${{ inputs.tree }} | base=${{ inputs.base }} | tests=${{ inputs.tests }} | migration=${{ inputs.migration }} | mode=${{ inputs.mode }} | attest=${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}"
+run-name: "${{ inputs.risk }} | ${{ inputs.item }} | commit=${{ inputs.commit }} | tree=${{ inputs.tree }} | base=${{ inputs.base }} | tests=${{ inputs.tests }} | migration=${{ inputs.migration }} | mode=${{ inputs.mode }} | attest=${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || inputs.attest == 'QA PASS names this tree' && 'qa' || 'invalid' }}"
 on:
   workflow_dispatch:
     inputs:
