@@ -1149,7 +1149,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v3TorsoR(y,BK){const t=V3P.torso,y0=t.y0-V3P.leg.hipY-.3,h=t.y1-t.y0,v=(y-y0)/h;if(v<0||v>1)return null;const smf=v3smf,gs=v3gs;
   let rx=0.276-0.008*gs(v,0.26,0.1)+(t.rx-0.272)*smf(0.3,0.66,v)+(t.sh-t.rx)*smf(0.62,0.82,v),rz=t.rz*(0.95+0.06*smf(0.35,0.7,v));
   if(v>0.8){const q=(v-0.8)/0.2;rx=0.11+(rx-0.11)*Math.pow(Math.max(0,1-Math.pow(q,2.4)),1/2.4);rz=0.1+(rz-0.1)*Math.pow(Math.max(0,1-q*q),0.5);}
-  return [rx*BK[0],(rz+(t.belly+BK[2])*gs(v,0.3,0.16)+0.034*gs(v,0.68,0.13))*BK[1]];}
+  return [rx*BK[0]*1.045,(rz+(t.belly+BK[2])*gs(v,0.3,0.16)+0.034*gs(v,0.68,0.13))*BK[1]*1.045];}/* x1.045: the shell is a superellipse (p 2.3), up to 4.5% outside the ellipse on the diagonals */
  /* the locked v3 face sheet (vinyl3.js faceTex, r5/r6: poster eyes, thick soft-arched brows, narrower smile with one row of teeth,
     rounded upper-lip frame); sk = the canvas skin colour (the squint lid) */
  function v3FaceSheet(L,sk){const c=document.createElement('canvas');c.width=1024;c.height=640;const x=c.getContext('2d'),W=1024,H=640,Fp=v3FaceOf(L),E=V3EYE;
@@ -1828,7 +1828,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    else if(yy<.9&&hh>1e-6){const k=Math.sqrt((1-yy)/hh)*1.004;l.x*=k;l.z*=k;}else l.multiplyScalar(1.004/Math.max(1e-3,Math.sqrt(yy+hh)));return out.copy(l).applyMatrix4(sk.matrixWorld);};
   const fwd=_v2p[2].set(0,0,-1).applyQuaternion(fig.getWorldQuaternion(_v2q)).setY(0).normalize(),hc=_v2p[3].set(0,0,0).applyMatrix4(sk.matrixWorld);let n=0;
   /* the head: a clip that drops the chin to the chest (the hero cheer's first beat) sinks the 2x skull into the collar; the neck and head go back toward their rest until clear */
-  if(!only){const Nk=B.Neck,Hd=B.Head;for(let it=0;it<4&&Hd;it++){let hit=false;for(const q of _v2sks){l.set(q[0]*r[0],q[1]*r[1],q[2]*r[2]).applyMatrix4(sk.matrixWorld);if(evT(l,0)<1.005){hit=true;break;}}if(!hit)break;if(!it)n++;
+  if(!only){const Nk=B.Neck,Hd=B.Head;for(let it=0;it<4&&Hd;it++){let hit=false;for(const q of _v2sks){l.set(q[0]*r[0],q[1]*r[1],q[2]*r[2]);if(SF)l.multiplyScalar(SF(l));l.applyMatrix4(sk.matrixWorld);if(evT(l,.004)<1.005){hit=true;break;}}/* v3: the sampled jaw is the shaped skull's (fuller lower cheeks) */if(!hit)break;if(!it)n++;
     [Nk,Hd].forEach(b=>{const rs=b&&RIG.rest[b.name];if(rs)b.quaternion.slerp(rs.lq,.5);});(Nk||Hd).updateWorldMatrix(false,true);_v2m.copy(sk.matrixWorld).invert();}}
   for(const sd of only||['Right','Left']){const A=B[sd+'Arm'],F=B[sd+'ForeArm'],Hb=B[sd+'Hand'];if(!A||!F||!Hb)continue;const tips=V2TIPS.map(k=>B[sd+'Hand'+k]).filter(Boolean),kn=B[sd+'HandMiddle1'];
    const wa=R3[sd==='Right'?'aL':'aR']/* the Lab's aL hangs on the Right bones */,wb=wa&&wa.wr&&wa.wr.userData.box;const fl=[];if(wb)wb.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.attributes.position)fl.push(o);});
