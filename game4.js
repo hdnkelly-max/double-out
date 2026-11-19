@@ -1332,7 +1332,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     const ox=o.x/m[3],oy=o.y/m[4],oz=o.z/m[5],vx=v.x/m[3],vy=v.y/m[4],vz=v.z/m[5];const A=vx*vx+vy*vy+vz*vz,B=2*(ox*vx+oy*vy+oz*vz),C=ox*ox+oy*oy+oz*oz-1,D=B*B-4*A*C;if(D<0)continue;const t=(-B+Math.sqrt(D))/(2*A);if(t>best)best=t;}return best;};
   const _gv=new T.Vector3();
   const envS=(M,dx,dy,dz,k)=>{k=k||0.012;let mx=0;const ts=[];for(const m of M){const t=envR([m],dx,dy,dz);if(t>0){ts.push(t);if(t>mx)mx=t;}}if(!ts.length)return 0;let s=0;for(const t of ts)s+=Math.exp((t-mx)/k);return mx+k*Math.log(s)-k*0.55;};
-  function groove(h,L,K,M,Ls,cols,hl,o){o=o||{};const sm=K.sm,dir=K.dir,val=o.valley||0.03,U=Math.round((o.U||76)*Math.min(1,S3_SEGF)),Vn=Math.round((o.V||29)*Math.min(1,S3_SEGF));
+  function groove(h,L,K,M,Ls,cols,hl,o){o=o||{};const sm=K.sm,dir=K.dir,val=o.valley||0.03,U=Math.round((o.U||76)*(o.dens||1)),Vn=Math.round((o.V||29)*(o.dens||1));/* dens: the game camera needs the valleys in the geometry, not smoothed away by a coarse grid (doc 25, clay capture) */
    /* each lock: its flow line as 29 unit vectors, flattened to numbers */
    const LK=Ls.map(lk=>{const n=28,P=[];if(lk.v){const cv=new T.CatmullRomCurve3(lk.v.map(q=>new T.Vector3(q[0],q[1],q[2]).normalize()),!!lk.closed,'centripetal');for(let i=0;i<=n;i++)P.push(cv.getPoint(i/n).normalize());}
     else{const cv=new T.CatmullRomCurve3(lk.p.map(q=>new T.Vector3(q[0],q[1],0)),false,'centripetal');for(let i=0;i<=n;i++){const q=cv.getPoint(i/n);P.push(dir(q.x,q.y));}}
@@ -1358,10 +1358,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const TW=S3G==='full'?512:384,TH=TW/2,cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
    const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
    for(let y=0;y<TH;y++){const tj=(y+0.5)/TH;for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW,thE=hl?hl(ph):1.6,th=thOf(tj,thE),st=Math.sin(th);const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
-     let a=(0.22+0.78*sm(0.04,0.42,b))*(0.55+0.45*sm(0.0,0.25,b-b2*0.92));const hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
+     const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));const hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
      const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
    cx.putImageData(im,0,0);const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
-   const m=v2M(0xffffff,'hair');m.map=tex;m.roughness=Math.max(.4,Math.min(.6,o.rough||0.42));if('clearcoat' in m)m.clearcoat=Math.max(.02,Math.min(.16,o.cc||0.16));m.needsUpdate=true;
+   const m=v2M(0xffffff,'hair');m.color.setRGB(1,1,1);/* v2M's hair rule pulls white to #eaeaea; the bake carries the colour */m.map=tex;m.roughness=Math.max(.4,Math.min(.6,o.rough||0.42));if('clearcoat' in m)m.clearcoat=Math.max(0,Math.min(.16,o.cc!=null?o.cc:0.16));m.needsUpdate=true;
    const mesh=new T.Mesh(g,m);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.hair=true;mesh.userData.tag='hair';h.add(mesh);return mesh;}
   /* Kai r9 (quiffL): the r8 poster-fitted masses and the 16 groove locks, verbatim */
   const KAI={M:[[-0.058,0.292,0.076,0.232,0.168,0.232,-0.1,0,0.08],[-0.27,0.218,-0.042,0.138,0.15,0.2,0,0,0.35],[0.188,0.222,0.046,0.13,0.13,0.15,0,0,-0.3],[-0.006,0.204,-0.128,0.238,0.262,0.23,0.2,0,0],[0.01,0.21,0.163,0.2,0.118,0.103,-0.5,0,0],[-0.25,0.252,0.11,0.14,0.13,0.13,0,0,0.3]],
@@ -1372,8 +1372,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     {p:[[0.6,-2.35],[1.05,-2.55],[1.5,-2.65],[1.75,-2.9]],w:0.07},{p:[[1.05,-0.33],[0.9,-0.4],[0.7,-0.55],[0.55,-0.95]],w:0.048,hk:0.8,soft:0.18},
     {p:[[1.45,2.15],[1.7,2.42],[2.02,2.7]],w:0.058,hk:0.85,n:20},{p:[[1.4,-2.1],[1.75,-2.32],[2.05,-2.5]],w:0.056,hk:0.85},{p:[[1.75,2.95],[2.0,3.08],[2.25,3.15]],w:0.052,hk:0.8},
     {p:[[0.85,1.25],[0.9,1.7],[1.1,2.1],[1.35,2.4]],w:0.055,hk:0.9},{p:[[0.85,-1.35],[0.95,-1.8],[1.2,-2.15],[1.3,-2.3]],w:0.055,hk:0.9}],
-   HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x543424,shadow:0x2A1810,hi:0x7A5C4C},
-   o:{valley:0.026,wk:0.85,hiLo:0.9,hi:0.35,rough:0.5,cc:0.08,lip:[0.16,2],tone:1.3}};/* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
+   HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x5F311E,shadow:0x31170F,hi:0x8D533A},/* doc 25 fix 4: ChatGPT's poster browns (r9 had 0x543424 / 0x2A1810 / 0x7A5C4C) */
+   o:{valley:0.026,wk:0.85,hiLo:0.92,hi:0.2,rough:0.5,cc:0.03,lip:[0.16,2],dens:1.6,floor:0.1,seam:0.4}};/* fix 4: no tone lift (it greyed the browns); the bake is written as the sRGB hex, the material white *//* doc 25 fix 2 (lock separation): darker valley floor and seams, a narrow highlight on each crown only, clearcoat .03, a 1.6x finer shell *//* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
   const RAY={M:[[-0.018,0.262,0.08,0.188,0.143,0.162,-0.25,0,0],[-0.018,0.19,-0.102,0.274,0.22,0.228,0,0,0],[-0.232,0.138,0.004,0.086,0.132,0.196,0,0,0.1],[0.22,0.138,-0.008,0.068,0.132,0.19,0,0,-0.1],[-0.172,0.262,0.008,0.08,0.1,0.1,0,0,0.3]],
    GL:[{p:[[0.85,0.05],[0.6,0.08],[0.35,0.12],[0.2,1.2],[0.35,2.9]],w:0.085},{p:[[0.82,-0.38],[0.65,-0.55],[0.5,-1.3],[0.75,-2.3],[1.3,-2.85]],w:0.075},{p:[[0.82,0.45],[0.66,0.62],[0.55,1.35],[0.85,2.3],[1.4,2.8]],w:0.072},
     {p:[[1.0,-0.95],[1.1,-1.35],[1.3,-2.05],[1.7,-2.55]],w:0.066},{p:[[1.08,1.0],[1.18,1.4],[1.35,2.0],[1.7,2.45]],w:0.05,hk:0.85},{p:[[0.5,2.5],[1.0,2.68],[1.5,2.85],[1.95,3.0],[2.15,3.05]],w:0.072,soft:0.22},
