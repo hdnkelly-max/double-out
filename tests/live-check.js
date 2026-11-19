@@ -1,7 +1,8 @@
 // Delivery QA (DQ-IDLE-1, Hayden 17:03: LOW items ship before Q&D sees them, so every release is checked live afterwards).
 // The live site as a brand-new player on two phones: iPhone 13 and Pixel 7, each a fresh device (no saved game).
 // Per phone it FAILs on: a page error; a same-origin file that fails (4xx/5xx/network) other than a known optional one; a page whose
-// version is not the release's; the loader not lifting in 120 s; a career match that doesn't start; three darts thrown by touch on
+// version is not the release's; the loader not lifting in 120 s; the welcome sheet not closing on a tap; a career match that doesn't
+// start; anything on top of the pull pad during the match; three darts thrown by touch on
 // the pull pad that don't land; and (file sweep) any file the live page names, or s3/manifest.json lists, not served. Screenshots (hub, match, after 3 darts) go to <out>/ for the run summary.
 //   node tests/live-check.js <site url> <expected version | -> [out dir] [devices, comma separated]
 // e.g. node tests/live-check.js https://hdnkelly-max.github.io/double-out/ 4.07 live-shots
@@ -49,6 +50,9 @@ async function sweep() {
       r.s3 = await p.evaluate(() => !!window.TOPS_S3FLAG).catch(() => null);
       if (want && want !== '-' && String(r.version) !== String(want)) r.fails.push(`page is version ${r.version}, release is ${want}`);
       await p.waitForTimeout(2000); await p.screenshot({ path: path.join(outDir, `${tag}_1_open.png`) });
+      // a brand-new player first sees the Season 3 welcome sheet: tap its start button like a finger (what is on top at its centre)
+      const wel = await p.evaluate(() => { const g = document.getElementById('s3WelGo'); if (!g || !g.offsetParent) return null; const bb = g.getBoundingClientRect(); return { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 }; });
+      if (wel) { await p.touchscreen.tap(wel.x, wel.y); await p.waitForTimeout(1500); r.welcome = await p.evaluate(() => { const g = document.getElementById('s3WelGo'); return g && g.offsetParent ? 'still open' : 'closed'; }); if (r.welcome !== 'closed') r.fails.push('the Season 3 welcome sheet did not close on a tap of its start button'); }
       // a career match as a new player starts one (Circuit in Season 3, the career fixture otherwise)
       r.start = await p.evaluate(() => { save.authSeen = true; save.name = 'QA live'; save.lessonDone = true; save.totThrows = 500; ['login', 'creator'].forEach(id => { const e = document.getElementById(id); if (e) e.hidden = true; });
         if (!career()) newCareer(); persist(); if (window.TOPS_S3FLAG && window.TOPS_S3) { TOPS_S3.book('pub_night'); TOPS_S3._playNow(); return 'circuit'; } beginMatch({ mode: 'career', tier: 0, p0: 'QA live', oppName: 'Pete', oppAvg: 45, legs: 3 }); return 'career'; });
@@ -60,6 +64,9 @@ async function sweep() {
       for (let tries = 0; thrown < 3 && tries < 400; tries++) {
         const st = await p.evaluate(() => { if (!S || S.done) return { done: 1 }; const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); const pad = document.getElementById('pullPad'); const bb = pad && pad.getBoundingClientRect(); return { can: typeof padCanPull === 'function' && padCanPull(), x: bb ? bb.x + bb.width / 2 : 0, y: bb ? bb.y + bb.height / 2 : 0, w: bb ? bb.width : 0 }; });
         if (st.done) break; if (!st.can || !st.w) { await p.waitForTimeout(150); continue; }
+        // a finger lands on whatever is on top: the pad must be it (an overlay over a live match is a real bug)
+        const top = await p.evaluate(({ x, y }) => { const e = document.elementFromPoint(x, y), pad = document.getElementById('pullPad'); return pad.contains(e) ? null : (e ? (e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : '')) : 'nothing'); }, st);
+        if (top) { r.fails.push(`the pull pad is covered by ${top} during the match`); break; }
         const d = await p.evaluate(({ x, y }) => { const pad = document.getElementById('pullPad'); const o = { bubbles: true, cancelable: true, pointerId: 9, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y };
           const n0 = (S.p[0].darts || 0) + (S.bull ? 100 : 0); pad.dispatchEvent(new PointerEvent('pointerdown', o)); if (!S.pulling) return null;
           const tgt = S.pullStart + S.pullMs * SWEET + 35; while (performance.now() < tgt) {} pad.dispatchEvent(new PointerEvent('pointerup', o)); if (S.pulling) document.dispatchEvent(new PointerEvent('pointerup', o));
