@@ -1912,10 +1912,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     let we=1,wp=null,wm=0,wv=0;const hp=(Q,ms,mt)=>{let e=evS(Q,ms);if(e<we){we=e;wp=Q.clone();wm=ms;wv=0;}e=evT(Q,mt);if(e<we){we=e;wp=Q.clone();wm=mt;wv=1;}};
     const dl=sd==='Left'?B.LeftHand.children.filter(c=>c.userData.spare&&c.visible):(u._dtFist&&u.dt?[u.dt]:[]);/* the darts held in this hand move with it */
     hp(H,.07,.04);const near=evS(H,dl.length?.34:.24)<1||evT(H,dl.length?.3:.17)<1;/* the fingers and the fist's vertices are only looked at when the hand is near the head or the body */
-    if(near){if(kn)hp(boneWTo(P,kn),.06,.045);tips.forEach(t=>hp(boneWTo(P,t),.032,.022));}
+    if(near){const hk=R3.handK||1;if(kn)hp(boneWTo(P,kn),.06*hk,.045);tips.forEach(t=>hp(boneWTo(P,t),.032*hk+(SF?.004:0),.022));}/* v3: the fingers are 1.2x thicker, so their reach round the bone is too */
     /* the fist itself, vertex by vertex (what the clip check measures): none inside the skull or the shirt */
     if(near)for(const d of dl)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=4){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,.004,.006);}});
-    if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,0,.008);}}
+    if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,SF?.006:0,.008);}}/* v3: every third palm vertex is sampled, so a 6 mm skull margin covers the ones between (Tama's round cheeks caught one at 3 mm) */
     let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m*AM)<1)armIn=true;});
     if(!wp&&!armIn)break;if(!pass)n++;
     const sg=Math.sign(l.copy(S).applyMatrix4(_v2m).x)||1;
