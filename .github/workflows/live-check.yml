@@ -30,6 +30,7 @@ jobs:
        github.event.workflow_run.repository.id == github.event.workflow_run.head_repository.id &&
        github.event.workflow_run.repository.full_name == github.repository &&
        contains(fromJSON('[".github/workflows/release.yml", ".github/workflows/deploy.yml"]'), github.event.workflow_run.path) &&
+       contains(fromJSON('["workflow_dispatch", "push"]'), github.event.workflow_run.event) &&
        !contains(github.event.workflow_run.display_title, 'mode=dry_run') &&
        !contains(github.event.workflow_run.display_title, 'mode=test_rollback'))
     runs-on: ubuntu-latest
@@ -39,18 +40,29 @@ jobs:
     defaults: { run: { shell: bash } }   # the Playwright image's default shell is sh
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, path: site, fetch-depth: 1 }
+        with: { ref: main, path: site, fetch-depth: 100 }
       - uses: actions/checkout@v4
         with: { ref: "${{ inputs.test_ref || 'src' }}", path: src, fetch-depth: 1, sparse-checkout: tests }
       - name: What should be live
         id: v
-        env: { WANT: '${{ inputs.version }}' }
+        env: { WANT: '${{ inputs.version }}', RUN: '${{ github.event.workflow_run.id }}', WF: '${{ github.event.workflow_run.name }}' }
         run: |
-          V=${WANT:-$(node -e "console.log(require('./site/version.json').v)")}
-          echo "v=$V" >> $GITHUB_OUTPUT; echo "sha=$(git -C site rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "expected live version $V (main $(git -C site rev-parse --short HEAD))"
+          cd site; SHA=$(git rev-parse HEAD); V=${WANT:-$(node -e "console.log(require('./version.json').v)")}
+          # ChatGPT P2-1: after a release, check THAT release: its own RELEASES.log line (by run id) gives the version, and the status goes
+          # on the commit that recorded it live. If a newer release is already live, this one is superseded: say so, don't fail on it.
+          if [ "$WF" = release ] && [ -n "$RUN" ]; then
+            L=$(grep " live version=.* run=$RUN " RELEASES.log | tail -1 || true)
+            [ -n "$L" ] || { echo "::error::release run $RUN has no live line in RELEASES.log"; exit 1; }
+            V=$(sed -n 's/.* live version=\([0-9.]*\) .*/\1/p' <<<"$L")
+            SHA=$(git log -1 --format=%H -G "live version=[0-9.]* .*run=$RUN " -- RELEASES.log)
+            if grep -A1000 -F "run=$RUN " RELEASES.log | tail -n +2 | grep -q ' live version='; then
+              echo "superseded=1" >> $GITHUB_OUTPUT; echo "### v$V was superseded by a newer live release before this check started; that release's own check covers the site" >> "$GITHUB_STEP_SUMMARY"; fi
+          fi
+          echo "v=$V" >> $GITHUB_OUTPUT; echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "expected live version $V (status on main ${SHA:0:7})"
       - name: Live check (file sweep + iPhone 13 + Pixel 7)
         id: check
+        if: steps.v.outputs.superseded != '1'
         working-directory: src
         run: |
           npm i --no-save playwright@1.48.2 >/dev/null
@@ -60,6 +72,7 @@ jobs:
         if: always()
         env: { GH_TOKEN: '${{ github.token }}', V: '${{ steps.v.outputs.v }}', SHA: '${{ steps.v.outputs.sha }}', RC: '${{ steps.check.outputs.rc }}' }
         run: |
+          [ -z "$RC" ] && [ "${{ steps.v.outputs.superseded }}" = 1 ] && exit 0
           if [ "$RC" = 0 ]; then st=success; d="v$V live: files + iPhone 13 + Pixel 7 PASS"; else st=failure; d="v$V live check FAILED: see run (roll back?)"; echo "::error::LIVE CHECK FAILED on v$V: $(grep -E '^(FAIL|  )' live.txt | head -3 | tr '\n' ' ')"; fi
           { echo "### $d"; echo '```'; cat live.txt 2>/dev/null; echo '```'; echo "Screenshots: artifact live-shots-$V"; } >> "$GITHUB_STEP_SUMMARY"
           [ -n "$SHA" ] && curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
