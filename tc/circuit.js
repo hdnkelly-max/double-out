@@ -186,6 +186,33 @@
   // broke: the way back is money matches and hardship entry (today's systems), so the career never dead-ends
   const broke = c => calendar(c).every(e => !e.canAfford);
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance };
+  // CAR-DEADWK (Producer 13:40, 20 Nov): the week only moves when an event finishes, so a week with nothing on at your level (the Opens run
+  // every 3 weeks, the Worlds once a year) stopped the career. The calendar stays the source of truth: a rest week jumps straight to the next
+  // week that has an event at your level (all the empty weeks at once), looking up to REST_SCAN weeks past this one. calendar() is also the
+  // eligibility gate (needCard, once, card, level), and book() only adds the bank check, so any week it finds can be booked.
+  const REST_SCAN = 156;
+  function nextEventWeek(c) { for (let w = c.week; w <= c.week + REST_SCAN; w++) { if (calendar(Object.assign({}, c, { week: w })).length) return w; } return null; }
+  const restNeeded = c => !c.live && !calendar(c).length;
+  function restWeek(c) {
+    if (c.live) return { ok: false, why: 'Finish the event you are in first' };
+    if (calendar(c).length) return { ok: false, why: 'There is an event on this week' };
+    const to = nextEventWeek(c); if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    const from = c.week; c.week = to; return { ok: true, from, to, skipped: to - from };
+  }
+  // Broke and nothing affordable on: a recovery entry books one eligible event this week with no cash up front, capped at the cheapest
+  // event on (entry + travel). It goes on the same debt as the hardship advance (half of each prize pays it back), normal prize and points,
+  // and it stays available after a loss, so being broke is never a new dead end. The cap is per entry (that one cheapest trip); the total
+  // owed is not capped on purpose, since any total cap would bring the dead end back (Producer's call, flagged).
+  function recoveryOffer(c) { if (c.live || !broke(c)) return null; const cal = calendar(c); if (!cal.length) return null; const e = cal.slice().sort((a, b) => a.cost - b.cost)[0]; return { id: e.id, n: e.n, cost: e.cost }; }
+  function recoveryEntry(c, id) {
+    const o = recoveryOffer(c); if (!o) return { ok: false, why: c.live ? 'Finish the event you are in first' : 'You can afford an event this week' };
+    const e = calendar(c).find(x => x.id === (id || o.id)); if (!e) return { ok: false, why: 'Not on this week' };
+    if (e.cost > o.cost) return { ok: false, why: 'A recovery entry covers the cheapest event this week' };
+    const bank = c.bank; let r; try { c.bank = e.cost; r = book(c, e.id); } finally { c.bank = bank; } if (!r || !r.ok) { c.live = null; c.booked = null; return r || { ok: false, why: 'Could not book' }; }
+    c.debt = (c.debt || 0) + e.cost; c.recovered = (c.recovered || 0) + 1; c.live.recovery = 1;
+    return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
+  }
+
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
