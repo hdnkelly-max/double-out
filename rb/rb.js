@@ -58,7 +58,7 @@
   const TABS = S3 ? S3.TABS : [['tonight', 'Tonight'], ['season', 'Season'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']];
   const OLD = { shop: 'kit', kit: 'kit', locker: 'player', practice: 'practice' };
   const BUILT = { tonight: 1, season: 1, locker: 1, shop: 1, practice: 1, circuit: 1, money: 1 };
-  if (S3) S3.attach(() => { try { render(); } catch (e) { console.warn('s3 render', e); } });   // until each new screen lands, the tab opens the old one
+  if (S3) S3.attach(() => { try { render(); } catch (e) { console.warn('s3 render', e); } }, (t, l) => { tab = t; if (l) lk = l; render(); try { const m = $id('rbMain') || document.querySelector('#rbApp .rb-scr'); if (m) m.scrollTop = 0; } catch (e) {} });   // until each new screen lands, the tab opens the old one
   let tab = S3 ? 'circuit' : 'tonight', lk = 'load', sel = null, shopMsg = '', cardF = 'all', shopSub = 'darts', setOpen = '';
   function ensure() {
     let el = $id('rbApp'); if (el) return el;
@@ -139,7 +139,7 @@
     const seg = `<div class="rb-seg" role="tablist">${[['load', 'Loadout'], ['stats', 'Stats'], ['cards', 'Cards'], ['troph', 'Trophies']].map(([a, b]) => `<button type="button" role="tab" aria-selected="${lk === a}" data-lk="${a}">${b}</button>`).join('')}</div>`;
     if (lk === 'stats') return seg + stats(M);
     if (lk === 'cards') return seg + cards(M);
-    if (lk === 'troph') return seg + trophies(M);
+    if (lk === 'troph') { const sh = S3 && S3.shelf ? S3.shelf() : null; return seg + (sh || trophies(M)); }   /* EXP-IDLE 3: the Season 3 shelf (behind s3x=1), else the old list */
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
     const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;

@@ -126,7 +126,7 @@
     const ladder = C.LEVELS.map((x, i) => `<li class="${i < c.level ? 's3-done' : i === c.level ? 's3-now' : ''}"><i></i><span>${SHORT[i]}</span></li>`).join('');
     const head = `<section class="s3-lv">
       <div class="s3-lvart" style="background:url(${lvArt(c.level)}) 50% 40%/cover no-repeat,${GRAD[c.level]}"></div><div class="s3-lvsh"></div>
-      <div class="s3-lvtx"><span class="rb-kick">Level ${c.level + 1} of 7 · week ${c.week}</span><span class="s3-lvn">${esc(L.n)}</span><span class="rb-sub">${esc(L.s)}</span></div>
+      <div class="s3-lvtx"><span class="rb-kick">Level ${c.level + 1} of 7 · week ${c.week}</span><span class="s3-lvn">${esc(L.n)}</span><span class="rb-sub">${esc(L.s)}</span></div>${X ? trChip(c) : ''}
     </section>
     <div class="rb-card s3-prog">
       ${need ? `<div class="s3-row"><span class="s3-lab">To move up · ${bestTxt}</span><b class="s3-num">${have} <small>/ ${need} pts</small></b></div><div class="rb-bar"><i style="width:${Math.min(100, 100 * have / need)}%"></i></div>` : ''}
@@ -143,6 +143,9 @@
     else body = c.live ? live(c) : week(c);
     return head + seg + body + records(c) + (isO ? '' : '');
   }
+  /* 'N titles' on the level card: opens Locker > Trophies (EXP-IDLE 3, behind s3x=1); hidden until there's something on the shelf */
+  function trChip(c) { const ts = c.titles || [], w = ts.filter(t => t.finish === 'W').length, f = ts.length - w; if (!ts.length) return '';
+    return `<button type="button" class="s3-trchip" data-s3="troph">${CUP(w ? 'W' : 'F', 's3cupchip')}<span>${w ? w + ' title' + (w > 1 ? 's' : '') : f + ' final' + (f > 1 ? 's' : '')}</span><i aria-hidden="true">›</i></button>`; }
   function week(c) {
     const C = CI(), cal = C.calendar(c);
     let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
@@ -381,7 +384,7 @@
   }
 
   /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
-  let shell = null, annT = 0;
+  let shell = null, nav = null, annT = 0;
   function render() { if (shell) shell(); }
   function wire() {
     const app = $id('rbApp'); if (!app) return;
@@ -393,7 +396,8 @@
     app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3;
       if (k === 'mm') D.moneyMatch();
       else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
-      else if (k === 'hist') histSheet(); });
+      else if (k === 'hist') histSheet();
+      else if (k === 'troph' && nav) nav('locker', 'troph'); });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
     /* not while the between-match reset is about to reload the page (ENG-RESET): the result would show behind the loader and be lost */
     /* nor while the loading screen still covers the page (the fresh page after the reset): wait for it to lift, then show it once */
@@ -468,12 +472,64 @@
     return typeof h === 'string' ? h.replace('<img class="ach-img"', '<img class="ach-img" onerror="this.outerHTML=window.TOPS_S3_TROPHY||\'\'"') : h; }; }
   window.TOPS_S3_TROPHY = '<svg class="ach-fb" viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path fill="#f1c64b" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3Zm0 4H6v1a2 2 0 0 0 1.2 1.8A5 5 0 0 1 7 8V7Zm10 0v1c0 .6-.1 1.2-.2 1.8A2 2 0 0 0 18 8V7h-1Z"/><rect x="6" y="20" width="12" height="2" rx="1" fill="#f1c64b"/></svg>';
 
+  /* ---------- EXP-IDLE 3 · the trophy shelf in Locker > Trophies (behind s3x=1). Built from Career's career().circuit.titles (wins + finals,
+     kept from day one), the circuit history (weeks, prize money), career().best.leg (the same number the Best Leg board ranks) and Career's
+     tops_history view for Seasons 1 & 2. The trophies are drawn here: no Vinyl trophy art exists yet. ---------- */
+  const CUP = (k, id) => { const g = { W: ['#fff3c4', '#f1c64b', '#a8791c'], F: ['#ffffff', '#c9d0d6', '#7d868d'] }[k];
+    if (!g) return `<svg class="s3-cup s3-cupe" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 7h20v4h6v5a8 8 0 0 1-8 8h-.6A10 10 0 0 1 26 29.8V34h6v4H16v-4h6v-4.2A10 10 0 0 1 16.6 24H16a8 8 0 0 1-8-8v-5h6V7Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.4"/><rect x="12" y="40" width="24" height="4" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.4"/></svg>`;
+    return `<svg class="s3-cup" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="${g[0]}"/><stop offset=".45" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[2]}"/></linearGradient></defs>
+      <path d="M14 7h20v4h6v5a8 8 0 0 1-8 8h-.6A10 10 0 0 1 26 29.8V34h6v4H16v-4h6v-4.2A10 10 0 0 1 16.6 24H16a8 8 0 0 1-8-8v-5h6V7Zm0 7h-2v2a4 4 0 0 0 2.4 3.7A10 10 0 0 1 14 17v-3Zm20 0v3c0 .9-.1 1.8-.4 2.7A4 4 0 0 0 36 16v-2h-2Z" fill="url(#${id})"/>
+      <path d="M18 10h3v9a6 6 0 0 0 1.5 4" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <rect x="12" y="39" width="24" height="5" rx="1.5" fill="#3a2b1e"/><rect x="15" y="40.5" width="18" height="2" rx="1" fill="url(#${id})" opacity=".8"/></svg>`; };
+  let shelfHi = null, shelfHiAt = 0;
+  function shelf() {
+    try {
+      if (!X || !CI() || !D.st()) return null;
+      const C = CI(), k = D.st(), c = typeof career === 'function' ? career() : null, ts = k.titles || [], hs = k.history || [];
+      const W = ts.filter(t => t.finish === 'W'), F = ts.filter(t => t.finish === 'F'), prize = hs.reduce((a, h) => a + (h.prize || 0), 0);
+      /* the week of each title: its own history entry (same event, same finish), taken in order */
+      const used = new Set(), weekOf = t => { const i = hs.findIndex((h, j) => !used.has(j) && h.id === t.ev && (t.finish === 'W' ? h.fin === 'W' : h.fin === 'F')); if (i < 0) return null; used.add(i); return hs[i].week; };
+      const tw = ts.map(t => Object.assign({ week: weekOf(t) }, t));
+      const lv = C.LEVELS[k.level];
+      const hero = `<section class="s3-trh"><div class="s3-lvart" style="background:url(${lvArt(k.level)}) 50% 40%/cover no-repeat,${GRAD[k.level]}"></div><div class="s3-lvsh"></div>
+        <div class="s3-trk"><div><small>Titles</small><b>${W.length}</b></div><div><small>Finals</small><b>${W.length + F.length}</b></div><div><small>Prize money</small><b>${money(prize)}</b></div></div></section>`;
+      /* best leg: career().best.leg is what lbPost sends to the board, so this number and the board's "Yours" always agree */
+      const b = c && c.best, leg = b && b.leg < 99 ? b.leg : null, at = b && b.legAt && b.legAt.d === leg ? b.legAt : null;
+      const rec = Array.isArray(blRows) && blRows[0] ? blRows[0] : null, recTxt = rec ? (rec.you ? (rec.darts === leg ? 'You hold the Season 3 record' : '') : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`) : '';
+      const bl = leg ? `<div class="s3-trbl"><b>${leg}</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>${leg} darts${at ? ` · ${esc(at.ev)}, week ${at.week}` : ''}</span>${recTxt ? `<small>${recTxt}</small>` : ''}</div></div>`
+        : `<div class="s3-trbl s3-tre"><b>–</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>Win a 501 leg in the Circuit to set one</span></div></div>`;
+      const empty = !ts.length ? `<div class="rb-card s3-tremp"><span class="rb-t2">Your shelf is empty</span><span class="rb-sub">Win an event, or reach a final, and the trophy goes here. ${esc(lv.events[0].n)} pays ${money(C.prizeFor(C.eventOf(lv.events[0].id), 'W'))} to the winner.</span></div>` : '';
+      let n = 0;
+      const lvRow = i => { const L = C.LEVELS[i], up = i < k.level, last = up ? hs.filter(h => h.level === i).slice(-1)[0] : null;
+        const cards = L.events.map(e => { const w = tw.filter(t => t.ev === e.id && t.finish === 'W'), f = tw.filter(t => t.ev === e.id && t.finish === 'F'), top = w.length ? 'W' : f.length ? 'F' : '';
+          const wk = (top === 'W' ? w : f).map(t => t.week).filter(x => x != null), pz = (top === 'W' ? w : f).reduce((a, t) => a + (t.prize || 0), 0), cnt = (top === 'W' ? w : f).length;
+          const line = top === 'W' ? `Winner${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : top === 'F' ? `Runner-up${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : up ? 'Not won' : 'Not won yet';
+          const more = top === 'W' && f.length ? `<small>+ ${f.length} final${f.length > 1 ? 's' : ''}</small>` : '';
+          return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}">${CUP(top, 's3cup' + (n++))}<b>${esc(TOWN(e.n))}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
+        const tag = up ? `<span class="s3-trup">Promoted${last ? ' · week ' + last.week : ''}</span>` : `<span class="s3-trnow">This level</span>`;
+        return `<section class="s3-trlv"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol></section>`; };
+      let rows = ''; for (let i = k.level; i >= 0; i--) rows += lvRow(i);
+      const nx = C.LEVELS[k.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
+      /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
+      const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
+      return hero + bl + empty + rows + next + oldSeasons();
+    } catch (x) { console.warn('s3 shelf', x); return null; }
+  }
+  function oldSeasons() {
+    const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null; if (!me || (!me.s1 && !me.s2)) return `<div id="s3TrHi"></div>`;
+    const one = (s, lab) => s ? `<li><span class="s3-lab">${lab}</span><span>${s.furthest ? esc(s.furthest.n) : '–'}</span><span>${s.bestAvg != null ? (+s.bestAvg).toFixed(1) + ' avg' : '–'}</span><span>${s.bestLeg != null ? s.bestLeg + ' darts' : '–'}</span></li>` : '';
+    return `<div class="rb-card" id="s3TrHi"><span class="rb-t2">Seasons 1 & 2 · yours</span><ol class="s3-tbl s3-trold">${one(me.s1, 'Season 1')}${one(me.s2, 'Season 2')}</ol><span class="rb-sub">Furthest level, best match average, fewest darts in a won leg. Kept from before the reset.</span></div>`;
+  }
+  /* where and when the best leg came: stamped when career().best.leg drops during a Circuit match (Career's recordBests sets the number) */
+  if (typeof recordBests === 'function') { const _rb = recordBests; recordBests = function () { const c = typeof career === 'function' ? career() : null, was = c && c.best ? c.best.leg : 99; const r = _rb.apply(this, arguments);
+    try { const b = c && c.best; if (b && b.leg < was && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), k = D.st(); b.legAt = { d: b.leg, ev: e ? e.n : '', week: k ? k.week : null }; } } catch (e) {} return r; }; }
+
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
-    wire, attach: fn => { shell = fn; },
-    resultBlock,
+    wire, attach: (fn, go) => { shell = fn; nav = go || null; },
+    resultBlock, shelf,
     refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
