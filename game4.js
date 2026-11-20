@@ -1115,7 +1115,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     Kept from the game's v2: materials (v2M, V2SKIN, venue light), the poster shirt texture + collar, fingers on the finger bones, the hair
     kit (V2HAIRS, from hair28) until Director's hair r8 file lands. Phones get a 1536 px head sheet (desktop 2048) and S3_SEGF segments. */
  const V3BASES=['kai','ray','tama','mia','dazza'];/* doc 25: Ray and Tama on v3; doc 33: Mia (hair28 bunL) and Dazza (hair28 backwards cap, hair under it, sculpted beard) too */
- const V3HAIRMAP={quiff:'quiffL',swept:'sweptL',curly:'curlyL',bun:'bunL',under:'underL'};/* Director's r9 lock builds on v3 heads (doc 24); Ray sweptL and Mia bunL follow with their ports */
+ const V3HAIRMAP={quiff:'quiffL',swept:'sweptR',curly:'curlyL',bun:'bunL',under:'underL'};/* Director's r9 lock builds on v3 heads (doc 24); r14: Ray = the lock-built sweptR (Producer 20 Nov 14:02), sweptL kept for rollback (TOPS_V3HAIRMAP) */
  function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&!!L.base&&V3BASES.includes(L.base)&&!L.pro;}
  const V3P={H:1.6,head:{c:[0,1.31,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.535,y1:1.015,rx:0.3,rz:0.215,belly:0.05,sh:0.365},
   shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
@@ -1355,14 +1355,23 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    /* each lock: its flow line as 29 unit vectors, flattened to numbers */
    const LK=Ls.map(lk=>{const n=28,P=[];if(lk.v){const cv=new T.CatmullRomCurve3(lk.v.map(q=>new T.Vector3(q[0],q[1],q[2]).normalize()),!!lk.closed,'centripetal');for(let i=0;i<=n;i++)P.push(cv.getPoint(i/n).normalize());}
     else{const cv=new T.CatmullRomCurve3(lk.p.map(q=>new T.Vector3(q[0],q[1],0)),false,'centripetal');for(let i=0;i<=n;i++){const q=cv.getPoint(i/n);P.push(dir(q.x,q.y));}}
-    const F=new Float32Array(P.length*3);P.forEach((p,i)=>{F[3*i]=p.x;F[3*i+1]=p.y;F[3*i+2]=p.z;});return {F,n,w:lk.w*(o.wk||1),hk:lk.hk||1,root:lk.root!=null?lk.root:0.18,soft:lk.soft||0,taper:lk.taper||0};});
-   const pw=o.pw||0.42,out=[0,0];
-   const field=(dx,dy,dz)=>{let best=0,second=0,bs=0,sb=0;for(const k of LK){let dm=9,um=0;const F=k.F,n=k.n;
+    const F=new Float32Array(P.length*3);P.forEach((p,i)=>{F[3*i]=p.x;F[3*i+1]=p.y;F[3*i+2]=p.z;});const wpM=lk.wp?Math.max(...lk.wp):1;return {F,n,w:lk.w*(o.wk||1),hk:lk.hk||1,root:lk.root!=null?lk.root:0.18,soft:lk.soft||0,taper:lk.taper||0,lift:lk.lift||null,wp:lk.wp||null,pw:lk.pw||0,wpM};});
+   /* hair28 r14 lock-built mass (o.heights, Ray sweptR): each lock carries its own height (lk.lift along its length, lk.wp width profile, lk.pw
+      section power); heights merge by a p-norm (HP), so locks fuse into one mass and valleys stay where the profiles fall off. The arc-length
+      parameter and distance are smoothed over nearby segments (no ridges where the nearest segment switches on the inside of a bend). */
+   const HT=!!o.heights,HP=o.hp||6,EW=o.envW||1,EP=o.envP||0.5,VW=o.vw||1.25,DS=new Float64Array(64),US=new Float64Array(64),LIFT=(a,u)=>{const x=(u<0?0:u>1?1:u)*(a.length-1),i=Math.min(a.length-2,Math.floor(x)),f=x-i;return a[i]*(1-f)+a[i+1]*f;};
+   const pw=o.pw||0.42,out=[0,0,0,1,0];
+   const field=(dx,dy,dz)=>{let best=0,second=0,bs=0,sb=0,HS=0,FR=1,BS=0;for(const k of LK){let dm=9,um=0;const F=k.F,n=k.n;
      for(let i=0;i<n;i++){const ax=F[3*i],ay=F[3*i+1],az=F[3*i+2],bx=F[3*i+3]-ax,by=F[3*i+4]-ay,bz=F[3*i+5]-az;const l2=bx*bx+by*by+bz*bz||1e-9;
-      let t=((dx-ax)*bx+(dy-ay)*by+(dz-az)*bz)/l2;t=t<0?0:t>1?1:t;const cx=ax+bx*t-dx,cy=ay+by*t-dy,cz=az+bz*t-dz,dd=Math.sqrt(cx*cx+cy*cy+cz*cz);if(dd<dm){dm=dd;um=(i+t)/n;}}
-     const wa=k.w*(0.5+0.5*Math.sin(Math.PI*Math.min(1,0.15+0.85*um)))*(1-k.taper*um)/0.33;/* r13: lk.taper narrows a lock along its length */let b=1-(dm/wa)*(dm/wa);if(b<=0)continue;b=Math.pow(b,pw)*k.hk*(0.35+0.65*sm(0,k.root,um));
-     if(b>best){second=best;sb=bs;best=b;bs=k.soft;}else if(b>second){second=b;sb=k.soft;}}
-    const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;return out;};
+      let t=((dx-ax)*bx+(dy-ay)*by+(dz-az)*bz)/l2;t=t<0?0:t>1?1:t;const cx=ax+bx*t-dx,cy=ay+by*t-dy,cz=az+bz*t-dz,dd=Math.sqrt(cx*cx+cy*cy+cz*cz);if(HT){DS[i]=dd;US[i]=(i+t)/n;}if(dd<dm){dm=dd;um=(i+t)/n;}}
+     if(HT){if(dm-0.04>k.w*k.wpM/0.33*Math.max(EW,VW,1))continue;/* exact early-out: this lock can't reach here (the smoothing lowers dm by at most .012 ln 28) */
+      let sw=0,su=0,sd=0;for(let i=0;i<n;i++){const e=DS[i]-dm;if(e>0.33)continue;const wg=Math.exp(-e/0.03);sw+=wg;su+=wg*US[i];sd+=Math.exp(-e/0.012);}um=su/sw;dm=Math.max(0,dm-0.012*Math.log(sd)+0.012*Math.log(2));}
+     const wa=k.w*(k.wp?LIFT(k.wp,um):1)*(0.5+0.5*Math.sin(Math.PI*Math.min(1,0.15+0.85*um)))*(1-k.taper*um)/0.33;/* r13: lk.taper narrows a lock along its length */
+     if(k.lift){const q=dm/(wa*EW),be=1-q*q;if(be>0)HS+=Math.pow(Math.pow(be,EP)*k.hk*(0.35+0.65*sm(0,k.root,um))*LIFT(k.lift,um),HP);}/* r14: the mass is the union of each lock's soft volume (wider than its crest) */
+     if(HT){const q=sm(VW,0.25,dm/wa)*k.hk;if(q>BS)BS=q;}/* r14: soft lock coverage for the valley walls */
+     let b=1-(dm/wa)*(dm/wa);if(b<=0)continue;b=Math.pow(b,k.pw||pw)*k.hk*(0.35+0.65*sm(0,k.root,um));
+     if(b>best){FR=dm/wa;second=best;sb=bs;best=b;bs=k.soft;}else if(b>second){second=b;sb=k.soft;}}
+    const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;out[2]=HS>0?Math.pow(HS,1/HP):0;out[3]=FR;out[4]=BS;return out;};
    const thOf=(tj,thE)=>0.015+(thE-0.015)*(tj<0.85?tj/0.85*0.97:0.97+0.03*(tj-0.85)/0.15);const LP=o.lip;
    const pos=[],uv=[],idx=[];
    /* hair28 r11 scalloped edge (Mia): where no lock reaches the hairline the edge pulls back, so the lock tips form the hairline */
@@ -1370,17 +1379,24 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    for(let j=0;j<=Vn;j++)for(let i=0;i<=U;i++){const ph=PHU(i/U),thE=o.scallop?SC[i]:(hl?hl(ph):1.6),tj=j/Vn;let th=thOf(tj,thE),eR=-1;const fr=LP?Math.pow(Math.max(0,Math.cos(ph)),LP[1]||2):0;
     if(o.round){const span=0.03+o.round*Math.pow(Math.max(0,Math.cos(ph)),2),tR=0.72;if(tj<=tR)th=0.015+(thE-span-0.015)*tj/tR;else{eR=(tj-tR)/(1-tR);th=thE-span+span*Math.sin(eR*Math.PI/2);}}/* the last rows wrap a quarter circle down to the hairline: a thick rounded roll face, no overhang */
     let thL=th;if(LP&&tj>0.8){const e=(tj-0.8)/0.2;thL=th+LP[0]*fr*Math.sin(Math.PI*Math.min(1,e*1.25))*(1-0.6*e);}
-    const d=dir(thL,ph),sk=SKR(thL,ph),tm=Math.min(th,thL),dm=dir(tm,ph);const b=field(dm.x,dm.y,dm.z)[0];const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;const PU=(o.push||0)*sm(0.15,0.6,b)*(o.pushMask?o.pushMask(dm):1);/* hair28 r10: crests ride slightly proud of the envelope (Mia) */let r=Math.max(sk+0.004,ENV(dm)+PU-vv*(1-b));
-    if(eR>=0)r=sk-0.003+(r-sk+0.003)*Math.pow(Math.max(0,1-eR*eR),o.roundP||0.5);/* r13: roundP > .5 feathers the rounded front into the skin */else if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}pos.push(d.x*r,d.y*r,d.z*r);uv.push((ph+Math.PI)/(2*Math.PI),1-tm/TMX);}
+    const d=dir(thL,ph),sk=SKR(thL,ph),tm=Math.min(th,thL),dm=dir(tm,ph);const f=field(dm.x,dm.y,dm.z),b=f[0];let r;
+    if(HT){/* r14: lock heights ride the smooth ellipsoid (the v3 skull's fine shape would print through as striations); skin still can't poke through; sides held in at the temples and upper ears; the scalp edge feathers */
+     const HL3=f[2],FRg=f[3],BSg=f[4],thE0=hl?hl(ph):1.6,FTH=(o.feather?sm(0,o.feather,thE0-th):1)*(o.sideCut?1-o.sideCut*Math.exp(-(((Math.abs(ph)-1.6)/0.6)**2))*sm(0.9,1.3,th):1),skS=Math.max(sk-0.006,Math.hypot(d.x*R0[0],d.y*R0[1],d.z*R0[2])+(o.skOff||0));
+     r=Math.max(sk+0.004,skS+FTH*(o.base||0.012)*(o.baseMod?o.baseMod(th,ph):1)+FTH*HL3-(o.hv||0)*(1-BSg)*sm(0.004,0.03,HL3)-(o.comb||0)*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,FRg)))*sm(0.15,0.45,FRg)*sm(0.01,0.04,HL3));}
+    else{const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;const PU=(o.push||0)*sm(0.15,0.6,b)*(o.pushMask?o.pushMask(dm):1);/* hair28 r10: crests ride slightly proud of the envelope (Mia) */r=Math.max(sk+0.004,ENV(dm)+PU-vv*(1-b));}
+    if(eR>=0){const fq=Math.pow(Math.max(0,1-eR*eR),o.roundP||0.5),fw=HT?Math.pow(Math.max(0,Math.cos(ph)),4):1;r=sk-0.003+(r-sk+0.003)*(fq*fw+(1-sm(0,1,eR))*(1-fw));}/* r14 heights: sides and back taper smoothly into the skin; only the front keeps the rounded roll face *//* r13: roundP > .5 feathers the rounded front into the skin */else if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}pos.push(d.x*r,d.y*r,d.z*r);uv.push((ph+Math.PI)/(2*Math.PI),1-tm/TMX);}
+   if(HT)for(const jr of [0,1]){let m=0;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3;m+=Math.hypot(pos[q],pos[q+1],pos[q+2]);}m/=U+1;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3,l=Math.hypot(pos[q],pos[q+1],pos[q+2]),k=(l+(m-l)*(jr?0.5:1))/l;pos[q]*=k;pos[q+1]*=k;pos[q+2]*=k;}}/* r14: the tiny crown ring collapses to its mean height (no pinched triangles at the pole) */
    for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i;idx.push(a,a+U+1,a+1,a+1,a+U+1,a+U+2);}
    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();
    {const Nn=g.attributes.normal;for(let j=0;j<=Vn;j++){const a0=j*(U+1),a1=a0+U;const x=Nn.getX(a0)+Nn.getX(a1),y=Nn.getY(a0)+Nn.getY(a1),z=Nn.getZ(a0)+Nn.getZ(a1),l=Math.hypot(x,y,z)||1;Nn.setXYZ(a0,x/l,y/l,z/l);Nn.setXYZ(a1,x/l,y/l,z/l);}
     let px=0,py=0,pz=0;for(let i=0;i<=U;i++){px+=Nn.getX(i);py+=Nn.getY(i);pz+=Nn.getZ(i);}const pl=Math.hypot(px,py,pz)||1;for(let i=0;i<=U;i++)Nn.setXYZ(i,px/pl,py/pl,pz/pl);}
    /* the baked lock colour: valley shadow -> base -> highlight along each crown, mixed in sRGB (the lab's numbers) */
-   const TW=S3G==='full'?512:384,TH=TW/2,cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
+   const TW=HT&&o.tw?(S3G==='full'?o.tw:Math.round(o.tw*2/3)):(S3G==='full'?512:384),TH=HT&&o.th?Math.round(o.th*TW/o.tw):TW/2,cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
    const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
    for(let y=0;y<TH;y++){const th=(y+0.5)/TH*TMX,st=Math.sin(th);for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW;const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
-     const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));const hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
+     const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a,hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);
+     if(HT){const Hq=f[2],FLx=fl+((o.openFloor||0.62)-fl)*(1-sm(0.012,0.04,Hq));a=FLx+(1-FLx)*Math.pow(f[4],0.8);if(o.combT)a*=1-o.combT*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,f[3])))*sm(0.01,0.04,Hq);hi*=sm(0.015,0.06,Hq);}/* r14: only seams between neighbouring locks go to the dark floor; open scalp stays mid-tone; comb lines along each lock */
+     else a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
      const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
    cx.putImageData(im,0,0);const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
    const m=v2M(0xffffff,'hair');m.color.setRGB(1,1,1);/* v2M's hair rule pulls white to #eaeaea; the bake carries the colour */m.map=tex;m.roughness=Math.max(.4,Math.min(.6,o.rough||0.42));if('clearcoat' in m)m.clearcoat=Math.max(0,Math.min(.16,o.cc!=null?o.cc:0.16));m.needsUpdate=true;
@@ -1421,6 +1437,25 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   /* r9 Ray (sweptL): his poster-fitted masses and groove locks, verbatim from hair28.js */
   sweptL(h,L,K){const G=V2GROOVE,Q=G.RAY;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
    const OV=(window.TOPS_V3HAIRO||{}).ray||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},
+  /* hair28 r14 Ray (sweptR, ChatGPT 8.5 PORT): the same silver swept-back pompadour built from 6 real locks over a restrained scalp:
+     1 dominant front lock (rises, rolls back over the crown to his right, runs down the back), 2 medium on his right, 1 on his left,
+     2 small rear locks tapering into the scalp; sides held in at the temples, rear close to the skull. Lock data verbatim from hair28.js;
+     window.RAY_R takes the lab's knobs. Materials stay at the r13 freeze (shadow #48443F, seam floor .14). */
+  sweptR(h,L,K){const G=V2GROOVE,Q=G.RAY,sm=K.sm,RP=window.RAY_R||{};const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   const LS=RP.lift||1,LB=RP.back!=null?RP.back:1,sc=a=>a.map((v,i)=>v*LS*(1+LB*sm(0.2,0.6,i/(a.length-1))));/* front stays, crown/rear follow-through lifted */
+   const GL=RP.locks||[
+    {p:[[1.04,0.12],[0.84,0.08],[0.58,-0.05],[0.36,-0.35],[0.18,-1.2],[0.3,-2.5],[0.68,-2.85],[1.1,-2.97]],w:RP.wD||0.1,wp:RP.wpD||[1.9,1.85,1.65,1.4,1.2,1.35,1.45,1.2],root:0.05,taper:0.2,pw:RP.pwD||0.3,lift:sc(RP.liftD||[0.044,0.07,0.068,0.054,0.046,0.062,0.064,0.032])},/* 1 dominant */
+    {p:[[1.03,-0.42],[0.86,-0.55],[0.68,-1.05],[0.8,-1.85],[1.12,-2.42]],w:RP.wM||0.075,wp:[1.3,1.25,1.1,0.9,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc([0.03,0.046,0.046,0.03,0.01])},/* 2 medium, his right */
+    {p:[[1.14,-0.86],[1.1,-1.25],[1.22,-1.82],[1.46,-2.25]],w:0.055,root:0.1,taper:0.4,lift:sc(RP.liftR2||[0.036,0.052,0.042,0.014])},
+    {p:RP.pL1||[[0.98,0.66],[0.78,0.82],[0.52,1.3],[0.66,2.1],[1.1,2.6]],w:RP.wM||0.075,wp:[1.3,1.4,1.3,1.0,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc([0.026,0.048,0.046,0.03,0.01])},/* 1 medium, his left */
+    {p:[[0.62,2.35],[0.95,2.6],[1.32,2.78],[1.7,2.88],[2.04,2.92]],w:0.06,root:0.1,taper:0.5,lift:sc([0.03,0.034,0.02,0.006,0.001])},/* 2 small rear, staggered ends */
+    {p:[[0.66,-2.3],[0.98,-2.5],[1.34,-2.64],[1.64,-2.72],[1.88,-2.76]],w:0.055,root:0.1,taper:0.5,lift:sc([0.028,0.03,0.017,0.006,0.001])}];
+   const C0=Object.assign({},Q.cols),OV=(window.TOPS_V3HAIRO||{}).rayR||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):C0,c=OV.cols&&c0===C0?Object.assign({},c0,OV.cols):c0;
+   const bf=RP.base!=null?RP.base:0.012,br=RP.baseR!=null?RP.baseR:0.028,si=RP.sideIn!=null?RP.sideIn:0.8;
+   G.groove(h,L,K,[],GL,RP.cols||c,hl,Object.assign({heights:true,base:1,baseMod:(th,ph)=>{const a=Math.abs(ph),back=sm(0.3,2.2,a)*sm(0.2,0.7,th)+sm(0.6,0,th);return bf+(br-bf)*Math.min(1,back)*sm(1.6,1.0,th)*(1-si*Math.exp(-(((a-1.45)/0.45)**2))*sm(0.6,1.1,th));},
+    hp:RP.hp||8,hlSmooth:0.22,wk:RP.wk||0.65,pw:RP.pw||0.6,frontDense:0.45,U:RP.U||60,V:RP.V||29,hi:RP.hi||0.36,hiLo:RP.hiLo||0.72,tone:0.88,round:0.14,roundP:1.0,rough:0.5,cc:0.03,
+    hv:RP.hv!=null?RP.hv:0.03,tw:768,th:512,envW:RP.envW||2.4,envP:RP.envP||0.5,feather:RP.feather||0.12,sideCut:RP.sideCut!=null?RP.sideCut:0.6,comb:RP.comb!=null?RP.comb:0,combN:3,combT:RP.combT!=null?RP.combT:0.22,openFloor:RP.of||0.74,
+    floor:Q.o.floor/* r13 freeze: the seam floor between locks stays at Ray's .14 */},OV.o));},
   /* hair28 r9-r11 Mia (bunL): long-hair locks on one sculpted shell inside the approved r8 envelope: crown sweeps from the offset part, a
      coiled bun, three S-waves per side to the shoulders, rear flow; the long sides hide the ears; gold hoops in front of the side hair */
   bunL(h,L,K){const G=V2GROOVE,sm=K.sm,M=[[-0.036,0.126,-0.068,0.306,0.262,0.31,0,0,0],[-0.05,0.383,-0.12,0.2,0.125,0.095,0,0,0],[-0.31,-0.085,-0.012,0.082,0.245,0.138,0,0,0.08],[0.285,-0.04,-0.012,0.075,0.18,0.138,0,0,0.12],[-0.05,0.23,0.08,0.21,0.07,0.09,-0.4,0,0],[-0.018,-0.08,-0.226,0.3,0.28,0.12,0,0,0]];
@@ -1508,7 +1543,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const V2HAIRON=(()=>{try{const q=new URLSearchParams(location.search).get('v2hair');if(q==='1'||q==='0')localStorage.setItem('tops_v2hair',q);return localStorage.getItem('tops_v2hair')==='1';}catch(e){return false;}})();
  window.TOPS_V2HAIR={on:V2HAIRON,styles:V2HAIRS,kit:()=>V2HK()};
  function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';if(L.cap)st=st?'capped':null;
-  {const key0=L.cap?(L.hair?'under':null):st,key=L._v3&&V3HAIRMAP[key0]?V3HAIRMAP[key0]:key0;const fn=key&&(V2HAIRON||L._v3)&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,V2HK());if(!L.cap||L._v3)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
+  {const key0=L.cap?(L.hair?'under':null):st,VM=Object.assign({},V3HAIRMAP,window.TOPS_V3HAIRMAP),key=L._v3&&VM[key0]?VM[key0]:key0;const fn=key&&(V2HAIRON||L._v3)&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,V2HK());if(!L.cap||L._v3)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
   const capG=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.27);capG.scale(R[0]*1.06,R[1]*1.08,R[2]*1.07);
   const back=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,Math.PI*.95,Math.PI*1.1,0,Math.PI*.6);back.scale(R[0]*1.05,R[1]*1.06,R[2]*1.06);
   if(st&&st!=='swept'&&st!=='capped'){mesh(capG,m,head,0,.01,-.005);mesh(back,m,head,0,0,-.01);}
@@ -1683,7 +1718,16 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   {let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});const dt=u.dt;out.sn=0;out.se=9;out.smm=0;
    if(opt&&opt.skull&&sk&&dt&&dt.visible){const r=V2P.head.r,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,SF=R3.skullF,M=1.04,rm=Math.min(r[0],r[1],r[2]);
     dt.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i++){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);out.checked++;
-     const e=Math.hypot(p.x/r[0],p.y/r[1],p.z/r[2])/(SF?SF(p):1);if(e<out.se)out.se=e;if(e<M){out.sn++;out.smm=Math.max(out.smm,(M-e)*rm*ws*1000);}}});}}
+     const e=Math.hypot(p.x/r[0],p.y/r[1],p.z/r[2])/(SF?SF(p):1);if(e<out.se)out.se=e;if(e<M){out.sn++;out.smm=Math.max(out.smm,(M-e)*rm*ws*1000);}}});}
+   /* r14 (Ray's new lock crest): and clear of the hair. A ray from the skull centre through each dart vertex: an odd number of hair hits
+      beyond the vertex = inside the hair (hn, hmm deepest); hc = the closest radial clearance (mm) over the vertices whose ray meets hair */
+   out.hn=0;out.hmm=0;out.hc=999;out.hd2=9;const HM=[];if(opt&&opt.skull&&sk&&dt&&dt.visible)fig.traverse(o=>{if(o.isMesh&&o.visible&&o.userData.hair&&o.geometry&&o.geometry.attributes.position)HM.push(o);});
+   if(HM.length){const O=new T.Vector3().setFromMatrixPosition(sk.matrixWorld),rc=new T.Raycaster(),sd0=HM.map(o=>{const s0=o.material.side;o.material.side=T.DoubleSide;return s0;});
+    dt.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);const L0=p.distanceTo(O);if(L0<1e-6)continue;
+     for(const o2 of HM){const P2=o2.geometry.attributes.position;for(let j=0;j<P2.count;j++){c.fromBufferAttribute(P2,j).applyMatrix4(o2.matrixWorld);const dd=c.distanceToSquared(p);if(dd<out.hd2)out.hd2=dd;}}/* the closest hair vertex, for the report */
+     rc.set(O,q.subVectors(p,O).normalize());rc.far=L0*3;const hs=rc.intersectObjects(HM,false);if(!hs.length)continue;out.checked++;const far=hs[hs.length-1].distance;out.hc=Math.min(out.hc,(L0-far)*1000);
+     let k=0;for(const h of hs)if(h.distance>L0)k++;if(k%2){out.hn++;let dd=9;for(const h of hs)if(h.distance>L0)dd=Math.min(dd,h.distance-L0);out.hmm=Math.max(out.hmm,dd*1000);}}});
+    HM.forEach((o,i)=>{o.material.side=sd0[i];});}out.hd=Math.sqrt(out.hd2)*1000;}
   return out;}
  window.TOPS_S3DARTCLEAR=s3DartClear;
 
