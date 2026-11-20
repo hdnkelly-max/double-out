@@ -1355,23 +1355,24 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    /* each lock: its flow line as 29 unit vectors, flattened to numbers */
    const LK=Ls.map(lk=>{const n=28,P=[];if(lk.v){const cv=new T.CatmullRomCurve3(lk.v.map(q=>new T.Vector3(q[0],q[1],q[2]).normalize()),!!lk.closed,'centripetal');for(let i=0;i<=n;i++)P.push(cv.getPoint(i/n).normalize());}
     else{const cv=new T.CatmullRomCurve3(lk.p.map(q=>new T.Vector3(q[0],q[1],0)),false,'centripetal');for(let i=0;i<=n;i++){const q=cv.getPoint(i/n);P.push(dir(q.x,q.y));}}
-    const F=new Float32Array(P.length*3);P.forEach((p,i)=>{F[3*i]=p.x;F[3*i+1]=p.y;F[3*i+2]=p.z;});const wpM=lk.wp?Math.max(...lk.wp):1;return {F,n,w:lk.w*(o.wk||1),hk:lk.hk||1,root:lk.root!=null?lk.root:0.18,soft:lk.soft||0,taper:lk.taper||0,lift:lk.lift||null,wp:lk.wp||null,pw:lk.pw||0,wpM};});
+    const F=new Float32Array(P.length*3);P.forEach((p,i)=>{F[3*i]=p.x;F[3*i+1]=p.y;F[3*i+2]=p.z;});const wpM=lk.wp?Math.max(...lk.wp):1;return {F,n,w:lk.w*(o.wk||1),hk:lk.hk||1,root:lk.root!=null?lk.root:0.18,soft:lk.soft||0,taper:lk.taper||0,lift:lk.lift||null,wp:lk.wp||null,pw:lk.pw||0,add:!!lk.add,wpM};});
    /* hair28 r14 lock-built mass (o.heights, Ray sweptR): each lock carries its own height (lk.lift along its length, lk.wp width profile, lk.pw
       section power); heights merge by a p-norm (HP), so locks fuse into one mass and valleys stay where the profiles fall off. The arc-length
       parameter and distance are smoothed over nearby segments (no ridges where the nearest segment switches on the inside of a bend). */
    const HT=!!o.heights,HP=o.hp||6,EW=o.envW||1,EP=o.envP||0.5,VW=o.vw||1.25,DS=new Float64Array(64),US=new Float64Array(64),LIFT=(a,u)=>{const x=(u<0?0:u>1?1:u)*(a.length-1),i=Math.min(a.length-2,Math.floor(x)),f=x-i;return a[i]*(1-f)+a[i+1]*f;};
-   const pw=o.pw||0.42,out=[0,0,0,1,0];
-   const field=(dx,dy,dz)=>{let best=0,second=0,bs=0,sb=0,HS=0,FR=1,BS=0;for(const k of LK){let dm=9,um=0;const F=k.F,n=k.n;
+   const pw=o.pw||0.42,out=[0,0,0,1,0,0];
+   const field=(dx,dy,dz)=>{let best=0,second=0,bs=0,sb=0,HS=0,FR=1,BS=0,ADD=0;for(const k of LK){let dm=9,um=0;const F=k.F,n=k.n;
      for(let i=0;i<n;i++){const ax=F[3*i],ay=F[3*i+1],az=F[3*i+2],bx=F[3*i+3]-ax,by=F[3*i+4]-ay,bz=F[3*i+5]-az;const l2=bx*bx+by*by+bz*bz||1e-9;
       let t=((dx-ax)*bx+(dy-ay)*by+(dz-az)*bz)/l2;t=t<0?0:t>1?1:t;const cx=ax+bx*t-dx,cy=ay+by*t-dy,cz=az+bz*t-dz,dd=Math.sqrt(cx*cx+cy*cy+cz*cz);if(HT){DS[i]=dd;US[i]=(i+t)/n;}if(dd<dm){dm=dd;um=(i+t)/n;}}
      if(HT){if(dm-0.04>k.w*k.wpM/0.33*Math.max(EW,VW,1))continue;/* exact early-out: this lock can't reach here (the smoothing lowers dm by at most .012 ln 28) */
       let sw=0,su=0,sd=0;for(let i=0;i<n;i++){const e=DS[i]-dm;if(e>0.33)continue;const wg=Math.exp(-e/0.03);sw+=wg;su+=wg*US[i];sd+=Math.exp(-e/0.012);}um=su/sw;dm=Math.max(0,dm-0.012*Math.log(sd)+0.012*Math.log(2));}
      const wa=k.w*(k.wp?LIFT(k.wp,um):1)*(0.5+0.5*Math.sin(Math.PI*Math.min(1,0.15+0.85*um)))*(1-k.taper*um)/0.33;/* r13: lk.taper narrows a lock along its length */
-     if(k.lift){const q=dm/(wa*EW),be=1-q*q;if(be>0)HS+=Math.pow(Math.pow(be,EP)*k.hk*(0.35+0.65*sm(0,k.root,um))*LIFT(k.lift,um),HP);}/* r14: the mass is the union of each lock's soft volume (wider than its crest) */
+     if(k.lift&&!k.add){const q=dm/(wa*EW),be=1-q*q;if(be>0)HS+=Math.pow(Math.pow(be,EP)*k.hk*(0.35+0.65*sm(0,k.root,um))*LIFT(k.lift,um),HP);}/* r14: the mass is the union of each lock's soft volume (wider than its crest) */
+     if(HT&&k.add){ADD+=sm(1.3,0.15,dm/wa)*LIFT(k.lift,um);continue;}/* r14b: an additive relief lock rides on top of the mass (no valley carve) */
      if(HT){const q=sm(VW,0.25,dm/wa)*k.hk;if(q>BS)BS=q;}/* r14: soft lock coverage for the valley walls */
      let b=1-(dm/wa)*(dm/wa);if(b<=0)continue;b=Math.pow(b,k.pw||pw)*k.hk*(0.35+0.65*sm(0,k.root,um));
      if(b>best){FR=dm/wa;second=best;sb=bs;best=b;bs=k.soft;}else if(b>second){second=b;sb=k.soft;}}
-    const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;out[2]=HS>0?Math.pow(HS,1/HP):0;out[3]=FR;out[4]=BS;return out;};
+    const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;out[2]=HS>0?Math.pow(HS,1/HP):0;out[3]=FR;out[4]=BS;out[5]=ADD;return out;};
    const thOf=(tj,thE)=>0.015+(thE-0.015)*(tj<0.85?tj/0.85*0.97:0.97+0.03*(tj-0.85)/0.15);const LP=o.lip;
    const pos=[],uv=[],idx=[];
    /* hair28 r11 scalloped edge (Mia): where no lock reaches the hairline the edge pulls back, so the lock tips form the hairline */
@@ -1381,8 +1382,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     let thL=th;if(LP&&tj>0.8){const e=(tj-0.8)/0.2;thL=th+LP[0]*fr*Math.sin(Math.PI*Math.min(1,e*1.25))*(1-0.6*e);}
     const d=dir(thL,ph),sk=SKR(thL,ph),tm=Math.min(th,thL),dm=dir(tm,ph);const f=field(dm.x,dm.y,dm.z),b=f[0];let r;
     if(HT){/* r14: lock heights ride the smooth ellipsoid (the v3 skull's fine shape would print through as striations); skin still can't poke through; sides held in at the temples and upper ears; the scalp edge feathers */
-     const HL3=f[2],FRg=f[3],BSg=f[4],thE0=hl?hl(ph):1.6,FTH=(o.feather?sm(0,o.feather,thE0-th):1)*(o.sideCut?1-o.sideCut*Math.exp(-(((Math.abs(ph)-1.6)/0.6)**2))*sm(0.9,1.3,th):1),skS=Math.max(sk-0.006,Math.hypot(d.x*R0[0],d.y*R0[1],d.z*R0[2])+(o.skOff||0));
-     r=Math.max(sk+0.004,skS+FTH*(o.base||0.012)*(o.baseMod?o.baseMod(th,ph):1)+FTH*HL3-(o.hv||0)*(1-BSg)*sm(0.004,0.03,HL3)-(o.comb||0)*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,FRg)))*sm(0.15,0.45,FRg)*sm(0.01,0.04,HL3));}
+     const HL3=f[2],FRg=f[3],BSg=f[4],ADg=f[5],CA=o.crestArc?o.crestArc(th,ph):null,HLc=CA?Math.pow(Math.pow(HL3,8)+Math.pow(CA[0],8),1/8):HL3,thE0=hl?hl(ph):1.6,FTH=(o.feather?sm(0,o.feather,thE0-th):1)*(o.sideCut?1-o.sideCut*Math.exp(-(((Math.abs(ph)-1.6)/0.6)**2))*sm(0.9,1.3,th):1),skS=Math.max(sk-0.006,Math.hypot(d.x*R0[0],d.y*R0[1],d.z*R0[2])+(o.skOff||0));
+     r=Math.max(sk+0.004,skS+FTH*(o.base||0.012)*(o.baseMod?o.baseMod(th,ph):1)+FTH*HLc+FTH*ADg-(o.hv||0)*(CA?1-CA[1]:1)*(1-BSg)*sm(0.004,0.03,HLc)-(o.comb||0)*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,FRg)))*sm(0.15,0.45,FRg)*sm(0.01,0.04,HL3));}
     else{const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;const PU=(o.push||0)*sm(0.15,0.6,b)*(o.pushMask?o.pushMask(dm):1);/* hair28 r10: crests ride slightly proud of the envelope (Mia) */r=Math.max(sk+0.004,ENV(dm)+PU-vv*(1-b));}
     if(eR>=0){const fq=Math.pow(Math.max(0,1-eR*eR),o.roundP||0.5),fw=HT?Math.pow(Math.max(0,Math.cos(ph)),4):1;r=sk-0.003+(r-sk+0.003)*(fq*fw+(1-sm(0,1,eR))*(1-fw));}/* r14 heights: sides and back taper smoothly into the skin; only the front keeps the rounded roll face *//* r13: roundP > .5 feathers the rounded front into the skin */else if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}pos.push(d.x*r,d.y*r,d.z*r);uv.push((ph+Math.PI)/(2*Math.PI),1-tm/TMX);}
    if(HT)for(const jr of [0,1]){let m=0;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3;m+=Math.hypot(pos[q],pos[q+1],pos[q+2]);}m/=U+1;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3,l=Math.hypot(pos[q],pos[q+1],pos[q+2]),k=(l+(m-l)*(jr?0.5:1))/l;pos[q]*=k;pos[q+1]*=k;pos[q+2]*=k;}}/* r14: the tiny crown ring collapses to its mean height (no pinched triangles at the pole) */
@@ -1395,7 +1396,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
    for(let y=0;y<TH;y++){const th=(y+0.5)/TH*TMX,st=Math.sin(th);for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW;const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
      const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a,hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);
-     if(HT){const Hq=f[2],FLx=fl+((o.openFloor||0.62)-fl)*(1-sm(0.012,0.04,Hq));a=FLx+(1-FLx)*Math.pow(f[4],0.8);if(o.combT)a*=1-o.combT*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,f[3])))*sm(0.01,0.04,Hq);hi*=sm(0.015,0.06,Hq);}/* r14: only seams between neighbouring locks go to the dark floor; open scalp stays mid-tone; comb lines along each lock */
+     if(HT){const Hq=f[2],FLx=fl+((o.openFloor||0.62)-fl)*(1-sm(0.012,0.04,Hq));a=FLx+(1-FLx)*Math.pow(f[4],0.8);if(f[5])a*=0.95+0.13*sm(0.004,0.014,f[5]);/* r14b: the relief lock reads as a lighter form with a soft shadowed edge */if(o.combT)a*=1-o.combT*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,f[3])))*sm(0.01,0.04,Hq);hi*=sm(0.015,0.06,Hq);}/* r14: only seams between neighbouring locks go to the dark floor; open scalp stays mid-tone; comb lines along each lock */
      else a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
      const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
    cx.putImageData(im,0,0);const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
@@ -1439,22 +1440,24 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const OV=(window.TOPS_V3HAIRO||{}).ray||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},
   /* hair28 r14 Ray (sweptR, ChatGPT 8.5 PORT): the same silver swept-back pompadour built from 6 real locks over a restrained scalp:
      1 dominant front lock (rises, rolls back over the crown to his right, runs down the back), 2 medium on his right, 1 on his left,
-     2 small rear locks tapering into the scalp; sides held in at the temples, rear close to the skull. Lock data verbatim from hair28.js;
+     2 small rear locks tapering into the scalp (r14b: + one shallow his-left relief, a broad roll under the crest); sides held in at the temples, rear close to the skull. Lock data verbatim from hair28.js;
      window.RAY_R takes the lab's knobs. Materials stay at the r13 freeze (shadow #48443F, seam floor .14). */
   sweptR(h,L,K){const G=V2GROOVE,Q=G.RAY,sm=K.sm,RP=window.RAY_R||{};const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
    const LS=RP.lift||1,LB=RP.back!=null?RP.back:1,sc=a=>a.map((v,i)=>v*LS*(1+LB*sm(0.2,0.6,i/(a.length-1))));/* front stays, crown/rear follow-through lifted */
    const GL=RP.locks||[
     {p:[[1.04,0.12],[0.84,0.08],[0.58,-0.05],[0.36,-0.35],[0.18,-1.2],[0.3,-2.5],[0.68,-2.85],[1.1,-2.97]],w:RP.wD||0.1,wp:RP.wpD||[1.9,1.85,1.65,1.4,1.2,1.35,1.45,1.2],root:0.05,taper:0.2,pw:RP.pwD||0.3,lift:sc(RP.liftD||[0.044,0.07,0.068,0.054,0.046,0.062,0.064,0.032])},/* 1 dominant */
-    {p:[[1.03,-0.42],[0.86,-0.55],[0.68,-1.05],[0.8,-1.85],[1.12,-2.42]],w:RP.wM||0.075,wp:[1.3,1.25,1.1,0.9,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc([0.03,0.046,0.046,0.03,0.01])},/* 2 medium, his right */
+    {p:[[1.03,-0.42],[0.86,-0.55],[0.68,-1.05],[0.8,-1.85],[1.12,-2.42]],w:RP.wM||0.075,wp:[1.3,1.25,1.1,0.9,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc(RP.liftR1||[0.025,0.038,0.044,0.03,0.01])},/* 2 medium, his right; r14b: front -18% (outer crest peak softened) */
     {p:[[1.14,-0.86],[1.1,-1.25],[1.22,-1.82],[1.46,-2.25]],w:0.055,root:0.1,taper:0.4,lift:sc(RP.liftR2||[0.036,0.052,0.042,0.014])},
-    {p:RP.pL1||[[0.98,0.66],[0.78,0.82],[0.52,1.3],[0.66,2.1],[1.1,2.6]],w:RP.wM||0.075,wp:[1.3,1.4,1.3,1.0,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc([0.026,0.048,0.046,0.03,0.01])},/* 1 medium, his left */
-    {p:[[0.62,2.35],[0.95,2.6],[1.32,2.78],[1.7,2.88],[2.04,2.92]],w:0.06,root:0.1,taper:0.5,lift:sc([0.03,0.034,0.02,0.006,0.001])},/* 2 small rear, staggered ends */
-    {p:[[0.66,-2.3],[0.98,-2.5],[1.34,-2.64],[1.64,-2.72],[1.88,-2.76]],w:0.055,root:0.1,taper:0.5,lift:sc([0.028,0.03,0.017,0.006,0.001])}];
+    {p:RP.pL1||[[0.98,0.66],[0.78,0.82],[0.52,1.3],[0.68,2.12],[1.22,2.64]],w:RP.wM||0.075,wp:[1.3,1.4,1.3,1.0,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc(RP.liftL1||[0.021,0.04,0.045,0.03,0.01])},/* 1 medium, his left; r14b: front -18%, tail 12% longer than his right (staggered) */
+    {p:RP.pLS||[[0.78,0.7],[0.84,1.02],[0.91,1.38],[0.99,1.7],[1.07,1.96]],w:RP.wLS||0.052,root:0.3,taper:0.55,add:true,lift:RP.liftLS||[0.005,0.013,0.015,0.012,0.003]},/* r14b: his-left side relief following the dominant sweep, ends before the ear */
+    {p:[[0.62,2.35],[0.95,2.6],[1.32,2.78],[1.7,2.88],[2.06,2.93]],w:0.068,wp:[1,1.15,1.02,0.9,0.8],root:0.1,taper:0.5,lift:sc([0.03,0.034,0.02,0.006,0.001])},/* 2 small rear, staggered ends; r14b: +13% / -13% wide, uneven along their length */
+    {p:[[0.66,-2.3],[0.98,-2.5],[1.34,-2.64],[1.64,-2.72],[1.86,-2.76]],w:0.048,wp:[1,0.9,1.08,0.95,0.8],root:0.1,taper:0.5,lift:sc([0.028,0.03,0.017,0.006,0.001])}];
    const C0=Object.assign({},Q.cols),OV=(window.TOPS_V3HAIRO||{}).rayR||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):C0,c=OV.cols&&c0===C0?Object.assign({},c0,OV.cols):c0;
    const bf=RP.base!=null?RP.base:0.012,br=RP.baseR!=null?RP.baseR:0.028,si=RP.sideIn!=null?RP.sideIn:0.8;
    G.groove(h,L,K,[],GL,RP.cols||c,hl,Object.assign({heights:true,base:1,baseMod:(th,ph)=>{const a=Math.abs(ph),back=sm(0.3,2.2,a)*sm(0.2,0.7,th)+sm(0.6,0,th);return bf+(br-bf)*Math.min(1,back)*sm(1.6,1.0,th)*(1-si*Math.exp(-(((a-1.45)/0.45)**2))*sm(0.6,1.1,th));},
     hp:RP.hp||8,hlSmooth:0.22,wk:RP.wk||0.65,pw:RP.pw||0.6,frontDense:0.45,U:RP.U||60,V:RP.V||29,hi:RP.hi||0.36,hiLo:RP.hiLo||0.72,tone:0.88,round:0.14,roundP:1.0,rough:0.5,cc:0.03,
     hv:RP.hv!=null?RP.hv:0.03,tw:768,th:512,envW:RP.envW||2.4,envP:RP.envP||0.5,feather:RP.feather||0.12,sideCut:RP.sideCut!=null?RP.sideCut:0.6,comb:RP.comb!=null?RP.comb:0,combN:3,combT:RP.combT!=null?RP.combT:0.22,openFloor:RP.of||0.74,
+    crestArc:RP.crest===0?null:(th,ph)=>{const C=RP.crest||[0.07,0.15,0.72,0.8,0.22,0.95],gp=Math.exp(-(((ph-C[1])/C[3])**2));return [C[0]*gp*Math.exp(-(((th-C[2])/C[4])**2)),C[5]*gp*Math.exp(-(((th-(C[6]||0.82))/(C[7]||0.09))**2))];},/* r14b: one broad convex roll under the crest; valleys damped only on its front face */
     floor:Q.o.floor/* r13 freeze: the seam floor between locks stays at Ray's .14 */},OV.o));},
   /* hair28 r9-r11 Mia (bunL): long-hair locks on one sculpted shell inside the approved r8 envelope: crown sweeps from the offset part, a
      coiled bun, three S-waves per side to the shoulders, rear flow; the long sides hide the ears; gold hoops in front of the side hair */
