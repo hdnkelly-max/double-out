@@ -20,13 +20,16 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const match = async (shot) => {
       if (await vis('#rbApp [data-s3book]')) await tap('#rbApp [data-s3book]'); await p.waitForTimeout(500); await tap('#s3Go');
       for (let i = 0; i < 80 && !(await p.evaluate(() => typeof S !== 'undefined' && S && !S.done).catch(() => false)); i++) await p.waitForTimeout(250);
+      await p.waitForTimeout(700); const strip = await p.evaluate(() => { const t = document.getElementById('eventTier'), m = document.getElementById('btnMenu'); if (!t || !m) return null; const a = t.getBoundingClientRect(), b = m.getBoundingClientRect();   // 2c (b): the strip stays left of MENU
+        return { txt: t.textContent, right: Math.round(a.right), menuL: Math.round(b.left), shown: a.width > 0 }; });
       for (let i = 0; i < 1500; i++) { const s = await p.evaluate(() => { try { if (!S || S.done) return 'done'; if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(0, 0); } return 'play'; }
           if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { S.p[0].score = 40; S.busy = true; land(0, -166); } const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
       for (let i = 0; i < 60 && !(await vis('#rbApp.rb-resmode #rbRGo')); i++) await p.waitForTimeout(250); await p.waitForTimeout(1800);
       const r = await p.evaluate(() => { const app = document.querySelector('#rbApp.rb-resmode'); const blk = app && app.querySelector('.s3-rp');
         return { text: app ? app.innerText : '', blk: blk ? blk.innerText : null, cells: blk ? [...blk.querySelectorAll('.s3-rpdraw li')].map(l => l.className + ':' + l.innerText.replace(/\s+/g, ' ')) : [], cashLab: ((app && app.querySelector('.rbw-cash small')) || {}).textContent, cash: (document.getElementById('rbRCash') || {}).textContent, xpTxt: (document.getElementById('rbRXp') || {}).textContent,
           bank: career().bank, s3xp: S && S.s3xp, res: S && S.s3res && { done: S.s3res.done, fin: S.s3res.fin, prize: S.s3res.prize, pts: S.s3res.pts, next: S.s3res.next }, pts: career().circuit.pts, wide: document.documentElement.scrollWidth > innerWidth + 1,
-          barB: blk && blk.querySelector('.s3-rpb') ? blk.querySelector('.s3-rpb').style.width : null, barG: blk && blk.querySelector('.s3-rpg') ? blk.querySelector('.s3-rpg').style.width : null }; });
+          barB: blk && blk.querySelector('.s3-rpb') ? blk.querySelector('.s3-rpb').style.width : null, barG: blk && blk.querySelector('.s3-rpg') ? blk.querySelector('.s3-rpg').style.width : null,
+          kick: (k => k ? { txt: k.innerText, nwRects: k.querySelector('.rbw-nw') ? k.querySelector('.rbw-nw').getClientRects().length : 0 } : null)(app && app.querySelector('.rbw-kick')) }; }); r.strip = strip;
       r.clear = await p.evaluate(() => { const sc = document.querySelector('#rbApp.rb-resmode .rb-scr'), pin = sc && sc.querySelector('.rbw-pin'); if (!sc || !pin) return null;
         const top = sc.scrollTop; sc.scrollTop = sc.scrollHeight; const last = pin.previousElementSibling, a = last.getBoundingClientRect(), b = pin.getBoundingClientRect();
         const below = Math.round(sc.getBoundingClientRect().bottom - b.bottom), gap = Math.round(b.top - a.bottom), atEnd = Math.abs(sc.scrollTop + sc.clientHeight - sc.scrollHeight) < 2; sc.scrollTop = top;
@@ -44,6 +47,8 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (qf.cashLab !== 'Banked so far' || !/^\$\d+$/.test(qf.cash || '')) fail.push(w + ' QF cash: ' + qf.cashLab + ' ' + qf.cash);
     if (!/0 \/ 150/.test(qf.blk) || !/potential \+50 if you win/i.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.wide) fail.push(w + ': QF Result scrolls sideways');
+    if (!qf.kick || qf.kick.nwRects !== 1 || !/quarter-final/i.test(qf.kick.txt)) fail.push(w + ' QF kicker breaks inside the round: ' + JSON.stringify(qf.kick));   // 2c (a)
+    if (!qf.strip || !qf.strip.shown || qf.strip.right > qf.strip.menuL - 4 || !/^quarter-final · /i.test(qf.strip.txt)) fail.push(w + ' in-match strip under MENU: ' + JSON.stringify(qf.strip));   // 2c (b)
     if (!qf.clear || qf.clear.gap < 16 || !qf.clear.atEnd || qf.clear.below > 1 || /rgba\(.*, 0\)/.test(qf.clear.solid)) fail.push(w + ' QF: last card not clear of Continue ' + JSON.stringify(qf.clear));
     if (qf.s3xp && !new RegExp('\\+' + (qf.s3xp.xp != null ? qf.s3xp.xp : '') ).test(qf.xpTxt || '') && qf.s3xp.xp != null) fail.push(w + ' XP on screen ' + qf.xpTxt + ' vs S.s3xp ' + JSON.stringify(qf.s3xp));
     if (w !== 390) return;
@@ -53,7 +58,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/winner/i.test(fin.blk || '') || !/\$35 prize money/i.test(fin.blk || '')) fail.push('Final block: ' + (fin.blk || '').replace(/\n/g, ' | '));
     if (fin.cashLab !== 'Prize money' || fin.cash !== '+$35') fail.push('Final cash ' + fin.cashLab + ' ' + fin.cash);
     if (fin.bank !== 90) fail.push('bank after the night ' + fin.bank + ' (want 60 - 5 + 35 = 90)');
-    if (!/50 \/ 150/.test(fin.blk || '') || !/\+50/.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
+    if (!/50 \/ 150/.test(fin.blk || '') || /100 \/ 150/.test(fin.blk || '') || !/\+50 from this event · now 50, was 0/i.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
     if (!/s3-rpfin/.test(fin.cells[2] || '') || !/s3-rpw/.test(fin.cells[2] || '')) fail.push('Final draw cells ' + JSON.stringify(fin.cells));
     out.badge = await p.evaluate(async () => { achToast({ id: 'tonavg', t: 'L', n: 'Ton average', d: 'test', ic: '' }); await new Promise(r => setTimeout(r, 1500)); const t = document.querySelector('#achToasts .ach-t:last-child');
       return t ? { img: !!t.querySelector('img.ach-img'), fb: !!t.querySelector('svg.ach-fb') } : null; });
@@ -66,7 +71,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       k.live = null; k.level = 1; r.promo = U.resultBlock(fakeS({ id: 'kauri_cup', round: 'F', level: 0 }, true, { done: true, fin: 'W', finName: 'Winner', prize: 170, pts: 150, up: { to: 1, n: 'Club' } }), c);
       Object.assign(k, JSON.parse(keep)); const tx = h => { const d = document.createElement('div'); d.innerHTML = h; return d.innerText || d.textContent; };
       return { lost: r.lost && tx(r.lost.html), lostCash: r.lost && r.lost.cashVal, group: r.group && tx(r.group.html), promo: r.promo && tx(r.promo.html) }; });
-    const d = out.direct; if (!/out in the quarter-final/i.test(d.lost || '') || d.lostCash !== '+$5') fail.push('lost QF: ' + JSON.stringify(d.lost) + ' ' + d.lostCash);
+    const d = out.direct; if (!/out in the quarter-final/i.test(d.lost || '') || !/\+10 from this event/i.test(d.lost || '') || d.lostCash !== '+$5') fail.push('lost QF: ' + JSON.stringify(d.lost) + ' ' + d.lostCash);
     if (!/group: 1 won, 0 lost/i.test(d.group || '') && !/group/i.test(d.group || '')) fail.push('group: ' + d.group);
     if (!/promoted to club/i.test(d.promo || '')) fail.push('promotion: ' + d.promo); });
   // 3 s3x off: nothing changes (no block; the 4.13 cash label and value)

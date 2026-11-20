@@ -311,7 +311,9 @@
   /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE") */
   /* the match intro and event strip name the Circuit event and round, not the old tier ("PUB LEAGUE"); Career sets S.s3 right after beginMatch */
   const s3Head = () => { try { if (typeof S === 'undefined' || !S || !S.s3 || !CI()) return; const e = CI().eventOf(S.s3.id), t = (e ? e.n + ' · ' : '') + roundName(S.s3.round);
-    ['introTier', 'eventTier'].forEach(id => { const el = $id(id); if (el && el.textContent !== t && !/^Leg |^Bull up/.test(el.textContent)) el.textContent = t; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
+    /* the in-match strip leads with the round, so a long venue is what gets trimmed, never the round (Delivery QA 14:42: it ran under MENU at 390) */
+    const ts = roundName(S.s3.round) + (e ? ' · ' + e.n : '');
+    [['introTier', t], ['eventTier', ts]].forEach(([id, tx]) => { const el = $id(id); if (el && el.textContent !== tx && !/^Leg |^Bull up/.test(el.textContent)) { el.textContent = tx; el.title = tx; } }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
   if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
 
   /* the first message after the creator: a Circuit league night, not the old 'Pub league' */
@@ -454,9 +456,9 @@
       let bar = '';
       if (L.need) { const now = Math.max(0, (k.pts && k.pts[L.id]) || 0), before = done ? Math.max(0, now - (r.pts || 0)) : now, pot = done ? now : Math.min(L.need, now + C.pointsFor(e, 'W'));
         const pc = v => Math.min(100, 100 * v / L.need), up = r.up && r.up.to > e.level;
-        bar = `<div class="s3-rpbar"><div class="s3-rprow"><span>${up ? 'Promoted to ' + esc(C.LEVELS[r.up.to].n) : esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points') + ' · to move up'}</span><b>${up ? '' : Math.min(now, L.need) + ' / ' + L.need}${done && r.pts ? ` <em>+${r.pts}</em>` : ''}</b></div>
+        bar = `<div class="s3-rpbar"><div class="s3-rprow"><span>${up ? 'Promoted to ' + esc(C.LEVELS[r.up.to].n) : esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points') + ' · to move up'}</span><b>${up ? '' : Math.min(now, L.need) + ' / ' + L.need}</b></div>
           <div class="s3-rpm"><i class="s3-rpb" style="width:${up ? 100 : pc(before)}%"></i>${done && !up ? `<i class="s3-rpg" style="left:${pc(before)}%;width:${pc(now) - pc(before)}%"></i>` : ''}${!done ? `<i class="s3-rpp" style="left:${pc(now)}%;width:${pc(pot) - pc(now)}%"></i>` : ''}</div>
-          ${!done ? `<small>Potential +${C.pointsFor(e, 'W')} if you win</small>` : ''}</div>`; }
+          ${!done ? `<small>Potential +${C.pointsFor(e, 'W')} if you win</small>` : r.pts ? `<small class="s3-rpgain"><em>+${r.pts} from this event</em> · ${up ? 'that took you over ' + L.need : 'now ' + Math.min(now, L.need) + ', was ' + before}</small>` : ''}</div>`; }
       return { pin: 's3-pin', html: `<div class="s3-rp"><ol class="s3-rpdraw" aria-label="The draw">${cells}</ol><div class="s3-rph"><b>${head}</b><span>${sub}</span></div>${bar}</div>`, cashLab, cashVal };
     } catch (x) { console.warn('s3 result block', x); return null; }
   }
