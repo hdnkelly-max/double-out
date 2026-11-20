@@ -140,3 +140,30 @@
 .s3-on .s3-fnopp img{width:56px;height:56px;border-radius:12px;object-fit:cover;object-position:50% 20%;background:var(--card2);flex:none}
 .s3-on .s3-fnopp b{display:block;font:800 22px/1 var(--d);text-transform:uppercase}.s3-on .s3-fnopp span{font-size:12px;color:var(--ink3)}
 @media (max-height:700px){.s3-on .s3-fnart{height:150px}.s3-on .s3-fnmore{display:none}.s3-on .s3-fnt{font-size:28px}.s3-on .s3-fnb{gap:9px}.s3-on .s3-fnc{padding:10px 12px;gap:8px}.s3-on .s3-fnkv b{font-size:18px}}
+
+/* EXP-IDLE 2 · Circuit result: event progress + move-up bar (s3x=1) */
+#rbApp .s3-rp{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;flex:none}
+#rbApp .s3-rpdraw{list-style:none;margin:0;padding:0;display:flex;gap:5px}
+#rbApp .s3-rpdraw li{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:34px;border-radius:9px;background:var(--card2);color:var(--ink3);font-size:12px}
+#rbApp .s3-rpdraw li b{font:800 15px/1 var(--d);text-transform:uppercase;white-space:nowrap;overflow:hidden}
+#rbApp .s3-rpdraw li i{font-style:normal;font-weight:800;font-size:12px}
+#rbApp .s3-rpdraw .s3-rpw{background:rgba(61,122,82,.35);color:var(--good)}
+#rbApp .s3-rpdraw .s3-rpl{background:rgba(215,35,45,.18);color:#f08a8f}
+#rbApp .s3-rpdraw .s3-rpnow{outline:2px solid currentColor;outline-offset:-2px}
+#rbApp .s3-rpdraw .s3-rpnext{color:var(--ink);outline:1px dashed var(--line2);outline-offset:-1px}
+#rbApp .s3-rpdraw .s3-rpoff{opacity:.45}
+#rbApp .s3-rpdraw .s3-rpfin.s3-rpw{background:linear-gradient(180deg,#4a3608,#2a2410);color:#f1c64b}
+#rbApp .s3-rph{display:flex;flex-direction:column;gap:2px}
+#rbApp .s3-rph b{font:800 22px/1.05 var(--d);text-transform:uppercase}
+#rbApp .s3-rph span{font-size:13px;color:var(--ink2)}
+#rbApp .s3-rpbar{display:flex;flex-direction:column;gap:6px}
+#rbApp .s3-rprow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--ink2)}
+#rbApp .s3-rprow b{color:var(--ink);font-variant-numeric:tabular-nums}#rbApp .s3-rprow em{font-style:normal;color:var(--good)}
+#rbApp .s3-rpm{position:relative;height:10px;border-radius:5px;background:var(--card2);overflow:hidden}
+#rbApp .s3-rpm i{position:absolute;top:0;bottom:0;left:0}
+#rbApp .s3-rpb{background:var(--red)}
+#rbApp .s3-rpg{background:var(--good);animation:s3rpg 1s .35s ease-out both}
+#rbApp .s3-rpp{background:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 4px,transparent 4px 8px)}
+#rbApp .s3-rpbar small{font-size:12px;color:var(--ink3)}
+@keyframes s3rpg{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){#rbApp .s3-rpg{animation:none}}
