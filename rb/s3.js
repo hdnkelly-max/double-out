@@ -94,6 +94,8 @@
     book(id) { if (!isDev()) return API().book(id); const r = CI().book(devState(), id); devSave(); return r; },
     play() { if (!isDev()) { if (!API().play()) toast('<b>Can\'t walk on</b><span>The event isn\'t running</span>'); return; } devTap = 1; render(); },
     advance() { if (!isDev()) return API().advance(); const r = CI().advance(devState()); devSave(); return r; },
+    rest() { if (!isDev()) return API().rest(); const r = CI().restWeek(devState()); devSave(); return r; },
+    recover() { if (!isDev()) return API().recover(); const r = CI().recoveryEntry(devState()); devSave(); return r; },
     moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) { console.warn('s3 money match', e); } },
     devResult(won) { const r = CI().result(devState(), won); devSave(); devTap = 0; return r; }
   };
@@ -145,10 +147,15 @@
   }
   function week(c) {
     const C = CI(), cal = C.calendar(c);
+    /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
+    if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
+      return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${nx != null && nx - c.week > 1 ? (nx - c.week) + ' weeks away' : 'next week'}.</span>
+      <button class="rb-primary" type="button" data-s3="rest"><b>Advance to next event</b><small>${nx != null ? 'Week ' + c.week + ' → week ' + nx : ''}</small></button></div>`; }
     let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
-    if (!cal.length) h += `<div class="rb-card"><span class="rb-t2">Nothing on at this level this week</span></div>`;
-    if (C.broke(c)) h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">A money match in the back room pays for the next one. Or take the hardship advance: two entries, paid back from half of each prize.</span>
-      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button></div></div>`;
+    if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
+      h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">${ro ? `Take a recovery entry: ${esc(ro.n)}, ${money(ro.cost)} entry and travel covered now, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
+      ${ro ? `<button class="rb-primary" type="button" data-s3="rec"><b>Recovery entry · ${esc(ro.n)}</b><small>${money(ro.cost)} covered, paid back from prizes${c.debt ? ' · you owe ' + money(c.debt + ro.cost) + ' after this' : ''}</small></button>` : ''}
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
     return h;
   }
   function poster(c, e) {
@@ -388,9 +395,11 @@
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
     const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
     app.querySelectorAll('[data-s3dev]').forEach(b => b.onclick = () => { D.devResult(b.dataset.s3dev === '1'); render(); });
-    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3;
+    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3; if ((k === 'rest' || k === 'rec') && b.dataset.busy) return; if (k === 'rest' || k === 'rec') { b.dataset.busy = 1; b.disabled = true; } /* one tap acts once */
       if (k === 'mm') D.moneyMatch();
       else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rest') { const r = D.rest(); if (!r || !r.ok) toast(`<b>Can't move on</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rec') { const r = D.recover(); if (r && r.ok) { toast(`<b>Entered · ${money(r.cost)} covered</b><span>Half of each prize pays it back</span>`); render(); D.play(); } else { toast(`<b>No recovery entry</b><span>${esc((r && r.why) || '')}</span>`); render(); } }
       else if (k === 'hist') histSheet(); });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
     /* not while the between-match reset is about to reload the page (ENG-RESET): the result would show behind the loader and be lost */
