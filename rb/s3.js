@@ -505,7 +505,7 @@
           const wk = (top === 'W' ? w : f).map(t => t.week).filter(x => x != null), pz = (top === 'W' ? w : f).reduce((a, t) => a + (t.prize || 0), 0), cnt = (top === 'W' ? w : f).length;
           const line = top === 'W' ? `Winner${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : top === 'F' ? `Runner-up${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : up ? 'Not won' : 'Not won yet';
           const more = top === 'W' && f.length ? `<small>+ ${f.length} final${f.length > 1 ? 's' : ''}</small>` : '';
-          return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}">${CUP(top, 's3cup' + (n++))}<b>${esc(TOWN(e.n))}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
+          return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}">${CUP(top, 's3cup' + (n++))}<b title="${esc(e.n)}">${esc(TOWN(e.n).split(' · ')[0])}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
         const tag = up ? `<span class="s3-trup">Promoted${last ? ' · week ' + last.week : ''}</span>` : `<span class="s3-trnow">This level</span>`;
         return `<section class="s3-trlv"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol></section>`; };
       let rows = ''; for (let i = k.level; i >= 0; i--) rows += lvRow(i);

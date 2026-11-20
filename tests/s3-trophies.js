@@ -26,10 +26,11 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       if (await vis('#rbApp [data-s3book]')) await tap('#rbApp [data-s3book]'); await p.waitForTimeout(500); await tap('#s3Go');
       for (let i = 0; i < 80 && !(await p.evaluate(() => typeof S !== 'undefined' && S && !S.done).catch(() => false)); i++) await p.waitForTimeout(250);
       for (let i = 0; i < 1500; i++) { const s = await p.evaluate(() => { try { if (!S || S.done) return 'done'; if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(0, 0); } return 'play'; }
-          if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { S.p[0].score = 40; S.busy = true; land(0, -166); } const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
+          if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { const me = S.p[0]; S.busy = true; if (me.score > 200) land(0, -103); else if (me.score - 20 >= 40) land(0, -60); else { me.score = 40; land(0, -166); } }   /* T20s, single 20s, out on D20: a 14-dart leg */ const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
       for (let i = 0; i < 60 && !(await vis('#rbApp.rb-resmode #rbRGo')); i++) await p.waitForTimeout(250); await p.waitForTimeout(800);
       const l0 = loads; for (let i = 0; i < 300 && loads === l0; i++) { for (const s of NEXT) { if (loads > l0) break; if (await tap(s)) { await p.waitForTimeout(300); break; } } await p.waitForTimeout(250); }
       if (loads > l0) await ready(); for (let i = 0; i < 20 && (await vis('#s3Ok')); i++) { await tap('#s3Ok'); await p.waitForTimeout(400); } };
+    const settle = async () => { for (let i = 0; i < 24; i++) { if (await vis('#s3Ok')) { await tap('#s3Ok'); await p.waitForTimeout(500); i = Math.max(i, 16); } else await p.waitForTimeout(500); } };   // the event result / promotion announcements
     const toTrophies = async () => { await p.evaluate(() => { const t = document.querySelector('#rbApp [data-tab="locker"], #rbApp [data-t="locker"]'); if (t) t.click(); }); await p.waitForTimeout(500);
       if (!(await vis('#rbApp [data-lk="troph"]'))) await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^locker$/i.test(x.textContent.trim())); if (t) t.click(); });
       await p.waitForTimeout(400); await tap('#rbApp [data-lk="troph"]'); await p.waitForTimeout(900); };
@@ -37,7 +38,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       return { shelf: !!q('.s3-trh'), hero: q('.s3-trh') ? q('.s3-trh').innerText.replace(/\s+/g, ' ') : null, bl: q('.s3-trbl') ? q('.s3-trbl').innerText.replace(/\s+/g, ' ') : null, empty: !!q('.s3-tremp'),
         cups: [...app.querySelectorAll('.s3-tr')].map(l => l.className.replace('s3-tr ', '') + ':' + l.innerText.replace(/\s+/g, ' ')), lv: [...app.querySelectorAll('.s3-trlv .s3-row')].map(r => r.innerText.replace(/\s+/g, ' ')),
         old: q('#s3TrHi') ? q('#s3TrHi').innerText.replace(/\s+/g, ' ') : null, oldList: !!q('#rbCab'), wide: document.documentElement.scrollWidth > innerWidth + 1, leg: (career().best || {}).leg, legAt: (career().best || {}).legAt, titles: career().circuit.titles || [] }; });
-    await fn(p, { match, toTrophies, read, tap, vis }); if (pe.length) fail.push(qs + ' ' + vw + ' page errors ' + pe.join('; ').slice(0, 160)); await ctx.close(); };
+    await fn(p, { match, toTrophies, read, tap, vis, settle }); if (pe.length) fail.push(qs + ' ' + vw + ' page errors ' + pe.join('; ').slice(0, 160)); await ctx.close(); };
   for (const [w, h] of [[390, 844], [360, 640]]) await session('?s3=1&s3x=1', w, h, async (p, T) => {
     // 1 empty
     const chip0 = await T.vis('#rbApp .s3-trchip'); await T.toTrophies(); const e = await T.read(); out['empty' + w] = { hero: e.hero, bl: e.bl, empty: e.empty, n: e.cups.length };
@@ -45,7 +46,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (e.cups.length !== 2 || e.cups.some(c => !/^s3-tre/.test(c))) fail.push(w + ' empty cups ' + JSON.stringify(e.cups));
     // 2 a real Pub night, won
     await T.tap('#rbApp [data-tab="circuit"]'); await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^circuit$/i.test(x.textContent.trim())); if (t) t.click(); }); await p.waitForTimeout(500);
-    for (let i = 0; i < 3; i++) await T.match();
+    for (let i = 0; i < 3; i++) await T.match(); await T.settle();
     const live = await p.evaluate(async () => ({ hist: await TOPS_HISTORY.rows(), bl: await TOPS_BESTLEG.table() }));   // Career's live views
     await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^circuit$/i.test(x.textContent.trim())); if (t) t.click(); }); await p.waitForTimeout(1200);
     const chip = await p.evaluate(() => { const c = document.querySelector('#rbApp .s3-trchip'); return c ? c.innerText.trim() : null; }); out['chip' + w] = chip;
@@ -58,7 +59,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/^pub this level$/i.test(r.lv[0] || '') || !/^club next level/i.test(r.lv[1] || '')) fail.push(w + ' level rows ' + JSON.stringify(r.lv));
     if (r.empty) fail.push(w + ': empty state still showing with a title');
     // best leg: the same number Career sends to the Best Leg board, with where it came from; the record line from Career's tops_bestleg_s3
-    if (!(r.leg < 99) || !new RegExp('^' + r.leg + ' your best leg · season 3 ' + r.leg + ' darts · kauri arms league night, week 1', 'i').test(r.bl || '') || !r.legAt || r.legAt.week !== 1) fail.push(w + ' best leg ' + JSON.stringify({ bl: r.bl, leg: r.leg, at: r.legAt }));
+    if (!(r.leg >= 9 && r.leg < 99) || !new RegExp('^' + r.leg + ' your best leg · season 3 ' + r.leg + ' darts · kauri arms league night, week 1', 'i').test(r.bl || '') || !r.legAt || r.legAt.week !== 1) fail.push(w + ' best leg ' + JSON.stringify({ bl: r.bl, leg: r.leg, at: r.legAt }));
     const rec = live.bl[0]; if (!rec || !new RegExp('season 3 record: ' + rec.darts + ' darts · ' + rec.name, 'i').test(r.bl || '')) fail.push(w + ' record line vs tops_bestleg_s3 ' + JSON.stringify({ bl: r.bl, rec }));
     const me = live.hist.find(x => x.you); const s2 = me && me.s2;
     if (!me || !new RegExp('season 1 ' + me.s1.furthest.n + ' ' + me.s1.bestAvg.toFixed(1) + ' avg ' + me.s1.bestLeg + ' darts season 2 ' + me.s2.furthest.n + ' ' + s2.bestAvg.toFixed(1) + ' avg ' + s2.bestLeg + ' darts', 'i').test(r.old || '')) fail.push(w + ' seasons vs tops_history ' + JSON.stringify({ old: r.old, me }));
@@ -70,10 +71,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.evaluate(() => { const k = career().circuit; k.titles.push({ ev: 'kauri_cup', n: 'The Kauri Cup', level: 0, season: 3, finish: 'F', prize: 85, date: new Date().toISOString() }, { ev: 'pub_night', n: 'Kauri Arms league night', level: 0, season: 3, finish: 'W', prize: 35, date: new Date().toISOString() });
       k.history.push({ week: 2, id: 'kauri_cup', n: 'The Kauri Cup', level: 0, fin: 'F', prize: 85, pts: 100 }, { week: 3, id: 'pub_night', n: 'Kauri Arms league night', level: 0, fin: 'W', prize: 35, pts: 50 }); k.level = 1; k.week = 4;
       const e = TOPS_CIRCUIT.LEVELS[1].events[0]; k.titles.push({ ev: e.id, n: e.n, level: 1, season: 3, finish: 'W', prize: 210, date: new Date().toISOString() }); k.history.push({ week: 4, id: e.id, n: e.n, level: 1, fin: 'W', prize: 210, pts: 50 }); k.week = 5; TOPS_S3UI.refreshRecords(); });
-    await p.waitForTimeout(900); const m = await T.read(); out.more = { hero: m.hero, cups: m.cups, lv: m.lv };
+    await T.settle(); await p.waitForTimeout(400); const m = await T.read(); out.more = { hero: m.hero, cups: m.cups, lv: m.lv };
     if (!/titles 3 finals 4/i.test(m.hero || '')) fail.push('more hero ' + m.hero);
     if (!/^club this level$/i.test(m.lv[0] || '') || !/^pub promoted · week 3$/i.test(m.lv[1] || '') || !/^palace|^opens|next level/i.test(m.lv[2] || '')) fail.push('more levels ' + JSON.stringify(m.lv));
-    if (!m.cups.some(c => /^s3-trW:KAURI ARMS LEAGUE NIGHT Winner ×2 · \$70 Weeks 1, 3$/i.test(c)) || !m.cups.some(c => /^s3-trF:THE KAURI CUP Runner-up · \$85 Week 2$/i.test(c))) fail.push('more cups ' + JSON.stringify(m.cups));
+    if (!m.cups.some(c => /^s3-trW:KAURI ARMS LEAGUE NIGHT Winner ×2 · \$70 Weeks 1, 3$/i.test(c)) || !m.cups.some(c => /^s3-trF:THE KAURI CUP Runner-up · \$85 Week 2$/i.test(c)) || !m.cups.some(c => /^s3-tre:INTERCLUB Not won yet$/i.test(c))) fail.push('more cups ' + JSON.stringify(m.cups));
     if (process.env.SHOTS) { await p.evaluate(() => { const m = document.querySelector('#rbApp .rb-scr') || document.getElementById('rbMain'); if (m) m.scrollTop = 0; }); await p.waitForTimeout(300); await p.screenshot({ path: path.join(__dirname, 's3_tr_390_more.png'), fullPage: false }); } });
   // 4 s3x off: the old Trophies list, no chip
   await session('?s3=1&s3x=0', 390, 844, async (p, T) => { await p.evaluate(() => { const k = career().circuit; (k.titles = k.titles || []).push({ ev: 'pub_night', n: 'Kauri Arms league night', level: 0, season: 3, finish: 'W', prize: 35 }); TOPS_S3UI.refreshRecords(); }); await p.waitForTimeout(600);
