@@ -294,8 +294,8 @@
     const C = CI(), to = C.LEVELS[up.to], down = up.to < up.from;
     const g = (c.grants && c.grants[up.to] && !down) ? [0, 60, 450, 900, 850, 0, 3000][up.to] : 0;
     const html = `<div class="s3-pmart" style="background:url(${lvArt(up.to)}) 50% 40%/cover no-repeat,${GRAD[up.to]}"></div>
-      <span class="rb-kick">${down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
-      <span class="rb-sub">${esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
+      <span class="rb-kick">${up.from === 6 ? 'Back on tour' : down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
+      <span class="rb-sub">${up.from === 6 ? `Out of the Worlds. A new season starts now with ${(c.pts && c.pts.dpnz) || 0} points carried (40%).` : esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
     sheet(html, 'See what\'s on', () => { seenSet(snap(c)); sub = 'week'; render(); }, 's3-promo');
   }
   // new best leg: Career fires window 'tops:bestleg' {detail:{darts, prev}}; kept on the device so it still shows after the reset reload

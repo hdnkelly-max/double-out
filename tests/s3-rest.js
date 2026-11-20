@@ -71,7 +71,8 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!r.palace || !r.palace.ok || r.palace.to !== 52) f.push('1 Palace week 17 -> 52: ' + JSON.stringify(r.palace));
     if (r.book.length) f.push('1 a week with an event could not be booked: ' + JSON.stringify(r.book.slice(0, 3)));
     if (JSON.stringify(r.palaceLate.map(x => x.to)) !== JSON.stringify([156, 157, 208])) f.push('1 late Palace arrivals ' + JSON.stringify(r.palaceLate));
-    if (r.afterWorlds.week !== 53 || r.afterWorlds.rest || r.afterWorlds.cal[0] !== 'worlds') f.push('1 after losing the Worlds at week 52 the next one should be on (week 53 is a Worlds week) ' + JSON.stringify(r.afterWorlds));
+    // car-worlds (CAR-WEAK 3): a lost Worlds goes back to the DPNZ Tour, so week 53 has the weekly DPNZ events (no rest)
+    if (r.afterWorlds.week !== 53 || r.afterWorlds.rest || !/^dpnz_/.test(r.afterWorlds.cal[0] || '')) f.push('1 after losing the Worlds at week 52 the DPNZ Tour should be on at week 53 ' + JSON.stringify(r.afterWorlds));
     if (r.adv.ok) f.push('3 the advance should be refused while one is owed');
     if (!r.offer || !r.rec.ok || r.bankAfterRec !== 0 || r.debt1 !== 120 + r.rec.cost || !r.live) f.push('3 recovery entry ' + JSON.stringify({ offer: r.offer, rec: r.rec, bank: r.bankAfterRec, debt: r.debt1 }));
     if (r.afterLoss.live || !r.afterLoss.offer) f.push('3 after a loss the recovery entry is gone (dead end) ' + JSON.stringify(r.afterLoss));

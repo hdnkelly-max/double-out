@@ -155,7 +155,11 @@
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
       newDpnzSeason(c); return { to: 3, n: 'DPNZ Tour', msg: 'Finished #' + r + '. A new DPNZ season: 40% of your points roll over' }; }
-    if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;
+    // CAR-WEAK 3 (1): a lost Worlds sends you back to the DPNZ Tour for a new season (40% of your DPNZ points carried, as after the
+    // Trans-Tasman), instead of a year of rest weeks at the Palace. Back to the Palace the same ways: OOM #1, or the Trans-Tasman final.
+    if (L.id === 'palace') { if (fin === 'W') return { champion: true, msg: 'World Champion. Champion’s Year starts next season' };
+      newDpnzSeason(c); const r = promote(c, 3, 'Out of the Worlds in the ' + (fin === 'F' ? 'final' : FIN_NAME[fin].toLowerCase()) + '. Back to the DPNZ Tour for a new season: 40% of your points roll over. Finish #1, or make the Trans-Tasman final, to go back to the Palace');
+      r.fromWorlds = fin; return r; }
     if (played >= L.minEv && ((c.pts[L.id] || 0) >= L.need || (e.jump && fin === 'W'))) return promote(c, c.level + 1, 'Up to ' + LEVELS[c.level + 1].n);
     return null;
   }
