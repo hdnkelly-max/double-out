@@ -37,7 +37,7 @@
   function play(){if(!on())return false;const k=circ();if(!k||!k.live)return false;try{window.playNext();}catch(e){return false;}return true;}
   function playNow(){if(!on())return false;const k=circ();if(!k||!k.live)return false;const o=C().nextOpp(k),e=C().eventOf(k.live.id),nm=oppName(k);
     beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0});
-    if(SS()){S.s3={id:e.id,round:o.round,level:k.level};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
+    if(SS()){S.s3={id:e.id,round:o.round,level:k.level,recovery:k.live&&k.live.recovery?1:0};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
   function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',{from:r.from,to:r.to,level:k.level});}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
   function recover(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().recoveryEntry(k,id));if(r&&r.ok){persist();L('s3_recover',{id:r.id,cost:r.cost,debt:r.debt,level:k.level});}return r;}
   function advance(){if(!on())return {ok:false,why:'Season 3 is off'};const r=sync(k=>C().advance(k));if(r&&r.ok){persist();L('s3_advance',{amt:r.amt});}return r;}
@@ -70,7 +70,7 @@
     try{S.s3xp=(window.C3&&C3.s3MatchXP)?C3.s3MatchXP():null;}catch(e){S.s3xp=null;}/* CAR-XP: player XP + levels, no cash (career3.js) */
     S.s3res=r;persist();setTimeout(()=>{try{lbPost();}catch(e){}},1500);
     const me0=S.p[0],op0=S.p[1],lv=id=>{try{return window.TOPS_LofT?Math.round(TOPS_LofT(id)*75+20):null;}catch(e){return null;}};
-    L('s3_result',{xp:S.s3xp?S.s3xp.xp:null,lv:S.s3xp?S.s3xp.after.lv:null,tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
+    L('s3_result',{xp:S.s3xp?S.s3xp.xp:null,lv:S.s3xp?S.s3xp.after.lv:null,tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level,debt:c.circuit.debt||0,rec:c.circuit.recovered||0,recm:S.s3.recovery?1:0});
     try{window.dispatchEvent(new CustomEvent('tops:s3',{detail:r}));}catch(e){}
   };}
 

@@ -58,7 +58,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.waitForTimeout(800);
   const ui2 = await p.evaluate(() => ({ week: TOPS_S3.view().week, posters: document.querySelectorAll('#rbApp [data-s3book]').length }));
   const ui3 = await p.evaluate(async () => { const c = career(), k = c.circuit; k.level = 3; k.week = 9; c.bank = 10; k.debt = 50; k.live = null; persist(); try { showHub('play'); } catch (e) {} await new Promise(r => setTimeout(r, 1500)); const e = document.querySelector('#rbApp [data-s3="rec"]'); return { rec: !!(e && e.getClientRects().length), text: e ? e.innerText : '', adv: !!document.querySelector('#rbApp [data-s3="adv"]') }; });
+  // 7 reload straight after a recovery entry (ChatGPT round 2 P2-2): bank, debt, live.recovery and the booking survive; no second funding
+  const rl0 = await p.evaluate(() => { const c = career(), k = c.circuit; k.level = 3; k.week = 9; c.bank = 10; k.debt = 50; k.live = null; k.recovered = 0; const rc = TOPS_S3.recover(); persist();
+    return { ok: rc && rc.ok, cost: rc && rc.cost, bank: c.bank, debt: k.debt, live: k.live && k.live.id, recovery: !!(k.live && k.live.recovery), recovered: k.recovered }; });
+  await p.goto(url); await p.waitForFunction(() => window.TOPS_S3 && window.C3 && window.TC_API, null, { timeout: 120000 }); await p.waitForTimeout(1500);
+  const rl1 = await p.evaluate(() => { const c = career(), k = c.circuit; const again = TOPS_S3.recover(); const v = TOPS_S3.view();
+    return { bank: c.bank, debt: k.debt, live: k.live && k.live.id, recovery: !!(k.live && k.live.recovery), recovered: k.recovered, again: !!(again && again.ok), vdebt: v.debt, vrec: v.recover }; });
   await b.close();
+  if (!rl0.ok || rl1.bank !== rl0.bank || rl1.debt !== rl0.debt || rl1.live !== rl0.live || !rl1.recovery || rl1.recovered !== 1 || rl1.again || rl1.vdebt !== rl0.debt || rl1.vrec) f.push('7 recovery entry across a reload ' + JSON.stringify({ rl0, rl1 }));
   if (r.err) f.push('error: ' + r.err); else {
     if (r.grid.length) f.push('1 levels/weeks not reaching an event in one action: ' + JSON.stringify(r.grid.slice(0, 5)) + ' (' + r.grid.length + ')');
     if (!r.palace || !r.palace.ok || r.palace.to !== 52) f.push('1 Palace week 17 -> 52: ' + JSON.stringify(r.palace));
@@ -81,5 +88,5 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   if (!ui3.rec || ui3.adv) f.push('5 broke card: recovery entry shown, advance hidden while owed ' + JSON.stringify(ui3));
   if (errs.length) f.push('page errors: ' + errs.slice(0, 3).join(' | '));
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ')); process.exit(1); }
-  console.log(`PASS: 7 levels x 120 start weeks each reach an event in one action (Palace 17 -> ${r.palace.to}); weeks with an event never move; a 4.13-style save parked on Opens week 5 reloads into "Rest week · until week 6" and the button moves it by touch; broke at DPNZ with an advance owed: recovery entry (${r.rec.id}, $${r.rec.cost} covered, bank unchanged), still there after a loss, a win repays half of $${r.win.prize}; not offered when you can afford one; hub Play jumps an empty week and books, and uses the recovery entry when broke; Pub night pays as before`);
+  console.log(`PASS: 7 levels x 120 start weeks each reach an event in one action (Palace 17 -> ${r.palace.to}); weeks with an event never move; a 4.13-style save parked on Opens week 5 reloads into "Rest week · until week 6" and the button moves it by touch; broke at DPNZ with an advance owed: recovery entry (${r.rec.id}, $${r.rec.cost} covered, bank unchanged), still there after a loss, a win repays half of $${r.win.prize}; not offered when you can afford one; hub Play jumps an empty week and books, and uses the recovery entry when broke; Pub night pays as before; a recovery entry survives a reload (bank, debt, booking) and is not funded twice`);
 })();
