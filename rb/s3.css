@@ -178,3 +178,33 @@
 /* in-match strip: stays inside its slot, left of MENU; the text trims with … (the round leads, so the venue is what gets cut) */
 html.s3-on body.lk-match #hud .event{align-items:stretch;overflow:hidden;flex:1 1 0;min-width:0;margin-right:10px}
 html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i{max-width:100%}
+/* ---------- EXP-IDLE 3 · trophy shelf (Locker > Trophies, behind s3x=1) ---------- */
+#rbApp .s3-trh{position:relative;height:160px;border-radius:12px;overflow:hidden;flex:none;background:var(--card)}
+#rbApp .s3-trk{position:absolute;left:14px;right:14px;bottom:12px;display:flex;gap:22px}
+#rbApp .s3-trk small{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+#rbApp .s3-trk b{display:block;font:800 32px/1.05 var(--d,"Barlow Condensed",sans-serif);color:var(--ink);font-variant-numeric:tabular-nums}
+#rbApp .s3-trbl{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid #6b5418;background:linear-gradient(90deg,#3a2a08,var(--card) 72%);flex:none}
+#rbApp .s3-trbl>b{font:800 italic 40px/1 var(--d,"Barlow Condensed",sans-serif);color:#f1c64b;min-width:44px;text-align:center}
+#rbApp .s3-trbl>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+#rbApp .s3-trbll{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#f1c64b}
+#rbApp .s3-trbl span:not(.s3-trbll){font-size:13.5px;color:var(--ink2)}
+#rbApp .s3-trbl small{font-size:12px;color:var(--ink3)}
+#rbApp .s3-trbl.s3-tre{border-color:var(--line);background:var(--card)}#rbApp .s3-trbl.s3-tre>b,#rbApp .s3-trbl.s3-tre .s3-trbll{color:var(--ink3)}
+#rbApp .s3-trlv{display:flex;flex-direction:column;gap:8px;flex:none}
+#rbApp .s3-trlv .s3-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#rbApp .s3-trn{font:800 21px/1 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;color:var(--ink)}
+#rbApp .s3-trup,#rbApp .s3-trnow{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;white-space:nowrap}
+#rbApp .s3-trup{background:rgba(127,209,154,.14);color:var(--good,#7fd19a)}#rbApp .s3-trnow{background:var(--card2,#22272b);color:var(--ink2)}
+#rbApp .s3-shelf{list-style:none;margin:0;padding:0 0 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-bottom:6px solid #3a2b1e;border-radius:0 0 4px 4px;box-shadow:0 10px 12px -8px #000}
+#rbApp .s3-tr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
+#rbApp .s3-tr b{font:800 15px/1.05 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;color:var(--ink);overflow-wrap:anywhere}
+#rbApp .s3-tr span{font-size:11.5px;line-height:1.25;color:var(--ink3)}#rbApp .s3-tr small{font-size:11px;color:var(--ink3)}
+#rbApp .s3-trW{border-color:#6b5418}#rbApp .s3-trW span{color:var(--ink2)}
+#rbApp .s3-tr.s3-tre{border-style:dashed;background:transparent}#rbApp .s3-tr.s3-tre b{color:var(--ink3)}
+#rbApp .s3-cup{width:46px;height:46px;flex:none}#rbApp .s3-cupe{color:var(--ink3);opacity:.6}
+#rbApp .s3-trlock{opacity:.5}
+#rbApp .s3-tremp{border-style:dashed}
+#rbApp .s3-trold li{display:grid;grid-template-columns:72px minmax(0,1fr) auto auto;gap:10px;align-items:baseline}
+/* the level card's titles chip */
+#rbApp .s3-trchip{position:absolute;right:12px;top:12px;z-index:2;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 6px;border-radius:17px;border:1px solid rgba(241,198,75,.5);background:rgba(16,18,20,.78);color:#f3f4f2;font-weight:700;font-size:13px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#rbApp .s3-trchip .s3-cup{width:22px;height:22px}#rbApp .s3-trchip i{font-style:normal;color:#f1c64b}
