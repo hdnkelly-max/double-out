@@ -51,6 +51,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^circuit$/i.test(x.textContent.trim())); if (t) t.click(); }); await p.waitForTimeout(1200);
     const chip = await p.evaluate(() => { const c = document.querySelector('#rbApp .s3-trchip'); return c ? c.innerText.trim() : null; }); out['chip' + w] = chip;
     if (!/^1 title/.test(chip || '')) fail.push(w + ': titles chip ' + chip);
+    if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_tr_chip_' + w + '.png'), clip: { x: 0, y: 0, width: w, height: 330 } });
     await T.tap('#rbApp .s3-trchip'); await p.waitForTimeout(900); const r = await T.read(); out['won' + w] = r;
     if (!r.shelf) fail.push(w + ': the chip did not open Locker > Trophies');
     if (r.titles.length !== 1 || r.titles[0].finish !== 'W' || r.titles[0].ev !== 'pub_night') fail.push(w + ' titles ' + JSON.stringify(r.titles));
@@ -59,7 +60,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/^pub this level$/i.test(r.lv[0] || '') || !/^club next level/i.test(r.lv[1] || '')) fail.push(w + ' level rows ' + JSON.stringify(r.lv));
     if (r.empty) fail.push(w + ': empty state still showing with a title');
     // best leg: the same number Career sends to the Best Leg board, with where it came from; the record line from Career's tops_bestleg_s3
-    if (!(r.leg >= 9 && r.leg < 99) || !new RegExp('^' + r.leg + ' your best leg · season 3 ' + r.leg + ' darts · kauri arms league night, week 1', 'i').test(r.bl || '') || !r.legAt || r.legAt.week !== 1) fail.push(w + ' best leg ' + JSON.stringify({ bl: r.bl, leg: r.leg, at: r.legAt }));
+    if (!(r.leg >= 9 && r.leg < 99) || !new RegExp('^' + r.leg + ' darts your best leg · season 3 kauri arms league night · week 1', 'i').test(r.bl || '') || !r.legAt || r.legAt.week !== 1) fail.push(w + ' best leg ' + JSON.stringify({ bl: r.bl, leg: r.leg, at: r.legAt }));
     const rec = live.bl[0]; if (!rec || !new RegExp('season 3 record: ' + rec.darts + ' darts · ' + rec.name, 'i').test(r.bl || '')) fail.push(w + ' record line vs tops_bestleg_s3 ' + JSON.stringify({ bl: r.bl, rec }));
     const me = live.hist.find(x => x.you); const s2 = me && me.s2;
     if (!me || !new RegExp('season 1 ' + me.s1.furthest.n + ' ' + me.s1.bestAvg.toFixed(1) + ' avg ' + me.s1.bestLeg + ' darts season 2 ' + me.s2.furthest.n + ' ' + s2.bestAvg.toFixed(1) + ' avg ' + s2.bestLeg + ' darts', 'i').test(r.old || '')) fail.push(w + ' seasons vs tops_history ' + JSON.stringify({ old: r.old, me }));

@@ -496,7 +496,7 @@
       /* best leg: career().best.leg is what lbPost sends to the board, so this number and the board's "Yours" always agree */
       const b = c && c.best, leg = b && b.leg < 99 ? b.leg : null, at = b && b.legAt && b.legAt.d === leg ? b.legAt : null;
       const rec = Array.isArray(blRows) && blRows[0] ? blRows[0] : null, recTxt = rec ? (rec.you ? (rec.darts === leg ? 'You hold the Season 3 record' : '') : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`) : '';
-      const bl = leg ? `<div class="s3-trbl"><b>${leg}</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>${leg} darts${at ? ` · ${esc(at.ev)}, week ${at.week}` : ''}</span>${recTxt ? `<small>${recTxt}</small>` : ''}</div></div>`
+      const bl = leg ? `<div class="s3-trbl"><b>${leg}<small>darts</small></b><div><span class="s3-trbll">Your best leg · Season 3</span><span>${at ? `${esc(at.ev)} · week ${at.week}` : 'Fewest darts in a won leg'}</span>${recTxt ? `<small>${recTxt}</small>` : ''}</div></div>`
         : `<div class="s3-trbl s3-tre"><b>–</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>Win a 501 leg in the Circuit to set one</span></div></div>`;
       const empty = !ts.length ? `<div class="rb-card s3-tremp"><span class="rb-t2">Your shelf is empty</span><span class="rb-sub">Win an event, or reach a final, and the trophy goes here. ${esc(lv.events[0].n)} pays ${money(C.prizeFor(C.eventOf(lv.events[0].id), 'W'))} to the winner.</span></div>` : '';
       let n = 0;
