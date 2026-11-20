@@ -359,6 +359,7 @@ html.rb-on.rb-preres #result{visibility:hidden!important}
 #rbApp .rbw-lt{position:absolute;z-index:1;left:18px;right:18px;bottom:18px;display:flex;flex-direction:column;gap:2px}
 #rbApp .rbw-kick{font:700 12px var(--b);letter-spacing:.16em;text-transform:uppercase;color:#f0a3a7}
 #rbApp .rbw-lost .rbw-kick{color:var(--ink3)}
+#rbApp .rbw-kick .rbw-nw{white-space:nowrap}
 #rbApp .rbw-res{font:italic 800 74px/.82 var(--d);letter-spacing:.01em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 28px rgba(215,35,45,.55),0 2px 0 rgba(0,0,0,.4)}
 #rbApp .rbw-lost .rbw-res{color:#d6dadc;text-shadow:0 2px 0 rgba(0,0,0,.4)}
 #rbApp .rbw-score{display:flex;align-items:center;gap:12px;margin-top:6px}
