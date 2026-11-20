@@ -27,6 +27,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
         return { text: app ? app.innerText : '', blk: blk ? blk.innerText : null, cells: blk ? [...blk.querySelectorAll('.s3-rpdraw li')].map(l => l.className + ':' + l.innerText.replace(/\s+/g, ' ')) : [], cashLab: ((app && app.querySelector('.rbw-cash small')) || {}).textContent, cash: (document.getElementById('rbRCash') || {}).textContent, xpTxt: (document.getElementById('rbRXp') || {}).textContent,
           bank: career().bank, s3xp: S && S.s3xp, res: S && S.s3res && { done: S.s3res.done, fin: S.s3res.fin, prize: S.s3res.prize, pts: S.s3res.pts, next: S.s3res.next }, pts: career().circuit.pts, wide: document.documentElement.scrollWidth > innerWidth + 1,
           barB: blk && blk.querySelector('.s3-rpb') ? blk.querySelector('.s3-rpb').style.width : null, barG: blk && blk.querySelector('.s3-rpg') ? blk.querySelector('.s3-rpg').style.width : null }; });
+      r.clear = await p.evaluate(() => { const sc = document.querySelector('#rbApp.rb-resmode .rb-scr'), pin = sc && sc.querySelector('.rbw-pin'); if (!sc || !pin) return null;
+        const top = sc.scrollTop; sc.scrollTop = sc.scrollHeight; const last = pin.previousElementSibling, a = last.getBoundingClientRect(), b = pin.getBoundingClientRect();
+        const below = Math.round(sc.getBoundingClientRect().bottom - b.bottom), gap = Math.round(b.top - a.bottom), atEnd = Math.abs(sc.scrollTop + sc.clientHeight - sc.scrollHeight) < 2; sc.scrollTop = top;
+        return { gap, below, atEnd, last: last.className, pinH: Math.round(b.height), solid: getComputedStyle(pin).backgroundColor }; });
       if (shot && process.env.SHOTS) { await p.evaluate(() => { const m = document.querySelector('#rbApp .rb-scr') || document.getElementById('rbMain'); if (m) m.scrollTop = 0; }); await p.waitForTimeout(300); await p.screenshot({ path: path.join(__dirname, shot) }); }
       const l0 = loads; for (let i = 0; i < 300 && loads === l0; i++) { for (const s of NEXT) { if (loads > l0) break; if (await tap(s)) { await p.waitForTimeout(300); break; } } await p.waitForTimeout(250); }
       if (loads > l0) await ready(); for (let i = 0; i < 20 && (await vis('#s3Ok')); i++) { await tap('#s3Ok'); await p.waitForTimeout(400); } return r; };
@@ -35,20 +39,25 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   for (const [w, h] of [[390, 844], [360, 640]]) await session('?s3=1&s3x=1', w, h, async (p, match) => {
     const qf = await match('s3_rp_' + w + '_qf.png'); out['qf' + w] = qf;
     if (!qf.blk) { fail.push(w + ': no progress block on the QF Result'); return; }
-    if (!/through to the semi-final/i.test(qf.blk) || !/next:/i.test(qf.blk) || !/\$35 if you win it/i.test(qf.blk)) fail.push(w + ' QF block copy: ' + qf.blk.replace(/\n/g, ' | '));
+    if (!/semi-final next/i.test(qf.blk) || !/next:/i.test(qf.blk) || !/\$35 if you win it/i.test(qf.blk)) fail.push(w + ' QF block copy: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.cells.length !== 3 || !/s3-rpw s3-rpnow/.test(qf.cells[0]) || !/s3-rpnext/.test(qf.cells[1])) fail.push(w + ' QF draw: ' + JSON.stringify(qf.cells));
     if (qf.cashLab !== 'Banked so far' || !/^\$\d+$/.test(qf.cash || '')) fail.push(w + ' QF cash: ' + qf.cashLab + ' ' + qf.cash);
-    if (!/0 \/ 150/.test(qf.blk) || !/\+50 pts/.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
+    if (!/0 \/ 150/.test(qf.blk) || !/potential \+50 if you win/i.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.wide) fail.push(w + ': QF Result scrolls sideways');
+    if (!qf.clear || qf.clear.gap < 16 || !qf.clear.atEnd || qf.clear.below > 1 || /rgba\(.*, 0\)/.test(qf.clear.solid)) fail.push(w + ' QF: last card not clear of Continue ' + JSON.stringify(qf.clear));
     if (qf.s3xp && !new RegExp('\\+' + (qf.s3xp.xp != null ? qf.s3xp.xp : '') ).test(qf.xpTxt || '') && qf.s3xp.xp != null) fail.push(w + ' XP on screen ' + qf.xpTxt + ' vs S.s3xp ' + JSON.stringify(qf.s3xp));
     if (w !== 390) return;
-    const sf = await match(null); out.sf = { blk: sf.blk, cells: sf.cells }; if (!/through to the final/i.test(sf.blk || '')) fail.push('SF block: ' + sf.blk);
+    const sf = await match(null); out.sf = { blk: sf.blk, cells: sf.cells }; if (!/final next/i.test(sf.blk || '')) fail.push('SF block: ' + sf.blk);
     const fin = await match('s3_rp_390_final.png'); out.fin = fin;
+    if (!fin.clear || fin.clear.gap < 16) fail.push('Final: last card not clear of Continue ' + JSON.stringify(fin.clear));
     if (!/winner/i.test(fin.blk || '') || !/\$35 prize money/i.test(fin.blk || '')) fail.push('Final block: ' + (fin.blk || '').replace(/\n/g, ' | '));
     if (fin.cashLab !== 'Prize money' || fin.cash !== '+$35') fail.push('Final cash ' + fin.cashLab + ' ' + fin.cash);
     if (fin.bank !== 90) fail.push('bank after the night ' + fin.bank + ' (want 60 - 5 + 35 = 90)');
     if (!/50 \/ 150/.test(fin.blk || '') || !/\+50/.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
     if (!/s3-rpfin/.test(fin.cells[2] || '') || !/s3-rpw/.test(fin.cells[2] || '')) fail.push('Final draw cells ' + JSON.stringify(fin.cells));
+    out.badge = await p.evaluate(async () => { achToast({ id: 'tonavg', t: 'L', n: 'Ton average', d: 'test', ic: '' }); await new Promise(r => setTimeout(r, 1500)); const t = document.querySelector('#achToasts .ach-t:last-child');
+      return t ? { img: !!t.querySelector('img.ach-img'), fb: !!t.querySelector('svg.ach-fb') } : null; });
+    if (!out.badge || out.badge.img || !out.badge.fb) fail.push('badge fallback (assets/ is absent here, so the image 404s): ' + JSON.stringify(out.badge));
     // 2 direct renders: lost QF, group stage, promotion
     out.direct = await p.evaluate(() => { const U = TOPS_S3UI, c = career(), k = c.circuit, keep = JSON.stringify(k), r = {};
       const fakeS = (s3, won, res) => ({ s3, won, s3res: res });

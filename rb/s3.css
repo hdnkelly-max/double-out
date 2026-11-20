@@ -142,7 +142,7 @@
 @media (max-height:700px){.s3-on .s3-fnart{height:150px}.s3-on .s3-fnmore{display:none}.s3-on .s3-fnt{font-size:28px}.s3-on .s3-fnb{gap:9px}.s3-on .s3-fnc{padding:10px 12px;gap:8px}.s3-on .s3-fnkv b{font-size:18px}}
 
 /* EXP-IDLE 2 · Circuit result: event progress + move-up bar (s3x=1) */
-#rbApp .s3-rp{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;flex:none}
+#rbApp .s3-rp{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;flex:none}
 #rbApp .s3-rpdraw{list-style:none;margin:0;padding:0;display:flex;gap:5px}
 #rbApp .s3-rpdraw li{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:34px;border-radius:9px;background:var(--card2);color:var(--ink3);font-size:12px}
 #rbApp .s3-rpdraw li b{font:800 15px/1 var(--d);text-transform:uppercase;white-space:nowrap;overflow:hidden}
@@ -167,3 +167,9 @@
 #rbApp .s3-rpbar small{font-size:12px;color:var(--ink3)}
 @keyframes s3rpg{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){#rbApp .s3-rpg{animation:none}}
+
+/* 2b: the pinned Continue is a solid bar (content scrolls under it cleanly, not cut by a see-through fade) and the last card always
+   scrolls fully clear of it: the bar takes its own height in the flow plus 16 px above it */
+#rbApp .rbw-pin.s3-pin{position:sticky;bottom:0;z-index:2;margin-top:16px;padding:10px 0 calc(16px + env(safe-area-inset-bottom,0px));background:var(--bg);box-shadow:0 -12px 14px -2px var(--bg)}
+#rbApp.rb-resmode .rb-scr:has(.s3-rp){gap:8px;padding-bottom:0}   /* a sticky bar sticks inside the scroller's padding: with 24 px of padding, cards showed under the bar */
+.s3-on .ach-fb{display:block}

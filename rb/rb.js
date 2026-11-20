@@ -343,7 +343,7 @@
     if (s3b) tbl = s3b.html;
     else if (s3m) tbl = s3m.line ? `<div class="rbw-row"><span>${esc(s3m.line)}</span><em>${esc(s3m.sub)}</em></div>` : '';
     else if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
-    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    const act = `<div class="rb-pin rbw-pin${s3b && s3b.pin ? ' ' + s3b.pin : ''}"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
     if (s3b) return head + tbl + tiles + rw + main + want + ach + act;   /* EXP-IDLE 2: where you are in the event comes first */
     return head + tiles + rw + main + want + ach + tbl + act;
   }
