@@ -133,7 +133,7 @@
     <div class="rb-card s3-prog">
       ${need ? `<div class="s3-row"><span class="s3-lab">To move up · ${bestTxt}</span><b class="s3-num">${have} <small>/ ${need} pts</small></b></div><div class="rb-bar"><i style="width:${Math.min(100, 100 * have / need)}%"></i></div>` : ''}
       <span class="rb-sub">${esc(L.up)}</span>
-      ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
+      ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
       <ol class="s3-ladder" aria-label="The seven levels, you're on ${esc(L.n)}">${ladder}</ol>
     </div>`;
     const isO = L.oom || L.id === 'tt';
@@ -148,14 +148,16 @@
   function week(c) {
     const C = CI(), cal = C.calendar(c);
     /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
-    if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
-      return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${nx != null && nx - c.week > 1 ? (nx - c.week) + ' weeks away' : 'next week'}.</span>
-      <button class="rb-primary" type="button" data-s3="rest"><b>Advance to next event</b><small>${nx != null ? 'Week ' + c.week + ' → week ' + nx : ''}</small></button></div>`; }
-    let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
+    if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
+      return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${gap > 1 ? gap + ' weeks away' : 'next week'}.</span>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
+    let h = '';
+    /* CAR-DEADWK layout (Q&D): when broke, the way out comes first, above the posters you can't afford */
     if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
-      h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">${ro ? `Take a recovery entry: ${esc(ro.n)}, ${money(ro.cost)} entry and travel covered now, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
-      ${ro ? `<button class="rb-primary" type="button" data-s3="rec"><b>Recovery entry · ${esc(ro.n)}</b><small>${money(ro.cost)} covered, paid back from prizes${c.debt ? ' · you owe ' + money(c.debt + ro.cost) + ' after this' : ''}</small></button>` : ''}
+      h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
+      ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
+    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
     return h;
   }
   function poster(c, e) {
@@ -246,7 +248,7 @@
     const rows = hs.map(h => `<li><span><b>${esc(h.n)}</b><small>Week ${h.week} · ${esc(C.FIN_NAME[h.fin])}</small></span><span class="s3-neg">−${money(h.cost)}</span><span class="s3-pos">${h.prize ? '+' + money(h.prize) : '$0'}</span></li>`).join('');
     return `<div class="rb-card s3-bank"><span class="s3-lab">Tour budget</span><b class="s3-huge">${money(c.bank)}</b><span class="rb-sub">${runTxt} (avg trip ${money(avg)})</span>
         <div class="rb-bar"><i style="width:${Math.min(100, run / 8 * 100)}%"></i></div>
-        ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
+        ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
       <div class="rb-card"><span class="rb-t2">Every dollar has a job</span><span class="rb-sub">Entry and travel are paid when you book. Prize money comes from how far you get. Moving up a level pays a one-off travel grant.</span></div>
       <div class="rb-card"><div class="s3-row"><span class="rb-t2">In and out</span><span class="rb-sub">${hs.length ? `last ${hs.length}: <span class="s3-pos">+${money(tin)}</span> · <span class="s3-neg">−${money(tout)}</span>` : ''}</span></div>
         ${rows ? `<ol class="s3-res s3-mon">${rows}</ol>` : `<span class="rb-sub">Nothing yet. Book an event on the Circuit tab.</span>`}</div>`;
