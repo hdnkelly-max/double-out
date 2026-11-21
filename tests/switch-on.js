@@ -32,7 +32,9 @@ function gate() {
   for (const t of GATE.filter(x => !only || only.includes(x))) {
     const f = path.join(__dirname, t + '.js'); if (!fs.existsSync(f)) { row('gate', t, false, 'not on this build (tests/' + t + '.js missing: not shipped yet)'); continue; }
     const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
-    const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
+    const all = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean); let last = all[all.length - 1] || '';
+    // a crash ends in node's "Node.js vX" footer: show the error line instead (the 44939483830 s3-v3heads row said only that)
+    if (r.status !== 0 && /^Node\.js v/.test(last)) last = [...all].reverse().find(x => /(Error|FAIL|Timeout)[:\s]/.test(x) && !/^\s+at /.test(x)) || last;
     row('gate', t, r.status === 0, `${r.status === 0 ? '' : (r.error && r.error.code === 'ETIMEDOUT' ? 'killed: over the 1500 s cap: ' : 'exit ' + (r.status == null ? r.signal : r.status) + ': ')}${last.slice(0, 220)} [${Math.round((Date.now() - s) / 1000)} s]`);
   }
 }
@@ -146,20 +148,121 @@ async function saves(b) {
   }
 }
 
+// ---------- CLOUD: two devices on one account, with a mocked save server (Producer Sun 08:11: no secret, no real account).
+// Every call the game makes to Supabase is answered here: sign-in is a fake session in the game's own storage key, the S3 save row lives
+// in one in-memory store that both devices share, and the save rpc copies the live server rule (tops_save3_put as of 22 Nov: refuse when
+// the stored sv is higher, or equal from another device, and send the stored copy back). The game's real supabase-js runs against it.
+// What it proves: what the game does with two devices. What it can't: the real server, its access rules, or a rule changed since 22 Nov.
+const SB = 'https://thyirfwoqkshsaqowdpe.supabase.co', SBKEY = 'sb-thyirfwoqkshsaqowdpe-auth-token', QA_UID = '00000000-0000-4000-8000-00000000c10d';
+function cloudServer() {
+  const st = { row: null, log: [], down: new Set() };
+  const put = (data, who) => { const cur = st.row && st.row.data; const nv = +(data && data.sv || 0), cv = +(cur && cur.sv || 0);
+    if (cur && (cv > nv || (cv === nv && (cur.dev || '') !== (data.dev || '') && cv > 0))) { st.log.push({ who, sv: nv, ok: false, cv }); return { ok: false, err: 'older', sv: cv, data: cur }; }
+    st.row = { data, updated_at: new Date().toISOString() }; st.log.push({ who, sv: nv, ok: true, bank: data.career && data.career.bank }); return { ok: true, sv: nv }; };
+  const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url'); const exp = Math.floor(Date.now() / 1000) + 6 * 3600;
+  const user = { id: QA_UID, aud: 'authenticated', role: 'authenticated', email: 'qa-cloud@example.invalid', user_metadata: { full_name: 'QA Cloud' }, app_metadata: { provider: 'google' }, created_at: '2026-01-01T00:00:00Z' };
+  const sess = { access_token: b64({ alg: 'none' }) + '.' + b64({ sub: QA_UID, role: 'authenticated', exp, aud: 'authenticated' }) + '.qa', token_type: 'bearer', expires_in: 6 * 3600, expires_at: exp, refresh_token: 'qa-refresh', user };
+  let sbjs = null; try { sbjs = fs.readFileSync(process.env.SBJS || require.resolve('@supabase/supabase-js/dist/umd/supabase.js'), 'utf8'); } catch (e) {}
+  const J = (r, s, o) => r.fulfill({ status: s, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: o === undefined ? '' : JSON.stringify(o) });
+  // attach to one page ("device"); its routes are added last, so they answer before session()'s no-cloud routes
+  const attach = async (p, who) => {
+    await p.addInitScript(({ k, s }) => { try { if (!sessionStorage.getItem('qa_auth')) { localStorage.setItem(k, JSON.stringify(s)); sessionStorage.setItem('qa_auth', '1'); } } catch (e) {} }, { k: SBKEY, s: sess });
+    await p.route(/supabase-js@[\d.]+\/dist\/umd\/supabase(\.min)?\.js/, r => sbjs ? r.fulfill({ status: 200, contentType: 'application/javascript', body: sbjs }) : r.continue());
+    await p.route(u => u.href.startsWith(SB), async r => { const q = r.request(), u = new URL(q.url()), m = q.method();
+      if (m === 'OPTIONS') return r.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+      if (st.down.has(who) && u.pathname.startsWith('/rest/')) return r.abort('internetdisconnected');   // this device is offline
+      if (u.pathname.startsWith('/auth/v1/user')) return J(r, 200, user);
+      if (u.pathname.startsWith('/auth/v1/token')) return J(r, 200, sess);
+      if (u.pathname.startsWith('/auth/v1/')) return J(r, 200, {});
+      if (u.pathname === '/rest/v1/rpc/tops_save3_put') { let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (e) {} return J(r, 200, put(b.p_data, who)); }
+      if (u.pathname === '/rest/v1/tops_saves_s3') {
+        if (m === 'GET') { const one = /pgrst\.object/.test(q.headers()['accept'] || ''); const rows = st.row ? [{ user_id: QA_UID, ...st.row }] : [];
+          return one ? (rows.length ? J(r, 200, rows[0]) : J(r, 406, { code: 'PGRST116', message: 'no rows', details: 'The result contains 0 rows', hint: null })) : J(r, 200, rows); }
+        let b = null; try { b = JSON.parse(q.postData() || 'null'); } catch (e) {} const x = Array.isArray(b) ? b[0] : b;   // the old direct upsert path, in case a build still uses it
+        if (x && x.data) { st.row = { data: x.data, updated_at: new Date().toISOString() }; st.log.push({ who, sv: +(x.data.sv || 0), ok: true, direct: true }); } return J(r, 201);
+      }
+      if (u.pathname.startsWith('/rest/v1/rpc/')) return J(r, 200, null);
+      if (u.pathname.startsWith('/realtime/')) return r.abort();
+      return m === 'GET' ? J(r, 200, []) : J(r, 201); });
+  };
+  return { st, attach, put };
+}
+async function cloud(b) {
+  const L = 'saves · cloud two devices'; const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'switch-on', 'a_long_s3.json'), 'utf8'));
+  const B0 = fx.career.bank; const seed = () => ({ ...fx, cloudUser: { id: QA_UID, name: 'QA' }, authSeen: true, dev: 'dqa000001' });
+  const init = { fn: () => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} } };
+  const URLQ = 'file://' + dir + '/index.html' + Q;
+  const S = p => p.evaluate(k => { if (!window.__qaWhy && typeof trackEv === 'function') { window.__qaWhy = []; const t = trackEv; trackEv = function (n, o) { if (n === 'tabs_away') __qaWhy.push((o && o.why) + '@sv' + (save.sv || 0)); return t.apply(this, arguments); }; } const s = (() => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } })(); return { mem: { sv: save.sv || 0, bank: save.career && save.career.bank, matches: save.matches, user: !!(window.NET && NET.user) }, store: s && { sv: s.sv || 0, bank: s.career && s.career.bank }, tabsCard: !!document.getElementById('tabsCard'), why: (window.__qaWhy || []).join(' ') }; }, 'doubleout_s3');
+  const open = async (p, T, srv, who) => { await srv.attach(p, who); await p.goto(URLQ, { timeout: 180000 }); await T.ready();
+    await p.waitForFunction(() => window.NET && NET.user && typeof save !== 'undefined' && save.career, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(2500); };
+  const hub = p => p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; showHub('play'); } catch (e) {} });
+  // a real save on a device: progress (bank and a match) on B; a Locker change (the shaft) on A, which an older device can make any time
+  const progress = (p, add) => p.evaluate(add => { career().bank += add; save.matches = (save.matches || 0) + 1; persist(); }, add);
+  const tweak = (p, k) => p.evaluate(k => { save.setup = save.setup || {}; save.setup.shaft = ['short', 'long', 'med'][k % 3]; persist(); }, k);
+
+  // 1) device B signs in on a new phone: it takes the cloud save, money/XP/level/history and look equal, no New look card again
+  { const srv = cloudServer(); srv.st.row = { data: { ...seed(), v3NewLook: 1763700000000, vlook: { v: 1, base: 'tama', body: 'heavy', hair: 'quiff', skin: '#c98e64', at: 1 } }, updated_at: new Date().toISOString() };
+    let R = {}; const pe = await session(b, 'Pixel 7', init, async (p, T) => { await open(p, T, srv, 'B'); R.s = await S(p); R.local = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('doubleout_s3')); } catch (e) { return null; } });
+      R.card = await p.evaluate(() => !!document.getElementById('s3V3New')); });
+    const c = srv.st.row.data, l = R.local; const bad = l ? Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(c)) !== JSON.stringify(g(l))).map(([k]) => k) : ['no local save'];
+    const lookSame = l && JSON.stringify(l.vlook) === JSON.stringify(c.vlook) && l.v3NewLook === c.v3NewLook;
+    row(L, 'a second device takes the cloud save', R.s && R.s.mem.user && !bad.length && lookSame, !R.s || !R.s.mem.user ? 'not signed in (mock not used?)' : bad.length ? 'differs: ' + bad.join(', ') : `signed in, took it: bank ${l.career.bank}, ${Object.keys(KEEP).length} fields, look and card flag equal${R.card ? '' : ''}`);
+    row(L, 'no page errors (second device)', !pe.length, pe.join(' | ')); }
+
+  // 2) stale write: A and B both have the save. A drops off the network for a bit (the pub's wifi); B makes progress and it reaches the
+  //    cloud; A, which never saw it, keeps saving while offline (a Locker change, or 4.26's hub redraw saves), then comes back and saves.
+  //    (A goes offline once it has the save and before B opens, so nothing of B's can reach A.) B's progress must survive in the cloud and on B. The live server rule compares save counters (sv): the device that saved more often
+  //    wins, so A's copy, with fewer matches and less money, replaces B's.
+  { const srv = cloudServer(); srv.st.row = { data: seed(), updated_at: new Date().toISOString() }; let R = {};
+    const until = async (p, who, f, ms) => { const t = Date.now(), n0 = srv.st.log.length; while (Date.now() - t < ms) { if (srv.st.log.slice(n0).some(x => x.who === who && f(x))) return Math.round((Date.now() - t) / 1000); await p.waitForTimeout(500); } return null; };
+    const settle = async p => { const t = Date.now(); let n = -1, at = Date.now(); while (Date.now() - t < 60000) { if (srv.st.log.length !== n) { n = srv.st.log.length; at = Date.now(); } else if (Date.now() - at > 6000) return Math.round((Date.now() - t) / 1000); await p.waitForTimeout(500); } return null; };
+    const pe = await session(b, 'iPhone 13', init, async (pa, TA) => { await open(pa, TA, srv, 'A'); await hub(pa); R.settleA = await settle(pa); srv.st.down.add('A'); R.a0 = await S(pa);
+      const peB = await session(b, 'Pixel 7', init, async (pb, TB) => { await open(pb, TB, srv, 'B'); await hub(pb); R.settle = await settle(pb); R.b0 = await S(pb); const n0 = srv.st.log.length;
+        await progress(pb, 250); R.bPushS = await until(pb, 'B', x => x.ok && x.bank === B0 + 250, 90000); R.b1 = await S(pb); R.cloudB = srv.st.row.data.career.bank; R.cloudSv = +(srv.st.row.data.sv || 0);
+        let k = 0; while (k < 40 && (await S(pa)).mem.sv <= R.cloudSv + 1) { await tweak(pa, k++); await pa.waitForTimeout(150); } R.aSaves = k;
+        await pa.waitForTimeout(3500); srv.st.down.delete('A'); await tweak(pa, k + 1); R.aPushS = await until(pa, 'A', () => true, 60000); await pa.waitForTimeout(1500); R.a1 = await S(pa);
+        R.cloudAfterA = srv.st.row.data.career.bank;
+        await progress(pb, 0); R.b2PushS = await until(pb, 'B', () => true, 90000); await pb.waitForTimeout(3000); R.b2 = await S(pb); R.cloudEnd = srv.st.row.data.career.bank;
+        R.log = srv.st.log.slice(n0); });
+      R.peB = peB; });
+    const want = B0 + 250, log = (R.log || []).map(x => `${x.who} sv${x.sv}${x.ok ? (x.direct ? ' direct' : ' ok') : ' refused(' + x.cv + ')'}`).join(', ');
+    const ok = R.cloudB === want && R.cloudEnd === want && R.b2 && R.b2.mem.bank === want;
+    row(L, 'an older device can\'t overwrite newer progress (stale write)', ok,
+      `B: bank ${B0} -> ${want}, in the cloud ${R.cloudB === want ? 'yes' : 'NO'} (sv ${R.cloudSv}); A, offline and not seeing it, saved ${R.aSaves}x (sv ${R.a1 && R.a1.mem.sv}), back online: cloud bank ${R.cloudAfterA}${R.cloudAfterA === want ? ' (kept)' : ' (B\'s progress LOST)'}; B's next save: cloud ${R.cloudEnd}, B shows ${R.b2 && R.b2.mem.bank}${R.b2 && R.b2.mem.bank !== want ? ' (LOST on B too)' : ''}${R.a1 && R.a1.tabsCard ? '; A showed the other-tab card (' + (R.a1.why || 'why not caught') + (R.a0 && R.a0.tabsCard ? ', already before B saved' : '') + ')' : ''}`);
+    // CAR-TABS' card is for two tabs of one browser; A is one tab on its own device, so the card there would be a false alarm
+    row(L, 'the older device carries on (no "open in another tab" card on a single tab)', R.a1 && !R.a1.tabsCard && R.a1.mem.bank === want, R.a1 ? `A ${R.a1.tabsCard ? 'shows the other-tab card (' + (R.a1.why || '?') + ')' : 'no card'}; A shows bank ${R.a1.mem.bank}${R.a1.mem.bank === want ? ' (B\'s progress)' : ''}` : 'not reached');
+    row(L, 'stale write: server log (info)', true, `quiet after ${R.settle} s; B's push reached the server after ${R.bPushS == null ? 'NEVER (90 s)' : R.bPushS + ' s'}; ${log}`.slice(0, 300));
+    row(L, 'no page errors (two devices)', !pe.length && !(R.peB || []).length, [...pe, ...(R.peB || [])].join(' | ')); }
+
+  // 3) the way back: a save made with the models on, opened by a device running the default-off release (v3=0), and pushed back
+  { const srv = cloudServer(); const on = { ...seed(), v3NewLook: 1763700000000, vlook: { v: 1, base: 'ray', body: 'skinny', hair: 'crop', skin: '#8d5a3b', at: 2 } }; srv.st.row = { data: on, updated_at: new Date().toISOString() };
+    let R = {}; const pe = await session(b, 'iPhone 13', init, async (p, T) => { await srv.attach(p, 'C'); await p.goto(URLQ + '&v3=0', { timeout: 180000 }); await T.ready();
+      await p.waitForFunction(() => window.NET && NET.user && save.career, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(2500); await hub(p); await p.waitForTimeout(1500);
+      await p.evaluate(() => { save.setup = save.setup || {}; save.setup.shaft = 'long'; persist(); }); await p.waitForTimeout(4500); R.v3 = await p.evaluate(() => !!window.TOPS_V3FLAG); });
+    const c = srv.st.row.data; const bad = Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(on)) !== JSON.stringify(g(c))).map(([k]) => k);
+    const same = JSON.stringify(c.vlook) === JSON.stringify(on.vlook) && c.v3NewLook === on.v3NewLook, pushed = srv.st.log.some(x => x.who === 'C' && x.ok);
+    row(L, 'models-on save through a models-off device and back to the cloud', !R.v3 && pushed && !bad.length && same, `models ${R.v3 ? 'ON (flag not off?)' : 'off'}; pushed ${pushed}; ${bad.length ? 'changed: ' + bad.join(', ') : Object.keys(KEEP).length + ' fields equal'}; look ${same ? 'and card flag kept' : 'or card flag LOST'}`);
+    row(L, 'no page errors (models-off device)', !pe.length, pe.join(' | ')); }
+}
+
 // ---------- V3: the models switch-on (Producer Sun 05:09, Director doc 69). Run on the switch-on candidate BEFORE the flip (default off;
 // ?v3=1 turns the models on for the test) so the same run answers "can the new models be the default?" and "is the way back safe?".
 const V3GATE = ['s3-v3newlook', 's3-v3heads', 's3-clip-cast', 's3-dart-cast', 'v3-cardart'];   // the models' own tests; a missing one = not on this build
 function v3gate() {
   for (const t of V3GATE) { const f = path.join(__dirname, t + '.js'); if (!fs.existsSync(f)) { row('v3 gate', t, false, 'not on this build (tests/' + t + '.js missing)'); continue; }
     const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
-    const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
+    const all = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean); let last = all[all.length - 1] || '';
+    // a crash ends in node's "Node.js vX" footer: show the error line instead (the 44939483830 s3-v3heads row said only that)
+    if (r.status !== 0 && /^Node\.js v/.test(last)) last = [...all].reverse().find(x => /(Error|FAIL|Timeout)[:\s]/.test(x) && !/^\s+at /.test(x)) || last;
     row('v3 gate', t, r.status === 0, `${r.status === 0 ? '' : 'exit ' + (r.status == null ? r.signal : r.status) + ': '}${last.slice(0, 200)} [${Math.round((Date.now() - s) / 1000)} s]`); }
   // v3-parity: default players see exactly the baseline (the live build): every figure's meshes, materials and pixels, and every clip
   const base = process.env.BASELINE && path.resolve(process.env.BASELINE), f = path.join(__dirname, 'v3-parity.js');
   if (!fs.existsSync(f)) row('v3 gate', 'v3-parity', false, 'not on this build');
   else if (!base || !fs.existsSync(path.join(base, 'index.html'))) row('v3 gate', 'v3-parity', false, 'no baseline build (BASELINE=<dir of the live build>)');
   else { const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, base, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
-    const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
+    const all = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean); let last = all[all.length - 1] || '';
+    // a crash ends in node's "Node.js vX" footer: show the error line instead (the 44939483830 s3-v3heads row said only that)
+    if (r.status !== 0 && /^Node\.js v/.test(last)) last = [...all].reverse().find(x => /(Error|FAIL|Timeout)[:\s]/.test(x) && !/^\s+at /.test(x)) || last;
     row('v3 gate', 'v3-parity (default players = the live build)', r.status === 0, `${last.slice(0, 200)} [${Math.round((Date.now() - s) / 1000)} s]`); }
 }
 // the three live Season 3 saves' creator choices (shapes from the db: look fields only)
@@ -399,8 +502,8 @@ if (process.argv[2] === '--merge') {
   const t0 = Date.now(); const ver = (() => { try { return (fs.readFileSync(path.join(dir, 'v051.js'), 'utf8').match(/TOPS_VER='([^']+)'/) || [])[1]; } catch (e) { return null; } })();
   if (PARTS.includes('gate')) gate();
   if (PARTS.includes('v3gate')) v3gate();
-  if (PARTS.includes('saves') || PARTS.includes('phones') || PARTS.includes('v3saves')) { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-    try { if (PARTS.includes('v3saves')) { await v3saves(b); await v3today(b); } if (PARTS.includes('saves')) await saves(b); if (PARTS.includes('phones')) await phones(b); } finally { await b.close(); } }
+  if (['saves', 'cloud', 'phones', 'v3saves'].some(x => PARTS.includes(x))) { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
+    try { if (PARTS.includes('v3saves')) { await v3saves(b); await v3today(b); } if (PARTS.includes('saves')) await saves(b); if (PARTS.includes('saves') || PARTS.includes('cloud')) await cloud(b); if (PARTS.includes('phones')) await phones(b); } finally { await b.close(); } }
   const nFail = rows.filter(r => !r.ok).length; const out = { version: ver, flag: NOFLAG ? 'no flag' : 's3x=1', at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), pass: !nFail, rows };
   if (process.env.QA_SABOTAGE) console.log('sabotage: ' + JSON.stringify(out_sab));
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
