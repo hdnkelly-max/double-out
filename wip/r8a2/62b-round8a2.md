@@ -54,5 +54,10 @@ v2 default untouched: every change sits behind `TOPS_V3FLAG`. Tests on this buil
 2. Skin: is peach right now per base? More form (`TOPS_SKINFORM` .45)?
 3. Score the five.
 
-## Tests (this build)
-Running at posting: v3-parity (v2 default), s3-dart-hair all bases (Mia63 on), s3-clip-cast. Mia-only dart-hair already PASS 8.5 mm.
+## Tests (this build, a69e8a8)
+
+| Test | Result |
+|---|---|
+| v3-parity vs 4.18 (v2 default) | **PASS**: 13 figures identical; 2,470 clip frames through V2POST identical at 0.01 mm |
+| s3-dart-hair, all bases + 3 opponents, Mia63 on | **PASS**, 17,312 samples: Mia 8.5 mm, Dazza 22.2 mm, Tama 85.7 mm, others 99 mm |
+| s3-clip-cast | **PASS**: 12 figures × 19 clips, 34.6 M checks |
