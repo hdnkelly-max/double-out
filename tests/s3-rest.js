@@ -26,10 +26,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       const v1 = TOPS_S3.view(); if (!v1.calendar.length) o.grid.push({ lv, w, stillEmpty: v1.week }); if (had && v1.week !== w) o.grid.push({ lv, w, weekChanged: v1.week }); }
     // every week a rest lands on (and every week with an event) can actually be booked: calendar() is the eligibility gate
     o.book = []; for (let lv = 0; lv <= 6; lv++) for (let w = 1; w <= 120; w++) { k.level = lv; k.week = w; k.live = null; c.bank = 999999; if (TOPS_S3.view().rest) TOPS_S3.rest(); const ev = TOPS_S3.view().calendar[0]; const bk = ev && TOPS_S3.book(ev.id); if (!bk || !bk.ok) o.book.push({ lv, w, ev: ev && ev.id, bk }); k.live = null; }
+    k.level = 6; k.week = 17; k.live = null; o.palace = TOPS_S3.rest(); // before any Worlds is in the history (no time travel)
     // Palace arrivals late in the cycle and after a Worlds was already played
     o.palaceLate = [106, 157, 200].map(w => { k.level = 6; k.week = w; k.live = null; const rr = TOPS_S3.view().rest ? TOPS_S3.rest() : { ok: true, to: w }; return { w, to: rr.to, ok: rr.ok }; });
     k.level = 6; k.week = 52; k.live = null; c.bank = 999999; TOPS_S3.book('worlds'); TOPS_S3._playNow(); S.won = false; S.p[0].legs = 0; S.p[0].darts = 30; S.p[0].pts = 300; careerAfterMatch(); S.done = true; o.afterWorlds = { week: k.week, rest: TOPS_S3.view().rest, r: TOPS_S3.rest(), cal: TOPS_S3.view().calendar.map(e => e.id) };
-    k.level = 6; k.week = 17; o.palace = TOPS_S3.rest();
     // 3 broke at DPNZ with an advance owed
     k.level = 3; k.week = 5; k.live = null; c.bank = 50; k.debt = 120; o.adv = TOPS_S3.advance(); const v = TOPS_S3.view(); o.offer = v.recover;
     const b0 = c.bank; o.rec = TOPS_S3.recover(); o.bankAfterRec = c.bank - b0; o.debt1 = k.debt; o.live = !!k.live;
@@ -70,8 +70,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (r.grid.length) f.push('1 levels/weeks not reaching an event in one action: ' + JSON.stringify(r.grid.slice(0, 5)) + ' (' + r.grid.length + ')');
     if (!r.palace || !r.palace.ok || r.palace.to !== 52) f.push('1 Palace week 17 -> 52: ' + JSON.stringify(r.palace));
     if (r.book.length) f.push('1 a week with an event could not be booked: ' + JSON.stringify(r.book.slice(0, 3)));
-    if (JSON.stringify(r.palaceLate.map(x => x.to)) !== JSON.stringify([156, 157, 208])) f.push('1 late Palace arrivals ' + JSON.stringify(r.palaceLate));
-    if (r.afterWorlds.week !== 53 || r.afterWorlds.rest || r.afterWorlds.cal[0] !== 'worlds') f.push('1 after losing the Worlds at week 52 the next one should be on (week 53 is a Worlds week) ' + JSON.stringify(r.afterWorlds));
+    if (JSON.stringify(r.palaceLate.map(x => x.to)) !== JSON.stringify([156, 208, 208])) f.push('1 late Palace arrivals (the Worlds is on week 52 of each year only) ' + JSON.stringify(r.palaceLate));
+    // car-worlds (CAR-WEAK 3): a lost Worlds goes back to the DPNZ Tour, so week 53 has the weekly DPNZ events (no rest)
+    if (r.afterWorlds.week !== 53 || r.afterWorlds.rest || !/^dpnz_/.test(r.afterWorlds.cal[0] || '')) f.push('1 after losing the Worlds at week 52 the DPNZ Tour should be on at week 53 ' + JSON.stringify(r.afterWorlds));
     if (r.adv.ok) f.push('3 the advance should be refused while one is owed');
     if (!r.offer || !r.rec.ok || r.bankAfterRec !== 0 || r.debt1 !== 120 + r.rec.cost || !r.live) f.push('3 recovery entry ' + JSON.stringify({ offer: r.offer, rec: r.rec, bank: r.bankAfterRec, debt: r.debt1 }));
     if (r.afterLoss.live || !r.afterLoss.offer) f.push('3 after a loss the recovery entry is gone (dead end) ' + JSON.stringify(r.afterLoss));

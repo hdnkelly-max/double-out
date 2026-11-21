@@ -99,7 +99,10 @@
   // what's on this week at your level (and the next level's events you've been invited to)
   function calendar(c) {
     const L = LEVELS[c.level];
-    return L.events.filter(e => (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1))
+    // events every 2-6 weeks are open for two weeks (the week and the one after); a yearly event (every 52: the Worlds, Q-School) runs on
+    // ONE week a year; finishing any event moves the week on, so it can't be entered twice (Q&D P1: on weeks 52 and 53 a World Champion could book and win the Worlds again straight away)
+    return L.events.filter(e => (e.every >= 52 ? c.week % e.every === 0 && !playedEdition(c, e)
+        : (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1)))
       && !(e.once && c.history.some(h => h.id === e.id)) && !(e.needCard && !c.card) && !(e.card && c.card))
       .map(e => Object.assign({ level: c.level, cost: cost(e), canAfford: c.bank >= cost(e) }, e));
   }
@@ -141,7 +144,7 @@
     c.pts[L.id] = c.res[L.id].slice().sort((a, b) => b - a).slice(0, BEST_N[L.id] || 99).reduce((s, x) => s + x, 0);
     if (OOM_BY_MONEY[L.id]) c.oom[L.id] = (c.oom[L.id] || 0) + prize;
     if (e.card && (fin === 'W' || fin === 'F' || fin === 'SF')) c.card = true;
-    const rec = { week: c.week, id: e.id, n: e.n, level: e.level, fin, prize, pts, cost: cost(e) };
+    const rec = { week: c.week, id: e.id, n: e.n, level: e.level, fin, prize, pts, cost: cost(e) }; if (e.every >= 52) rec.ed = edition(e, c.week);
     c.history.push(rec); c.live = null; c.booked = null; c.week++;
     const up = checkUp(c, e, fin);
     return Object.assign({ done: true, fin, finName: FIN_NAME[fin], prize, pts }, up ? { up } : {});
@@ -155,13 +158,24 @@
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
       newDpnzSeason(c); return { to: 3, n: 'DPNZ Tour', msg: 'Finished #' + r + '. A new DPNZ season: 40% of your points roll over' }; }
-    if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;
+    // CAR-WEAK 3 (1): a lost Worlds sends you back to the DPNZ Tour for a new season (40% of your DPNZ points carried, as after the
+    // Trans-Tasman), instead of a year of rest weeks at the Palace. Back to the Palace the same ways: OOM #1, or the Trans-Tasman final.
+    if (L.id === 'palace') { if (fin === 'W') return { champion: true, msg: 'World Champion. Champion’s Year starts next season' };
+      newDpnzSeason(c); const r = promote(c, 3, 'Out of the Worlds in the ' + (fin === 'F' ? 'final' : FIN_NAME[fin].toLowerCase()) + '. Back to the DPNZ Tour for a new season: 40% of your points roll over. Finish #1, or make the Trans-Tasman final, to go back to the Palace');
+      r.fromWorlds = fin; return r; }
     if (played >= L.minEv && ((c.pts[L.id] || 0) >= L.need || (e.jump && fin === 'W'))) return promote(c, c.level + 1, 'Up to ' + LEVELS[c.level + 1].n);
     return null;
   }
   const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
   const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
-  function newDpnzSeason(c) { c.dpnzEv = 0; const carry = Math.round((c.pts.dpnz || 0) * .4); c.res = c.res || {}; c.res.dpnz = carry ? [carry] : []; c.pts.dpnz = carry; c.dpnzYear = (c.dpnzYear || 0) + 1; }
+  // Championship-year identity (Hayden 15:10, doc 46): a yearly event (every 52: the Worlds, Q-School) has one edition per cycle,
+  // edition = floor(week / 52). Each history record carries its edition, and an edition already played can't be entered again,
+  // so weeks 52 and 53 (or any repeat) can never be two claimable titles.
+  const edition = (e, week) => e.every >= 52 ? Math.floor(week / e.every) : null;
+  const playedEdition = (c, e) => (c.history || []).some(h => h.id === e.id && (h.ed != null ? h.ed : edition(e, h.week)) === edition(e, c.week));
+  // carry into a new DPNZ season: 40%, capped below the Palace route so a new season always needs new results (doc 46)
+  const DPNZ_CARRY = .4, DPNZ_CARRY_CAP = 300;
+  function newDpnzSeason(c) { c.dpnzEv = 0; const carry = Math.min(DPNZ_CARRY_CAP, Math.round((c.pts.dpnz || 0) * DPNZ_CARRY)); c.res = c.res || {}; c.res.dpnz = carry ? [carry] : []; c.pts.dpnz = carry; c.dpnzYear = (c.dpnzYear || 0) + 1; }
   const GRANT = [0, 60, 450, 900, 850, 0, 3000]; // paid when you arrive at a level: rep-squad fund, DPNZ travel subsidy, NZ team flights, Palace travel
   function promote(c, to, msg) { c.grants = c.grants || {}; const g = to > c.level && !c.grants[to] ? GRANT[to] : 0; if (g) c.grants[to] = 1; c.level = to; c.bank += g; return { to, n: LEVELS[to].n, msg, grant: g }; }
   // hardship advance: two entries at your level, paid back from half of each prize until cleared (once at a time)
@@ -213,6 +227,6 @@
     return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
   }
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, edition, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
