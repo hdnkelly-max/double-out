@@ -58,9 +58,7 @@ jobs:
           CUR=$(grep " live version=" RELEASES.log | tail -1 || true)
           CV=$(echo "$CUR" | grep -o "version=[^ ]*" | cut -d= -f2); CT=$(echo "$CUR" | grep -o "tag=[^ ]*" | cut -d= -f2)
           [ -n "$CV" ] && [ -n "$CT" ] || { echo "::error::ROLLBACK REFUSED: no live release in RELEASES.log"; exit 1; }
-          # main's record must match what players have now; anything else is a state a human has to look at first
           LV=$(curl -fsS "${U}version.json?cb=$RANDOM" | python3 -c "import json,sys;print(json.load(sys.stdin).get('v',''))" || true)
-          [ "$LV" = "$CV" ] || { echo "::error::ROLLBACK REFUSED: live shows v$LV but main's last live release is v$CV ($CT); check by hand first"; exit 1; }
           if [ "$MODE" = redeploy_current ]; then T=$CT; TV=$CV
           else
             if [ -n "$TO" ]; then L=$(grep " live version=[^ ]* tag=$TO " RELEASES.log | tail -1 || true); [ -n "$L" ] || { echo "::error::ROLLBACK REFUSED: $TO is not a live release in RELEASES.log"; exit 1; }
@@ -68,23 +66,28 @@ jobs:
             T=$(echo "$L" | grep -o "tag=[^ ]*" | cut -d= -f2); TV=$(echo "$L" | grep -o "version=[^ ]*" | cut -d= -f2)
             [ "$TV" != "$CV" ] || { echo "::error::ROLLBACK REFUSED: $T is the version live now (v$CV); use mode redeploy_current for that"; exit 1; }
           fi
+          # main's record must match what players have now. One exception (ChatGPT B-P1): a re-run of a rollback whose deploy landed
+          # but whose verify or main push then failed: live already shows the target and main still says v$CV. Then skip the deploy,
+          # verify and restore main (that's the recovery for both gaps: re-run with the same inputs).
+          ALREADY=; if [ "$LV" = "$CV" ]; then :; elif [ "$MODE" = rollback ] && [ "$LV" = "$TV" ]; then ALREADY=1; echo "::warning::live already shows the target v$TV while main still says v$CV: reconciling main (no deploy)"
+          else echo "::error::ROLLBACK REFUSED: live shows v$LV but main's last live release is v$CV ($CT)${TV:+ and the target is v$TV}; check by hand first"; exit 1; fi
           git rev-parse -q --verify "$T^{commit}" >/dev/null || { echo "::error::ROLLBACK REFUSED: tag $T not found"; exit 1; }
           git worktree add -q ../rb "$T"
           GV=$(python3 -c "import json;print(json.load(open('../rb/version.json')).get('v',''))")
           [ "$GV" = "$TV" ] || { echo "::error::ROLLBACK REFUSED: $T's version.json says v$GV, RELEASES.log says v$TV"; exit 1; }
-          { echo "t=$T"; echo "tv=$TV"; echo "cv=$CV"; echo "ct=$CT"; echo "url=$U"; } >> "$GITHUB_OUTPUT"
+          { echo "t=$T"; echo "tv=$TV"; echo "cv=$CV"; echo "ct=$CT"; echo "url=$U"; echo "already=$ALREADY"; } >> "$GITHUB_OUTPUT"
           echo "ROLLBACK-TARGET mode=$MODE version=$TV tag=$T from=$CV ($CT)"
           { echo "### ROLLBACK $MODE: v$CV ($CT) -> v$TV ($T)"; echo "reason: $REASON"; } >> "$GITHUB_STEP_SUMMARY"
           [ "$MODE" != check ] || echo "check only: nothing deployed, nothing pushed" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v3
-        if: inputs.mode != 'check'
+        if: inputs.mode != 'check' && steps.pick.outputs.already != '1'
         with: { path: rb, name: 'rollback-site-${{ github.run_attempt }}' }
       - name: Wait until the artifact is listed
-        if: inputs.mode != 'check'
+        if: inputs.mode != 'check' && steps.pick.outputs.already != '1'
         env: { N: 'rollback-site-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
         run: eval "$WAIT_ART"
       - id: d1
-        if: inputs.mode != 'check'
+        if: inputs.mode != 'check' && steps.pick.outputs.already != '1'
         uses: actions/deploy-pages@v4
         continue-on-error: true
         with: { artifact_name: 'rollback-site-${{ github.run_attempt }}' }
@@ -116,7 +119,7 @@ jobs:
         with: { artifact_name: 'rollback-site-retry-${{ github.run_attempt }}' }
       - name: Verify it is live (version.json = the target, its rig if it names one, a headless load with no page errors)
         id: verify
-        if: inputs.mode != 'check' && (steps.d1.outcome == 'success' || steps.d2.outcome == 'success' || steps.d3.outcome == 'success')
+        if: inputs.mode != 'check' && (steps.pick.outputs.already == '1' || steps.d1.outcome == 'success' || steps.d2.outcome == 'success' || steps.d3.outcome == 'success')
         env: { TV: '${{ steps.pick.outputs.tv }}', U: '${{ steps.pick.outputs.url }}' }
         run: |
           set -euo pipefail
@@ -145,11 +148,11 @@ jobs:
           # a new 'live' line for the target, so release.yml's own rollback (last live release) and the next version both read it right
           echo "$(date -u +%FT%TZ) live version=$TV tag=$T rollback-of=$CV run=${{ github.run_id }} by=${{ github.actor }} reason=$REASON" >> RELEASES.log
           git add RELEASES.log; git commit -qm "rollback: v$CV -> v$TV ($T) by ${{ github.actor }}: $REASON (rollback run ${{ github.run_id }})"
-          git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; live is v$TV but main still holds v$CV: restore main by hand before any hand push"; exit 1; }
+          git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; live is v$TV but main still holds v$CV. RECOVERY: re-run this workflow with the same inputs (it sees v$TV live and reconciles main). Don't hand-push main meanwhile."; exit 1; }
           { echo "main restored to $T site files ($(git rev-parse --short HEAD))"; echo "**src still holds v$CV's code: the next release ships it again unless src is fixed first (rel-v3-off for the v3 flag).**"; } >> "$GITHUB_STEP_SUMMARY"
       - name: Rollback not confirmed (state for a human)
         if: failure() && steps.pick.outcome == 'success' && inputs.mode != 'check' && steps.verify.outcome != 'success'
         env: { TV: '${{ steps.pick.outputs.tv }}', CV: '${{ steps.pick.outputs.cv }}', T: '${{ steps.pick.outputs.t }}' }
         run: |
-          echo "::error::ROLLBACK NOT CONFIRMED: deploying $T (v$TV) could not be verified. main is unchanged and still says v$CV; live may be v$CV or v$TV. Check the live version.json first."
-          { echo "### ROLLBACK NOT CONFIRMED"; echo "main unchanged (v$CV); live uncertain (v$CV or v$TV)."; } >> "$GITHUB_STEP_SUMMARY"; exit 1
+          echo "::error::ROLLBACK NOT CONFIRMED: deploying $T (v$TV) could not be verified. main is unchanged and still says v$CV; live may be v$CV or v$TV. RECOVERY: re-run this workflow with the same inputs. If live shows v$TV by then it skips the deploy and reconciles main; if live still shows v$CV it deploys again. Don't hand-push main meanwhile."
+          { echo "### ROLLBACK NOT CONFIRMED"; echo "main unchanged (v$CV); live uncertain (v$CV or v$TV). Recovery: re-run with the same inputs (it reconciles main if v$TV is live, else deploys again)."; } >> "$GITHUB_STEP_SUMMARY"; exit 1
