@@ -20,8 +20,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     for (let k = 0; k < 3; k++) { await p.evaluate(() => { save.name = 'Hayden'; save.lessonDone = true; newCareer(); save.vlook = { v: 1, base: 'mia', shirt: 0xd7232d, acc: [], at: Date.now() }; persist(); }); await p.waitForTimeout(3000); if (await stored()) break; }
     if (!(await stored())) fail.push(w + ': the existing save did not stick');
     await title(p); await p.waitForTimeout(2000); const off = await card(p); out['off' + w] = off; if (off) fail.push(w + ': card shows with v3 off');
-    const lk0 = await p.evaluate(() => ({ shirt: TOPS_RB.myShirt(), fem: TOPS_RB.meFem() })); out['lk0' + w] = lk0; await p.close();
-    p = await page(ctx, '1'); await title(p); await p.waitForSelector('#s3V3New', { timeout: 6000 }).catch(() => {}); await p.waitForTimeout(400); const on = await card(p); out['on' + w] = on;
+    const lk0 = await p.evaluate(() => ({ shirt: TOPS_RB.myShirt(), fem: TOPS_RB.meFem() })); out['lk0' + w] = lk0;
+    // v3 switches on: the same tab reloads with the flag (a fresh tab under file:// doesn't reliably see the last tab's storage in headless Chromium)
+    await p.goto('file://' + dir + '/index.html?s3=1&v3=1', { timeout: 180000 }); await p.waitForFunction(() => window.TC_API && window.TOPS_S3 && window.TOPS_S3UI, null, { timeout: 180000 }); await p.waitForTimeout(1500);
+    if (!(await stored())) fail.push(w + ': the save was lost on reload'); await title(p); await p.waitForSelector('#s3V3New', { timeout: 6000 }).catch(() => {}); await p.waitForTimeout(400); const on = await card(p); out['on' + w] = on;
     if (!on || !/^hayden new look, same you we’ve rebuilt every player and opponent from the ground up: new faces, new hair, more personality\. your career, cards and stats haven’t changed\. let’s go tweak my look$/i.test(on.t) || !on.img || !on.fits || on.wide || on.ink !== 'rgb(243, 244, 242)') fail.push(w + ' card ' + JSON.stringify(on));
     const lk1 = await p.evaluate(() => ({ shirt: TOPS_RB.myShirt(), fem: TOPS_RB.meFem() })); out['lk1' + w] = lk1;
     if (lk1.shirt !== '#d7232d' || lk1.fem !== true) fail.push(w + ' v3 Locker look ' + JSON.stringify(lk1)); if (lk0.shirt === '#d7232d' && lk0.fem === true) fail.push(w + ' v3 off already uses the v3 look ' + JSON.stringify(lk0));
