@@ -176,8 +176,8 @@
     return `<article class="s3-post">
       <div class="s3-part" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}">${e.jump ? '<span class="s3-tag">Win it to move up</span>' : ''}<h3>${esc(e.n)}</h3></div>
       <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
-        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
-        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
+        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${e.funded && !e.cost ? 'Paid' : money(e.cost)}</b><span>${e.funded ? 'qualifier’s trip' : e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
+        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${e.funded && !e.cost ? 'trip paid' : money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
           : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
       </div></article>`;
   }
@@ -442,7 +442,7 @@
       <div class="s3-fnb">
         <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${C.oppAvg(e.level, 0, n, e.field)} · best of ${L.legs} legs</span></div></div>` : ''}
           <span class="s3-fnl">Win ${n} matches to take it</span><ol class="s3-fndraw">${draw}</ol>
-          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(C.cost(e))}</b><span>entry, paid</span></div></div></div>
+          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(lv.paid != null ? lv.paid : C.cost(e))}</b><span>entry, paid</span></div></div></div>
         ${L.need ? `<div class="s3-fnc"><span class="s3-fnl">How you move up</span><ol class="s3-fnlad">${lad}</ol>
           <div class="s3-fnrow"><span class="s3-fnsm">${esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points')}</span><b>${have} / ${L.need}</b></div><div class="s3-fnbar"><i style="width:${Math.min(100, 100 * have / L.need)}%"></i></div>
           <span class="s3-fnsm">${esc(L.up.replace(/\.$/, ''))}${C.LEVELS[e.level + 1] ? ', and you\'re up to the ' + esc(C.LEVELS[e.level + 1].n) : ''}.<span class="s3-fnmore"> Each week you pick an event, pay to enter and climb toward the Palace.</span></span></div>` : ''}

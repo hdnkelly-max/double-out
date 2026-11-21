@@ -22,7 +22,7 @@ const XPMUL = [1, 1.25, 1.5, 2, 2.5, 3.5, 5], CAPS = [40, 50, 60, 68, 75, 80, 82
 const lvNeed = L => Math.round(150 + 25 * L + .6 * L * L), gainAt = v => Math.max(2, Math.min(6, Math.round((100 - v) / 9)));
 // the game maps every career opponent into its tier band (v11.js v1.77 shift, Season 2 and 3 alike): Pub QF 44 plays as 54
 const BAND = [[50, 58], [56, 64], [62, 70], [68, 76], [74, 82], [80, 90], [88, 100]], CEN = [58, 63, 69, 76, 84, 91, 97], TAVG = [52, 65, 75, 85, 91, 95, 101];
-const CENX = process.env.CEN ? JSON.parse(process.env.CEN) : null;
+let CENX = process.env.CEN ? JSON.parse(process.env.CEN) : null; // else the engine's Season 3 FIELD_CEN when it has one (set below)
 const shift = (v, k) => { if (CENX) { const [lo, hi] = BAND[k], c0 = CENX[k], adj = c0 - (lo + hi) / 2, rel = Math.max(-10, Math.min(10, v - TAVG[k])) * .5; return Math.round(Math.max(Math.max(20, lo + adj), Math.min(hi + adj, c0 + rel))); } const [lo, hi] = BAND[k], adj = CEN[k] - (lo + hi) / 2, rel = Math.max(-10, Math.min(10, v - TAVG[k])) * .5; return Math.round(Math.max(Math.max(20, lo + adj), Math.min(hi + adj, CEN[k] + rel))); };
 const PALACE_BACK = ["if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;",
   "if (L.id === 'palace') { if (fin === 'W') return { champion: true, msg: 'World Champion. Champion’s Year starts next season' }; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour'); }"];
@@ -47,8 +47,13 @@ const VARIANTS = {
 
   // the engine exactly as it is on this branch (car-worlds: the lost-Worlds rule in tc/circuit.js), no patches
   branch: { raw: true },
-  branch_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000']] }, branch_pub6_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000'], ['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 6,']] },
-  branch_pub6: { raw: true, text: [['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 6,']] }, branch_pub5: { raw: true, text: [['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 5,']] },
+  // CAR-OPP pace levers on top of the gate (Producer 22:21), all raw = this branch
+  gateKeep: { raw: true, text: [['function newDpnzSeason(c) { c.dpnzEv = 0; c.dpnzF = 0; c.dpnzSF = 0;', 'function newDpnzSeason(c) { c.dpnzEv = 0;'], ['function promote(c, to, msg) { if (to === 6) c.wfund = nextWorldsEd(c.week);', 'function promote(c, to, msg) { if (to === 6) { c.wfund = nextWorldsEd(c.week); c.dpnzF = 0; c.dpnzSF = 0; }']] },
+  gateRoute350: { raw: true, text: [['const DPNZ_ROUTE = 400,', 'const DPNZ_ROUTE = 350,']] },
+  gateSF1: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2;', 'const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1;']] },
+  noGate: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2;', 'const routeGate = c => true;']] },
+  branch_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000']] }, branch_pub6_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000'], ['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 6,']] },
+  branch_pub6: { raw: true, text: [['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 6,']] }, branch_pub5: { raw: true, text: [['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 5,']] },
   // (1) a lost Worlds sends you back to the DPNZ Tour (new season, 40% carry)
   worldsBack: { text: [PALACE_BACK] },
   // DPNZ season length (OOM decided after N events instead of 8)
@@ -104,7 +109,7 @@ function career(E, curve, cap) {
 }
 const want = (process.argv[4] || Object.keys(VARIANTS).join(',')).split(',');
 const res = {};
-for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {};
+for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {}; if (!process.env.CEN) CENX = E.FIELD_CEN || null;
   for (const who of Object.keys(CURVES)) { const runs = []; for (let i = 0; i < N; i++) runs.push(career(E, CURVES[who], 400));
     const q = (a, p) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(p * (s.length - 1))] : null; };
     const pa = runs.map(r => r.palaceAt).filter(x => x != null);
@@ -113,6 +118,6 @@ for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {};
       const fe = [].concat(...xs.map(x => x.fv.slice(0, 10))), fx = [].concat(...xs.filter(x => x.up).map(x => x.fv.slice(-10))); const mean = a => a.length ? +(a.reduce((p, q) => p + q, 0) / a.length).toFixed(2) : null;
       lvl[L] = { reached: xs.length, up: xs.filter(x => x.up).length, cIn: mean(fe), cOut: mean(fx), m1: q(xs.map(x => x.fv.length), .5), mMed: q(xs.map(x => x.m), .5), m1Med: q(xs.map(x => x.m1 || 0), .5), evMed: q(xs.map(x => x.ev), .5), win: +(xs.reduce((s, x) => s + x.w, 0) / xs.reduce((s, x) => s + x.m, 0)).toFixed(2),
         entry: f.length ? +(f.reduce((s, x) => s + x, 0) / f.length).toFixed(2) : null, exit: l.length ? +(l.reduce((s, x) => s + x, 0) / l.length).toFixed(2) : null }; }
-    res[v][who] = { palace: pa.length + '/' + N, toPalaceP50: q(pa, .5), toPalaceP25: q(pa, .25), toPalaceP75: q(pa, .75), champ: runs.filter(r => r.champion).length + '/' + N,
+    res[v][who] = { palace: pa.length + '/' + N, toPalaceP50: q(pa, .5), toPalaceP90: q(runs.map(r => r.palaceAt == null ? 9999 : r.palaceAt), .9), stuck150: runs.filter(r => r.palaceAt == null || r.palaceAt > 150).length, toPalaceP25: q(pa, .25), toPalaceP75: q(pa, .75), champ: runs.filter(r => r.champion).length + '/' + N,
       matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), qualsP50: q(runs.map(r => r.quals || 0), .5), gapP50: q([].concat(...runs.map(r => r.gaps || [])), .5), stalls: runs.filter(r => /stall/.test(r.end || '')).length, recP50: q(runs.map(r => r.rec), .5), recPubP50: q(runs.map(r => r.recPub), .5), cappedP50: q(runs.map(r => r.capped), .5), debtMaxP50: q(runs.map(r => r.debtMax), .5), debtMaxP90: q(runs.map(r => r.debtMax), .9), debtMaxMax: Math.max(...runs.map(r => r.debtMax)), debtEndP50: q(runs.map(r => r.debtEnd), .5), recPtsP50: q(runs.map(r => r.recPts), .5), reachClub: runs.filter(r => r.maxLevel >= 1).length, reachDpnz: runs.filter(r => r.maxLevel >= 3).length, clubAtP50: q(runs.map(r => r.lv[0] ? r.lv[0].m : null).filter(x => x != null), .5), lvl }; } }
 console.log(JSON.stringify(res));
