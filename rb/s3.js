@@ -94,6 +94,8 @@
     book(id) { if (!isDev()) return API().book(id); const r = CI().book(devState(), id); devSave(); return r; },
     play() { if (!isDev()) { if (!API().play()) toast('<b>Can\'t walk on</b><span>The event isn\'t running</span>'); return; } devTap = 1; render(); },
     advance() { if (!isDev()) return API().advance(); const r = CI().advance(devState()); devSave(); return r; },
+    rest() { if (!isDev()) return API().rest(); const r = CI().restWeek(devState()); devSave(); return r; },
+    recover() { if (!isDev()) return API().recover(); const r = CI().recoveryEntry(devState()); devSave(); return r; },
     moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) { console.warn('s3 money match', e); } },
     devResult(won) { const r = CI().result(devState(), won); devSave(); devTap = 0; return r; }
   };
@@ -131,7 +133,7 @@
     <div class="rb-card s3-prog">
       ${need ? `<div class="s3-row"><span class="s3-lab">To move up · ${bestTxt}</span><b class="s3-num">${have} <small>/ ${need} pts</small></b></div><div class="rb-bar"><i style="width:${Math.min(100, 100 * have / need)}%"></i></div>` : ''}
       <span class="rb-sub">${esc(L.up)}</span>
-      ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
+      ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
       <ol class="s3-ladder" aria-label="The seven levels, you're on ${esc(L.n)}">${ladder}</ol>
     </div>`;
     const isO = L.oom || L.id === 'tt';
@@ -148,10 +150,17 @@
     return `<button type="button" class="s3-trchip" data-s3="troph">${CUP(w ? 'W' : 'F', 's3cupchip')}<span>${w ? w + ' title' + (w > 1 ? 's' : '') : f + ' final' + (f > 1 ? 's' : '')}</span><i aria-hidden="true">›</i></button>`; }
   function week(c) {
     const C = CI(), cal = C.calendar(c);
-    let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
-    if (!cal.length) h += `<div class="rb-card"><span class="rb-t2">Nothing on at this level this week</span></div>`;
-    if (C.broke(c)) h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">A money match in the back room pays for the next one. Or take the hardship advance: two entries, paid back from half of each prize.</span>
-      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button></div></div>`;
+    /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
+    if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
+      return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${gap > 1 ? gap + ' weeks away' : 'next week'}.</span>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
+    let h = '';
+    /* CAR-DEADWK layout (Q&D): when broke, the way out comes first, above the posters you can't afford */
+    if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
+      h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
+      ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
+    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
     return h;
   }
   function poster(c, e) {
@@ -242,7 +251,7 @@
     const rows = hs.map(h => `<li><span><b>${esc(h.n)}</b><small>Week ${h.week} · ${esc(C.FIN_NAME[h.fin])}</small></span><span class="s3-neg">−${money(h.cost)}</span><span class="s3-pos">${h.prize ? '+' + money(h.prize) : '$0'}</span></li>`).join('');
     return `<div class="rb-card s3-bank"><span class="s3-lab">Tour budget</span><b class="s3-huge">${money(c.bank)}</b><span class="rb-sub">${runTxt} (avg trip ${money(avg)})</span>
         <div class="rb-bar"><i style="width:${Math.min(100, run / 8 * 100)}%"></i></div>
-        ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
+        ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
       <div class="rb-card"><span class="rb-t2">Every dollar has a job</span><span class="rb-sub">Entry and travel are paid when you book. Prize money comes from how far you get. Moving up a level pays a one-off travel grant.</span></div>
       <div class="rb-card"><div class="s3-row"><span class="rb-t2">In and out</span><span class="rb-sub">${hs.length ? `last ${hs.length}: <span class="s3-pos">+${money(tin)}</span> · <span class="s3-neg">−${money(tout)}</span>` : ''}</span></div>
         ${rows ? `<ol class="s3-res s3-mon">${rows}</ol>` : `<span class="rb-sub">Nothing yet. Book an event on the Circuit tab.</span>`}</div>`;
@@ -393,9 +402,11 @@
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
     const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
     app.querySelectorAll('[data-s3dev]').forEach(b => b.onclick = () => { D.devResult(b.dataset.s3dev === '1'); render(); });
-    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3;
+    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3; if ((k === 'rest' || k === 'rec') && b.dataset.busy) return; if (k === 'rest' || k === 'rec') { b.dataset.busy = 1; b.disabled = true; } /* one tap acts once */
       if (k === 'mm') D.moneyMatch();
       else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rest') { const r = D.rest(); if (!r || !r.ok) toast(`<b>Can't move on</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rec') { const r = D.recover(); if (r && r.ok) { toast(`<b>Entered · ${money(r.cost)} covered</b><span>Half of each prize pays it back</span>`); render(); D.play(); } else { toast(`<b>No recovery entry</b><span>${esc((r && r.why) || '')}</span>`); render(); } }
       else if (k === 'hist') histSheet();
       else if (k === 'troph' && nav) nav('locker', 'troph'); });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
