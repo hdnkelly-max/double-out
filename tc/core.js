@@ -980,7 +980,8 @@
       else {
         if (!WK.hold0) WK.hold0 = now;
         const heldMs = (WK.held || 0) + now - WK.hold0, dl = (() => { try { return typeof V !== 'undefined' && V.animsPending && V.animsPending(); } catch (e) { return false; } })();
-        if (heldMs < 4000 || (dl && heldMs < 10000)) {
+        if (dl) WK.dlSeen = now; else if (WK.dlSeen && !WK.dlEnd) WK.dlEnd = now;   // the file just landed: give the clip a moment to start (parse, mixer) before giving up
+        if (heldMs < 4000 || (heldMs < 10000 && (dl || (WK.dlEnd && now - WK.dlEnd < 2500)))) {
           WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
           const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board
           return { fov: 52 };

@@ -1,7 +1,7 @@
 // The first walk-on of a session on a slow connection (Engine + Producer, 22 Nov): the walk clip file (assets/anims.glb) is still
 // downloading when Walk on is pressed. The walk-on used to give up after a flat 4 s held and skip, so the player never saw it. Now it
 // holds while the file is still coming, up to 10 s, then plays; a tap still skips; a file that never lands still ends the walk-on by ~10 s.
-// Runs on v2 and v3 figures, the clip file delayed in the network layer (throttled: 7 s), the match started before it lands.
+// Runs on v2 and v3 figures, the clip file delayed in the network layer (throttled: 5.5 s, past today's 4 s give-up), the match started before it lands.
 // usage: node tests/walk-slowanims.js [dir]
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const http = require('http');
 const dir = path.resolve(process.argv[2] || path.resolve(__dirname, '..'));
@@ -30,8 +30,8 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
     const w = await p.evaluate(() => ({ walked: window.__w.walk, secs: window.__w.on && window.__w.off ? +((window.__w.off - window.__w.on) / 1000).toFixed(1) : null }));
     const r = Object.assign({ pend0 }, w, { pe: pe.slice(0, 2) }); out[tag] = r; await ctx.close(); return r; };
   for (const v3 of ['0', '1']) {
-    const r = await run('slow7s_v3' + v3, v3, 7000);
-    if (!(r.walked > 3)) fail.push(`v3=${v3}: clip file 7 s late, the walk-on skipped instead of waiting for it ${JSON.stringify(r)}`);
+    const r = await run('slow55_v3' + v3, v3, 5500);
+    if (!(r.walked > 3)) fail.push(`v3=${v3}: clip file 5.5 s late, the walk-on skipped instead of waiting for it ${JSON.stringify(r)}`);
     if (r.secs == null || r.secs > 17) fail.push(`v3=${v3}: walk-on length ${r.secs}s`);
   }
   { const r = await run('stalled', '1', Infinity); if (r.secs == null || r.secs < 9 || r.secs > 12.5) fail.push('a clip file that never lands must end the walk-on at about 10 s ' + JSON.stringify(r)); }
