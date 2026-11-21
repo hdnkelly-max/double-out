@@ -146,16 +146,26 @@
   /* one render per look: heroShot draws and reads back the figure on every call, and the Locker redraws on every tab change */
   let lkMemo = { k: '', u: '' }; const lkFig = tier => { const k = JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]); if (lkMemo.k === k && lkMemo.u) return lkMemo.u;
     let u = ''; try { u = V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { u = ''; } if (u) lkMemo = { k, u }; return u; };
-  /* the figure is its own <img> over the plate (not a background layer), so it can sit in the room: a soft shadow onto the locker behind and a
-     warm edge from the locker lamp (rb/s3.css .rb-lkfig), the whole head inside the card with headroom, and the bottom fading into the card */
-  /* a shadow pool on the locker behind the figure: grounds it and keeps the plate's filled-in patch (where the photo's person stood) dark */
-  const lkPlate = scene => `radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.78) 0,rgba(14,9,6,.5) 45%,rgba(14,9,6,0) 100%),url(${IMG}lk_plate.jpg) 80% 30%/cover no-repeat,${scene}`;
-  const lkFigTag = tier => { const u = lkMemo.u && lkMemo.k === JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]) ? lkMemo.u : '';
-    return `<img class="rb-lkfig" id="rbLkFig" alt=""${u ? ` src="${u}"` : ' hidden'}>`; };
-  let lkWait = 0; const v3LockerBg = (tier, scene) => { const u = lkFig(tier); clearTimeout(lkWait); if (u) return lkPlate(scene);
-    let n = 0; const again = () => { const e = $id('rbLkHero'), f = $id('rbLkFig'); if (!e || !f) return; const u2 = lkFig(tier);
-      if (u2) { f.onload = () => { e.style.background = lkPlate(scene); f.hidden = false; e.dataset.lk74 = 1; }; f.src = u2; return; } if (++n < 24) lkWait = setTimeout(again, 500); };
-    lkWait = setTimeout(again, 500); return scene; };
+  /* the figure is its own layer over the plate (not a background), so it can sit in the room (ChatGPT 8.0 framing pass, Producer 09:34):
+     - headroom by framing, not by shrinking: the render's own highest point (hair, bun, cap; read from its alpha once per look) is placed
+       LK_HEAD px below the card top, so every look gets the same headroom at every width;
+     - a light falloff painted on the figure only (masked by its own alpha): warm toward the locker lamp, darker low and away from it;
+     - a restrained contact shadow and a soft shadow onto the locker (rb/s3.css), under the name's shade so the name always reads. */
+  const LK_HEAD = 10, LK_EXTRA = 40;   // px of headroom above the highest point; px the figure runs past the card bottom (waist-up)
+  const lkPlate = scene => `radial-gradient(ellipse 24% 26% at 70% 100%,rgba(8,5,3,.62) 0,rgba(8,5,3,.3) 55%,rgba(8,5,3,0) 100%),radial-gradient(ellipse 22% 55% at 76% 40%,rgba(30,17,10,.62) 0,rgba(30,17,10,.35) 55%,rgba(30,17,10,0) 100%),radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.6) 0,rgba(14,9,6,.36) 45%,rgba(14,9,6,0) 100%),url(${lkImg(IMG + 'lk_plate.jpg')}) 80% 30%/cover no-repeat,${scene}`;
+  const lkImg = p => { try { return window.TOPS_S3_IMG ? TOPS_S3_IMG(p) : p; } catch (e) { return p; } };   /* the Season 3 file switch: a style set from script after render doesn't pass through it */
+  const lkTop = {};   // render url -> [highest opaque row / height, width / height]
+  const lkMeasure = (u, done) => { if (lkTop[u]) return done(lkTop[u]); const im = new Image(); im.onload = () => { let top = 0, ar = im.width / im.height || .8;
+      try { const c = document.createElement('canvas'), w = 120, h = Math.round(120 / ar); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0, w, h);
+        const d = g.getImageData(0, 0, w, h).data; find: for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) { top = y / h; break find; } } catch (e) {}
+      lkTop[u] = [top, ar]; done(lkTop[u]); }; im.onerror = () => done([0, .8]); im.src = u; };
+  const lkPlace = (w, u, m) => { const card = w.parentNode, H = (card ? card.clientHeight : 170) + LK_EXTRA; w.style.height = H + 'px'; w.style.width = Math.round(H * m[1]) + 'px';
+    w.style.top = Math.round(LK_HEAD - m[0] * H) + 'px'; w.querySelector('img').src = u; const sh = w.querySelector('.rb-lkshade'); sh.style.webkitMaskImage = sh.style.maskImage = `url(${u})`; w.hidden = false; };
+  const lkFigTag = () => `<div class="rb-lkfig" id="rbLkFig" hidden><img alt=""><i class="rb-lkshade"></i></div>`;
+  let lkWait = 0; const v3LockerBg = (tier, scene) => { clearTimeout(lkWait); let n = 0;
+    const again = () => { const e = $id('rbLkHero'), w = $id('rbLkFig'); if (!e || !w) { if (++n < 24) lkWait = setTimeout(again, 60); return; } const u = lkFig(tier);
+      if (u) { lkMeasure(u, m => { if ($id('rbLkFig') !== w) return; e.style.background = lkPlate(scene); lkPlace(w, u, m); e.dataset.lk74 = 1; }); return; } if (++n < 24) lkWait = setTimeout(again, 500); };
+    lkWait = setTimeout(again, 0); return lkFig(tier) && lkTop[lkMemo.u] ? lkPlate(scene) : scene; };
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
     if (v3Lk()) return v3LockerBg(tier, scene);
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
@@ -168,7 +178,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') { const sh = S3 && S3.shelf ? S3.shelf() : null; return seg + (sh || trophies(M)); }   /* EXP-IDLE 3: the Season 3 shelf (behind s3x=1), else the old list */
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div>${v3Lk() ? lkFigTag(c.tier) : ''}<div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div>${v3Lk() ? lkFigTag() : ''}<div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -469,6 +479,8 @@
     qa('#rbApp [data-card]').forEach(b => b.onclick = () => { try { T.binder(); } catch (e) {} });
     const lo = $id('rbLoad'); if (lo && T) lo.onclick = () => { close(); const bk = $id('rbBack'); if (bk) bk.hidden = false; try { T.loadout(); } catch (e) { console.warn('rb loadout', e); } };
     qa('#rbApp [data-drill]').forEach(b => b.onclick = () => { try { startDrill(b.dataset.drill); } catch (e) { console.warn('rb drill', e); } });
+    if (v3Lk()) { const nm = document.querySelector('#rbApp .rb-hero #rbLkHero ~ .rb-tx .rb-big'); if (nm) { nm.style.whiteSpace = 'nowrap'; nm.style.display = 'block'; const one = !/[\s-]/.test(nm.textContent.trim()); let fs = 32; const lo = one ? 18 : 22;
+      while (fs > lo && nm.scrollWidth > nm.clientWidth + 1) { fs -= 1; nm.style.fontSize = fs + 'px'; } if (nm.scrollWidth > nm.clientWidth + 1) { nm.style.whiteSpace = ''; if (one) nm.style.overflowWrap = 'anywhere'; } } }   /* long names at 360: one line from 32 down to 22 px (18 for one long word), then two lines */
     const cb = $id('rbCab'); if (cb && window.TC_API) cb.onclick = () => { try { TC_API.cabinet(); } catch (e) { console.warn('rb cabinet', e); } };
     qa('#rbApp [data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go; if (BUILT[k]) { tab = k; render(); } else toOld(k); });
   }
@@ -514,6 +526,6 @@
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk, lkFig };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk, lkFig, lkInfo: () => { const w = $id('rbLkFig'), u = w && w.querySelector('img').src, m = u && lkTop[u]; if (!w || w.hidden || !m) return null; const H = parseFloat(w.style.height); return { head: Math.round(parseFloat(w.style.top) + m[0] * H), H, u }; } };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw
