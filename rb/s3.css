@@ -254,6 +254,10 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 /* ---------- v3 switch-on: the one-time 'New look' card (on <body>, so it carries its own tokens) ---------- */
 .s3-on .s3-v3nl{--bg:#121517;--card:#1a1e21;--line:#343a3e;--ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
   position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,9,11,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+@keyframes s3nlin{from{opacity:0}to{opacity:1}}
+.s3-on .s3-v3nl{animation:s3nlin .18s ease-out}
+.s3-on .s3-v3nlgo,.s3-on .s3-v3nltw{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.s3-on .s3-v3nlgo:active,.s3-on .s3-v3nltw:active{transform:scale(.985);filter:brightness(.92)}
 .s3-on .s3-v3nlbox{width:100%;max-width:420px;max-height:100%;overflow:auto;background:radial-gradient(120% 70% at 50% 0%,#3a1418 0%,var(--card) 62%);border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;box-shadow:0 18px 48px rgba(0,0,0,.6)}
 .s3-on .s3-v3nlfig{width:200px;height:200px;flex:none;display:flex;align-items:flex-end;justify-content:center;margin-top:-4px}
 .s3-on .s3-v3nlfig img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.55))}

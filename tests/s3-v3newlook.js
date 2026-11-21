@@ -33,6 +33,23 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     else { await p.locator('#s3V3NewGo').tap(); await p.waitForTimeout(500); const g = await p.evaluate(() => ({ gone: !document.getElementById('s3V3New'), flag: !!save.v3NewLook })); out.go = g; if (!g.gone || !g.flag) fail.push("Let's go " + JSON.stringify(g)); }
     await p.reload(); await p.waitForFunction(() => window.TOPS_S3UI, null, { timeout: 180000 }); await p.waitForTimeout(1500); await title(p); await p.waitForTimeout(2000); if (await card(p)) fail.push(w + ': card shows again after it was seen');
     if (p.pe.length) fail.push(w + ' page errors ' + p.pe.join('; ').slice(0, 200)); await p.close(); await ctx.close(); }
+  // DQ go/no-go: the first tap on Let's go as the card arrives must count (a touch tap the moment the card is in the page, no waiting for it
+  // to settle); a lifted finger acts without the browser's click; Tweak acts once even when pointerup and click both arrive.
+  { const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); await ctx.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} });
+    const p = await page(ctx, '1'); await p.waitForTimeout(1000);
+    const arm = () => p.evaluate(() => { if (!career()) { save.name = 'Hayden'; save.lessonDone = true; newCareer(); save.vlook = { v: 1, base: 'mia', shirt: 0xd7232d, acc: [], at: Date.now() }; }
+      delete save.v3NewLook; persist(); $('login').hidden = true; save.authSeen = true; showTitle(); });
+    const born = () => p.waitForFunction(() => { const d = document.getElementById('s3V3New'); if (!d) return null; const g = document.getElementById('s3V3NewGo'), r = g.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, pe: getComputedStyle(g).pointerEvents, dur: parseFloat(getComputedStyle(d).animationDuration) || 0 }; }, null, { timeout: 15000, polling: 'raf' }).then(h => h.jsonValue(), () => null);
+    await arm(); let at = await born(); out.arrive = at;
+    if (!at) fail.push('arrival: no card'); else { if (at.pe === 'none' || at.dur > 0.25) fail.push('arrival: buttons not live or fade too long ' + JSON.stringify(at));
+      await p.touchscreen.tap(at.x, at.y); await p.waitForTimeout(300); const g = await p.evaluate(() => ({ gone: !document.getElementById('s3V3New'), flag: !!save.v3NewLook })); out.firstTap = g; if (!g.gone || !g.flag) fail.push("first tap on Let's go as the card arrives didn't count " + JSON.stringify(g)); }
+    await arm(); at = await born();
+    if (at) { const r = await p.evaluate(() => { let n = 0; const sc = showCreator; showCreator = function () { n++; return sc.apply(this, arguments); }; const t = document.getElementById('s3V3NewTw');
+        const o = { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true }; t.dispatchEvent(new PointerEvent('pointerdown', o)); t.dispatchEvent(new PointerEvent('pointerup', o));
+        const afterUp = { gone: !document.getElementById('s3V3New'), n }; t.click(); showCreator = sc; return Object.assign(afterUp, { total: n }); });
+      out.liftOnly = r; if (!r.gone || r.n !== 1 || r.total !== 1) fail.push('Tweak: lifting the finger (no click) must act once ' + JSON.stringify(r)); } else fail.push('second arrival: no card');
+    if (p.pe.length) fail.push('arrival page errors ' + p.pe.join('; ').slice(0, 200)); await ctx.close(); }
   // a career started with v3 on: no card
   { const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); await ctx.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); } catch (e) {} });
     const p = await page(ctx, '1'); await p.evaluate(() => { save.name = 'New'; save.lessonDone = true; newCareer(); persist(); }); await title(p); await p.waitForTimeout(2000); const c = await card(p); out.fresh = { card: !!c, flag: await p.evaluate(() => !!save.v3NewLook) };

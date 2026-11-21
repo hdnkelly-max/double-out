@@ -660,13 +660,21 @@
         <span class="s3-v3nlname">${esc(nm)}</span><h2 id="s3V3NewT">${esc(V3NL.title)}</h2><p>${esc(V3NL.body)}</p><p class="s3-v3nlkeep">${esc(V3NL.keep)}</p>
         <button type="button" class="s3-v3nlgo" id="s3V3NewGo">${esc(V3NL.go)}</button><button type="button" class="s3-v3nltw" id="s3V3NewTw">${esc(V3NL.tweak)}</button></div>`;
       document.body.appendChild(d);
-      const done = () => { save.v3NewLook = Date.now(); try { persist(); } catch (e) {} d.remove(); };
-      $id('s3V3NewGo').onclick = () => { done(); v3log('s3_v3newlook', { act: 'go' }); };
-      $id('s3V3NewTw').onclick = () => { done(); v3log('s3_v3newlook', { act: 'tweak' }); try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } };
+      let acted = false; const done = () => { save.v3NewLook = Date.now(); try { persist(); } catch (e) {} d.remove(); };
+      const act = k => { if (acted) return; acted = true; done(); v3log('s3_v3newlook', { act: k }); if (k === 'tweak') { try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } } };
+      /* DQ go/no-go: a first tap on Let's go while the card was coming in sometimes didn't count. The buttons now act on the finger lifting
+         (pointerup on the same button it went down on), not only on the browser's click, which a phone can drop when the page changes under
+         the finger (the figure swapping in); click stays for keyboard and anything without pointer events. One action per card. */
+      [['s3V3NewGo', 'go'], ['s3V3NewTw', 'tweak']].forEach(([id, k]) => { const b = $id(id); let down = false;
+        b.addEventListener('pointerdown', () => { down = true; });
+        b.addEventListener('pointerup', e => { if (down && (e.pointerType === 'touch' || e.pointerType === 'pen' || e.button === 0)) { e.preventDefault(); act(k); } down = false; });
+        b.addEventListener('pointercancel', () => { down = false; });
+        b.addEventListener('click', () => act(k)); });
       setTimeout(() => { try { $id('s3V3NewGo').focus(); } catch (e) {} }, 50);
       /* the player's own v3 figure: the hero render needs the rig, so try a few times; the base card stays if it never comes */
       let n = 0; const hero = () => { if (!$id('s3V3New')) return; let u = ''; try { if (typeof V !== 'undefined' && V.heroShot) u = V.heroShot(save.look, nm, c.tier || 0, ''); } catch (e) {}
-        if (u) { const f = d.querySelector('.s3-v3nlfig'); if (f) f.innerHTML = `<img id="s3V3NewFig" class="s3-v3nlhero" src="${u}" alt="">`; } else if (++n < 12) setTimeout(hero, 500); };
+        /* the render goes into the same <img> once it has decoded (no new element, no size change under a finger mid-tap) */
+        if (u) { const im = new Image(); im.onload = () => { if (!$id('s3V3New')) return; let f = $id('s3V3NewFig'); if (!f) { const w = d.querySelector('.s3-v3nlfig'); if (!w) return; w.innerHTML = '<img id="s3V3NewFig" alt="">'; f = $id('s3V3NewFig'); } f.src = u; f.classList.add('s3-v3nlhero'); }; im.src = u; } else if (++n < 12) setTimeout(hero, 500); };
       hero();
     } catch (e) { console.warn('v3 new look', e); }
   }
