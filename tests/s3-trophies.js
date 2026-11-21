@@ -37,7 +37,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const read = () => p.evaluate(() => { const app = document.getElementById('rbApp'); const q = s => app.querySelector(s);
       return { shelf: !!q('.s3-trh'), hero: q('.s3-trh') ? q('.s3-trh').innerText.replace(/\s+/g, ' ') : null, bl: q('.s3-trbl') ? q('.s3-trbl').innerText.replace(/\s+/g, ' ') : null, empty: !!q('.s3-tremp'),
         cups: [...app.querySelectorAll('.s3-tr')].map(l => l.className.replace('s3-tr ', '') + ':' + l.innerText.replace(/\s+/g, ' ')), lv: [...app.querySelectorAll('.s3-trlv .s3-row')].map(r => r.innerText.replace(/\s+/g, ' ')),
-        old: q('#s3TrHi') ? q('#s3TrHi').innerText.replace(/\s+/g, ' ') : null, oldList: !!q('#rbCab'), wide: document.documentElement.scrollWidth > innerWidth + 1, leg: (career().best || {}).leg, legAt: (career().best || {}).legAt, titles: career().circuit.titles || [] }; });
+        old: q('#s3TrHi') ? q('#s3TrHi').innerText.replace(/\s+/g, ' ') : null, oldList: !q('.s3-trh') && !!q('#rbCab'), cab: !!q('.s3-trh') && !!q('#rbCab'), wide: document.documentElement.scrollWidth > innerWidth + 1, leg: (career().best || {}).leg, legAt: (career().best || {}).legAt, titles: career().circuit.titles || [] }; });
     await fn(p, { match, toTrophies, read, tap, vis, settle }); if (pe.length) fail.push(qs + ' ' + vw + ' page errors ' + pe.join('; ').slice(0, 160)); await ctx.close(); };
   for (const [w, h] of [[390, 844], [360, 640], [320, 640]]) await session('?s3=1&s3x=1', w, h, async (p, T) => {
     // 1 empty
@@ -60,7 +60,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/titles 1 finals 1 prize money \$35/i.test(r.hero || '')) fail.push(w + ' hero ' + r.hero);
     if (!/^s3-trW:KAURI ARMS LEAGUE NIGHT Winner · \$35 Week 1$/i.test(r.cups[0] || '') || !/^s3-tre/.test(r.cups[1] || '')) fail.push(w + ' Pub shelf ' + JSON.stringify(r.cups));
     if (!/^pub this level$/i.test(r.lv[0] || '') || !/^club next level/i.test(r.lv[1] || '')) fail.push(w + ' level rows ' + JSON.stringify(r.lv));
-    if (r.empty) fail.push(w + ': empty state still showing with a title');
+    if (r.empty) fail.push(w + ': empty state still showing with a title'); if (!r.cab) fail.push(w + ': no way to the Seasons 1 & 2 trophy cabinet');
     // best leg: the same number Career sends to the Best Leg board, with where it came from; the record line from Career's tops_bestleg_s3
     if (!(r.leg >= 9 && r.leg < 99) || !new RegExp('^' + r.leg + ' darts your best leg · season 3 kauri arms league night · week 1', 'i').test(r.bl || '') || !r.legAt || r.legAt.week !== 1) fail.push(w + ' best leg ' + JSON.stringify({ bl: r.bl, leg: r.leg, at: r.legAt }));
     const rec = live.bl[0]; if (!rec || !new RegExp('season 3 record: ' + rec.darts + ' darts · ' + rec.name, 'i').test(r.bl || '')) fail.push(w + ' record line vs tops_bestleg_s3 ' + JSON.stringify({ bl: r.bl, rec }));
