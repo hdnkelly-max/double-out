@@ -3,6 +3,7 @@
    and returns { options:[def,def,def], chosen:0..2, owned:{[cardId]:count} }.
    Card def: { id, name, no, set, rarity:'common'|'uncommon'|'rare'|'epic'|'legendary', art, cosmetic? } */
 (function (root) {
+  const s3img = u => { try { return typeof root.TOPS_S3_IMG === 'function' ? root.TOPS_S3_IMG(u) : u; } catch (e) { return u; } };   // the Season 3 picture switch; off = the URL as given
   'use strict';
   const RAR = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
   const T = { arrive: 180, stagger: 60, lift: 120, flip: 540, react: 490, othersGap: 100, quickFlip: 200 };
@@ -59,7 +60,10 @@
   }
   function fill(c, def) {
     c.dataset.r = def.rarity; c.dataset.id = def.id;
-    c.querySelector('.tc__art').style.backgroundImage = def.art ? `url(${def.art})` : '';
+    /* EXP-S3-BINDER (live since 4.00): the Season 3 picture switch (rb/s3.js, window.TOPS_S3_IMG) is applied here, where the URL is built.
+       It used to rely on a setter patched onto CSSStyleDeclaration.prototype, which Chromium never calls for style.backgroundImage (the
+       property lives on each style object), so Chrome and Edge showed the old lifelike art on every card. */
+    c.querySelector('.tc__art').style.backgroundImage = def.art ? `url("${s3img(def.art)}")` : '';   /* quoted: the placeholder is a data: SVG with ( ) in it, which an unquoted url() rejects */
     if (def.foilMask) c.style.setProperty('--foil-mask', `url(${def.foilMask}) center/cover`);
     const nm = c.querySelector('.tc__name'); nm.textContent = def.name; nm.classList.toggle('is-long', def.name.length > 11); nm.classList.toggle('is-xlong', def.name.length > 16);
     c.querySelector('.tc__set').innerHTML = `No. ${String(def.no).padStart(3, '0')}<span class="tc__setname"> · ${esc(def.setName || def.set)}</span>`;
