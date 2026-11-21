@@ -22,7 +22,8 @@ const XPMUL = [1, 1.25, 1.5, 2, 2.5, 3.5, 5], CAPS = [40, 50, 60, 68, 75, 80, 82
 const lvNeed = L => Math.round(150 + 25 * L + .6 * L * L), gainAt = v => Math.max(2, Math.min(6, Math.round((100 - v) / 9)));
 // the game maps every career opponent into its tier band (v11.js v1.77 shift, Season 2 and 3 alike): Pub QF 44 plays as 54
 const BAND = [[50, 58], [56, 64], [62, 70], [68, 76], [74, 82], [80, 90], [88, 100]], CEN = [58, 63, 69, 76, 84, 91, 97], TAVG = [52, 65, 75, 85, 91, 95, 101];
-const shift = (v, k) => { const [lo, hi] = BAND[k], adj = CEN[k] - (lo + hi) / 2, rel = Math.max(-10, Math.min(10, v - TAVG[k])) * .5; return Math.round(Math.max(Math.max(20, lo + adj), Math.min(hi + adj, CEN[k] + rel))); };
+const CENX = process.env.CEN ? JSON.parse(process.env.CEN) : null;
+const shift = (v, k) => { if (CENX) { const [lo, hi] = BAND[k], c0 = CENX[k], adj = c0 - (lo + hi) / 2, rel = Math.max(-10, Math.min(10, v - TAVG[k])) * .5; return Math.round(Math.max(Math.max(20, lo + adj), Math.min(hi + adj, c0 + rel))); } const [lo, hi] = BAND[k], adj = CEN[k] - (lo + hi) / 2, rel = Math.max(-10, Math.min(10, v - TAVG[k])) * .5; return Math.round(Math.max(Math.max(20, lo + adj), Math.min(hi + adj, CEN[k] + rel))); };
 const PALACE_BACK = ["if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;",
   "if (L.id === 'palace') { if (fin === 'W') return { champion: true, msg: 'World Champion. Champion’s Year starts next season' }; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour'); }"];
 const DPNZ_NEED = n => ["if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;", "if (L.id === 'dpnz' && (c.pts.dpnz || 0) >= " + n + " && played >= 2) return promote(c, 6, 'DPNZ points: the Palace'); if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;"];
@@ -81,7 +82,7 @@ const VARIANTS = {
 function career(E, curve, cap) {
   const A = v => { const xs = curve.map(r => r[0]), ys = curve.map(r => r[1]); if (v <= xs[0]) return ys[0]; for (let i = 1; i < xs.length; i++) if (v <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (v - xs[i - 1]) / (xs[i] - xs[i - 1]); return ys[ys.length - 1]; };
   const c = E.newCareer({ bank: 60 }); const st = { sc: 20, fi: 20, ct: 20, rh: 20, co: 20 }; let plv = 1, xp = 0, pts = 0, seen = 1;
-  const out = { lv: {}, matches: 0, palaceAt: null, champion: false, worlds: 0, rec: 0, capped: 0, debtMax: 0, recPub: 0, recPts: 0 }; const R = () => (out.lv[c.level] = out.lv[c.level] || { m: 0, w: 0, ev: 0, first: [], last: [] });
+  const out = { lv: {}, matches: 0, palaceAt: null, champion: false, worlds: 0, rec: 0, capped: 0, debtMax: 0, recPub: 0, recPts: 0 }; const R = () => (out.lv[c.level] = out.lv[c.level] || { m: 0, w: 0, ev: 0, first: [], last: [], fv: [] });
   let guard = 0;
   while (out.matches < cap && guard++ < 20000) {
     if (plv > seen) { pts += plv - seen; seen = plv; }
@@ -92,9 +93,9 @@ function career(E, curve, cap) {
       if (e) E.book(c, e.id); else { const rc = E.recoveryEntry(c); if (!rc.ok) return Object.assign(out, { end: 'stall broke' }); out.rec++; if (c.level === 0) out.recPub++; if (c.live.capped) out.capped++; }
       R().ev++; if (c.live.id === 'worlds') out.worlds++; }
     const o = E.nextOpp(c), me = A((st.sc + st.fi + st.ct + st.rh) / 4); const opp = SHIFT ? shift(o.avg, c.level) : o.avg; const won = Math.random() < 1 / (1 + Math.pow(10, (opp - me) / 12));
-    const L0 = c.level, r = R(); r.m++; if (!out.left || !out.left[L0]) r.m1 = (r.m1 || 0) + 1; if (won) r.w++; (r.first.length < 10 ? r.first : r.last).push(won ? 1 : 0); if (r.last.length > 10) r.last.shift();
+    const L0 = c.level, r = R(); r.m++; if (!out.left || !out.left[L0]) { r.m1 = (r.m1 || 0) + 1; r.fv.push(won ? 1 : 0); } if (won) r.w++; (r.first.length < 10 ? r.first : r.last).push(won ? 1 : 0); if (r.last.length > 10) r.last.shift();
     out.matches++; xp += (60 + (won ? 100 : 0)) * XPMUL[L0] + (won ? 60 : 0); while (xp >= lvNeed(plv)) { xp -= lvNeed(plv); plv++; }
-    const wasRec = !!(c.live && c.live.recovery); const res = E.result(c, won); out.debtMax = Math.max(out.debtMax, c.debt || 0); if (res && res.done && wasRec) out.recPts += res.pts || 0; if (c.level !== L0) { out.left = out.left || {}; out.left[L0] = 1; }
+    const wasRec = !!(c.live && c.live.recovery); const res = E.result(c, won); out.debtMax = Math.max(out.debtMax, c.debt || 0); if (res && res.done && wasRec) out.recPts += res.pts || 0; if (c.level !== L0) { out.left = out.left || {}; if (!out.left[L0] && c.level > L0) r.up = 1; out.left[L0] = 1; }
     if (res && res.up && res.up.champion) { out.champion = true; break; }
     if (c.level === 6 && L0 !== 6) { out.quals = (out.quals || 0) + 1; if (out.lastQ != null) (out.gaps = out.gaps || []).push(out.matches - out.lastQ); out.lastQ = out.matches; }
     if (c.level === 6 && out.palaceAt == null) out.palaceAt = out.matches;
@@ -109,7 +110,8 @@ for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {};
     const pa = runs.map(r => r.palaceAt).filter(x => x != null);
     const lvl = {}; for (let L = 0; L <= 6; L++) { const xs = runs.map(r => r.lv[L]).filter(Boolean); if (!xs.length) continue;
       const f = [].concat(...xs.map(x => x.first)), l = [].concat(...xs.filter(x => x.m >= 10).map(x => x.last));
-      lvl[L] = { reached: xs.length, mMed: q(xs.map(x => x.m), .5), m1Med: q(xs.map(x => x.m1 || 0), .5), evMed: q(xs.map(x => x.ev), .5), win: +(xs.reduce((s, x) => s + x.w, 0) / xs.reduce((s, x) => s + x.m, 0)).toFixed(2),
+      const fe = [].concat(...xs.map(x => x.fv.slice(0, 10))), fx = [].concat(...xs.filter(x => x.up).map(x => x.fv.slice(-10))); const mean = a => a.length ? +(a.reduce((p, q) => p + q, 0) / a.length).toFixed(2) : null;
+      lvl[L] = { reached: xs.length, up: xs.filter(x => x.up).length, cIn: mean(fe), cOut: mean(fx), m1: q(xs.map(x => x.fv.length), .5), mMed: q(xs.map(x => x.m), .5), m1Med: q(xs.map(x => x.m1 || 0), .5), evMed: q(xs.map(x => x.ev), .5), win: +(xs.reduce((s, x) => s + x.w, 0) / xs.reduce((s, x) => s + x.m, 0)).toFixed(2),
         entry: f.length ? +(f.reduce((s, x) => s + x, 0) / f.length).toFixed(2) : null, exit: l.length ? +(l.reduce((s, x) => s + x, 0) / l.length).toFixed(2) : null }; }
     res[v][who] = { palace: pa.length + '/' + N, toPalaceP50: q(pa, .5), toPalaceP25: q(pa, .25), toPalaceP75: q(pa, .75), champ: runs.filter(r => r.champion).length + '/' + N,
       matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), qualsP50: q(runs.map(r => r.quals || 0), .5), gapP50: q([].concat(...runs.map(r => r.gaps || [])), .5), stalls: runs.filter(r => /stall/.test(r.end || '')).length, recP50: q(runs.map(r => r.rec), .5), recPubP50: q(runs.map(r => r.recPub), .5), cappedP50: q(runs.map(r => r.capped), .5), debtMaxP50: q(runs.map(r => r.debtMax), .5), debtMaxP90: q(runs.map(r => r.debtMax), .9), debtMaxMax: Math.max(...runs.map(r => r.debtMax)), debtEndP50: q(runs.map(r => r.debtEnd), .5), recPtsP50: q(runs.map(r => r.recPts), .5), reachClub: runs.filter(r => r.maxLevel >= 1).length, reachDpnz: runs.filter(r => r.maxLevel >= 3).length, clubAtP50: q(runs.map(r => r.lv[0] ? r.lv[0].m : null).filter(x => x != null), .5), lvl }; } }
