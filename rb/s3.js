@@ -152,6 +152,11 @@
     const C = CI(), cal = C.calendar(c);
     /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
     if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
+      /* CAR-CARD (Q&D, Producer 23:26): when the tap sends you back to the DPNZ Tour, the card says so before the tap */
+      const pl = C.restPlan ? C.restPlan(c) : null;
+      if (pl && pl.back === 'dpnz') { const lvN = esc(C.LEVELS[pl.fromLevel].n), pts = pl.carry + ' point' + (pl.carry === 1 ? '' : 's') + ' carry over';
+        return `<div class="rb-sh"><h3>${pl.why === 'qschool' ? 'Waiting for Q-School' : 'Nothing left on'}</h3></div><div class="rb-card s3-rest s3-restback"><span class="rb-t2">${pl.why === 'qschool' ? `Q-School is in week ${pl.qsWeek}. Wait on the DPNZ Tour until then` : `Nothing left on at the ${lvN} for you. Back to the DPNZ Tour for a new season`}</span><span class="rb-sub">${pl.why === 'qschool' ? 'The DPNZ Tour runs every week, so you keep playing while you wait.' : 'The DPNZ Tour runs every week.'}</span>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>Back to the DPNZ Tour</b><small>${pl.why === 'qschool' ? 'Q-School place kept · ' : ''}${pts}</small></button></div>`; }
       return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${gap > 1 ? gap + ' weeks away' : 'next week'}.</span>
       <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
     let h = '';
@@ -294,8 +299,8 @@
     const C = CI(), to = C.LEVELS[up.to], down = up.to < up.from;
     const g = (c.grants && c.grants[up.to] && !down) ? [0, 60, 450, 900, 850, 0, 3000][up.to] : 0;
     const html = `<div class="s3-pmart" style="background:url(${lvArt(up.to)}) 50% 40%/cover no-repeat,${GRAD[up.to]}"></div>
-      <span class="rb-kick">${down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
-      <span class="rb-sub">${esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
+      <span class="rb-kick">${up.from >= 5 && down ? 'Back on tour' : down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
+      <span class="rb-sub">${up.from >= 5 && down ? `${up.from === 6 ? 'Out of the Worlds' : 'No Tour Card this time'}. A new season starts now with ${(c.pts && c.pts.dpnz) || 0} points carried (40%, up to 300).` : esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
     sheet(html, 'See what\'s on', () => { seenSet(snap(c)); sub = 'week'; render(); }, 's3-promo');
   }
   // new best leg: Career fires window 'tops:bestleg' {detail:{darts, prev}}; kept on the device so it still shows after the reset reload

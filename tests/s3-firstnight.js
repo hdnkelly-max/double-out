@@ -19,7 +19,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_fn_' + w + '.png') });
     const o = out[k]; if (!o) { fail.push(w + ': no first-night screen'); return; }
     if (o.match) fail.push(w + ': the match started under the first-night screen'); if (!o.goIn) fail.push(w + ': Walk on not on screen'); if (o.wide) fail.push(w + ': scrolls sideways');
-    if (!/your first night/i.test(o.t) || !/league night/i.test(o.t) || !/first up/i.test(o.t) || !/\$35/.test(o.t) || !/how you move up/i.test(o.t) || !/0 \/ 150/.test(o.t)) fail.push(w + ': copy ' + o.t.slice(0, 220).replace(/\n/g, ' | '));
+    if (!/your first night/i.test(o.t) || !/league night/i.test(o.t) || !/first up/i.test(o.t) || !/\$35/.test(o.t) || !/how you move up/i.test(o.t) || !/0 \/ 75/.test(o.t)) fail.push(w + ': copy ' + o.t.slice(0, 220).replace(/\n/g, ' | '));
     if (o.draw !== 3) fail.push(w + ': draw cells ' + o.draw); if (o.ink !== 'rgb(243, 244, 242)') fail.push(w + ': text colour (tokens) ' + o.ink);
     await p.locator('#s3FnGo').tap(); for (let i = 0; i < 40 && !(await p.evaluate(() => typeof S !== 'undefined' && !!S && !S.done)); i++) await p.waitForTimeout(250);
     out[k + 'after'] = await p.evaluate(() => ({ gone: !document.getElementById('s3Fn'), s3: typeof S !== 'undefined' && S && S.s3, seen: localStorage.getItem('tops_s3_firstnight') }));

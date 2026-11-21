@@ -9,6 +9,8 @@
 // nothing is owed, else the recovery entry. Stat points spread evenly (lowest stat first),
 // no kit bought (kit only adds stats; noted as a limit).
 // usage: node tests/econ-career-sim.js <curves.json> [careers per profile=20] [match cap=400] [partial-out.json] > out.json
+// a sim, not a gate test: CI runs every tests/*.js with no arguments, so with no curves file it prints its usage and passes
+if (!process.argv[2]) { console.log('SKIP (sim, not a test): usage: node ' + require('path').basename(__filename) + ' <curves.json> [careers] ...'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const CURVES = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')); const N = +(process.argv[3] || 20), CAP = +(process.argv[4] || 400);
 (async () => {
