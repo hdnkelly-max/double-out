@@ -1226,7 +1226,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   return FP;}
  function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
   const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY.standard;/* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
-  L._logo={u:.575,v:.76};/* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');v3Warm(skin);const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
+  L._logo=Object.assign({u:.575,v:.76},window.TOPS_V3LOGO||{});/* TOPS_V3LOGO {u,v,px,track}: test knob for the logo move (doc 44 #3) *//* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');v3Warm(skin);const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
   /* collar and placket as the shipped poster shirt, sized to the v3 neck (ChatGPT round 8: the collar read a little big) */
