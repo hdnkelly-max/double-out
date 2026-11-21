@@ -159,8 +159,8 @@ function cloudServer() {
   // MOCK_RULE=guard answers with the proposed server guard instead (tops_save3_put(p_data, p_base): refuse unless the stored sv is exactly p_base), for a client that sends p_base
   const put = (data, who, base) => { const cur = st.row && st.row.data; const nv = +(data && data.sv || 0), cv = +(cur && cur.sv || 0);
     const cas = process.env.MOCK_RULE === 'guard' && base != null && (cur ? cv !== +base : false);
-    if (cur && (cas || cv > nv || (cv === nv && (cur.dev || '') !== (data.dev || '') && cv > 0))) { st.log.push({ who, sv: nv, ok: false, cv }); return { ok: false, err: 'older', sv: cv, data: cur }; }
-    st.row = { data, updated_at: new Date().toISOString() }; st.log.push({ who, sv: nv, ok: true, bank: data.career && data.career.bank }); return { ok: true, sv: nv }; };
+    if (cur && (cas || cv > nv || (cv === nv && (cur.dev || '') !== (data.dev || '') && cv > 0))) { st.log.push({ who, sv: nv, ok: false, cv, base }); return { ok: false, err: 'older', sv: cv, data: cur }; }
+    st.row = { data, updated_at: new Date().toISOString() }; st.log.push({ who, sv: nv, ok: true, bank: data.career && data.career.bank, base }); return { ok: true, sv: nv }; };
   const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url'); const exp = Math.floor(Date.now() / 1000) + 6 * 3600;
   const user = { id: QA_UID, aud: 'authenticated', role: 'authenticated', email: 'qa-cloud@example.invalid', user_metadata: { full_name: 'QA Cloud' }, app_metadata: { provider: 'google' }, created_at: '2026-01-01T00:00:00Z' };
   const sess = { access_token: b64({ alg: 'none' }) + '.' + b64({ sub: QA_UID, role: 'authenticated', exp, aud: 'authenticated' }) + '.qa', token_type: 'bearer', expires_in: 6 * 3600, expires_at: exp, refresh_token: 'qa-refresh', user };
@@ -176,7 +176,10 @@ function cloudServer() {
       if (u.pathname.startsWith('/auth/v1/user')) return J(r, 200, user);
       if (u.pathname.startsWith('/auth/v1/token')) return J(r, 200, sess);
       if (u.pathname.startsWith('/auth/v1/')) return J(r, 200, {});
-      if (u.pathname === '/rest/v1/rpc/tops_save3_put') { let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (e) {} return J(r, 200, put(b.p_data, who, b.p_base)); }
+      if (u.pathname === '/rest/v1/rpc/tops_save3_put') { let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (e) {}
+        // today's server has only tops_save3_put(p_data): PostgREST answers a call with p_base as it does live (404 PGRST202)
+        if ('p_base' in b && process.env.MOCK_RULE !== 'guard') { st.log.push({ who, sv: +(b.p_data && b.p_data.sv || 0), ok: false, cv: 'no p_base' }); return J(r, 404, { code: 'PGRST202', details: 'Searched for the function public.tops_save3_put with parameters p_base, p_data or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.tops_save3_put(p_data)', message: 'Could not find the function public.tops_save3_put(p_base, p_data) in the schema cache' }); }
+        return J(r, 200, put(b.p_data, who, b.p_base)); }
       if (u.pathname === '/rest/v1/tops_saves_s3') {
         if (m === 'GET') { const one = /pgrst\.object/.test(q.headers()['accept'] || ''); const rows = st.row ? [{ user_id: QA_UID, ...st.row }] : [];
           return one ? (rows.length ? J(r, 200, rows[0]) : J(r, 406, { code: 'PGRST116', message: 'no rows', details: 'The result contains 0 rows', hint: null })) : J(r, 200, rows); }
@@ -227,7 +230,7 @@ async function cloud(b) {
         await progress(pb, 0); R.b2PushS = await until(pb, 'B', () => true, 90000); await pb.waitForTimeout(3000); R.b2 = await S(pb); R.cloudEnd = srv.st.row.data.career.bank;
         R.log = srv.st.log.slice(n0); });
       R.peB = peB; });
-    const want = B0 + 250, log = (R.log || []).map(x => `${x.who} sv${x.sv}${x.ok ? (x.direct ? ' direct' : ' ok') : ' refused(' + x.cv + ')'}`).join(', ');
+    const want = B0 + 250, log = (R.log || []).map(x => `${x.who} sv${x.sv}${x.base != null ? '/b' + x.base : ''}${x.ok ? (x.direct ? ' direct' : ' ok') : ' refused(' + x.cv + ')'}`).join(', ');
     const ok = R.cloudB === want && R.cloudEnd === want && R.b2 && R.b2.mem.bank === want;
     row(L, 'an older device can\'t overwrite newer progress (stale write)', ok,
       `B: bank ${B0} -> ${want}, in the cloud ${R.cloudB === want ? 'yes' : 'NO'} (sv ${R.cloudSv}); A, offline and not seeing it, saved ${R.aSaves}x (sv ${R.a1 && R.a1.mem.sv}), back online: cloud bank ${R.cloudAfterA}${R.cloudAfterA === want ? ' (kept)' : ' (B\'s progress LOST)'}; B's next save: cloud ${R.cloudEnd}, B shows ${R.b2 && R.b2.mem.bank}${R.b2 && R.b2.mem.bank !== want ? ' (LOST on B too)' : ''}${R.a1 && R.a1.tabsCard ? '; A showed the other-tab card (' + (R.a1.why || 'why not caught') + (R.a0 && R.a0.tabsCard ? ', already before B saved' : '') + ')' : ''}`);
