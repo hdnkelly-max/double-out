@@ -29,7 +29,7 @@ const v13=fs.existsSync('v13.js')?fs.readFileSync('v13.js','utf8'):'';
 const v14=fs.existsSync('v14.js')?fs.readFileSync('v14.js','utf8'):'';
 const v15=fs.existsSync('v15.js')?fs.readFileSync('v15.js','utf8'):'';/* CAR-S career backup + confirm */
 const v16=fs.existsSync('v16.js')?fs.readFileSync('v16.js','utf8'):'';/* ENG-RESET fresh page between matches */
-const s3c=fs.existsSync('tc/s3.js')?`<script>${fs.readFileSync('tc/circuit.js','utf8')}\n${fs.readFileSync('tc/s3.js','utf8')}</script>\n`:'';/* S3 Circuit career (Career): engine + wiring, off unless the s3 flag is on */
+const s3c=fs.existsSync('tc/s3.js')?`<script>${fs.readFileSync('tc/circuit.js','utf8')}\n${fs.readFileSync('tc/s3.js','utf8')}\n${fs.existsSync('tc/prestige.js')?fs.readFileSync('tc/prestige.js','utf8'):''}</script>\n`:'';/* S3 Circuit career (Career): engine + wiring, off unless the s3 flag is on */
 const dg=fs.existsSync('dartgeo.json')?`<script>window.TOPS_DG_RAW=${fs.readFileSync('dartgeo.json','utf8')}</script>\n`:'';
 // collectibles (cards, packs, cabinet, exhibitions): tc/
 const tcf=n=>fs.existsSync('tc/'+n)?fs.readFileSync('tc/'+n,'utf8'):'';
