@@ -233,10 +233,31 @@ jobs:
     needs: gate_build
     if: ${{ inputs.mode != 'dry_run' && needs.gate_build.outputs.mode == 'new' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions: { contents: write, pages: write, id-token: write }
-    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outputs.page_url }}' }
-    env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}', CI: '${{ needs.gate_build.outputs.ci }}', BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}" }
+    timeout-minutes: 40   # worst case: 3 deploy attempts (each after up to 3 min waiting for its artifact) + 3 rollback attempts
+    permissions: { contents: write, pages: write, id-token: write, actions: read }   # actions: read = list this run's artifacts
+    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url || steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outputs.page_url || steps.rbdeploy3.outputs.page_url }}' }
+    env:
+      # INCIDENTS 4.16 (run 44837661545) and 4.19 (run 44891654662): deploy-pages looks its artifact up in this run's artifact list
+      # (GET actions/runs/<id>/artifacts) straight after the upload; the list lags the upload by seconds, so it saw 2 artifacts, not
+      # its own ("No artifacts named github-pages-1"). The 60 s retry re-uploaded and hit the same lag with the new artifact (the
+      # first one WAS listed by then). So before every deploy-pages: wait (up to 3 min) until the artifact is in that same list.
+      # (the steps that run it get GH_TOKEN; the rest of the job, e.g. the live check's npm install, does not)
+      WAIT_ART: |
+        t0=$(date +%s)
+        for i in $(seq 1 36); do
+          c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$N\" and (.expired | not))] | length" 2>/dev/null || echo 0)
+          if [ "${c:-0}" -ge 1 ]; then echo "ARTIFACT: $N listed after $(( $(date +%s) - t0 )) s"; echo "ARTIFACT: \`$N\` listed after $(( $(date +%s) - t0 )) s" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          sleep 5
+        done
+        echo "::warning::ARTIFACT: $N still not listed after $(( $(date +%s) - t0 )) s; trying the deploy anyway"
+      V: '${{ needs.gate_build.outputs.version }}'
+      TAG: '${{ needs.gate_build.outputs.tag }}'
+      ITEM: '${{ inputs.item }}'
+      QTREE: '${{ inputs.tree }}'
+      QCOMMIT: '${{ inputs.commit }}'
+      RISK: '${{ inputs.risk }}'
+      CI: '${{ needs.gate_build.outputs.ci }}'
+      BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}"
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, path: site, fetch-depth: 0 }
@@ -263,31 +284,49 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site, name: 'github-pages-${{ github.run_attempt }}' }
-      # INCIDENT 4.16 (run 44837661545): deploy-pages failed ("No artifacts named github-pages were found", a GitHub-side glitch)
-      # after main already said 'prepared', and nothing below ran, so main said 4.16 while live stayed 4.15. Now a failed deploy is
-      # retried once (60 s later, freshly uploaded); any failure before the live check passes then runs the rollback chain below
-      # (redeploy the last live release, with one retry; verify it; restore main's site files; mark this version failed), so main
-      # always ends matching live. Artifact names carry the run attempt, so a re-run never collides with an earlier attempt's.
+      # Deploy in up to 3 attempts, each only once its artifact is listed (WAIT_ART above): 1 straight away; 2 after 30 s on the SAME
+      # artifact (a fresh upload only restarts the lag); 3 after 90 s more on a fresh upload (in case the first artifact is bad).
+      # Any failure before the live check passes then runs the rollback chain below (redeploy the last live release, same 3
+      # attempts; verify it; restore main's site files; mark this version failed), so main always ends matching live (4.16 lesson).
+      # Artifact names carry the run attempt, so a re-run never collides with an earlier attempt's.
+      - name: Wait until the site artifact is listed
+        env: { N: 'github-pages-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
       - id: deploy
         uses: actions/deploy-pages@v4
         continue-on-error: true
         with: { artifact_name: 'github-pages-${{ github.run_attempt }}' }
-      - name: Deploy failed once; wait, then upload the site again for one retry
+      - name: Deploy attempt 1 failed; wait 30 s, then retry the same artifact once it is listed
         if: steps.deploy.outcome == 'failure'
+        env: { N: 'github-pages-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
         run: |
-          echo "::warning::DEPLOY: first deploy-pages attempt failed; retrying once in 60 s with a fresh artifact"; sleep 60
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.deploy.outcome == 'failure'
-        with: { path: site, name: 'github-pages-retry-${{ github.run_attempt }}' }
+          echo "::warning::DEPLOY: attempt 1 failed; attempt 2 in 30 s on the same artifact"; sleep 30
+          eval "$WAIT_ART"
       - id: deploy2
         if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        with: { artifact_name: 'github-pages-${{ github.run_attempt }}' }
+      - name: Deploy attempt 2 failed; wait 90 s, then upload the site again
+        if: steps.deploy2.outcome == 'failure'
+        run: |
+          echo "::warning::DEPLOY: attempt 2 failed; attempt 3 in 90 s with a fresh artifact"; sleep 90
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.deploy2.outcome == 'failure'
+        with: { path: site, name: 'github-pages-retry-${{ github.run_attempt }}' }
+      - name: Wait until the fresh artifact is listed
+        if: steps.deploy2.outcome == 'failure'
+        env: { N: 'github-pages-retry-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
+      - id: deploy3
+        if: steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
         with: { artifact_name: 'github-pages-retry-${{ github.run_attempt }}' }
       - name: Live check (version.json cache-busted, then a headless load with no page errors)
         id: live
-        if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success'
+        if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success' || steps.deploy3.outcome == 'success'
         run: |
-          U="${{ steps.deploy.outcome == 'success' && steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}"
+          U="${{ steps.deploy.outcome == 'success' && steps.deploy.outputs.page_url || steps.deploy2.outcome == 'success' && steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
           # R-1: the live version.json must be the released one (its "build" is what the page's update check compares); parsed, not grepped
@@ -315,7 +354,7 @@ jobs:
           echo "src -> $(git rev-parse --short FETCH_HEAD)" >> $GITHUB_STEP_SUMMARY
       - name: Prepare rollback to the last live release
         id: rbprep
-        # a failed live check, or both deploy attempts failed (live is then most likely still the last release, but a deploy that
+        # a failed live check, or all 3 deploy attempts failed (live is then most likely still the last release, but a deploy that
         # reports failure can still have landed, so redeploy the last release to be sure, exactly as for a failed live check)
         # ChatGPT P1 (incident review): EVERY failure after main says 'prepared' and before the live check has passed enters rollback
         # (configure-pages, either upload, either deploy, or the live check itself). A failure after the live check passed (the src
@@ -332,26 +371,45 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         if: failure() && steps.rbprep.outcome == 'success'
         with: { path: rb, name: 'rollback-${{ github.run_attempt }}' }
+      - name: Wait until the rollback artifact is listed
+        if: failure() && steps.rbprep.outcome == 'success'
+        env: { N: 'rollback-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
       - id: rbdeploy
         uses: actions/deploy-pages@v4
         if: failure() && steps.rbprep.outcome == 'success'
         continue-on-error: true
         with: { artifact_name: 'rollback-${{ github.run_attempt }}' }
-      - name: Rollback deploy failed once; wait and retry
+      - name: Rollback attempt 1 failed; wait 30 s, then retry the same artifact once it is listed
         if: failure() && steps.rbdeploy.outcome == 'failure'
+        env: { N: 'rollback-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
         run: |
-          echo "::warning::ROLLBACK: first rollback deploy failed; retrying once in 60 s"; sleep 60
-      - uses: actions/upload-pages-artifact@v3
-        if: failure() && steps.rbdeploy.outcome == 'failure'
-        with: { path: rb, name: 'rollback-retry-${{ github.run_attempt }}' }
+          echo "::warning::ROLLBACK: attempt 1 failed; attempt 2 in 30 s on the same artifact"; sleep 30
+          eval "$WAIT_ART"
       - id: rbdeploy2
         uses: actions/deploy-pages@v4
         if: failure() && steps.rbdeploy.outcome == 'failure'
+        continue-on-error: true
+        with: { artifact_name: 'rollback-${{ github.run_attempt }}' }
+      - name: Rollback attempt 2 failed; wait 90 s, then upload the rollback again
+        if: failure() && steps.rbdeploy2.outcome == 'failure'
+        run: |
+          echo "::warning::ROLLBACK: attempt 2 failed; attempt 3 in 90 s with a fresh artifact"; sleep 90
+      - uses: actions/upload-pages-artifact@v3
+        if: failure() && steps.rbdeploy2.outcome == 'failure'
+        with: { path: rb, name: 'rollback-retry-${{ github.run_attempt }}' }
+      - name: Wait until the fresh rollback artifact is listed
+        if: failure() && steps.rbdeploy2.outcome == 'failure'
+        env: { N: 'rollback-retry-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
+      - id: rbdeploy3
+        uses: actions/deploy-pages@v4
+        if: failure() && steps.rbdeploy2.outcome == 'failure'
         with: { artifact_name: 'rollback-retry-${{ github.run_attempt }}' }
       - name: Verify the rollback is live
         id: rbverify
-        if: failure() && (steps.rbdeploy.outcome == 'success' || steps.rbdeploy2.outcome == 'success')
-        env: { PV: '${{ steps.rbprep.outputs.pv }}', U: '${{ steps.rbdeploy.outcome == ''success'' && steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outputs.page_url }}' }
+        if: failure() && (steps.rbdeploy.outcome == 'success' || steps.rbdeploy2.outcome == 'success' || steps.rbdeploy3.outcome == 'success')
+        env: { PV: '${{ steps.rbprep.outputs.pv }}', U: '${{ steps.rbdeploy.outcome == ''success'' && steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outcome == ''success'' && steps.rbdeploy2.outputs.page_url || steps.rbdeploy3.outputs.page_url }}' }
         run: |
           for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$PV" ] && { echo "ROLLBACK LIVE: $U shows $PV" >> $GITHUB_STEP_SUMMARY; exit 0; }; sleep 5; done
           echo "::error::ROLLBACK: version.json never showed $PV (last: $g); restore by hand"; exit 1
@@ -374,7 +432,7 @@ jobs:
           git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; main still holds v$V, restore it by hand before any hand push"; exit 1; }
           echo "main restored to $PREV site files ($(git rev-parse --short HEAD))" >> $GITHUB_STEP_SUMMARY
       - name: Rollback could not be confirmed (state for a human)
-        # ChatGPT P2 (incident review round 2): if the rollback deploy failed twice or its live verify failed, main is NOT restored
+        # ChatGPT P2 (incident review round 2): if the rollback deploy failed 3 times or its live verify failed, main is NOT restored
         # (live is uncertain), so say exactly what state things are in, so nobody hand-pushes main on a guess.
         if: failure() && steps.rbprep.outcome == 'success' && steps.rbverify.outcome != 'success'
         env: { PV: '${{ steps.rbprep.outputs.pv }}', PREV: '${{ steps.rbprep.outputs.prev }}' }
