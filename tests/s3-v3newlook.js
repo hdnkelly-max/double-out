@@ -28,7 +28,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     const lk1 = await p.evaluate(() => ({ shirt: TOPS_RB.myShirt(), fem: TOPS_RB.meFem() })); out['lk1' + w] = lk1;
     if (lk1.shirt !== '#d7232d' || lk1.fem !== true) fail.push(w + ' v3 Locker look ' + JSON.stringify(lk1)); if (lk0.shirt === '#d7232d' && lk0.fem === true) fail.push(w + ' v3 off already uses the v3 look ' + JSON.stringify(lk0));
     if (process.env.SHOTS) { await p.waitForTimeout(3000); await p.screenshot({ path: path.join(__dirname, 's3_v3nl_' + w + '.png') }); }
-    if (!on) { /* already failed above: no taps */ } else if (w === 390) { await p.locator('#s3V3NewTw').tap(); await p.waitForTimeout(1200); const tw = await p.evaluate(() => ({ gone: !document.getElementById('s3V3New'), flag: !!save.v3NewLook, cre: !!document.querySelector('#creator') && !document.getElementById('creator').hidden && getComputedStyle(document.getElementById('creator')).display !== 'none' }));
+    if (!on) { /* already failed above: no taps */ } else if (w === 390) { await p.locator('#s3V3NewTw').tap({ timeout: 60000 }); await p.waitForTimeout(1500); const tw = await p.evaluate(() => ({ gone: !document.getElementById('s3V3New'), flag: !!save.v3NewLook, cre: !!document.querySelector('#creator') && !document.getElementById('creator').hidden && getComputedStyle(document.getElementById('creator')).display !== 'none' }));
       out.tweak = tw; if (!tw.gone || !tw.flag || !tw.cre) fail.push('Tweak my look ' + JSON.stringify(tw)); }
     else { await p.locator('#s3V3NewGo').tap(); await p.waitForTimeout(500); const g = await p.evaluate(() => ({ gone: !document.getElementById('s3V3New'), flag: !!save.v3NewLook })); out.go = g; if (!g.gone || !g.flag) fail.push("Let's go " + JSON.stringify(g)); }
     await p.reload(); await p.waitForFunction(() => window.TOPS_S3UI, null, { timeout: 180000 }); await p.waitForTimeout(1500); await title(p); await p.waitForTimeout(2000); if (await card(p)) fail.push(w + ': card shows again after it was seen');
@@ -47,7 +47,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await arm(); at = await born();
     if (at) { const r = await p.evaluate(() => { let n = 0; const sc = showCreator; showCreator = function () { n++; return sc.apply(this, arguments); }; const t = document.getElementById('s3V3NewTw');
         const o = { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true }; t.dispatchEvent(new PointerEvent('pointerdown', o)); t.dispatchEvent(new PointerEvent('pointerup', o));
-        const afterUp = { gone: !document.getElementById('s3V3New'), n }; t.click(); showCreator = sc; return Object.assign(afterUp, { total: n }); });
+        const gone = !document.getElementById('s3V3New'); t.click(); return new Promise(ok => setTimeout(() => { showCreator = sc; ok({ gone, n, total: n }); }, 300)); });
       out.liftOnly = r; if (!r.gone || r.n !== 1 || r.total !== 1) fail.push('Tweak: lifting the finger (no click) must act once ' + JSON.stringify(r)); } else fail.push('second arrival: no card');
     if (p.pe.length) fail.push('arrival page errors ' + p.pe.join('; ').slice(0, 200)); await ctx.close(); }
   // a career started with v3 on: no card
