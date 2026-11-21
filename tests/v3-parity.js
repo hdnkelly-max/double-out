@@ -5,10 +5,10 @@
 // and pose. Also checks the v3 flag reads false and no v3-only global switch is set.
 // Clip pass (Q&D iso.js, 21 Nov): every figure x every clip x 10 frames, posed by the mixer and then run through TOPS_V2POST (the head and arm
 // clearance the game runs every frame), every bone's world position compared with the baseline at 0.01 mm. Exit 0 only if everything matches.
-// node tests/v3-parity.js <baseline dir> <candidate dir>
+// node tests/v3-parity.js <baseline dir> <candidate dir>   [env CAND_GLOBALS='{...}': globals set on the candidate page only]
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 const serve=dir=>http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':'application/octet-stream'});r.end(d);});}).listen(0);
-async function snap(b,dir){const srv=serve(dir);const p=await (await b.newContext({...devices['iPhone 13']})).newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
+async function snap(b,dir){const srv=serve(dir);const p=await (await b.newContext({...devices['iPhone 13']})).newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));if(dir===path.resolve(process.argv[3])&&process.env.CAND_GLOBALS)await p.addInitScript(G=>{Object.assign(window,G);},JSON.parse(process.env.CAND_GLOBALS));/* doc 77: CAND_GLOBALS (e.g. {"TOPS_GRIP77":0,"TOPS_CAP77":0}) on the candidate only: a deliberate change switched off must leave everything identical */
  await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
  await p.addInitScript(()=>{try{localStorage.setItem('tops_s3','1');localStorage.setItem('tops_s3_welcome','1');}catch(e){}window.TOPS_S3PROS=true;let s=12345;Math.random=()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};});
  await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
