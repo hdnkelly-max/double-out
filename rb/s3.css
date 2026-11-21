@@ -250,3 +250,19 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */
 #rbApp .s3-wkh .s3-wkup .s3-nw{white-space:nowrap;font:inherit;color:inherit;letter-spacing:inherit}
 @media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
+/* CAR-PRESTIGE: the title edition under each level on the trophy shelf */
+#rbApp .s3-ed{display:flex;align-items:center;gap:12px;background:var(--card2,var(--card));border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:64px}
+#rbApp .s3-ed img,#rbApp .s3-ed i{width:44px;height:44px;border-radius:8px;flex:none;object-fit:cover;transform:rotate(45deg) scale(.82);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#rbApp .s3-ed i{background:repeating-linear-gradient(45deg,var(--line) 0 6px,transparent 6px 12px);transform:none;box-shadow:none}
+#rbApp .s3-ed>div{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+#rbApp .s3-ed span{font:700 11px/1 var(--b,Manrope,sans-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+#rbApp .s3-ed b{font:800 17px/1.1 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;color:var(--ink)}
+#rbApp .s3-ed small{font:500 12px/1.3 var(--b,Manrope,sans-serif);color:var(--ink2)}
+#rbApp .s3-ed:not(.s3-edopen):not(.s3-edown) img{filter:grayscale(1) brightness(.6)}
+#rbApp .s3-edb{flex:none;min-height:44px;min-width:96px;padding:6px 12px;border-radius:10px;border:0;background:var(--acc,#c6f36b);color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+#rbApp .s3-edb b{font:800 14px/1 var(--b,Manrope,sans-serif);letter-spacing:.04em;text-transform:uppercase;color:#111}
+#rbApp .s3-edb small{font:600 10px/1.2 var(--b,Manrope,sans-serif);color:#111;opacity:.75;max-width:110px;text-align:center}
+#rbApp .s3-edb[disabled]{background:var(--card);border:1px solid var(--line);cursor:default}
+#rbApp .s3-edb[disabled] b,#rbApp .s3-edb[disabled] small{color:var(--ink2)}
+#rbApp .s3-edw{background:transparent;border:1px solid var(--line)}
+#rbApp .s3-edw b{color:var(--ink)}

@@ -611,7 +611,8 @@
           const more = top === 'W' && f.length ? `<small>+ runner-up${f.length > 1 ? ' ×' + f.length : ''}</small>` : '';
           return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}" data-ev="${esc(e.id)}">${CUP(top, 's3cup' + (n++))}<b title="${esc(e.n)}">${esc(TOWN(e.n).split(' · ')[0])}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
         const tag = up ? `<span class="s3-trup">Promoted${left ? ' · week ' + left : ''}</span>` : `<span class="s3-trnow">This level</span>`;
-        return `<section class="s3-trlv" data-lv="${i}"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol></section>`; };
+        const ed = window.TOPS_PRESTIGE && TOPS_PRESTIGE.row ? (() => { try { return TOPS_PRESTIGE.row(i); } catch (x) { return ''; } })() : '';   /* CAR-PRESTIGE: the level's title edition */
+        return `<section class="s3-trlv" data-lv="${i}"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol>${ed}</section>`; };
       let rows = ''; for (let i = d.level; i >= 0; i--) rows += lvRow(i);
       const nx = C.LEVELS[d.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
       /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
