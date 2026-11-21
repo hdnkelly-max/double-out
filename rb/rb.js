@@ -306,7 +306,13 @@
     return '';
   }
   // a shirt reward in its real colour (EXP-WIN): pending = '' (the card stays dark), failure = the neutral trophy image
-  const shirtImg = (hex, done) => recolour('w_rw_shirt', hex, `${IMG}w_rw_trophy.jpg`, done);
+  /* Season 3 (Director's audit): there is no Vinyl redo of w_rw_shirt / w_rw_trophy, so the image switch turned them into its dark placeholder
+     and a shirt reward showed an almost black square ('Racing green shirt'). With Season 3 on and no redo, the shirt photo is the player's
+     Vinyl Locker photo in that colour, and the fallback is the venue, never the placeholder. */
+  const s3NoShirt = () => !!window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/w_rw_shirt.jpg');
+  const shirtBase = () => s3NoShirt() ? (meFem() ? 'lk_f' : 'lk_m') : 'w_rw_shirt';
+  const shirtFb = () => { if (!s3NoShirt()) return `${IMG}w_rw_trophy.jpg`; try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } };
+  const shirtImg = (hex, done) => recolour(shirtBase(), hex, shirtFb(), done);
   // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
   // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
   function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
@@ -463,7 +469,7 @@
   const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
     const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
     const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
-    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); return true; };
+    const u = recolour(shirtBase(), r.v, shirtFb(), put); if (u) put(u); return true; };
   let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
