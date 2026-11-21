@@ -7,7 +7,12 @@
 //   PHONES  item 2's automatable half: iPhone 13, Pixel 7 and a 360 px phone, each a brand-new player: the first night, a whole Pub night
 //           (3 results), the Trophies shelf, the titles chip and back. On every screen: no stuck overlay, nothing under MENU, no word split
 //           over two lines, no sideways scroll, no page errors. (Hayden's real-phone play stays a manual item.)
-// usage: node tests/switch-on.js [dir] [parts]      parts: gate,saves,phones (default all)
+//   V3GATE  the models switch-on (Producer Sun 05:09, Director doc 69): the models' own tests (s3-v3newlook, s3-v3heads, s3-clip-cast,
+//           s3-dart-cast, v3-cardart) + v3-parity against BASELINE=<dir of the live build> (default players see exactly the live build)
+//   V3SAVES the three live S3 saves' creator choices, with the models on (?v3=1): the New look card once per account (also on a second
+//           phone with the same save), the figure shows the chosen skin, cap, beard and hair; then the same save opened with the models
+//           off (what the default-off release gives) keeps money, XP, level, history, the v3 look and the card flag, and on again
+// usage: node tests/switch-on.js [dir] [parts]      parts: gate,saves,phones (default) or v3gate,v3saves for the models
 //        OUT=<file.json> writes the full result; SHOTS=<dir> saves a screenshot of every checked screen; PHONES='Pixel 7' runs one phone profile
 // Exit 0 only if every row passes. The last lines printed are a markdown PASS/FAIL table.
 // --merge only reads JSON (the report job has no Playwright installed)
@@ -141,6 +146,106 @@ async function saves(b) {
   }
 }
 
+// ---------- V3: the models switch-on (Producer Sun 05:09, Director doc 69). Run on the switch-on candidate BEFORE the flip (default off;
+// ?v3=1 turns the models on for the test) so the same run answers "can the new models be the default?" and "is the way back safe?".
+const V3GATE = ['s3-v3newlook', 's3-v3heads', 's3-clip-cast', 's3-dart-cast', 'v3-cardart'];   // the models' own tests; a missing one = not on this build
+function v3gate() {
+  for (const t of V3GATE) { const f = path.join(__dirname, t + '.js'); if (!fs.existsSync(f)) { row('v3 gate', t, false, 'not on this build (tests/' + t + '.js missing)'); continue; }
+    const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
+    const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
+    row('v3 gate', t, r.status === 0, `${r.status === 0 ? '' : 'exit ' + (r.status == null ? r.signal : r.status) + ': '}${last.slice(0, 200)} [${Math.round((Date.now() - s) / 1000)} s]`); }
+  // v3-parity: default players see exactly the baseline (the live build): every figure's meshes, materials and pixels, and every clip
+  const base = process.env.BASELINE && path.resolve(process.env.BASELINE), f = path.join(__dirname, 'v3-parity.js');
+  if (!fs.existsSync(f)) row('v3 gate', 'v3-parity', false, 'not on this build');
+  else if (!base || !fs.existsSync(path.join(base, 'index.html'))) row('v3 gate', 'v3-parity', false, 'no baseline build (BASELINE=<dir of the live build>)');
+  else { const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, base, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
+    const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
+    row('v3 gate', 'v3-parity (default players = the live build)', r.status === 0, `${last.slice(0, 200)} [${Math.round((Date.now() - s) / 1000)} s]`); }
+}
+// the three live Season 3 saves' creator choices (shapes from the db: look fields only)
+const V3FIX = [ { id: 'a_long_s3', label: 'Tama, heavy build, quiff, chosen skin, band + glasses' }, { id: 'd_ray_s3', label: 'Ray, heavy build, clean face, silver hair, glasses + band + cap' }, { id: 'b_short_s3', label: 'Kai, the default look' } ];
+const BEARDS = ['stubble', 'full', 'goatee', 'walrus'];
+async function v3saves(b) {
+  for (const fx of V3FIX) {
+    const raw = fs.readFileSync(path.join(__dirname, 'fixtures', 'switch-on', fx.id + '.json'), 'utf8'); const before = JSON.parse(raw); const v = before.vlook || {}; const L = 'v3 · ' + fx.id;
+    let R = {}; const url = on => 'file://' + dir + '/index.html?s3=1&s3x=1&v3=' + (on ? '1' : '0');
+    const pe = await session(b, 'iPhone 13', { fn: raw => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.setItem('doubleout_s3', raw); localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} }, arg: raw }, async (p, T) => {
+      const title = async () => { await p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; save.authSeen = true; showTitle(); } catch (e) {} }); await p.waitForTimeout(1600); };
+      const card = async () => { await p.waitForSelector('#s3V3New', { timeout: 7000 }).catch(() => {}); return p.evaluate(() => !!document.getElementById('s3V3New')); };
+      const hub = async () => { await p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; showHub('play'); } catch (e) {} }); await p.waitForTimeout(1500); for (let i = 0; i < 6; i++) { let hit = false; for (const s of NEXT) if (await T.tap(s)) { hit = true; await p.waitForTimeout(300); break; } if (!hit) break; } };
+      const rd = () => p.evaluate(() => { try { persist(); } catch (e) {} return localStorage.getItem('doubleout_s3'); });
+      // the player's own figure as the game builds it with the models on. Colours go through the game's skin table and warmth pass, so a
+      // choice is judged by DIFFERENCE: rebuild the player with that one choice taken out (the base's own value then applies) and see
+      // whether the figure changes. A choice that changes nothing on the figure is lost (doc 69: "Tama skin choice lost, build lost").
+      const fig = () => p.evaluate(async () => { const sl = ms => new Promise(r => setTimeout(r, ms));
+        /* the player figure (makeFigure) doesn't need the GLB rig, which the v3 models never load: wait only for the 3D module */
+        for (let i = 0; i < 240 && !(typeof V !== 'undefined' && V.setPlayerLook && V._qa && V._qa.meFig); i++) await sl(500); if (!(typeof V !== 'undefined' && V.setPlayerLook && V._qa && V._qa.meFig)) return { err: 'no 3D module' };
+        const T3 = V._qa.T; const sig = () => { const f = V._qa.meFig(); if (!f) return null; f.updateMatrixWorld(true); const o = { tags: {}, meshes: 0 }; const all = new T3.Box3().setFromObject(f);
+          o.box = [all.max.x - all.min.x, all.max.y - all.min.y, all.max.z - all.min.z].map(x => +x.toFixed(3));
+          f.traverse(m => { if (!m.isMesh || !m.visible) return; o.meshes++; const t = m.userData.cap ? 'cap' : m.userData.tag; if (!['skull', 'hair', 'cap', 'beard'].includes(t)) return;
+            const bx = new T3.Box3().setFromObject(m), mt = [].concat(m.material)[0], g = o.tags[t] = o.tags[t] || { n: 0, verts: 0, lo: 1e9, hi: -1e9, col: null };
+            g.n++; g.verts += (m.geometry.attributes.position || { count: 0 }).count; g.lo = Math.min(g.lo, bx.min.y); g.hi = Math.max(g.hi, bx.max.y); if (!g.col && mt && mt.color) g.col = mt.color.getHexString(); });
+          for (const k in o.tags) { o.tags[k].lo = +o.tags[k].lo.toFixed(3); o.tags[k].hi = +o.tags[k].hi.toFixed(3); } return o; };
+        const v = JSON.parse(JSON.stringify(save.vlook || {})), tier = (typeof career === 'function' && career() && career().tier) || 0;
+        // the figure as a picture: drawn alone, fixed camera and pose, 256x256; the pixel hash says whether a choice changed what a player sees
+        const Q = V._qa, cam = new T3.PerspectiveCamera(30, 1, .05, 30); cam.position.set(0, 1.2, -3.2); cam.lookAt(0, 1.0, 0); const rt = new T3.WebGLRenderTarget(256, 256), px = new Uint8Array(256 * 256 * 4);
+        const pic = f => { const keep = []; Q.scene.children.forEach(c => { if (c.visible && !c.isLight) { keep.push(c); c.visible = false; } }); const vis = f.visible; f.visible = true; const pp = f.parent, pos = f.position.clone(), rot = f.rotation.clone();
+          Q.scene.add(f); f.position.set(0, 0, 0); f.rotation.set(0, Math.PI, 0); f.updateMatrixWorld(true); const R = Q.renderer; R.setRenderTarget(rt); R.clear(); R.render(Q.scene, cam); R.readRenderTargetPixels(rt, 0, 0, 256, 256, px); R.setRenderTarget(null);
+          Q.scene.remove(f); if (pp) pp.add(f); f.position.copy(pos); f.rotation.copy(rot); f.visible = vis; keep.forEach(c => c.visible = true);
+          let a = 2166136261, lit = 0; for (let i = 0; i < px.length; i += 4) { const q = (px[i] >> 2) << 16 | (px[i + 1] >> 2) << 8 | (px[i + 2] >> 2); a = Math.imul(a ^ q, 16777619); if (px[i + 3]) lit++; } return { px: a >>> 0, lit }; };
+        const build = async vl => { save.vlook = vl; try { V.setPlayerLook(save.look, save.flight, save.name, tier); } catch (e) { return { err: e.message }; } await sl(600); const o = sig(); if (o) Object.assign(o, pic(V._qa.meFig())); return o; };
+        const out = { v3: window.TOPS_V3FLAG === true, full: await build(v), without: {}, base: (window.TOPS_S3_LOOK && TOPS_S3_LOOK(v.base)) || null }; if (!out.full) return { err: 'setPlayerLook built no figure' };
+        // swap each choice for another value from the game's own option list: if the figure doesn't change, the game ignores that choice
+        const OPT = window.TOPS_S3_OPTIONS || {}; out.alt = {};
+        for (const k of ['skin', 'hair', 'hairC', 'face', 'body', 'acc']) { if (v[k] == null || (k === 'acc' && !(v.accSet || (v.acc || []).length))) continue;
+          const alt = JSON.parse(JSON.stringify(v));
+          if (k === 'acc') { alt.accSet = true; alt.acc = v.acc.includes('cap') ? v.acc.filter(x => x !== 'cap') : v.acc.concat('cap'); out.alt[k] = alt.acc; }
+          else { const o = (OPT[k] || []).find(x => String(x).toLowerCase() !== String(v[k]).toLowerCase() && x !== 'bald'); if (o == null) continue; alt[k] = o; out.alt[k] = o; }
+          out.without[k] = await build(alt); }
+        const again = await build(v); out.stable = !!(again && out.full && again.px === out.full.px); save.vlook = v; return out; });   /* control: the same look twice must give the same picture */
+      // 1. the models on: the New look card once, then the figure
+      await p.goto(url(1), { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500); await title(); R.card1 = await card(); await T.shot('v3_' + fx.id + '_card');
+      if (R.card1) { await T.tap('#s3V3NewGo'); await p.waitForTimeout(600); } R.flag1 = await p.evaluate(() => !!save.v3NewLook);
+      await hub(); await T.tab('locker'); await p.waitForTimeout(1500); R.fig = await fig(); R.lookOn = await T.look(true); await T.shot('v3_' + fx.id + '_locker');
+      R.on = await rd();
+      // 2. the way back: the same save opened with the models off (what the default-off release gives a player), then on again
+      await p.goto(url(0), { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500); await title(); R.cardOff = await card(); await hub(); await T.tab('locker'); await p.waitForTimeout(1200);
+      R.lookOff = await T.look(true); R.figOff = await p.evaluate(async () => { const sl = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 240 && !(typeof V !== 'undefined' && V.setPlayerLook && V._qa && V._qa.meFig); i++) await sl(500);
+        try { V.setPlayerLook(save.look, save.flight, save.name, (career() || {}).tier || 0); } catch (e) { return false; } await sl(600); const f = V._qa.meFig(); let n = 0; if (f) f.traverse(m => { if (m.isMesh) n++; }); return n > 5; }); await T.shot('v3_' + fx.id + '_off'); R.off = await rd();
+      await p.goto(url(1), { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500); await title(); R.card2 = await card(); R.on2 = await rd(); });
+    // 3. another device with the same (cloud) save: the card is per account, not per device
+    let card3 = null; const pe3 = R.on2 ? await session(b, 'Pixel 7', { fn: raw => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.setItem('doubleout_s3', raw); localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} }, arg: R.on2 }, async (p, T) => {
+      await p.goto('file://' + dir + '/index.html?s3=1&s3x=1&v3=1', { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500);
+      await p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; save.authSeen = true; showTitle(); } catch (e) {} }); await p.waitForTimeout(1600);
+      await p.waitForSelector('#s3V3New', { timeout: 7000 }).catch(() => {}); card3 = await p.evaluate(() => !!document.getElementById('s3V3New')); }) : [];
+    const J = s => { try { return JSON.parse(s || 'null'); } catch (e) { return null; } }; const on = J(R.on), off = J(R.off), on2 = J(R.on2);
+    row(L, 'New look card once per account', R.card1 && R.flag1 && !R.cardOff && !R.card2 && card3 === false, `first open with the models on: ${R.card1 ? 'shown' : 'NOT shown'}, flag ${R.flag1 ? 'saved' : 'NOT saved'}; models off: ${R.cardOff ? 'SHOWN' : 'none'}; on again: ${R.card2 ? 'SHOWN AGAIN' : 'none'}; same save on a second phone: ${card3 ? 'SHOWN AGAIN' : card3 === false ? 'none' : 'not run'}`);
+    // creator choices: what each choice changes on the figure (vs the same player without it), plus where beard and hair sit
+    const F = R.fig, probs = [], notes = []; const t = (F && F.full && F.full.tags) || {};
+    if (!F || F.err || !F.full) probs.push('no player figure' + (F && F.err ? ': ' + F.err : '')); else if (!F.v3) probs.push('the models flag did not switch on'); else if (F.full.err) probs.push('rebuild failed: ' + F.full.err);
+    if (F && F.full && !F.full.err && !F.stable) probs.push('render not repeatable (the same look drew two different pictures): the choice checks are void');
+    if (F && F.full && !F.full.err) {
+      const shows = s => s.px;   // the rendered picture of the figure
+      for (const [k, w] of Object.entries(F.without)) { if (!w || w.err) { probs.push(k + ': rebuild failed'); continue; }
+        const same = shows(F.full) === shows(w); const sw = `${JSON.stringify(v[k])} -> ${JSON.stringify(F.alt[k])}`;
+        if (same) probs.push(`${k} is ignored: ${sw} leaves the rendered figure identical`); notes.push(`${k} ${sw}: ${same ? 'NO CHANGE' : 'changes the picture'}`); }
+      const acc = Array.isArray(v.acc) && (v.accSet || v.acc.length) ? v.acc : null;
+      if (acc && acc.includes('cap') !== !!t.cap) probs.push(acc.includes('cap') ? 'chosen cap missing' : 'a cap the player did not choose');
+      if (v.face) { const want = BEARDS.includes(v.face); if (want !== !!t.beard) probs.push(want ? 'chosen ' + v.face + ' missing' : 'a beard on a clean face');
+        if (want && t.beard && t.skull && t.beard.hi < t.skull.lo + 0.01) probs.push(`the ${v.face} hangs under the jaw (beard top ${t.beard.hi}, skull bottom ${t.skull.lo})`); }
+      if (v.hair) { const want = v.hair !== 'bald'; if (want !== !!t.hair) probs.push(want ? 'chosen ' + v.hair + ' hair missing' : 'hair on a bald choice');
+        if (want && t.hair && t.skull && t.hair.hi < t.skull.hi - 0.005) probs.push(`the ${v.hair} doesn't cover the skull top (hair top ${t.hair.hi}, skull top ${t.skull.hi})`); } }
+    row(L, 'creator choices shown on the new models: ' + fx.label, !probs.length, (probs.length ? probs.join('; ') + ' | ' : '') + notes.join('; '));
+    // the way back: the same save under the models off keeps everything, and the models' look waits for them
+    const bad = []; if (!on || !off) bad.push('save missing'); else { for (const [k, g] of Object.entries(KEEP)) if (JSON.stringify(g(on)) !== JSON.stringify(g(off))) bad.push(k);
+      if (JSON.stringify(on.vlook) !== JSON.stringify(off.vlook)) bad.push('vlook (the v3 look) changed'); if (!!on.v3NewLook !== !!off.v3NewLook) bad.push('v3NewLook flag lost'); if (on2 && JSON.stringify(on2.vlook) !== JSON.stringify(on.vlook)) bad.push('vlook changed on the way back'); }
+    for (const [k, g] of Object.entries(KEEP)) if (on && JSON.stringify(g(before)) !== JSON.stringify(g(on))) bad.push('with the models on: ' + k);
+    row(L, 'a save made with the models on opens safely with them off', !bad.length && R.figOff && lookOk(R.lookOff || {}), bad.length ? bad.join(', ') : `all ${Object.keys(KEEP).length} fields, the v3 look and the card flag equal on, off and on again; figure built with the models off: ${R.figOff ? 'yes' : 'NO'}${R.lookOff && !lookOk(R.lookOff) ? '; ' + lookNote(R.lookOff) : ''}`);
+    row(L, 'screens with the models on', lookOk(R.lookOn || {}), R.lookOn ? (lookNote(R.lookOn) || 'Locker: no stuck overlay, nothing under MENU, no word split') : 'not reached');
+    row(L, 'no page errors', !pe.length && !pe3.length, pe.concat(pe3).join(' | '));
+  }
+}
+
 // ---------- PHONES: a brand-new player's first Pub night, on each phone
 async function phones(b) {
   const only = process.env.PHONES ? process.env.PHONES.split(',') : null;   // PHONES='Pixel 7' runs one profile
@@ -226,7 +331,7 @@ async function phones(b) {
 if (process.argv[2] === '--merge') {
   const outs = process.argv.slice(3).map(f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return { rows: [{ part: 'merge', check: path.basename(f), ok: false, note: 'no result: ' + e.message.slice(0, 80) }] }; } });
   const all = outs.flatMap(o => o.rows || []); const ver = (outs.find(o => o.version) || {}).version; const flag = (outs.find(o => o.flag) || {}).flag;
-  const ord = r => r.part === 'gate' ? 0 : r.part.startsWith('saves') ? 1 : 2; all.sort((a, b) => ord(a) - ord(b));
+  const ord = r => r.part === 'gate' ? 0 : r.part.startsWith('saves') ? 1 : r.part.startsWith('v3') ? 3 : 2; all.sort((a, b) => ord(a) - ord(b));
   const nFail = all.filter(r => !r.ok).length;
   console.log(`### SWITCH-ON ${nFail ? 'FAIL' : 'AUTOMATED PASS'} on v${ver} (${flag || 's3x=1'}): ${all.length - nFail}/${all.length} rows pass (longest part ${Math.max(0, ...outs.map(o => o.secs || 0))} s) · release NOT cleared until the manual checklist items are signed off on this build\n\n| | Part | Check | Note |\n|---|---|---|---|`);
   for (const r of all) console.log(`| ${r.ok ? 'PASS' : '**FAIL**'} | ${r.part} | ${r.check} | ${String(r.note).replace(/\|/g, '/')} |`);
@@ -236,8 +341,9 @@ if (process.argv[2] === '--merge') {
 (async () => {
   const t0 = Date.now(); const ver = (() => { try { return (fs.readFileSync(path.join(dir, 'v051.js'), 'utf8').match(/TOPS_VER='([^']+)'/) || [])[1]; } catch (e) { return null; } })();
   if (PARTS.includes('gate')) gate();
-  if (PARTS.includes('saves') || PARTS.includes('phones')) { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-    try { if (PARTS.includes('saves')) await saves(b); if (PARTS.includes('phones')) await phones(b); } finally { await b.close(); } }
+  if (PARTS.includes('v3gate')) v3gate();
+  if (PARTS.includes('saves') || PARTS.includes('phones') || PARTS.includes('v3saves')) { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
+    try { if (PARTS.includes('v3saves')) await v3saves(b); if (PARTS.includes('saves')) await saves(b); if (PARTS.includes('phones')) await phones(b); } finally { await b.close(); } }
   const nFail = rows.filter(r => !r.ok).length; const out = { version: ver, flag: NOFLAG ? 'no flag' : 's3x=1', at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), pass: !nFail, rows };
   if (process.env.QA_SABOTAGE) console.log('sabotage: ' + JSON.stringify(out_sab));
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
