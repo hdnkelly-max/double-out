@@ -407,8 +407,13 @@
      wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
   /* Engine's PLAYER row draws each base as a live 3D portrait, which shows plain white busts on phones (Q&D). Fill each slot first with the
      painted Vinyl head (s3/assets/creator/head_<id>.png): Engine's portrait pass skips a slot that already has a picture. */
-  const heads = () => { try { document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { if (i.querySelector('img.s3-head')) return; const u = swap('assets/creator/head_' + i.dataset.pt + '.png');
-      if (!/^s3\//.test(u)) return; i.innerHTML = `<img class="s3-head" src="${u}" alt="">`; }); } catch (e) {} };
+  /* v3 switch-on: with ?v3=1 the preview is the v3 figure, so the row uses the v3 cards (s3/assets/creator/head_v3_<id>.png, listed in
+     have.json) as soon as they are in the build. Until then the painted cards stay (the live 3D fallback is the white-bust bug above).
+     A card already showing the other set is replaced when the switch differs from the one it was drawn for. */
+  const heads = () => { try { const v3 = !!window.TOPS_V3FLAG; document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { const id = i.dataset.pt;
+      const p3 = 'assets/creator/head_v3_' + id + '.png', want = v3 && HAVE[p3] ? p3 : 'assets/creator/head_' + id + '.png', have = i.querySelector('img.s3-head');
+      if (have && have.dataset.src === want) return; const u = swap(want); if (!/^s3\//.test(u)) return;
+      i.innerHTML = `<img class="s3-head${want === p3 ? ' s3-head3' : ''}" src="${u}" alt="" data-src="${want}">`; }); } catch (e) {} };
   if (typeof s3Creator === 'function') { const _s3c = s3Creator; s3Creator = function () { const r = _s3c.apply(this, arguments); heads(); return r; }; }
   const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {
