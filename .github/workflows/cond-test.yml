@@ -1,0 +1,27 @@
+# THROWAWAY (never merged): exercises the publish job's new step conditions with stub steps, one case per matrix leg.
+name: cond-test
+on: { push: { branches: [qa-cond-test] } }
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    strategy: { fail-fast: false, matrix: { case: [first-ok, retry-ok, both-fail, live-fail] } }
+    steps:
+      - id: deploy
+        continue-on-error: true
+        run: '[ "${{ matrix.case }}" = first-ok ] || [ "${{ matrix.case }}" = live-fail ] || exit 1'
+      - if: steps.deploy.outcome == 'failure'
+        run: echo "RETRY-WAIT ran"
+      - if: steps.deploy.outcome == 'failure'
+        run: echo "RETRY-UPLOAD ran"
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        run: '[ "${{ matrix.case }}" = retry-ok ] || exit 1'
+      - id: live
+        if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success'
+        run: 'echo "LIVE ran"; [ "${{ matrix.case }}" != live-fail ] || exit 1'
+      - run: echo "MARK-LIVE ran"
+      - id: rbprep
+        if: failure() && (steps.live.outcome == 'failure' || steps.deploy2.outcome == 'failure')
+        run: echo "ROLLBACK ran"
+      - if: failure() && steps.rbprep.outcome == 'success'
+        run: 'echo "RESTORE-MAIN ran: $([ "${{ steps.deploy2.outcome }}" = failure ] && echo "deploy failed twice" || echo "failed live check")"'
