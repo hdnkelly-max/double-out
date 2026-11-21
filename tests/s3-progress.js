@@ -45,7 +45,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/semi-final next/i.test(qf.blk) || !/next:/i.test(qf.blk) || !/\$35 if you win it/i.test(qf.blk)) fail.push(w + ' QF block copy: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.cells.length !== 3 || !/s3-rpw s3-rpnow/.test(qf.cells[0]) || !/s3-rpnext/.test(qf.cells[1])) fail.push(w + ' QF draw: ' + JSON.stringify(qf.cells));
     if (qf.cashLab !== 'Banked so far' || !/^\$\d+$/.test(qf.cash || '')) fail.push(w + ' QF cash: ' + qf.cashLab + ' ' + qf.cash);
-    if (!/0 \/ 150/.test(qf.blk) || !/potential \+50 if you win/i.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
+    if (!/0 \/ 75/.test(qf.blk) || !/potential \+50 if you win/i.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.wide) fail.push(w + ': QF Result scrolls sideways');
     if (!qf.kick || qf.kick.nwRects !== 1 || !/quarter-final/i.test(qf.kick.txt)) fail.push(w + ' QF kicker breaks inside the round: ' + JSON.stringify(qf.kick));   // 2c (a)
     if (!qf.strip || !qf.strip.shown || qf.strip.right > qf.strip.menuL - 4 || !/^quarter-final · /i.test(qf.strip.txt)) fail.push(w + ' in-match strip under MENU: ' + JSON.stringify(qf.strip));   // 2c (b)
@@ -58,7 +58,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/winner/i.test(fin.blk || '') || !/\$35 prize money/i.test(fin.blk || '')) fail.push('Final block: ' + (fin.blk || '').replace(/\n/g, ' | '));
     if (fin.cashLab !== 'Prize money' || fin.cash !== '+$35') fail.push('Final cash ' + fin.cashLab + ' ' + fin.cash);
     if (fin.bank !== 90) fail.push('bank after the night ' + fin.bank + ' (want 60 - 5 + 35 = 90)');
-    if (!/50 \/ 150/.test(fin.blk || '') || /100 \/ 150/.test(fin.blk || '') || !/\+50 from this event · now 50, was 0/i.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
+    if (!/50 \/ 75/.test(fin.blk || '') || /100 \/ 75/.test(fin.blk || '') || !/\+50 from this event · now 50, was 0/i.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
     if (!/s3-rpfin/.test(fin.cells[2] || '') || !/s3-rpw/.test(fin.cells[2] || '')) fail.push('Final draw cells ' + JSON.stringify(fin.cells));
     out.badge = await p.evaluate(async () => {   // force the image to fail whatever the build has (the release gate's copy has assets/): point it at a file that never exists
       const _ai = achIco; achIco = function () { const h = _ai.apply(this, arguments); return typeof h === 'string' ? h.replace(/(<img class="ach-img"[^>]*?\ssrc=")[^"]*"/, '$1s3/__missing_badge_for_test__.webp"') : h; };

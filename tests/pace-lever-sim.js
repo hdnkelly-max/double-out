@@ -46,6 +46,8 @@ const VARIANTS = {
 
   // the engine exactly as it is on this branch (car-worlds: the lost-Worlds rule in tc/circuit.js), no patches
   branch: { raw: true },
+  branch_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000']] }, branch_pub6_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000'], ['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 6,']] },
+  branch_pub6: { raw: true, text: [['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 6,']] }, branch_pub5: { raw: true, text: [['const BEST_N = { pub: 99,', 'const BEST_N = { pub: 5,']] },
   // (1) a lost Worlds sends you back to the DPNZ Tour (new season, 40% carry)
   worldsBack: { text: [PALACE_BACK] },
   // DPNZ season length (OOM decided after N events instead of 8)
