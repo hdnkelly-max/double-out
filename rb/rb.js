@@ -143,7 +143,9 @@
      filled-in patch is where the figure stands), and the card fills in when it is. TOPS_LK74 = 0 brings back the photos. V is a script-level
      const, not on window. */
   const v3Lk = () => !!window.TOPS_V3FLAG && window.TOPS_LK74 !== 0 && typeof V !== 'undefined' && !!V.heroShot;
-  const lkFig = tier => { try { return V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { return ''; } };
+  /* one render per look: heroShot draws and reads back the figure on every call, and the Locker redraws on every tab change */
+  let lkMemo = { k: '', u: '' }; const lkFig = tier => { const k = JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]); if (lkMemo.k === k && lkMemo.u) return lkMemo.u;
+    let u = ''; try { u = V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { u = ''; } if (u) lkMemo = { k, u }; return u; };
   const lkLayers = (u, scene) => `url(${u}) right 5% top 0/auto 132% no-repeat,url(${IMG}lk_plate.jpg) 80% 30%/cover no-repeat,${scene}`;
   let lkWait = 0; const v3LockerBg = (tier, scene) => { const u = lkFig(tier); clearTimeout(lkWait); if (u) return lkLayers(u, scene);
     let n = 0; const again = () => { const e = $id('rbLkHero'); if (!e) return; const u2 = lkFig(tier); if (u2) { e.style.background = lkLayers(u2, scene); e.dataset.lk74 = 1; return; } if (++n < 24) lkWait = setTimeout(again, 500); };
@@ -506,6 +508,6 @@
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk, lkFig };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw

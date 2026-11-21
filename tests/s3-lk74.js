@@ -16,18 +16,23 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       $('login').hidden = true; save.authSeen = true; try { $('title').hidden = true; } catch (e) {} TOPS_RB.open('locker'); }, [look, late]);
     const filled = await p.waitForFunction(() => { const e = document.getElementById('rbLkHero'); return e && /lk_plate\.jpg/.test(e.style.background) && /data:image\/png/.test(e.style.background); }, null, { timeout: v3 === '1' && lk74 ? 30000 : 4000 }).then(() => true, () => false);
     const r = await p.evaluate(() => { const e = document.getElementById('rbLkHero'), bg = e ? e.style.background : '';
-      let same = null; try { const u = V.heroShot(save.look, save.name || 'You', career().tier | 0, save.flight); same = !!u && bg.includes(u.slice(0, 200)) && bg.indexOf('data:image/png') < bg.indexOf('lk_plate'); } catch (e) { same = 'err ' + e.message; }
+      let same = null; try { same = TOPS_RB.lkFig(career().tier) === (bg.match(/url\("?(data:image\/png;base64,[^")]+)/) || [])[1] && bg.indexOf('data:image/png') < bg.indexOf('lk_plate'); } catch (e) { same = 'err ' + e.message; }
       // the level-up overlay: a stand-in for career3's #c3rw with its own render on top and a shirt reward tile
       const ov = document.createElement('div'); ov.id = 'c3rw'; ov.innerHTML = '<img class="rwhero" src="data:image/png;base64,iVBORw0KGgo="><div id="c3rwUnl">Level 4 <span class="ri ri-hero"><img src="data:image/png;base64,iVBORw0KGgo="></span></div>'; document.body.appendChild(ov);
       TOPS_RB.fixReward(); const h = ov.querySelector('img.rwhero'), ri = ov.querySelector('.ri.ri-hero');
       const rw = { heroKept: !h.dataset.rb && h.src === 'data:image/png;base64,iVBORw0KGgo=', tileTouched: !!ri.dataset.rb }; ov.remove();
-      return { base: e && e.dataset.base, plate: /lk_plate\.jpg/.test(bg), fig: /data:image\/png/.test(bg), same, rw, lk: TOPS_RB.v3Lk() }; });
+      const fig = (bg.match(/url\("?(data:image\/png;base64,[^")]+)/) || [])[1];
+      return new Promise(ok => { if (!fig) return ok(0); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+        const d = g.getImageData(0, Math.round(im.height * .5), im.width, Math.round(im.height * .2)).data; let n = 0, t = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { n++; if (d[i + 2] > d[i] + 40 && d[i + 1] > d[i] + 40) t++; } ok(n ? t / n : 0); }; im.onerror = () => ok(-1); im.src = fig; })
+      .then(teal => ({ teal: Math.round(teal * 100) / 100, base: e && e.dataset.base, plate: /lk_plate\.jpg/.test(bg), fig: /data:image\/png/.test(bg), same, rw, lk: TOPS_RB.v3Lk() })); });
     r.filled = filled; r.pe = pe.slice(0, 2); out[tag] = r; await ctx.close(); return r; };
 
   let r = await run('mia', '1', MIA);
   if (r.base !== 'lk74' || !r.filled || r.same !== true) fail.push('v3 Mia Locker hero isn\'t her render over the plate ' + JSON.stringify(r));
+  if (r.teal < .15) fail.push('v3 Mia teal shirt not teal on the Locker figure ' + r.teal);
   if (!r.rw.heroKept || r.rw.tileTouched) fail.push('v3 reward hero/tile swapped for the photo ' + JSON.stringify(r.rw));
   r = await run('ray', '1', RAY); if (r.base !== 'lk74' || !r.filled || r.same !== true) fail.push('v3 Ray save Locker hero ' + JSON.stringify(r));
+  if (r.teal > .05) fail.push('v3 Ray charcoal shirt reads teal ' + r.teal);
   r = await run('late', '1', MIA, { late: 3 }); if (!r.filled || r.same !== true) fail.push('late render never filled the Locker hero ' + JSON.stringify(r));
   r = await run('lk74off', '1', MIA, { lk74: 0 }); if (r.base !== 'lk_f' || r.plate || r.lk) fail.push('TOPS_LK74=0 under v3 isn\'t the photo path ' + JSON.stringify(r));
   if (r.rw.heroKept) fail.push('TOPS_LK74=0: reward photo swap didn\'t run ' + JSON.stringify(r.rw));
