@@ -213,18 +213,31 @@
   function nextEventWeek(c) { for (let w = c.week; w <= c.week + REST_SCAN; w++) { if (calendar(Object.assign({}, c, { week: w })).length) return w; } return null; }
   const restNeeded = c => !c.live && !calendar(c).length;
   const QS_WAIT = 4; // weeks a player without a card may rest at the Tour Card level waiting for Q-School
+  // CAR-CARD (Q&D re-check, Producer 23:26): what a rest week will do, worked out BEFORE the tap so the rest card can say it. null = no rest
+  // (an event is on, or one is live). Stable field names (Experience's s3x rest screen reads them too):
+  //   next   the week the next event at this level is on (null if none in REST_SCAN weeks)
+  //   back   'dpnz' when the tap sends you back to the DPNZ Tour instead of moving the week on, else null
+  //   why    'qschool' (no card, Q-School more than QS_WAIT weeks off) or 'none' (the safety net: nothing left at this level)
+  //   qsWeek the Q-School week (why 'qschool'), carry the DPNZ points a new season starts with (40%, capped), fromLevel the level you leave
+  function restPlan(c) {
+    if (c.live || calendar(c).length) return null;
+    const next = nextEventWeek(c), carry = Math.min(DPNZ_CARRY_CAP, Math.round(((c.pts && c.pts.dpnz) || 0) * DPNZ_CARRY));
+    if (next == null && c.level > 3) return { next: null, back: 'dpnz', why: 'none', qsWeek: null, carry, fromLevel: c.level };
+    if (next != null && c.level === 5 && !c.card && next - c.week > QS_WAIT) return { next, back: 'dpnz', why: 'qschool', qsWeek: next, carry, fromLevel: 5 };
+    return { next, back: null, why: null, qsWeek: null, carry: null, fromLevel: c.level };
+  }
   function restWeek(c) {
     if (c.live) return { ok: false, why: 'Finish the event you are in first' };
     if (calendar(c).length) return { ok: false, why: 'There is an event on this week' };
-    const to = nextEventWeek(c);
+    const to = nextEventWeek(c), plan = restPlan(c);
     // CAR-CARD safety net: above the DPNZ Tour, a level with nothing left for this career (a rule we missed later) sends you back to the
     // DPNZ Tour, which runs every week, instead of a dead end. Pub to DPNZ always have events, so they keep the explicit error.
-    if (to == null && c.level > 3) { const fromLevel = c.level; newDpnzSeason(c); const up = promote(c, 3, 'Nothing left on at the ' + LEVELS[fromLevel].n + ' for you. Back to the DPNZ Tour for a new season: 40% of your points roll over');
+    if (plan.back === 'dpnz' && plan.why === 'none') { const fromLevel = c.level; newDpnzSeason(c); const up = promote(c, 3, 'Nothing left on at the ' + LEVELS[fromLevel].n + ' for you. Back to the DPNZ Tour for a new season: 40% of your points roll over');
       return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel, up }; }
     if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
     // CAR-CARD: no card yet means the only Tour Card event is Q-School, once a year. Rather than up to 51 rest weeks, wait on the DPNZ Tour
     // (weekly events) with the Q-School place kept; the Q-School offer is taken from there in its week
-    if (c.level === 5 && !c.card && to - c.week > QS_WAIT) { c.qsOffer = true; newDpnzSeason(c); const up = promote(c, 3, 'Q-School is in week ' + to + '. Back to the DPNZ Tour until then: your Q-School place is kept, and 40% of your points roll over');
+    if (plan.back === 'dpnz' && plan.why === 'qschool') { c.qsOffer = true; newDpnzSeason(c); const up = promote(c, 3, 'Q-School is in week ' + to + '. Back to the DPNZ Tour until then: your Q-School place is kept, and 40% of your points roll over');
       return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel: 5, qsWeek: to, up }; }
     const from = c.week; c.week = to; return { ok: true, from, to, skipped: to - from };
   }
@@ -242,6 +255,6 @@
     return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
   }
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, edition, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, edition, nextEventWeek, restNeeded, restPlan, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);

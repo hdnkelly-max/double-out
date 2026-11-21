@@ -47,6 +47,16 @@ out.before = before; if (before !== null && before === 0) f.push('4 the old engi
     if (!r || !r.ok || !r.fallback || r.fromLevel !== 5 || c.level !== 3 || !E.calendar(c).length || !/Nothing left on at the Tour Card/.test(r.up.msg)) f.push('5 safety net ' + JSON.stringify({ r, level: c.level }));
     const c2 = E.newCareer({ level: 2, week: 2 }); const r2 = E.restWeek(c2); if (r2.fallback) f.push('5 the safety net must not move a lower level up');
   } finally { ev.forEach((e, i) => { Object.keys(e).forEach(k => delete e[k]); Object.assign(e, keep[i]); }); } }
+// 7 the rest plan is known before the tap (Q&D re-check, Producer 23:26): view().rest carries {next, back, why, qsWeek, carry, fromLevel}
+{ const c = atCard({ week: 60, pts: { dpnz: 900 }, res: { dpnz: [400, 300, 200] }, card: false }); const pl = E.restPlan(c); out.plan = pl;
+  if (!pl || pl.next !== 104 || pl.back !== 'dpnz' || pl.why !== 'qschool' || pl.qsWeek !== 104 || pl.carry !== 300 || pl.fromLevel !== 5) f.push('7 Q-School plan ' + JSON.stringify(pl));
+  const r = E.restWeek(c); if (c.level !== 3 || c.pts.dpnz !== pl.carry || !r.fallback) f.push('7 the tap does what the plan said ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, r }));
+  const near = atCard({ week: 49, card: false }); const pn = E.restPlan(near); if (!pn || pn.back || pn.next !== 52) f.push('7 Q-School 3 weeks off: a plain rest ' + JSON.stringify(pn));
+  const on = atCard({ week: 52 }); if (E.restPlan(on) !== null) f.push('7 no plan when an event is on');
+  const pal = E.newCareer({ level: 6, week: 61 }); const pp = E.restPlan(pal); if (!pp || pp.back || pp.next !== 104) f.push('7 Palace rest is a plain rest ' + JSON.stringify(pp));
+  const ev = E.LEVELS[5].events, keep = ev.map(e => Object.assign({}, e)); ev.forEach(e => { e.needCard = true; });
+  try { const n = atCard({ week: 60, pts: { dpnz: 500 } }); const pz = E.restPlan(n); if (!pz || pz.back !== 'dpnz' || pz.why !== 'none' || pz.next !== null || pz.carry !== 200) f.push('7 safety-net plan ' + JSON.stringify(pz)); }
+  finally { ev.forEach((e, i) => { Object.keys(e).forEach(k => delete e[k]); Object.assign(e, keep[i]); }); } }
 (async () => {
   const { chromium } = require('playwright'); const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--allow-file-access-from-files'] });
   const p = await b.newPage({ viewport: { width: 390, height: 844 } }); const errs = []; p.on('pageerror', e => errs.push(e.message));
@@ -66,10 +76,25 @@ out.before = before; if (before !== null && before === 0) f.push('4 the old engi
     const d = document.getElementById('s3Sheet'); o.sheet = d ? d.innerText.replace(/\s+/g, ' ').slice(0, 220) : null;
   } catch (e) { o.err = String(e.stack || e).slice(0, 300); } return o; });
   await p.screenshot({ path: path.join(dir, 'wip/car-card/s3-card-fallback-390.jpg'), quality: 80 }).catch(() => {});
+  // 7 page: the rest card says it before the tap, then the tap matches it
+  const card = async (w, h) => { await p.setViewportSize({ width: w, height: h }); return p.evaluate(async () => { const o = {}; try { const c = career(), k = c.circuit;
+    k.level = 5; c.tier = 5; k.week = 60; k.card = false; k.live = null; k.pts = { dpnz: 900 }; k.res = { dpnz: [400, 300, 200] }; k.dpnzEv = 8; persist();
+    localStorage.setItem('tops_s3_seen', JSON.stringify({ h: k.history.length, lv: 5, r: -1, id: '', g: 0 })); const sh = document.getElementById('s3Sheet'); if (sh) sh.remove();
+    o.rest = TOPS_S3.view().rest; try { showHub('play'); } catch (e) {} await new Promise(r => setTimeout(r, 1500));
+    const el = document.querySelector('.s3-rest'); o.text = el ? el.innerText.replace(/\s+/g, ' ') : null; if (el) el.scrollIntoView({ block: 'center' }); } catch (e) { o.err = String(e.stack || e).slice(0, 300); } return o; }); };
+  const c360 = await card(360, 780); await p.screenshot({ path: path.join(dir, 'wip/car-card/s3-card-restback-360.jpg'), quality: 80 }).catch(() => {});
+  out.lines360 = await p.evaluate(() => { const b = document.querySelector('.s3-rest [data-s3="rest"]'); const t = b && b.querySelector('b'), s = b && b.querySelector('small'); const L = e => e ? Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)) : null; return { b: L(t), small: L(s) }; });
+  const c390 = await card(390, 844); await p.screenshot({ path: path.join(dir, 'wip/car-card/s3-card-restback-390.jpg'), quality: 80 }).catch(() => {});
+  const tap = await p.evaluate(async () => { const b = document.querySelector('.s3-rest [data-s3="rest"]'); if (!b) return { err: 'no button' }; b.click(); await new Promise(r => setTimeout(r, 800)); const k = career().circuit; return { lv: k.level, pts: k.pts.dpnz, qs: k.qsOffer, tier: career().tier }; });
+  out.card = { c360: c360.text, c390: c390.text, rest: c390.rest, tap };
   await b.close(); out.page = pg;
   if (pg.err) f.push('6 page ' + pg.err);
   else if (!pg.r.ok || !pg.r.fallback || pg.level !== 3 || pg.tier !== 3 || !pg.cal || pg.pts !== 300 || !/^Back on tour/i.test(pg.sheet || '') || !/No Tour Card this time/.test(pg.sheet || '')) f.push('6 page safety net ' + JSON.stringify(pg));
+  for (const cc of [c360, c390]) { if (cc.err) f.push('7 page ' + cc.err); else if (!/Q-School is in week 104\. Wait on the DPNZ Tour until then/.test(cc.text || '') || !/Back to the DPNZ Tour/i.test(cc.text || '') || !/Q-School place kept · 300 points carry over/i.test(cc.text || '') || /Advance to week|Skips/.test(cc.text || '')) f.push('7 rest card text ' + JSON.stringify(cc.text)); }
+  if (out.lines360.b !== 1 || out.lines360.small !== 1) f.push('7 at 360 the button title and line each fit on one line ' + JSON.stringify(out.lines360));
+  { const r = c390.rest || {}; if (r.next !== 104 || r.back !== 'dpnz' || r.why !== 'qschool' || r.qsWeek !== 104 || r.carry !== 300) f.push('7 view().rest ' + JSON.stringify(r)); }
+  if (tap.err || tap.lv !== 3 || tap.pts !== 300 || !tap.qs || tap.tier !== 3) f.push('7 the tap matches the card ' + JSON.stringify(tap));
   if (errs.length) f.push('page errors: ' + errs.slice(0, 2).join(' | '));
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  console.log(`PASS: Q-School without a card goes back to the DPNZ Tour (new season, 40% of 1000 capped at 300 carried, Q-School place kept, $3,700 spent, no grant); a Q-School semi-final gives the card and Players Championships next week; Q-School is on again next year; no card with Q-School more than 4 weeks off waits on the DPNZ Tour with the place kept (week 60 -> back, week 49 -> rests to 52); grid ${out.grid.states} states (7 levels x 120 weeks x card x Q-School played): 0 dead (${out.grid.fallback} via the safety net), the engine before this change: ${out.before} dead; the safety net moves only levels above the DPNZ Tour; on the page TOPS_S3.rest() takes it, the tier follows and the sheet reads "Back on tour"`);
+  console.log(`PASS: Q-School without a card goes back to the DPNZ Tour (new season, 40% of 1000 capped at 300 carried, Q-School place kept, $3,700 spent, no grant); a Q-School semi-final gives the card and Players Championships next week; Q-School is on again next year; no card with Q-School more than 4 weeks off waits on the DPNZ Tour with the place kept (week 60 -> back, week 49 -> rests to 52); grid ${out.grid.states} states (7 levels x 120 weeks x card x Q-School played): 0 dead (${out.grid.fallback} via the safety net), the engine before this change: ${out.before} dead; the safety net moves only levels above the DPNZ Tour; on the page TOPS_S3.rest() takes it, the tier follows and the sheet reads "Back on tour"; before the tap view().rest = {next 104, back dpnz, why qschool, qsWeek 104, carry 300} and the rest card reads "${(out.card.c390 || '').slice(0, 150)}" (360 and 390), never "Advance to week"; the tap lands on the DPNZ Tour with 300 points and the place kept; the safety-net plan says the same (why none)`);
 })();

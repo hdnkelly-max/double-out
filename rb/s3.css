@@ -214,3 +214,5 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .rb-primary.s3-grow b{font-size:20px;line-height:1.1;overflow-wrap:anywhere}
 #rbApp .rb-primary.s3-grow small{line-height:1.3}
 #rbApp .s3-broke{display:flex;flex-direction:column;gap:10px}
+/* CAR-CARD: the back-to-tour rest button keeps "Back to the DPNZ Tour" on one line at 360 */
+@media (max-width:374px){#rbApp .s3-restback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}
