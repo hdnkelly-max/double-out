@@ -373,3 +373,12 @@ jobs:
           git commit -qm "v$V $WHY; rolled back to $PREV (main site files restored)"
           git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; main still holds v$V, restore it by hand before any hand push"; exit 1; }
           echo "main restored to $PREV site files ($(git rev-parse --short HEAD))" >> $GITHUB_STEP_SUMMARY
+      - name: Rollback could not be confirmed (state for a human)
+        # ChatGPT P2 (incident review round 2): if the rollback deploy failed twice or its live verify failed, main is NOT restored
+        # (live is uncertain), so say exactly what state things are in, so nobody hand-pushes main on a guess.
+        if: failure() && steps.rbprep.outcome == 'success' && steps.rbverify.outcome != 'success'
+        env: { PV: '${{ steps.rbprep.outputs.pv }}', PREV: '${{ steps.rbprep.outputs.prev }}' }
+        run: |
+          echo "::error::ROLLBACK NOT CONFIRMED: v$V failed before going live and redeploying $PREV (v$PV) could not be verified. main still says v$V prepared; live may be v$PV or v$V. Check the live version.json, then either redeploy $PREV (deploy.yml from a main whose site files equal $PREV) or finish v$V by hand. Do not dispatch another release until main matches live."
+          { echo "### ROLLBACK NOT CONFIRMED"; echo "main still says v$V prepared; live is uncertain (v$PV or v$V). Restore by hand before any release."; } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
