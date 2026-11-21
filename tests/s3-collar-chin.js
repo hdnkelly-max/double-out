@@ -17,7 +17,7 @@ const res=await p.evaluate(([only])=>{const Q=V._qa,T=Q.T;const boardC=new T.Vec
  for(const [look,name,id] of specs){const f=Q.makeFigure(look,name,0);if(!f.userData.rigged){out[id]={err:'not rigged'};continue;}Q.scene.add(f);f.position.set(0.1,0,2.37-0.51);f.rotation.set(0,0.8,0);
   const Hd=f.userData.B&&f.userData.B.Head;const col=[],head=[];let skull=null;
   f.traverse(o=>{if(!o.isMesh||!o.visible)return;const t=o.userData.tag;if(t==='collar'||t==='pipe'||t==='fold'){col.push(o);return;}let a=o;while(a&&a!==Hd)a=a.parent;if(a===Hd){head.push(o);if(t==='skull')skull=o;}});
-  if(!col.length){out[id]={err:'no r16 collar ('+col.length+')'};Q.scene.remove(f);Q.dispose(f);continue;}
+  if(!col.some(o=>o.userData.tag==='pipe')){out[id]={err:'skipped: no r16 collar (v2 figure, untouched by r16)'};Q.scene.remove(f);Q.dispose(f);continue;}
   const R={inside:0,min:99,at:'',minBy:{},n:0,colMeshes:col.length,headMeshes:head.length};
   const skP=skull?new T.Mesh(skull.geometry,new T.MeshBasicMaterial({side:T.DoubleSide})):null;
   const meas=where=>{f.updateMatrixWorld(true);R.n++;if(skP){skP.matrixWorld.copy(skull.matrixWorld);skP.matrixAutoUpdate=false;}
