@@ -13,6 +13,9 @@
 const { chromium, devices } = require('playwright'); const path = require('path'), fs = require('fs'), cp = require('child_process');
 const dir = path.resolve(process.argv[2] || path.resolve(__dirname, '..')); const PARTS = (process.argv[3] || 'gate,saves,phones').split(',');
 const SHOTS = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null; if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
+// FLAG=none opens the game with no ?s3x (and clears the stored opt-in first): use it once the default has flipped, to test what an
+// unflagged player gets. Today (flag off by default) that run is expected to FAIL; it is the post-flip check (ChatGPT P1-1).
+const NOFLAG = process.env.FLAG === 'none'; const Q = NOFLAG ? '?s3=1' : '?s3=1&s3x=1';
 const GATE = ['s3-trophies', 's3-shelf-data', 's3-progress', 's3-firstnight', 's3-xp', 's3-match', 's3-screens', 's3-welcome'];
 const rows = []; const row = (part, check, ok, note) => { rows.push({ part, check, ok: !!ok, note: String(note || '').replace(/\s+/g, ' ').slice(0, 300) }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${part} · ${check}${note ? '  (' + String(note).replace(/\s+/g, ' ').slice(0, 200) + ')' : ''}`); };
 if (!fs.existsSync(path.join(dir, 'index.html'))) { console.error('no index.html in ' + dir + ' (run bash tests/setup.sh)'); process.exit(2); }
@@ -92,8 +95,8 @@ const out_sab = [];
 async function saves(b) {
   for (const fx of FIX) {
     const raw = fs.readFileSync(path.join(__dirname, 'fixtures', 'switch-on', fx.id + '.json'), 'utf8'); const before = JSON.parse(raw); const L = 'saves · ' + fx.id;
-    let res = null; const pe = await session(b, 'iPhone 13', { fn: ({ slot, raw, seen }) => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.setItem(slot, raw); if (seen) { localStorage.setItem('tops_s3_welcome', '1'); } sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} }, arg: { slot: fx.slot, raw, seen: !fx.s2only } }, async (p, T) => {
-      await p.goto('file://' + dir + '/index.html?s3=1&s3x=1', { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500);
+    let res = null; const pe = await session(b, 'iPhone 13', { fn: ({ slot, raw, seen, noflag }) => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.setItem(slot, raw); if (noflag) localStorage.removeItem('tops_s3x'); if (seen) { localStorage.setItem('tops_s3_welcome', '1'); } sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} }, arg: { slot: fx.slot, raw, seen: !fx.s2only, noflag: NOFLAG } }, async (p, T) => {
+      await p.goto('file://' + dir + '/index.html' + Q, { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500);
       if (process.env.QA_SABOTAGE) out_sab.push(await p.evaluate(() => { try { const c = career(); const b0 = c.bank; c.bank += 1; c.circuit.bank += 1; return { b0, b1: career().bank, key: TOPS_SAVE_NS.key }; } catch (e) { return "err " + e.message; } }));   // proves the check bites: the money rows must FAIL
       const fn = await T.vis('#s3Fn'); await T.shot('saves_' + fx.id + '_open');
       await p.evaluate(() => { const l = document.getElementById('login'); if (l) l.hidden = true; }); if (!(await T.vis('#rbApp'))) await p.evaluate(() => { try { showHub('play'); } catch (e) {} }); await p.waitForTimeout(1200);
@@ -101,16 +104,23 @@ async function saves(b) {
       if (circ.chip) { await T.tap('#rbApp .s3-trchip'); await p.waitForTimeout(900); } else await T.toTrophies(); const sh = await T.shelf(); await T.shot('saves_' + fx.id + '_trophies');
       await T.tab('circuit'); await p.waitForTimeout(600);
       await p.evaluate(() => { try { persist(); } catch (e) {} });   // anything the visit changed in memory is now in storage too
-      const store = await p.evaluate(() => ({ s3: localStorage.getItem('doubleout_s3'), s2: localStorage.getItem('doubleout2'), key: window.TOPS_SAVE_NS && TOPS_SAVE_NS.key }));
-      res = { fn, chip: circ.chip, shelf: sh, store }; });
+      const rd = () => p.evaluate(() => ({ s3: localStorage.getItem('doubleout_s3'), s2: localStorage.getItem('doubleout2'), key: window.TOPS_SAVE_NS && TOPS_SAVE_NS.key }));
+      const store = await rd();
+      // ChatGPT P2-3: the stored copy must survive a fresh page load (the game reads it back and writes it again) with the same numbers
+      await p.reload({ timeout: 180000 }); await T.ready(); await p.waitForTimeout(2000); await p.evaluate(() => { try { persist(); } catch (e) {} }); const store2 = await rd();
+      res = { fn, chip: circ.chip, shelf: sh, store, store2 }; });
     if (!res) { row(L, 'opens', false, 'session failed'); continue; }
     const after = JSON.parse((fx.slot === 'doubleout2' ? res.store.s2 : res.store.s3) || 'null');
     if (!after) { row(L, 'save still there', false, 'slot ' + fx.slot + ' empty after opening'); continue; }
     if (fx.s2only) {
-      row(L, 'Season 2 save untouched', JSON.stringify(after) === JSON.stringify(before), JSON.stringify(after) === JSON.stringify(before) ? 'doubleout2 byte-identical after opening Season 3' : 'doubleout2 changed');
+      const s2b = res.store2.s2, same2 = s2b === raw, dd = []; if (!same2) { const z = JSON.parse(s2b || 'null'); const f = (a, b, pre) => { if (JSON.stringify(a) === JSON.stringify(b)) return; if (!a || !b || typeof a !== 'object' || Array.isArray(a)) { dd.push(pre + ': ' + JSON.stringify(a).slice(0, 40) + ' → ' + JSON.stringify(b).slice(0, 40)); return; } for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) f(a[k], b[k], pre ? pre + '.' + k : k); }; f(before, z, ''); }
+      row(L, 'same after a fresh page load', same2, same2 ? 'doubleout2 still byte-identical after a reload' : 'doubleout2 changed after a reload: ' + dd.slice(0, 8).join(', '));
+      row(L, 'Season 2 save untouched', res.store.s2 === raw, res.store.s2 === raw ? 'doubleout2 byte-identical after opening Season 3' : JSON.stringify(after) === JSON.stringify(before) ? 'doubleout2 rewritten (same content, different bytes)' : 'doubleout2 changed');
       const s3 = JSON.parse(res.store.s3 || 'null'); row(L, 'Season 3 starts clean', !s3 || !(s3.career && s3.career.circuit && (s3.career.circuit.history || []).length), (res.fn ? 'first-night screen shown (zero S3 history, by design)' : 'no first-night screen') + '; S3 slot ' + (s3 ? 'new' : 'empty'));
     } else {
       const bad = []; for (const [k, g] of Object.entries(KEEP)) { const a = JSON.stringify(g(before)), z = JSON.stringify(g(after)); if (a !== z) bad.push(k + ': ' + String(a).slice(0, 60) + ' → ' + String(z).slice(0, 60)); }
+      const after2 = JSON.parse(res.store2.s3 || 'null'); const bad2 = after2 ? Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(before)) !== JSON.stringify(g(after2))).map(([k]) => k) : ['save gone'];
+      row(L, 'same after a fresh page load', !bad2.length, bad2.length ? 'changed after reload: ' + bad2.join(', ') : 'reloaded, read back and saved again: all ' + Object.keys(KEEP).length + ' fields still equal');
       row(L, 'money, XP, level, history unchanged', !bad.length, bad.length ? bad.join(' | ') : Object.keys(KEEP).length + ' fields equal (bank ' + before.career.bank + ', XP ' + before.career.v3.xp + ', level ' + before.career.v3.lv + '/' + before.career.circuit.level + ', ' + (before.career.circuit.history || []).length + ' events)');
       const diff = (a, z, pre, d, out) => { if (JSON.stringify(a) === JSON.stringify(z)) return out; if (d >= 4 || !a || !z || typeof a !== 'object' || typeof z !== 'object' || Array.isArray(a)) { out.push(pre); return out; }
         for (const k of new Set([...Object.keys(a), ...Object.keys(z)])) if (k !== 'sv') diff(a[k], z[k], pre ? pre + '.' + k : k, d + 1, out); return out; };
@@ -136,7 +146,7 @@ async function phones(b) {
     const L = 'phones · ' + prof; const R = {}; const looks = [];
     const check = async (name, hub) => { const l = await phonesLook(name, hub); looks.push([name, l]); return l; };
     let phonesLook;
-    const pe = await session(b, prof, null, async (p, T) => {
+    const pe = await session(b, prof, NOFLAG ? { fn: () => { try { if (!sessionStorage.getItem('qa_seeded')) { localStorage.removeItem('tops_s3x'); sessionStorage.setItem('qa_seeded', '1'); } } catch (e) {} } } : null, async (p, T) => {
       phonesLook = async (name, hub) => {
         // QA_SABOTAGE_UI=1 proves the three screen checks bite: text under MENU and a split word on the first night, a stuck overlay on the hub
         if (process.env.QA_SABOTAGE_UI && name === '1_first_night') await p.evaluate(() => { const w = document.createElement('div'); w.id = 'qaSplit'; w.textContent = 'Championship'; w.style.cssText = 'position:fixed;left:10px;top:300px;width:40px;overflow-wrap:anywhere;z-index:2147483647;color:#fff;font:16px sans-serif'; document.body.appendChild(w); });
@@ -146,7 +156,7 @@ async function phones(b) {
         await T.shot('phones_' + prof + '_' + name); const l = await T.look(hub);
         if (process.env.QA_SABOTAGE_UI) await p.evaluate(() => ['qaUnderMenu', 'qaSplit', 'qaStuck'].forEach(i => { const e = document.getElementById(i); if (e) e.remove(); }));
         return l; };
-      await p.goto('file://' + dir + '/index.html?s3=1&s3x=1', { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2000);
+      await p.goto('file://' + dir + '/index.html' + Q, { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2000);
       // a new player: the Season 3 welcome (if shown) -> creator -> That's me -> Jonno's message -> the first-night screen
       if (await T.vis('#s3WelGo')) await T.tap('#s3WelGo'); await p.waitForTimeout(1200);
       if (!(await T.vis('#creator')) && !(await T.vis('#btnCreate'))) { await p.evaluate(() => { const l = document.getElementById('login'); if (l) l.hidden = true; save.authSeen = true; persist(); showTitle(); }); await p.waitForTimeout(1000); await T.tap('#btnNewCareer'); await p.waitForTimeout(1200); }
@@ -178,9 +188,19 @@ async function phones(b) {
       for (let i = 0; i < 24; i++) { if (await T.vis('#s3Ok')) { await T.tap('#s3Ok'); await p.waitForTimeout(500); i = Math.max(i, 16); } else await p.waitForTimeout(400); }
       // back on the hub: the Circuit tab, the titles chip, the shelf, and back again
       await T.tab('circuit'); R.hubLook = await check('3_circuit_after', true); const c = await T.shelf(); R.chip = c.chip;
+      // ChatGPT P2-5: MENU really works to a finger, not only by geometry: a tap opens its sheet, a second tap closes it
+      const sheetUp = () => p.evaluate(() => { const d = document.getElementById('rbMenuSheet'); return !!(d && d.getClientRects().length); });
+      R.menuTap = { open: false, closed: false }; if (await T.tap('#rbMenu')) { await p.waitForTimeout(500); R.menuTap.open = await sheetUp(); await T.tap('#rbMenu'); await p.waitForTimeout(500); R.menuTap.closed = !(await sheetUp()); }
       if (c.chip) await T.tap('#rbApp .s3-trchip'); await p.waitForTimeout(900); R.shelf = await T.shelf(); R.shelfLook = await check('4_trophies', true);
       await T.tab('circuit'); await p.waitForTimeout(700); R.back = await T.shelf(); R.backLook = await check('5_back_on_circuit', true);
       R.titles = await p.evaluate(() => (career().circuit.titles || []).map(t => t.finish + ':' + t.ev));
+      // ChatGPT P1-1 (what we can test before the flip): a fresh load with no ?s3x keeps the player in Season 3 with the title
+      // (the test has no cloud, so a fresh load stops at the Google sign-in; pass it the way the start of this run does, as a signed-in player would)
+      await p.goto('file://' + dir + '/index.html?s3=1', { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500);
+      R.reloadKey = await p.evaluate(() => ({ key: window.TOPS_SAVE_NS && TOPS_SAVE_NS.key, x: localStorage.getItem('tops_s3x'), login: /Season 3/.test((document.getElementById('login') || {}).innerText || '') }));
+      await p.evaluate(() => { const l = document.getElementById('login'); if (l) l.hidden = true; if (!(document.getElementById('rbApp') || {}).isConnected) { try { showHub('play'); } catch (e) {} } }); await p.waitForTimeout(1500); for (let i = 0; i < 6 && (await T.vis('#s3Ok')); i++) { await T.tap('#s3Ok'); await p.waitForTimeout(400); }
+      R.reload = await p.evaluate(() => { try { return { s3: !!(window.TOPS_S3 && document.getElementById('rbApp') && document.getElementById('rbApp').getClientRects().length), titles: (career().circuit.titles || []).map(t => t.finish + ':' + t.ev), fn: !!(document.getElementById('s3Fn') && document.getElementById('s3Fn').getClientRects().length) }; } catch (e) { return { err: e.message }; } });
+      await T.shot('phones_' + prof + '_6_reloaded');
     });
     row(L, 'first night', R.firstNight && lookOk(R.fnLook), R.firstNight ? lookNote(R.fnLook) || 'shown, Walk on starts the QF' : 'no first-night screen for a new player');
     (R.matchLooks || []).forEach((l, i) => row(L, 'match ' + (i + 1) + ' (mid-match)', lookOk(l), (lookNote(l) || 'MENU ' + l.menu + ' clear')));
@@ -189,6 +209,8 @@ async function phones(b) {
     const won = (R.titles || []).includes('W:pub_night');
     row(L, 'Trophies shelf', R.shelf && R.shelf.shelf && won && /titles 1/i.test(R.shelf.hero || '') && lookOk(R.shelfLook), R.shelf ? (lookNote(R.shelfLook) || `"${(R.shelf.hero || '').slice(0, 80)}"`) + (won ? '' : '; Pub night not recorded as won: ' + JSON.stringify(R.titles)) : 'not reached');
     row(L, 'the chip and back', !!R.chip && /1 title/.test(R.chip) && R.back && !R.back.shelf && R.back.chip === R.chip && lookOk(R.backLook) && lookOk(R.hubLook), `chip "${R.chip}"; back on Circuit: chip "${R.back && R.back.chip}"` + (lookNote(R.backLook) ? '; ' + lookNote(R.backLook) : '') + (lookNote(R.hubLook) ? '; hub: ' + lookNote(R.hubLook) : ''));
+    row(L, 'MENU opens and closes to a tap', R.menuTap && R.menuTap.open && R.menuTap.closed, R.menuTap ? `tap: sheet ${R.menuTap.open ? 'opened' : 'did NOT open'}; second tap: ${R.menuTap.closed ? 'closed' : 'still open'}` : 'not reached');
+    const rl = R.reload || {}; const rk = R.reloadKey || {}; row(L, 'still Season 3 after a reload (no ?s3x)', rk.key === 'doubleout_s3' && rl.s3 && (rl.titles || []).includes('W:pub_night') && !rl.fn, rl.err ? 'error ' + rl.err : `save ${rk.key}, opt-in ${rk.x}, sign-in says Season 3: ${!!rk.login}; hub ${rl.s3 ? 'shown' : 'NOT shown'}; titles ${JSON.stringify(rl.titles)}; first night ${rl.fn ? 'shown again' : 'not shown again'}`);
     for (const [what, test] of [['no stuck overlay', l => !l.overlay], ['nothing under MENU', l => !l.underMenu.length], ['no word split', l => !l.splits.length]]) {
       const badAt = looks.filter(([, l]) => l && !test(l)).map(([n, l]) => n + ': ' + lookNote(l)); row(L, what, !badAt.length, badAt.length ? badAt.join(' | ') : looks.length + ' screens checked');
     }
@@ -204,7 +226,8 @@ async function phones(b) {
   const nFail = rows.filter(r => !r.ok).length; const out = { version: ver, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), pass: !nFail, rows };
   if (process.env.QA_SABOTAGE) console.log('sabotage: ' + JSON.stringify(out_sab));
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
-  console.log(`\n### SWITCH-ON ${nFail ? 'FAIL' : 'PASS'} on v${ver}: ${rows.length - nFail}/${rows.length} rows pass (${out.secs} s)\n\n| | Part | Check | Note |\n|---|---|---|---|`);
+  // ChatGPT P1-3: green here means checklist items 1-3 pass on this build, not that Season 3 may be switched on
+  console.log(`\n### SWITCH-ON ${nFail ? 'FAIL' : 'AUTOMATED PASS'} on v${ver}${NOFLAG ? ' (no flag)' : ' (s3x=1)'}: ${rows.length - nFail}/${rows.length} rows pass (${out.secs} s) · release NOT cleared until the manual checklist items are signed off on this build\n\n| | Part | Check | Note |\n|---|---|---|---|`);
   for (const r of rows) console.log(`| ${r.ok ? 'PASS' : '**FAIL**'} | ${r.part} | ${r.check} | ${r.note.replace(/\|/g, '/')} |`);
   console.log('| (manual) | real phones | Hayden: one Pub night on an Android Chrome phone (iPhone skipped by Hayden, Sat 19:59) | not automatable |');
   process.exit(nFail ? 1 : 0);
