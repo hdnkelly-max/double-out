@@ -21,7 +21,8 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       if (await vis('#rbApp [data-s3book]')) await tap('#rbApp [data-s3book]'); await p.waitForTimeout(500); await tap('#s3Go');
       for (let i = 0; i < 80 && !(await p.evaluate(() => typeof S !== 'undefined' && S && !S.done).catch(() => false)); i++) await p.waitForTimeout(250);
       await p.waitForTimeout(700); const strip = await p.evaluate(() => { const t = document.getElementById('eventTier'), m = document.getElementById('btnMenu'); if (!t || !m) return null; const a = t.getBoundingClientRect(), b = m.getBoundingClientRect();   // 2c (b): the strip stays left of MENU
-        return { txt: t.textContent, right: Math.round(a.right), menuL: Math.round(b.left), shown: a.width > 0 }; });
+        const it = document.querySelector('#introTier span[style*="nowrap"]'), itR = it ? it.getClientRects().length : -1;   // the walk-on card: the round never splits
+        return { txt: t.textContent, right: Math.round(a.right), menuL: Math.round(b.left), shown: a.width > 0, intro: it ? it.textContent : null, introRects: itR }; });
       for (let i = 0; i < 1500; i++) { const s = await p.evaluate(() => { try { if (!S || S.done) return 'done'; if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(0, 0); } return 'play'; }
           if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { S.p[0].score = 40; S.busy = true; land(0, -166); } const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
       for (let i = 0; i < 60 && !(await vis('#rbApp.rb-resmode #rbRGo')); i++) await p.waitForTimeout(250); await p.waitForTimeout(1800);
@@ -48,6 +49,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!/0 \/ 150/.test(qf.blk) || !/potential \+50 if you win/i.test(qf.blk)) fail.push(w + ' QF bar: ' + qf.blk.replace(/\n/g, ' | '));
     if (qf.wide) fail.push(w + ': QF Result scrolls sideways');
     if (!qf.kick || qf.kick.nwRects !== 1 || !/quarter-final/i.test(qf.kick.txt)) fail.push(w + ' QF kicker breaks inside the round: ' + JSON.stringify(qf.kick));   // 2c (a)
+    if (!qf.strip || !/^quarter-final$/i.test(qf.strip.intro || '') || qf.strip.introRects > 1) fail.push(w + ' walk-on card round: ' + JSON.stringify(qf.strip));
     if (!qf.strip || !qf.strip.shown || qf.strip.right > qf.strip.menuL - 4 || !/^quarter-final · /i.test(qf.strip.txt)) fail.push(w + ' in-match strip under MENU: ' + JSON.stringify(qf.strip));   // 2c (b)
     if (!qf.clear || qf.clear.gap < 16 || !qf.clear.atEnd || qf.clear.below > 1 || /rgba\(.*, 0\)/.test(qf.clear.solid)) fail.push(w + ' QF: last card not clear of Continue ' + JSON.stringify(qf.clear));
     if (qf.s3xp && !new RegExp('\\+' + (qf.s3xp.xp != null ? qf.s3xp.xp : '') ).test(qf.xpTxt || '') && qf.s3xp.xp != null) fail.push(w + ' XP on screen ' + qf.xpTxt + ' vs S.s3xp ' + JSON.stringify(qf.s3xp));

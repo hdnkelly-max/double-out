@@ -318,7 +318,10 @@
   const s3Head = () => { try { if (typeof S === 'undefined' || !S || !S.s3 || !CI()) return; const e = CI().eventOf(S.s3.id), t = (e ? e.n + ' · ' : '') + roundName(S.s3.round);
     /* the in-match strip leads with the round, so a long venue is what gets trimmed, never the round (Delivery QA 14:42: it ran under MENU at 390) */
     const ts = roundName(S.s3.round) + (e ? ' · ' + e.n : '');
-    [['introTier', t], ['eventTier', ts]].forEach(([id, tx]) => { const el = $id(id); if (el && el.textContent !== tx && !/^Leg |^Bull up/.test(el.textContent)) { el.textContent = tx; el.title = tx; } }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
+    [['introTier', t], ['eventTier', ts]].forEach(([id, tx]) => { const el = $id(id); if (!el || el.dataset.s3v === el.innerHTML && el.dataset.s3t === tx || /^Leg |^Bull up/.test(el.textContent)) return;
+      /* the walk-on card wraps: the round sits whole on its own line ('KAURI ARMS LEAGUE NIGHT ·' / 'QUARTER-FINAL'), never split at its hyphen */
+      if (id === 'introTier' && e) el.innerHTML = `<span>${esc(e.n)}&nbsp;·</span> <span style="white-space:nowrap">${esc(roundName(S.s3.round))}</span>`; else el.textContent = tx;
+      el.title = tx; el.dataset.s3t = tx; el.dataset.s3v = el.innerHTML; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
   if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
 
   /* the first message after the creator: a Circuit league night, not the old 'Pub league' */
