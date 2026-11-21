@@ -1,0 +1,40 @@
+name: binder-diag
+'on':
+  push:
+    branches:
+    - qa-diag-binder
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.2-jammy
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: c6ca822cdcb17b4be967f533202852120b5f8f94
+        path: code
+        fetch-depth: 1
+    - uses: actions/checkout@v4
+      with:
+        path: diag
+        sparse-checkout: diag
+        fetch-depth: 1
+    - name: Build live 4.26
+      working-directory: code
+      run: git config --global --add safe.directory "*"; npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+    - name: Binder art, Chromium and WebKit (iPhone engine)
+      working-directory: code
+      run: cp ../diag/diag/binder.js ../diag/diag/a_long_s3.json tests/; for br in webkit chromium; do echo "=== $br"; BR=$br node tests/binder.js "$PWD" "../shot-$br.png" 2>&1 | grep -v "^ *\"sample\""
+        | head -40; done
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: binder-shots
+        path: shot-*.png
