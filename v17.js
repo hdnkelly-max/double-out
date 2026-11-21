@@ -39,10 +39,27 @@
     const j = body(); if (j !== null && j === lastBody) { try { hubBankUpdate(); } catch (e) {} return; }   // nothing changed: no write, no counter bump
     if (stale()) { stepAside('newer'); return; }
     const r = _p.apply(this, arguments); lastBody = j; return r; };
-  // 3 the cloud
-  if (typeof cloudPush === 'function') { const _c = cloudPush; cloudPush = function () { if (away || stale()) return; return _c.apply(this, arguments); }; }
+  // 3 the cloud. The server keeps the higher save counter, but a counter alone can be beaten: a device (or a stale tab) that saves on
+  // without seeing another device's newer cloud save climbs past it and overwrites it. So: a stepped-aside or stale tab never pushes, and
+  // before each push this device checks the cloud: if another device saved since the last time this one synced, it loads that save
+  // instead of overwriting it (the same "never over a newer save" rule as storage). synced = the cloud counter this device last pushed or loaded.
+  let synced = null;
+  if (typeof cloudPush === 'function' && window.TOPS_SAVEV && TOPS_SAVEV.adopt) {
+    const SV = TOPS_SAVEV, _adopt = SV.adopt; SV.adopt = function (c, why) { const r = _adopt.apply(this, arguments); try { if (c) synced = +(c.sv || 0); lastBody = body(); } catch (e) {} return r; };
+    const _pull = SV.pull; SV.pull = async function () { if (away) return; return _pull.apply(this, arguments); };
+    cloudPush = function (now) {
+      if (typeof NET === 'undefined' || !NET.user || !NET.sb || away || stale()) return; clearTimeout(NET.pushT);
+      const go = async () => { if (away || stale()) return; try {
+        if (synced != null) { let c = null; try { const r = await NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id', NET.user.id).maybeSingle(); c = r && r.data && r.data.data; } catch (e) {}
+          if (c && c.dev !== SV.dev() && +(c.sv || 0) > synced) { try { trackEv && trackEv('save_conflict', { cloud: c.sv || 0, synced, mine: save.sv || 0 }); } catch (e) {} SV.adopt(c, 'push'); return; } }
+        const { data, error } = await NET.sb.rpc(TOPS_SAVE_NS.rpc, { p_data: save }); if (error) throw error;
+        if (data && data.ok) { NET.cloudAt = Date.now(); synced = +(save.sv || 0); return; }
+        if (data && data.err === 'older' && data.data) { console.warn('TOPS cloud save is newer (sv ' + data.sv + ' vs ' + (save.sv || 0) + '), loading it'); SV.adopt(data.data, 'push'); }
+      } catch (e) { console.warn('cloud push', e); } };
+      if (now) go(); else NET.pushT = setTimeout(go, 2500); };
+  } else if (typeof cloudPush === 'function') { const _c = cloudPush; cloudPush = function () { if (away || stale()) return; return _c.apply(this, arguments); }; }
   lastBody = body();   // what this tab loaded counts as written
-  window.TOPS_TABS = { tab: TAB, away: () => away, canWrite: () => !away && !stale(), stepAside, claim };
+  window.TOPS_TABS = { tab: TAB, away: () => away, canWrite: () => !away && !stale(), stepAside, claim, synced: () => synced };
 })();
 </script>
 <style>

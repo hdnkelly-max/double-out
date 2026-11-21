@@ -233,7 +233,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
    if((c.sv||0)>(save.sv||0)&&c.dev!==DEV)adopt(c,'pull');}catch(e){}};
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pull();});
  setInterval(()=>{try{if(NET.pendCloud&&!busy())adopt(NET.pendCloud,'push');}catch(e){}},2000);
- window.TOPS_SAVEV={pull,dev:()=>DEV};
+ window.TOPS_SAVEV={pull,dev:()=>DEV,adopt};/* CAR-TABS: v17's cloud guard adopts through the same path */
 })();
 </script>
 <script>

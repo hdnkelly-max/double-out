@@ -8,6 +8,8 @@
 //   3 no-career wipe: tab A sits on the title with no career; tab B starts a career; A saves once: B's career is still there
 //   4 cloud: a stale tab never pushes its copy (the save RPC is not called), the owner does
 //   5 the hub does not save on its redraws: an idle owner hub writes the save no more than once in 30 s (it was every 2.5 s)
+//   6 cloud, two devices (mocked cloud that keeps the higher counter, like tops_save3_put): device Y loads X's save and plays on; stale device X,
+//     never pulling, saves more times than Y did; X's push must load Y's newer save, not overwrite it (a counter alone let X win)
 // usage: node tests/s3-tabs.js [dir]
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 require('fs').mkdirSync(path.join(dir, 'wip/car-tabs'), { recursive: true });
@@ -73,7 +75,21 @@ let url = ''; const f = []; const out = {};
     await A.waitForTimeout(30000); const w1 = await A.evaluate(() => window.__w); out.hubWrites = w1 - w0;
     if (out.hubWrites > 1) f.push('5 the idle hub saved ' + out.hubWrites + ' times in 30 s');
     await ctx.close(); }
+  // 6 cloud, two devices
+  { let cloud = null; const rpcs = []; const mk = async () => { const ctx = await b.newContext();
+      await ctx.exposeBinding('__cloudGet', () => cloud ? JSON.parse(JSON.stringify(cloud)) : null);
+      await ctx.exposeBinding('__cloudPut', (src, d) => { rpcs.push(d.sv); if (cloud && (d.sv || 0) <= (cloud.sv || 0)) return { ok: false, err: 'older', sv: cloud.sv, data: cloud }; cloud = d; return { ok: true }; }); return ctx; };
+    const net = () => { NET.user = { id: 'u1' }; NET.sb = { rpc: async (n, a) => ({ data: await __cloudPut(JSON.parse(JSON.stringify(a.p_data))) }), from: () => ({ upsert: async () => ({}), select: () => ({ eq: () => ({ maybeSingle: async () => { const c = await __cloudGet(); return { data: c ? { data: c } : null }; } }) }) }) }; };
+    const X = await open(await mk()); await X.evaluate(n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 100; persist(); cloudPush(true); }, '(' + net + ')'); await X.waitForTimeout(800);
+    const Y = await open(await mk()); await Y.evaluate(async n => { eval(n)(); save.authSeen = true; await TOPS_SAVEV.pull(); }, '(' + net + ')'); await Y.waitForTimeout(800);
+    out.y0 = await Y.evaluate(() => ({ bank: career() && career().bank, sv: save.sv }));
+    await Y.evaluate(() => { for (let i = 1; i <= 3; i++) { career().bank = 200 + i; persist(); } cloudPush(true); }); await Y.waitForTimeout(800);
+    await X.evaluate(() => { for (let i = 1; i <= 4; i++) { career().bank = 100 + i; persist(); } cloudPush(true); }); await X.waitForTimeout(1500);
+    out.cloud2 = { bank: cloud && cloud.career && cloud.career.bank, sv: cloud && cloud.sv, x: await X.evaluate(() => ({ bank: career().bank, sv: save.sv })), y0: out.y0 };
+    if (out.y0.bank !== 100) f.push('6 setup: device Y should load X\'s save from the cloud ' + JSON.stringify(out.y0));
+    if (out.cloud2.bank !== 203) f.push('6 stale device X overwrote device Y\'s newer cloud save ' + JSON.stringify(out.cloud2));
+    if (out.cloud2.x.bank !== 203) f.push('6 device X should load Y\'s newer save instead ' + JSON.stringify(out.cloud2)); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s`);
+  console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s; two devices on a mocked cloud: stale device X (4 saves after Y's 3) loads Y's newer save ($${out.cloud2.bank}) instead of overwriting it`);
 })();
