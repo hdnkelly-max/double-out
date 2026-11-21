@@ -24,8 +24,8 @@
   // The seven levels. avg = the static field average (today's TIERS). legs = best-of. need = threshold to move up.
   // Each event: id, n (name), where, kind ('ko' | 'groupko' | 'league'), size (draw), entry, travel, purse, pts, every (weeks)
   const LEVELS = [
-    { id: 'pub', n: 'Pub', s: 'Thursday nights at the Kauri Arms', avg: 52, legs: 3, need: 150, minEv: 1,
-      up: 'Reach 150 Kauri points, or win the Kauri Cup',
+    { id: 'pub', n: 'Pub', s: 'Thursday nights at the Kauri Arms', avg: 52, legs: 3, need: 75, minEv: 1, /* pace package (Hayden 15:10): 150 -> 75 */
+      up: 'Reach 75 Kauri points, or win the Kauri Cup',
       events: [
         { id: 'pub_night', n: 'Kauri Arms league night', where: 'The Kauri Arms', kind: 'ko', size: 8, entry: 5, travel: 0, purse: 120, pts: 50, every: 1, field: -2 },
         { id: 'kauri_cup', n: 'The Kauri Cup', where: 'The Kauri Arms', kind: 'ko', size: 16, entry: 10, travel: 0, purse: 600, pts: 150, every: 4, jump: true, field: 2 }
@@ -37,8 +37,8 @@
         { id: 'interclub', n: 'Interclub · Auckland association', where: 'Rotating clubs', kind: 'ko', size: 16, entry: 15, travel: 20, purse: 1200, pts: 120, every: 2, field: 0 },
         { id: 'assoc_open', n: 'Waitākere Open', where: 'Henderson RSA', kind: 'ko', size: 32, entry: 30, travel: 10, purse: 3000, pts: 260, every: 4, jump: true, field: 3 }
       ] },
-    { id: 'opens', n: 'Regional Opens', s: 'NZDC-ranked weekend Opens around the North Island', avg: 75, legs: 5, need: 260, minEv: 2,
-      up: 'Reach 260 NZ Opens points (your best 5 Opens count) for a DPNZ Tour place',
+    { id: 'opens', n: 'Regional Opens', s: 'NZDC-ranked weekend Opens around the North Island', avg: 75, legs: 5, need: 150, minEv: 2, /* pace package: 260 -> 150 */
+      up: 'Reach 150 NZ Opens points (your best 5 Opens count) for a DPNZ Tour place',
       events: [
         { id: 'northland', n: 'Northland Open', where: 'Whangārei', kind: 'groupko', size: 32, entry: 30, travel: 90, purse: 2600, pts: 260, every: 3, field: -3 },
         { id: 'waikato', n: 'Waikato Open', where: 'Hamilton', kind: 'groupko', size: 32, entry: 30, travel: 70, purse: 3200, pts: 340, every: 3, field: 0 },
@@ -48,7 +48,7 @@
         { id: 'akl_open', n: 'Auckland Open', where: 'Auckland', kind: 'groupko', size: 64, entry: 40, travel: 40, purse: 6000, pts: 420, every: 6, jump: true, field: 4 }
       ] },
     { id: 'dpnz', n: 'DPNZ Tour', s: 'Six weekends, two events each. #1 on the Order of Merit goes to the Palace', avg: 85, legs: 5, need: 900, minEv: 2, oom: true,
-      up: 'NZ route: finish #1 on the DPNZ Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
+      up: 'Reach 400 DPNZ points (your best 6 count, at least 2 events this season) or finish #1 on the Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
       events: [
         { id: 'dpnz_wlg', n: 'DPNZ Tour · Wellington', where: 'Wellington', kind: 'ko', size: 32, entry: 60, travel: 380, purse: 8000, pts: 400, every: 1, field: 1 },
         { id: 'dpnz_ham', n: 'DPNZ Tour · Hamilton', where: 'Hamilton', kind: 'ko', size: 32, entry: 60, travel: 150, purse: 8000, pts: 400, every: 1 },
@@ -58,7 +58,7 @@
         { id: 'dpnz_dun', n: 'DPNZ Tour · Dunedin', where: 'Dunedin', kind: 'ko', size: 32, entry: 60, travel: 450, purse: 8000, pts: 400, every: 1 }
       ] },
     { id: 'tt', n: 'Trans-Tasman', s: 'One Brisbane weekend: top 8 NZ v top 8 AUS', avg: 88, legs: 7, need: 0, minEv: 1,
-      up: 'Reach the final for the Palace (both finalists go). Semi-finalists earn a funded Q-School place (optional)',
+      up: 'Reach the semi-finals for the Palace (all four semi-finalists go)',
       events: [
         { id: 'tt_bne', n: 'Trans-Tasman Championship', where: 'Brisbane', kind: 'ko', size: 16, entry: 150, travel: 700, purse: 40000, pts: 0, every: 1 }
       ] },
@@ -152,14 +152,18 @@
   // how you move up: a points threshold (with a minimum number of events), or a jump event won, or a route to the Palace
   function checkUp(c, e, fin) {
     const L = LEVELS[c.level], played = c.history.filter(h => h.level === c.level).length;
-    if (L.id === 'tt') { if (fin === 'W' || fin === 'F') return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : 'Trans-Tasman finalist') + ': you’re going to the Palace'); if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
+    if (L.id === 'tt') { if (fin === 'W' || fin === 'F' || fin === 'SF') { if (fin === 'SF') c.qsOffer = true; return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : fin === 'F' ? 'Trans-Tasman finalist' : 'Trans-Tasman semi-finalist') + ': you’re going to the Palace'); } /* pace package: the semi-final qualifies too */ if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
     if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace');
       // CAR-CARD: Q-School without a card sends you back to the DPNZ Tour (new season, 40% carried); the Q-School place (qsOffer) is kept
       // for next year, the same way back as the Trans-Tasman and a lost Worlds
       if (e.id === 'qschool' && !c.card) { c.qsOffer = true; newDpnzSeason(c); const r = promote(c, 3, 'No Tour Card this time (' + FIN_NAME[fin].toLowerCase() + '). Back to the DPNZ Tour for a new season: 40% of your points roll over. Your Q-School place stays for next year');
         r.fromQs = fin; return r; }
       return null; }
-    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1; if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
+    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;
+      // pace package (Hayden 15:10, doc 46): the DPNZ points route. 400 points (best 6) with at least 2 events this season; the carry
+      // from a new season is capped at 300, so it always takes new results
+      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points: the NZ route to the Palace');
+      if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
       newDpnzSeason(c); return { to: 3, n: 'DPNZ Tour', msg: 'Finished #' + r + '. A new DPNZ season: 40% of your points roll over' }; }
@@ -172,6 +176,7 @@
     return null;
   }
   const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
+  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
   const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
   // Championship-year identity (Hayden 15:10, doc 46): a yearly event (every 52: the Worlds, Q-School) has one edition per cycle,
   // edition = floor(week / 52). Each history record carries its edition, and an edition already played can't be entered again,
@@ -242,6 +247,6 @@
     return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
   }
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, edition, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, DPNZ_ROUTE, DPNZ_ROUTE_EV, edition, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
