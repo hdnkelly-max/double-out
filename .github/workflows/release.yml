@@ -235,7 +235,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions: { contents: write, pages: write, id-token: write }
-    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}' }
+    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outputs.page_url }}' }
     env: { V: '${{ needs.gate_build.outputs.version }}', TAG: '${{ needs.gate_build.outputs.tag }}', ITEM: '${{ inputs.item }}', QTREE: '${{ inputs.tree }}', QCOMMIT: '${{ inputs.commit }}', RISK: '${{ inputs.risk }}', CI: '${{ needs.gate_build.outputs.ci }}', BY: "${{ inputs.attest == 'AUTHOR TESTS PASS names this tree' && 'author' || 'qa' }}" }
     steps:
       - uses: actions/checkout@v4
@@ -245,6 +245,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: src-bundle, path: . }
       - name: Record the release on main (prepared) and tag it
+        id: prep
         run: |
           cd site
           git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
@@ -261,30 +262,32 @@ jobs:
           git push -q origin HEAD:main "$TAG" || { echo "::error::SYNC: push to main failed; nothing deployed"; exit 1; }
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with: { path: site }
+        with: { path: site, name: 'github-pages-${{ github.run_attempt }}' }
       # INCIDENT 4.16 (run 44837661545): deploy-pages failed ("No artifacts named github-pages were found", a GitHub-side glitch)
       # after main already said 'prepared', and nothing below ran, so main said 4.16 while live stayed 4.15. Now a failed deploy is
-      # retried once with a freshly uploaded artifact; if that fails too, the rollback chain below runs as for a failed live check
-      # (redeploy the last live release, verify it, restore main's site files, mark this version failed), so main always matches live.
+      # retried once (60 s later, freshly uploaded); any failure before the live check passes then runs the rollback chain below
+      # (redeploy the last live release, with one retry; verify it; restore main's site files; mark this version failed), so main
+      # always ends matching live. Artifact names carry the run attempt, so a re-run never collides with an earlier attempt's.
       - id: deploy
         uses: actions/deploy-pages@v4
         continue-on-error: true
+        with: { artifact_name: 'github-pages-${{ github.run_attempt }}' }
       - name: Deploy failed once; wait, then upload the site again for one retry
         if: steps.deploy.outcome == 'failure'
         run: |
-          echo "::warning::DEPLOY: first deploy-pages attempt failed; retrying once in 30 s with a fresh artifact"; sleep 30
+          echo "::warning::DEPLOY: first deploy-pages attempt failed; retrying once in 60 s with a fresh artifact"; sleep 60
       - uses: actions/upload-pages-artifact@v3
         if: steps.deploy.outcome == 'failure'
-        with: { path: site, name: github-pages-retry }
+        with: { path: site, name: 'github-pages-retry-${{ github.run_attempt }}' }
       - id: deploy2
         if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
-        with: { artifact_name: github-pages-retry }
+        with: { artifact_name: 'github-pages-retry-${{ github.run_attempt }}' }
       - name: Live check (version.json cache-busted, then a headless load with no page errors)
         id: live
         if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success'
         run: |
-          U="${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}"
+          U="${{ steps.deploy.outcome == 'success' && steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}"
           ok=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$V" ] && { ok=1; break; }; sleep 5; done
           [ -n "$ok" ] || { echo "::error::LIVE: version.json never showed $V (last: $g)"; exit 1; }
           # R-1: the live version.json must be the released one (its "build" is what the page's update check compares); parsed, not grepped
@@ -314,7 +317,10 @@ jobs:
         id: rbprep
         # a failed live check, or both deploy attempts failed (live is then most likely still the last release, but a deploy that
         # reports failure can still have landed, so redeploy the last release to be sure, exactly as for a failed live check)
-        if: failure() && (steps.live.outcome == 'failure' || steps.deploy2.outcome == 'failure')
+        # ChatGPT P1 (incident review): EVERY failure after main says 'prepared' and before the live check has passed enters rollback
+        # (configure-pages, either upload, either deploy, or the live check itself). A failure after the live check passed (the src
+        # push) does NOT: that release is live and correct, and main + live agree.
+        if: failure() && steps.prep.outcome == 'success' && steps.live.outcome != 'success'
         run: |
           cd site
           L=$(grep " live " RELEASES.log | grep -v "version=$V " | tail -1)
@@ -325,15 +331,27 @@ jobs:
           echo "ROLLBACK to $PREV (v$PV)" >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-pages-artifact@v3
         if: failure() && steps.rbprep.outcome == 'success'
-        with: { path: rb, name: rollback }
+        with: { path: rb, name: 'rollback-${{ github.run_attempt }}' }
       - id: rbdeploy
         uses: actions/deploy-pages@v4
         if: failure() && steps.rbprep.outcome == 'success'
-        with: { artifact_name: rollback }
+        continue-on-error: true
+        with: { artifact_name: 'rollback-${{ github.run_attempt }}' }
+      - name: Rollback deploy failed once; wait and retry
+        if: failure() && steps.rbdeploy.outcome == 'failure'
+        run: |
+          echo "::warning::ROLLBACK: first rollback deploy failed; retrying once in 60 s"; sleep 60
+      - uses: actions/upload-pages-artifact@v3
+        if: failure() && steps.rbdeploy.outcome == 'failure'
+        with: { path: rb, name: 'rollback-retry-${{ github.run_attempt }}' }
+      - id: rbdeploy2
+        uses: actions/deploy-pages@v4
+        if: failure() && steps.rbdeploy.outcome == 'failure'
+        with: { artifact_name: 'rollback-retry-${{ github.run_attempt }}' }
       - name: Verify the rollback is live
         id: rbverify
-        if: failure() && steps.rbdeploy.outcome == 'success'
-        env: { PV: '${{ steps.rbprep.outputs.pv }}', U: '${{ steps.rbdeploy.outputs.page_url }}' }
+        if: failure() && (steps.rbdeploy.outcome == 'success' || steps.rbdeploy2.outcome == 'success')
+        env: { PV: '${{ steps.rbprep.outputs.pv }}', U: '${{ steps.rbdeploy.outcome == ''success'' && steps.rbdeploy.outputs.page_url || steps.rbdeploy2.outputs.page_url }}' }
         run: |
           for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | grep -o '"v":"[0-9.]*"' | cut -d'"' -f4); [ "$g" = "$PV" ] && { echo "ROLLBACK LIVE: $U shows $PV" >> $GITHUB_STEP_SUMMARY; exit 0; }; sleep 5; done
           echo "::error::ROLLBACK: version.json never showed $PV (last: $g); restore by hand"; exit 1
@@ -351,7 +369,7 @@ jobs:
           git diff --cached --quiet "$PREV" -- $P || { echo "::error::ROLLBACK: main site files still differ from $PREV; restore main by hand before any hand push"; exit 1; }
           sed -i "s/ prepared version=$V / failed version=$V /" RELEASES.log
           git add RELEASES.log
-          WHY=$([ "${{ steps.deploy2.outcome }}" = failure ] && echo "deploy failed twice" || echo "failed live check")
+          WHY=$([ "${{ steps.live.outcome }}" = failure ] && echo "failed live check" || echo "deploy failed")
           git commit -qm "v$V $WHY; rolled back to $PREV (main site files restored)"
           git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; main still holds v$V, restore it by hand before any hand push"; exit 1; }
           echo "main restored to $PREV site files ($(git rev-parse --short HEAD))" >> $GITHUB_STEP_SUMMARY
