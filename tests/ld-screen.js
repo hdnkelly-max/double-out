@@ -9,10 +9,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     // the game hides the screen as soon as it is ready (fast here); hold that until the test lets it go, so the bar can be watched
     await p.addInitScript(() => { const add = DOMTokenList.prototype.add; DOMTokenList.prototype.add = function (...c) { try { if (!window.__letGo && c.includes('gone') && document.getElementById('loading') && this === document.getElementById('loading').classList) { window.__goneAsked = 1; return; } } catch (e) {} return add.apply(this, c); }; });
     await p.addInitScript(() => { let tl; Object.defineProperty(window, 'TOPS_LOAD', { configurable: true, get() { return tl; }, set(v) { if (v && v.part) v.part = function () {}; tl = v; } }); });   // the page's own progress steps (ENG-FLASH) are switched off here so the API itself can be checked from 0; tests/ld-progress.js covers them
-    await p.addInitScript(() => { try { sessionStorage.setItem('tops_reset', JSON.stringify({ k: 'Next up', t: 'vs Tama Rewiri', s: 'Club singles · week 2 of 8' })); } catch (e) {} });
+    await p.addInitScript(() => { try { sessionStorage.setItem('tops_reset', JSON.stringify({ k: 'Next up', t: 'vs Wiremu Rewiri', s: 'Club singles · week 2 of 8' })); } catch (e) {} });
     await p.goto('file://' + dir + '/index.html', { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => window.TOPS_LOAD, null, { timeout: 30000 });
     const w = () => p.evaluate(() => parseFloat(document.getElementById('ldBar').style.width) || 0);
-    const r = {}; r.card = await p.evaluate(() => { const n = document.getElementById('ldNext'); return !n.hidden && n.textContent.includes('Tama Rewiri'); });
+    const r = {}; r.card = await p.evaluate(() => { const n = document.getElementById('ldNext'); return !n.hidden && n.textContent.includes('Wiremu Rewiri'); });
     r.cardOnce = await p.evaluate(() => sessionStorage.getItem('tops_reset') === null);
     await p.evaluate(() => TOPS_LOAD.set(.2, 'Loading the venue…')); const a0 = await w(); await p.waitForTimeout(1500); const a1 = await w(); r.creep = [a0, a1];
     r.label = await p.evaluate(() => document.getElementById('ldTip').textContent);

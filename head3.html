@@ -63,7 +63,7 @@ html.tops-pre #loading.gone{opacity:1!important;visibility:visible!important}
 <script>/* ENG-RESET loading screen (Experience, Overseer 14:18; Hayden 14:14: "a small load so long as we have a loading bar/screen").
  API for Engine, safe to call from the first script on:
    TOPS_LOAD.set(p, label?)  p = 0..1 real progress (never goes backwards); label = one short line (optional)
-   TOPS_LOAD.next({k, t, s})  optional "Next up" card, e.g. {k:'Next up', t:'vs Tama Rewiri', s:'Club singles · week 2 of 8'}
+   TOPS_LOAD.next({k, t, s})  optional "Next up" card, e.g. {k:'Next up', t:'vs Wiremu Rewiri', s:'Club singles · week 2 of 8'}
    TOPS_LOAD.done()           fills the bar, then fades the screen (the game's own #loading.gone still works too)
  Before a between-matches reload, Engine can write sessionStorage 'tops_reset' = JSON {k,t,s}: the card shows from the first frame.
  Never looks frozen: between real updates the bar creeps toward the next step (at most +12 %, never past 96 %) and its fill shimmers;

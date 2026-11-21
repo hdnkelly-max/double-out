@@ -498,7 +498,8 @@
   const X = (() => { try { if (q.has('s3x')) lsSet('tops_s3x', q.get('s3x') === '1' ? '1' : null); } catch (e) {} return lsGet('tops_s3x') === '1'; })();
   const FNK = 'tops_s3_firstnight';
   const CARD = ['anika', 'bigmal', 'deano', 'jonno', 'kev', 'mo', 'pete', 'phil', 'shazza', 'tama'];
-  const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const c = CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
+  const ART_AS = { wiremu: 'tama' };   /* REN-WI: Wiremu 'Wi' Rewiri keeps his card art (the file stays tama.webp, as does his card id) */
+  const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const a = Object.keys(ART_AS).find(x => k.startsWith(x)); const c = a ? ART_AS[a] : CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
   function firstNight(go) {
     const C = CI(), A = API(), k = A._circ && A._circ(); if (!C || !k) return go();
     if (!k.live) { const v = A.view(), e = v && v.calendar.find(x => x.canAfford); if (!e) return go(); const r = A.book(e.id); if (!r || r.ok === false) return go(); }

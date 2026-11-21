@@ -21,7 +21,7 @@ window.TC_DATA = (function () {
   const CARDS = [
     ['deano', 1, 'Deano', 'regulars', 'epic', 'wear_mullet'],
     ['shazza', 2, 'Shazza', 'regulars', 'rare', 'wear_towel'],
-    ['tama', 3, 'Tama', 'regulars', 'uncommon', 'flight_club'],
+    ['tama', 3, 'Wi', 'regulars', 'uncommon', 'flight_club'],
     ['kev', 4, 'Kev Mercer', 'regulars', 'epic', 'wear_ciggie'],
     ['mo', 5, 'Mo Rangi', 'regulars', 'common', null],
     ['kauri', 6, 'The Kauri Arms', 'venues', 'common', null],

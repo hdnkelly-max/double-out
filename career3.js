@@ -29,7 +29,7 @@ function applyUnlocks(){const v=V3();if(!v)return;for(const u of v.unl){if(u.k==
 function stars(f){const n=Math.max(0,Math.min(5,f/20));let s='';for(let i=0;i<5;i++)s+=i<Math.floor(n)?'★':(i<n?'⯪':'☆');return s;}
 function tierOf(){const c=career();return c?c.tier:0;}
 // ----- contracts -----
-const FROM=['The Kauri','Jonno','Shah Electrical','Tama','Kev','The club bar'];
+const FROM=['The Kauri','Jonno','Shah Electrical','Wi','Kev','The club bar'];
 const CON_T=[
  {id:'tons',mk:t=>{const n=[2,3,3,4,4,5,5][t];return {n,t:`Hit ${n} tons in one match`};},ok:(m,n)=>m.tons>=n},
  {id:'v140',mk:t=>({t:'Hit a 140 or better'}),ok:m=>m.maxV>=140},

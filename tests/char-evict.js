@@ -11,7 +11,7 @@ await p.evaluate(()=>{save.authSeen=true;save.name='Lee';$('login').hidden=true;
 const snap=()=>p.evaluate(()=>{const d=V._qa.gfx();const live=new Set(['remy']);if(d.me)live.add(d.me);(d.extras||[]).forEach(e=>live.add(String(e).split(':')[0]));
   const opp=V._qa.opp&&V._qa.opp();if(opp&&opp.userData&&opp.userData.ck)live.add(opp.userData.ck);
   return {rigs:d.rigs,live:[...live],extra:d.rigs.filter(k=>!live.has(k)),freed:window.__charsFreed||0,oppCk:opp&&opp.userData&&opp.userData.ck};});
-const names=['Pete the Plumber','Shazza','Tama Rewiri','Kev Marsh','Pete the Plumber'];const out=[];
+const names=['Pete the Plumber','Shazza','Wiremu Rewiri','Kev Marsh','Pete the Plumber'];const out=[];
 for(const n of names){await p.evaluate(n=>{V.setOpponentLook({},n,1);},n);await p.waitForTimeout(9000);await p.evaluate(n=>{V.setOpponentLook({},n,1);},n);await p.waitForTimeout(1500);out.push(Object.assign({opp:n},await snap()));}
 const last=out[out.length-1];const pass=last.freed>=1&&out.every(o=>o.extra.length===0)&&last.rigs.includes(last.oppCk)&&!pe.length;
 const r={out,pe:pe.slice(0,3)};

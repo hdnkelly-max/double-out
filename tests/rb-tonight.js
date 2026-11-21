@@ -9,7 +9,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.evaluate(() => { save.authSeen = true; save.lessonDone = true; save.name = 'Hayden'; newCareer(); const c = career(); c.stage = 'season'; c.bank = 640; newSeason(c); save.tcWelSeen = 1; persist(); $('login').hidden = true; showHub('play'); });
   await p.waitForTimeout(4000); await p.evaluate(() => { try { delete TC_API.st().welPend; } catch (e) {} document.querySelectorAll('.tc-sheet,.tc-poster,.tcpk,.tc-back,.tc-scrim').forEach(e => e.remove()); });
   const cases = [];
-  for (let t = 0; t <= 6; t++) for (const nm of ['Tama Rewiri', 'Shazza', 'Lisa Tane']) {
+  for (let t = 0; t <= 6; t++) for (const nm of ['Wiremu Rewiri', 'Shazza', 'Lisa Tane']) {
     const r = await p.evaluate(([t, nm]) => { const c = career(); c.tier = t; c.next = Object.assign({}, nextOpponent(), { oppName: nm, oppName2: null }); TOPS_RB.render();
       const im = document.querySelector('#rbApp .rb-hero .rb-im'), bg = im ? im.style.background || im.style.backgroundImage : ''; const m = bg.match(/tn_t(\d)(f?)\.jpg/);
       return { t, nm, img: m ? m[0] : null, line: (document.querySelector('#rbApp .rb-line') || {}).textContent || '' }; }, [t, nm]);
@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.setViewportSize({ width: 390, height: 844 });
   const loaded = await p.evaluate(async () => { const out = {}; for (let t = 0; t <= 6; t++) for (const f of ['', 'f']) { const u = `assets/rb/tn_t${t}${f}.jpg`; out[u] = await new Promise(res => { const i = new Image(); i.onload = () => res(i.naturalWidth); i.onerror = () => res(0); i.src = u; }); } return out; });
   const fail = [];
-  for (const c of cases) { const f = c.nm !== 'Tama Rewiri'; if (c.img !== `tn_t${c.t}${f ? 'f' : ''}.jpg`) fail.push(`tier ${c.t} ${c.nm}: ${c.img}`); if (/\bHim\b/.test(c.line) || !c.line.includes(c.nm.split(' ')[0] + ' · avg ')) fail.push(`line "${c.line}"`); }
+  for (const c of cases) { const f = c.nm !== 'Wiremu Rewiri'; if (c.img !== `tn_t${c.t}${f ? 'f' : ''}.jpg`) fail.push(`tier ${c.t} ${c.nm}: ${c.img}`); if (/\bHim\b/.test(c.line) || !c.line.includes(c.nm.split(' ')[0] + ' · avg ')) fail.push(`line "${c.line}"`); }
   for (const [u, w] of Object.entries(loaded)) if (w !== 1200) fail.push(`${u} did not load (${w})`);
   if (!/Them · avg /.test(edge.pair) || /\bHim\b/.test(edge.pair)) fail.push('pair line "' + edge.pair + '"'); if (edge.overflow) fail.push('long name overflows at 360: "' + edge.long + '"');
   if (bad.length) fail.push('failed requests ' + bad.join(', ')); if (pe.length) fail.push('page errors ' + pe.join('; ').slice(0, 150));
