@@ -1,6 +1,6 @@
 // Director doc 74 under v3 (?v3=1): the Locker hero is the player's own V.heroShot (every creator choice, the real shirt colour) over
 // lk_plate.jpg (the Kauri Arms locker with the photo's person taken out), not the recoloured man/woman photo; it fills in when the render
-// arrives late; the level-up reward hero and the shirt reward tile keep career3's own render (rb.js no longer swaps them). TOPS_LK74=0 under
+// arrives late; the figure is its own img (whole head inside the card with headroom, shadow onto the locker, under the name's shade); the level-up reward hero and the shirt reward tile keep career3's own render (rb.js no longer swaps them). TOPS_LK74=0 under
 // v3, and v3 off, keep the photo path exactly (data-base lk_m/lk_f, no plate, the reward photo swap still runs). usage: node tests/s3-lk74.js [dir]
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const fail = [], out = {};
@@ -14,21 +14,25 @@ const { chromium } = require('playwright'); const path = require('path'); const 
       if (late && typeof V !== 'undefined') { const real = V.heroShot; let n = 0; V.heroShot = function () { return ++n <= late ? '' : real.apply(this, arguments); }; }   // the render isn't ready for the first few asks
       save.name = 'Hayden'; save.lessonDone = true; newCareer(); save.vlook = Object.assign({ at: Date.now() }, look); save.v3NewLook = 1; persist();
       $('login').hidden = true; save.authSeen = true; try { $('title').hidden = true; } catch (e) {} TOPS_RB.open('locker'); }, [look, late]);
-    const filled = await p.waitForFunction(() => { const e = document.getElementById('rbLkHero'); return e && /lk_plate\.jpg/.test(e.style.background) && /data:image\/png/.test(e.style.background); }, null, { timeout: v3 === '1' && lk74 ? 30000 : 4000 }).then(() => true, () => false);
+    const filled = await p.waitForFunction(() => { const e = document.getElementById('rbLkHero'), f = document.getElementById('rbLkFig'); return e && /lk_plate\.jpg/.test(e.style.background) && f && !f.hidden && /^data:image\/png/.test(f.src) && f.complete; }, null, { timeout: v3 === '1' && lk74 ? 30000 : 4000 }).then(() => true, () => false);
     const r = await p.evaluate(() => { const e = document.getElementById('rbLkHero'), bg = e ? e.style.background : '';
-      let same = null; try { same = TOPS_RB.lkFig(career().tier) === (bg.match(/url\("?(data:image\/png;base64,[^")]+)/) || [])[1] && bg.indexOf('data:image/png') < bg.indexOf('lk_plate'); } catch (e) { same = 'err ' + e.message; }
+      const fe = document.getElementById('rbLkFig'); let same = null; try { same = !!fe && TOPS_RB.lkFig(career().tier) === fe.src; } catch (e) { same = 'err ' + e.message; }
       // the level-up overlay: a stand-in for career3's #c3rw with its own render on top and a shirt reward tile
       const ov = document.createElement('div'); ov.id = 'c3rw'; ov.innerHTML = '<img class="rwhero" src="data:image/png;base64,iVBORw0KGgo="><div id="c3rwUnl">Level 4 <span class="ri ri-hero"><img src="data:image/png;base64,iVBORw0KGgo="></span></div>'; document.body.appendChild(ov);
       TOPS_RB.fixReward(); const h = ov.querySelector('img.rwhero'), ri = ov.querySelector('.ri.ri-hero');
       const rw = { heroKept: !h.dataset.rb && h.src === 'data:image/png;base64,iVBORw0KGgo=', tileTouched: !!ri.dataset.rb }; ov.remove();
-      const fig = (bg.match(/url\("?(data:image\/png;base64,[^")]+)/) || [])[1];
+      const fig = fe && !fe.hidden ? fe.src : '';
+      // the figure sits in the card: head inside with headroom, a shadow and a lamp edge, under the name's shade
+      const card = e && e.closest('.rb-hero').getBoundingClientRect(), fr = fe ? fe.getBoundingClientRect() : null, cs = fe ? getComputedStyle(fe) : null, sh = e && e.parentNode.querySelector('.rb-sh2');
+      const comp = fe && fr ? { top: Math.round(fr.top - card.top), drop: /drop-shadow/.test(cs.filter), under: !!sh && !!(fe.compareDocumentPosition(sh) & Node.DOCUMENT_POSITION_FOLLOWING) } : null;
       return new Promise(ok => { if (!fig) return ok(0); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
         const d = g.getImageData(0, Math.round(im.height * .5), im.width, Math.round(im.height * .2)).data; let n = 0, t = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { n++; if (d[i + 2] > d[i] + 40 && d[i + 1] > d[i] + 40) t++; } ok(n ? t / n : 0); }; im.onerror = () => ok(-1); im.src = fig; })
-      .then(teal => ({ teal: Math.round(teal * 100) / 100, base: e && e.dataset.base, plate: /lk_plate\.jpg/.test(bg), fig: /data:image\/png/.test(bg), same, rw, lk: TOPS_RB.v3Lk() })); });
+      .then(teal => ({ comp, teal: Math.round(teal * 100) / 100, base: e && e.dataset.base, plate: /lk_plate\.jpg/.test(bg), fig: !!fig, same, rw, lk: TOPS_RB.v3Lk() })); });
     r.filled = filled; r.pe = pe.slice(0, 2); out[tag] = r; await ctx.close(); return r; };
 
   let r = await run('mia', '1', MIA);
   if (r.base !== 'lk74' || !r.filled || r.same !== true) fail.push('v3 Mia Locker hero isn\'t her render over the plate ' + JSON.stringify(r));
+  if (!r.comp || r.comp.top < 6 || !r.comp.drop || !r.comp.under) fail.push('v3 Locker figure composition (head inside with headroom, shadow, under the name shade) ' + JSON.stringify(r.comp));
   if (r.teal < .15) fail.push('v3 Mia teal shirt not teal on the Locker figure ' + r.teal);
   if (!r.rw.heroKept || r.rw.tileTouched) fail.push('v3 reward hero/tile swapped for the photo ' + JSON.stringify(r.rw));
   r = await run('ray', '1', RAY); if (r.base !== 'lk74' || !r.filled || r.same !== true) fail.push('v3 Ray save Locker hero ' + JSON.stringify(r));
