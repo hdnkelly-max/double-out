@@ -134,3 +134,100 @@
     const r=_bmt.apply(this,arguments);try{const s=SS();if(s)s.tune=snap;}catch(e){}return r;};}
   window.TOPS_BESTLEG=BESTLEG;window.TOPS_HISTORY=HISTORY;
 })();
+
+/* ===== CAR-TABS (Q&D, Producer 22 Nov 07:38 / 09:09 / 09:44): one tab owns the save =====
+   Lives here (Career's file, loaded after v11/v15's save wrappers) so no protected file changes. Two tabs of one browser each held their own
+   copy of the save and wrote all of it on every save, so the last tab to save won (real progress lost on 4.26). Now:
+   1 ownership with a handshake: a new tab says hello and waits up to ~1 s; the owner flushes its last completed state and acks, then the new
+     tab loads the latest save and takes over; the older tab steps aside behind "TOPS is open in another tab" with "Play here". If the owner is
+     mid-match (a match can't be resumed), the NEW tab shows the card ("a match is in progress") with "Play here anyway" instead. A lone tab, or
+     a reload (ENG-RESET between matches), takes over at once: the owner keeps a heartbeat and clears it when its page goes.
+   2 write guard: before a write the tab compares the save counter in storage (sv) with its own; if another tab (or an older build) saved
+     since, it never overwrites and steps aside. Every write of the save key goes through it (a guard on localStorage.setItem for that one
+     key), so direct writes elsewhere (the LUX buy in career3) are covered without touching them: a refused write throws, as a full storage would.
+   3 the cloud: a stepped-aside or stale tab never pushes or pulls; before each push a device checks the cloud and, if another device saved
+     since this one last synced, loads that save instead of overwriting it. When the server supports it (DQ's tops_save3_put p_base, a
+     proposal for Hayden), the push also sends p_base = the cloud counter this device last synced; until then it sends what it sends today.
+   4 a save only writes when something changed, so the hub's redraws don't save or bump the counter.
+   5 recovery copies: before a tab steps aside for a newer write, or loads a newer cloud save over changes it hadn't synced, it keeps its own
+     save under <key>_rescue (the last 3), so nothing is ever thrown away silently. TOPS_TABS.rescues() lists them.
+   Loading another device's save (adopt) is never itself a reason to step aside: the migration it runs saves, and that save is allowed. */
+(function(){
+  if(typeof persist!=='function'||typeof TOPS_SAVE_NS==='undefined'||!window.localStorage)return;
+  const KEY=TOPS_SAVE_NS.key,OWN='tops_owner_'+KEY,MSG=OWN+'_msg',RES=KEY+'_rescue',TAB='t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+  const SI=Storage.prototype.setItem;let away=false,pending=true,owner=false,passing=0,adopting=0,lastBody=null,waitT=0,synced=null;
+  const raw=(k,v)=>SI.call(localStorage,k,v);
+  const svIn=()=>{try{const s=localStorage.getItem(KEY);return s?+(JSON.parse(s).sv||0):0;}catch(e){return 0;}};
+  const mine=()=>{try{return +(save&&save.sv||0);}catch(e){return 0;}};
+  const stale=()=>svIn()>mine();
+  const body=()=>{try{const sv=save.sv,dev=save.dev;save.sv=0;save.dev='';const j=JSON.stringify(save);save.sv=sv;save.dev=dev;return j;}catch(e){return null;}};
+  const ev=(n,d)=>{try{window.TOPS_FLIGHT&&TOPS_FLIGHT.log&&TOPS_FLIGHT.log(n,d||{});}catch(e){}};
+  function rescue(why){try{const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);list.push({at:Date.now(),why,sv:mine(),tab:TAB,save:JSON.parse(JSON.stringify(save))});
+    try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why,sv:mine()});}catch(e){}}
+  // the card
+  (function(){try{const st=document.createElement('style');st.textContent='#tabsCard{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(9,10,12,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#f3f4f2;font-family:Manrope,system-ui,sans-serif}#tabsCard .tc-in{max-width:340px;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}#tabsCard b{font:800 26px/1.1 "Saira Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase}#tabsCard p{margin:0;font-size:15px;line-height:1.45;color:#c9ccd0}#tabsCard button{min-height:48px;padding:0 28px;border:0;border-radius:12px;background:#c6f36b;color:#111;font:800 16px/1 Manrope,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}#tabsCard button:focus,#tabsCard button:focus-visible{outline:3px solid #f3f4f2;outline-offset:3px}#tabsCard small{font-size:12px;color:#8d9096}';(document.head||document.documentElement).appendChild(st);}catch(e){}})();
+  function card(mode){const old=document.getElementById('tabsCard');if(old){if(old.dataset.mode===(mode||''))return;old.remove();}
+    const d=document.createElement('div');d.id='tabsCard';d.dataset.mode=mode||'';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
+    d.innerHTML=mode==='busy'?'<div class="tc-in"><b>TOPS is open in another tab</b><p>A match is in progress there. Finish it there, or play here anyway: the match in the other tab stops and isn’t saved.</p><button type="button">Play here anyway</button><small>Your progress up to that match is safe either way.</small></div>'
+      :'<div class="tc-in"><b>TOPS is open in another tab</b><p>Only one tab can play at a time, so your progress stays safe. Keep playing there, or play here instead.</p><button type="button">Play here</button><small>Play here loads your latest save.</small></div>';
+    d.querySelector('button').onclick=mode==='busy'?()=>{d.remove();takeOver('anyway');}:()=>{try{raw(OWN,JSON.stringify({tab:'reload',at:Date.now()}));}catch(e){}location.reload();};
+    const stop=e=>{if(!e.target.closest||!e.target.closest('button'))e.stopPropagation();};['pointerdown','touchstart','click','keydown'].forEach(t=>d.addEventListener(t,stop,true));
+    (document.body||document.documentElement).appendChild(d);try{d.querySelector('button').focus();}catch(e){}}
+  function stepAside(why){if(away)return;if(why==='newer'&&body()!==lastBody)rescue('newer');away=true;try{clearTimeout(NET.pushT);}catch(e){}try{if(typeof S!=='undefined'&&S&&!S.done)S.paused=true;}catch(e){}ev('tabs_away',{why});card();}
+  // 2: every write of the save key passes the guard (passing = this tab's own guarded save, or a cloud adopt)
+  Storage.prototype.setItem=function(k,v){if(k===KEY&&this===localStorage&&!passing&&!adopting){
+      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(stale()){stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
+    return SI.apply(this,arguments);};
+  // 1 ownership
+  const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
+  let bc=null;try{bc=new BroadcastChannel('tops-tabs-'+KEY);bc.onmessage=m=>on(m&&m.data);}catch(e){}
+  const send=d=>{d.tab=TAB;d.at=Date.now();try{bc&&bc.postMessage(d);}catch(e){}try{raw(MSG,JSON.stringify(d));}catch(e){}};
+  function on(d){if(!d||d.tab===TAB)return;
+    if(d.t==='hello'&&!away&&!pending){const busy=midMatch();try{persist();}catch(e){}send({t:'ack',to:d.tab,busy,sv:mine()});}   // flush the last completed state, then answer
+    else if(d.t==='ack'&&d.to===TAB&&pending){clearTimeout(waitT);if(d.busy){pending=false;away=true;card('busy');ev('tabs_busy');return;}
+      const want=+(d.sv||0),t0=Date.now();const wait=()=>{if(!pending)return;if(svIn()>=want||Date.now()-t0>800)takeOver('ack');else setTimeout(wait,25);};wait();}   // the ack can beat the flushed save to this tab's storage
+    else if(d.t==='claim'){if(pending){clearTimeout(waitT);pending=false;}stepAside('claim');}}
+  function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt)TOPS_SAVEV.adopt(s,'tab');}catch(e){}}
+  function takeOver(why){if(away&&why!=='anyway')return;pending=false;away=false;owner=true;reread();try{persist();}catch(e){}send({t:'claim'});
+    try{raw(OWN,JSON.stringify({tab:TAB,at:Date.now()}));}catch(e){}ev('tabs_own',{why});}
+  window.addEventListener('storage',e=>{try{
+    if(e.key===MSG&&e.newValue){if(!bc)on(JSON.parse(e.newValue));}
+    else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(o&&!o.hb&&o.tab!==TAB&&!pending)stepAside('claim');}
+    else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale())stepAside('newer');}catch(x){}});
+  setInterval(()=>{if(owner&&!away)try{raw(OWN,JSON.stringify({tab:TAB,at:Date.now(),hb:1}));}catch(e){}},4000);   // hb: a heartbeat, never a claim
+  window.addEventListener('pagehide',()=>{try{const o=JSON.parse(localStorage.getItem(OWN)||'null');if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
+  const start=()=>{let live=null;try{live=JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){}
+    if(!live||live.tab==='reload'||!(Date.now()-(live.at||0)<9000))takeOver('alone');else{send({t:'hello'});waitT=setTimeout(()=>{if(pending)takeOver('timeout');},1000);}};
+  // 2 + 4 the save itself
+  const _p=persist;
+  persist=function(){
+    if(adopting){passing++;try{return _p.apply(this,arguments);}finally{passing--;lastBody=body();}}   // the migration inside an adopt saves the adopted save
+    if(away||pending)return;
+    const j=body();if(j!==null&&j===lastBody){try{hubBankUpdate();}catch(e){}return;}   // nothing changed: no write, no counter bump
+    if(stale()){stepAside('newer');return;}
+    passing++;try{const r=_p.apply(this,arguments);lastBody=j;return r;}finally{passing--;}};
+  // 3 the cloud
+  const PB='tops_pbase';const pbase=()=>{try{const v=JSON.parse(localStorage.getItem(PB)||'null');if(!v)return null;if(v.ok)return true;return Date.now()-v.at<864e5?false:null;}catch(e){return null;}};
+  const rpcPut=async()=>{const args={p_data:save};const pb=synced!=null?pbase():false;
+    if(pb!==false&&synced!=null){const r=await NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:synced},args));
+      if(!r.error){if(pb==null)try{raw(PB,JSON.stringify({ok:1,at:Date.now()}));}catch(e){}return r;}
+      const m=String((r.error&&(r.error.code+' '+r.error.message))||'');if(/PGRST202|p_base|function/i.test(m)){try{raw(PB,JSON.stringify({ok:0,at:Date.now()}));}catch(e){}}else return r;}
+    return NET.sb.rpc(TOPS_SAVE_NS.rpc,args);};
+  if(typeof cloudPush==='function'&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){
+    const SV=TOPS_SAVEV,_adopt=SV.adopt;
+    SV.adopt=function(c,why){if(c&&why!=='tab'&&mine()>0&&(synced==null||mine()>synced))rescue('cloud');   // this device saved since it last synced: keep its copy
+      adopting++;let r;try{r=_adopt.apply(this,arguments);}finally{adopting--;}try{if(c&&why!=='tab')synced=+(c.sv||0);lastBody=body();}catch(e){}return r;};
+    const _pull=SV.pull;SV.pull=async function(){if(away||pending)return;return _pull.apply(this,arguments);};
+    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||away||pending||stale())return;clearTimeout(NET.pushT);
+      const go=async()=>{if(away||pending||stale())return;try{
+        if(synced!=null){let c=null;try{const r=await NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle();c=r&&r.data&&r.data.data;}catch(e){}
+          if(c&&c.dev!==SV.dev()&&+(c.sv||0)>synced){ev('save_conflict',{cloud:c.sv||0,synced,mine:mine()});SV.adopt(c,'push');return;}}
+        const {data,error}=await rpcPut();if(error)throw error;
+        if(data&&data.ok){NET.cloudAt=Date.now();synced=mine();return;}
+        if(data&&data.err==='older'&&data.data){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+mine()+'), loading it');SV.adopt(data.data,'push');}
+      }catch(e){console.warn('cloud push',e);}};
+      if(now)go();else NET.pushT=setTimeout(go,2500);};
+  }else if(typeof cloudPush==='function'){const _c=cloudPush;cloudPush=function(){if(away||pending||stale())return;return _c.apply(this,arguments);};}
+  lastBody=body();start();
+  window.TOPS_TABS={tab:TAB,away:()=>away,pending:()=>pending,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
+})();
