@@ -9,7 +9,7 @@
 # The parts run as parallel jobs (gate in two halves, saves, one per phone, ~15 min; the models: v3 gate + v3 saves); a report job merges them into one table.
 # The PASS/FAIL table is in the run summary; screenshots and the JSON are an artifact. Hayden's real-phone play stays manual.
 name: switch-on
-run-name: "switch-on on ${{ inputs.build || '8f2bac2551f1bbd8be2b46213a023ccad95111dd' }} (${{ inputs.parts || 'v3gate,saves' }}, flag ${{ inputs.flag || 's3x' }})"
+run-name: "switch-on on ${{ inputs.build || 'dacc9b4c9a69c4657d9b54c44e732623eec30b43' }} (${{ inputs.parts || 'v3saves' }}, flag ${{ inputs.flag || 's3x' }})"
 on:
   push: { branches: [qa-switch-proof] }
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: Skip parts not asked for
         id: want
-        env: { PARTS: '${{ inputs.parts || ''v3gate,saves'' }}', P: '${{ matrix.p.part }}' }
+        env: { PARTS: '${{ inputs.parts || ''v3saves'' }}', P: '${{ matrix.p.part }}' }
         run: |
           case ",$PARTS," in *",$P,"*) echo "run=1" >> $GITHUB_OUTPUT ;; *) echo "skipped: $P not in $PARTS" ;; esac
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
       - name: Pick the build
         id: pick
         if: steps.want.outputs.run
-        env: { BUILD: '${{ inputs.build || ''8f2bac2551f1bbd8be2b46213a023ccad95111dd'' }}', TREF: '${{ inputs.test_ref || ''qa-switch-on'' }}' }
+        env: { BUILD: '${{ inputs.build || ''dacc9b4c9a69c4657d9b54c44e732623eec30b43'' }}', TREF: '${{ inputs.test_ref || ''qa-switch-on'' }}' }
         run: |
           git config --global --add safe.directory '*'
           cd code; LIVE=$(node -e "console.log(require('../site/version.json').v)")
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { pattern: 'switch-on-*', path: parts }
       - name: One PASS/FAIL table
-        env: { PARTS: '${{ inputs.parts || ''v3gate,saves'' }}' }
+        env: { PARTS: '${{ inputs.parts || ''v3saves'' }}' }
         run: |
           # every asked-for part must have its JSON (a crashed or cancelled job is a FAIL row, never a silent gap)
           F=""; for id in gate-a gate-b saves iphone13 pixel7 p360 v3-gate v3-saves; do case "$id" in gate-*) p=gate;; iphone13|pixel7|p360) p=phones;; v3-gate) p=v3gate;; v3-saves) p=v3saves;; *) p=$id;; esac
