@@ -669,7 +669,9 @@
         <button type="button" class="s3-v3nlgo" id="s3V3NewGo">${esc(V3NL.go)}</button><button type="button" class="s3-v3nltw" id="s3V3NewTw">${esc(V3NL.tweak)}</button></div>`;
       document.body.appendChild(d);
       let acted = false; const done = () => { save.v3NewLook = Date.now(); try { persist(); } catch (e) {} d.remove(); };
-      const act = k => { if (acted) return; acted = true; done(); v3log('s3_v3newlook', { act: k }); if (k === 'tweak') { try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } } };
+      const act = k => { if (acted) return; acted = true; done(); v3log('s3_v3newlook', { act: k });
+        /* the creator builds a 3D preview: open it after the touch sequence has finished, not inside the finger's pointerup */
+        if (k === 'tweak') setTimeout(() => { try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } }, 0); };
       /* DQ go/no-go: a first tap on Let's go while the card was coming in sometimes didn't count. The buttons now act on the finger lifting
          (pointerup on the same button it went down on), not only on the browser's click, which a phone can drop when the page changes under
          the finger (the figure swapping in); click stays for keyboard and anything without pointer events. One action per card. */
