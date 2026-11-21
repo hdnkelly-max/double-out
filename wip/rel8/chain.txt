@@ -1,0 +1,32 @@
+parity exit 0 :: V3-PARITY PASS: 13 figures identical in geometry, materials and pixels, and 2470 clip frames through V2POST identical at 0.01 mm, without ?v3=1
+cardart exit 0 :: V3-CARDART PASS (9 pro cards: v3 art under ?v3=1 and loads 700x1050; no nested swap; v2 keeps today's art)
+saves exit 0
+dart-p70 exit 1 :: S3-DART-HAIR FAIL (276992 samples, k step 0.01, margin >= 8 mm; closest: save1 99 mm, save2 76.1 mm, save3 99 mm, kai_hair_short 99 mm, kai_hair_buzz 99 mm, kai_hair_quiff 99 mm, kai_hair_curly 84.1 mm, kai_hair_mullet 99 mm, kai_hair_horseshoe 99 mm, kai_hair_ponytail 18 mm, kai_hair_bald 99 mm, kai_face_clean 99 mm, kai_face_s
+match-v2 exit 0 :: s3-match PASS
+match-v3 exit 0 :: s3-match PASS
+creator-v2 exit 0 :: S3-CREATOR PASS
+creator-v3 exit 0 :: S3-CREATOR PASS
+v2clear-v2 exit 0 :: S3-V2-CLEAR PASS (8 figures, 44 poses + 19 clips, 48398400 checks, 0 head penetration, 0 darts in arms (spares >= 67 deg off the forearm), throwing dart clear of the skull (closest 1.059 at ray/throw0.45) and of the hair (closest 999 mm at ); glasses ray 6.8mm, kai 6.8mm, tama 6.8mm, dazza 6.8mm, mia 6.8mm; remy fetched 0 times)
+v2clear-v3 exit 0 :: S3-V2-CLEAR PASS (8 figures, 44 poses + 19 clips, 47783805 checks, 0 head penetration, 0 darts in arms (spares >= 67 deg off the forearm), throwing dart clear of the skull (closest 1.095 at ray/throw0.75) and of the hair (closest 23 mm at dazza/throw0.7); glasses ray 8.3mm, kai 8.3mm, tama 8.3mm, dazza 8.3mm, mia 8.3mm; remy fet
+clip-v2 exit 0 :: S3-CLIP-GAME PASS (8 figures, 19 clips, 23831077 checks)
+clip-v3 exit 0 :: S3-CLIP-GAME PASS (8 figures, 19 clips, 23299729 checks)
+chin-v3 exit 0 :: S3-COLLAR-CHIN PASS
+blend-v3 exit 0 :: S3-BLEND PASS (8 v3 figures, 9 transitions x 4 blend weights x 2 start points (+ layered throw phases) = 1088 mid-crossfade samples, 52028488 checks: 0 head penetration, 0 darts in arms/shirt, 0 clip pokes, 0 collar in the skull; throwing dart closest to the skull 1.127 at kai/throw>celebrate@0.6/w0.8+throw.6, to the hair 34.6 m
+dart-hold-v3 exit 0 :: S3-DART-HOLD PASS
+dart-hair-v3 exit 0 :: S3-DART-HAIR PASS (17312 samples, k step 0.01, margin >= 8 mm; closest: ray 99 mm, kai 99 mm, tama 85.7 mm, dazza 22 mm, mia 17.9 mm, opp:Big Mal 18.1 mm, opp:Shazza 99 mm, opp:Deano 99 mm; 108 s)
+dart-cast-v3 exit 0 :: S3-DART-HAIR PASS (25968 samples, k step 0.01, margin >= 8 mm; closest: Big Mal 18.1 mm, Shazza 99 mm, Dave Hurring 99 mm, Pete the Plumber 20.2 mm, Deano Marsh 99 mm, Jonno 99 mm, Kev Marsh 95 mm, Lisa Tane 99 mm, Luke Littler 99 mm, Michael van Gerwen 99 mm, Gerwyn Price 14.6 mm, Luke Humphries 24.1 mm; 66 s)
+parity-fix exit 0 :: V3-PARITY PASS: 13 figures identical in geometry, materials and pixels, and 2470 clip frames through V2POST identical at 0.01 mm, without ?v3=1
+clip-cast exit 0 :: S3-CLIP-GAME PASS (12 figures, 19 clips, 34612818 checks)
+pers exit 0 :: S3-PERS-CLEAR PASS (5 figures, 75 poses, 1633743 checks)
+clip-p70-part0 exit 0 :: S3-CLIP-P70 PASS (43 figures, 19 clips, 125534174 checks)
+pers-match exit 0 :: S3-PERS-MATCH PASS (5 bases, 25 moments held through the game's hooks, 429269 clip checks, release on pull OK)
+clip-p70-part1 exit 0 :: S3-CLIP-P70 PASS (43 figures, 19 clips, 125545097 checks)
+pros-v2 exit 0 :: S3-PROS PASS
+clip-p70-part2 exit 0 :: S3-CLIP-P70 PASS (42 figures, 19 clips, 122625112 checks)
+dart-p70-mia exit 0 :: S3-DART-HAIR PASS (54100 samples, k step 0.01, margin >= 8 mm; closest: mia_hair_short 99 mm, mia_hair_buzz 99 mm, mia_hair_quiff 96.8 mm, mia_hair_curly 84.4 mm, mia_hair_mullet 99 mm, mia_hair_horseshoe 99 mm, mia_hair_ponytail 17.9 mm, mia_hair_bald 99 mm, mia_face_clean 17.9 mm, mia_face_stubble 17.9 mm, mia_face_full 17.9 m
+heads exit 0
+
+rel-v3-r8 @ 168b507 (tree 634911b), base src v4.23 9e182c2; merges clean onto src v4.26 c6ca822.
+The first dart-p70 FAIL (mia_body_heavy 5.6 mm) was on 9e34736; fixed at 168b507 (Mia heavy belly 40% -> 10%) and re-run: dart-p70-mia PASS (worst 9.2 mm).
+dart-p70 / clip-p70 for the other looks: on 9e34736 (dart) and 168b507 (clip, all 128 in 3 parts). The fix only changes Mia's heavy pick.
+chain67 was stopped at its 2 h limit after dart-cast; the remaining tests ran on 168b507 (parity-fix, clip-cast, pers, pers-match, pros, dart-p70-mia, clip-p70 parts 0-2).
