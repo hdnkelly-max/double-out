@@ -14,6 +14,7 @@
 //   10 the handshake race (DQ 22 Nov 10:52): a slow owner never leaves both tabs behind the card; mid-match it is known busy from its heartbeat
 //   11 a tab that took over on a timeout adopts the late write of the tab it claimed from (2 s) instead of stepping aside
 //   12 recovery copies when another build's tab writes the save
+//   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
 // usage: node tests/s3-tabs.js [dir]   (CASES=7,10 runs just those; pass an absolute dir)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 require('fs').mkdirSync(path.join(dir, 'wip/car-tabs'), { recursive: true });
@@ -135,12 +136,12 @@ let url = ''; const f = []; const out = {};
   if (RUN(9)) { const n = out.pbfalse, y = out.pbtrue;
     if (n.calls[0] !== 'p_data' || !n.calls.includes('p_base,p_data=' + n.s1) || n.calls[n.calls.length - 1] !== 'p_data' || !/"ok":0/.test(n.flag || '')) f.push('9 without server support: plain push, one probe, then plain again ' + JSON.stringify(n));
     if (!y.calls.slice(1).every(c => /^p_base,p_data=\d+$/.test(c)) || !/"ok":1/.test(y.flag || '')) f.push('9 with server support every push after the first sync sends p_base ' + JSON.stringify(y)); }
-  // 10 the handshake race (DQ 10:52): an owner that hears the hello late (1.7 s, past the new tab's 1.5 s wait, as a busy or just-woken tab
-  //    does) ignores it (no flush, no ack); the new tab takes over and the owner steps aside on the claim: exactly one tab plays, never both
+  // 10 the handshake race (DQ 10:52): an owner that hears the hello late (4.5 s, past the new tab's wait: 4 s with a live heartbeat, as a busy
+  //    or just-woken tab does) ignores it (no flush, no ack); the new tab takes over and the owner steps aside on the claim: exactly one tab plays, never both
   //    behind the card. 10b: the same slow owner mid-match: its heartbeat already says "busy", so the new tab shows "a match is in progress"
   //    at once and the owner keeps playing; when that match ends the card turns into the ordinary "Play here"
   if (RUN(10)) for (const mid of [false, true]) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(m => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); if (m) { const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); } else try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 1700 }; }, mid);
+    await A.evaluate(m => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); if (m) { const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); } else try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: m ? 1700 : 4500 }; }, mid);
     if (mid) await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(1500); const sv0 = (await stored(A)).sv;
     const B = await open(ctx); await B.waitForTimeout(3500);
     const st = async P => P.evaluate(() => ({ card: (document.getElementById('tabsCard') || {}).dataset ? document.getElementById('tabsCard').dataset.mode || 'other' : null, away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), live: typeof S !== 'undefined' && !!S && !S.done && !S.paused }));
@@ -152,6 +153,17 @@ let url = ''; const f = []; const out = {};
       await A.evaluate(() => { S.done = true; }); await B.waitForTimeout(2000); r.after = await st(B);
       if (r.after.card !== 'other') f.push('10b the match there ended: the card offers Play here ' + JSON.stringify(r.after)); }
     out['race' + (mid ? 'Mid' : 'Hub')] = r; await ctx.close(); }
+  // 13 DQ 12:41: the owner starts a match and is at once too busy to run timers (main thread blocked 3 s, messages late); a tab opened right
+  //    then still sees busy, because busy is written where the match starts, not by a poll: the busy card, and the owner keeps its match
+  if (RUN(13)) { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); window.TOPS_TABS_QA = { delay: 1700 }; const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow();
+      setTimeout(() => { const t = Date.now(); while (Date.now() - t < 3000); }, 0); });
+    const own = await A.evaluate(() => JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null')).catch(e => String(e));
+    const B = await open(ctx); await B.waitForTimeout(3000);
+    const st = async P => P.evaluate(() => ({ card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, away: TOPS_TABS.away(), live: typeof S !== 'undefined' && !!S && !S.done && !S.paused }));
+    out.r13 = { own, a: await st(A), b: await st(B) };
+    if (out.r13.b.card !== 'busy' || out.r13.a.card || !out.r13.a.live) f.push('13 a blocked owner that just started a match keeps it; the new tab shows the busy card ' + JSON.stringify(out.r13));
+    await ctx.close(); }
   // 11 the 2 s adopt: an owner that still flushes a late hello (as the old build did, or a write already under way when the claim lands)
   //    writes a newer save just after the new tab took over; the new tab loads it instead of stepping aside, and the change is kept
   if (RUN(11)) { const ctx = await b.newContext(); const A = await open(ctx);

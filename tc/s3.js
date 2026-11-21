@@ -162,7 +162,7 @@
   if(typeof persist!=='function'||typeof TOPS_SAVE_NS==='undefined'||!window.localStorage)return;
   const KEY=TOPS_SAVE_NS.key,OWN='tops_owner_'+KEY,MSG=OWN+'_msg',RES=KEY+'_rescue',TAB='t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
   const SI=Storage.prototype.setItem;let away=false,pending=true,owner=false,passing=0,adopting=0,lastBody=null,waitT=0,synced=null,lastWrote=null,grace=null;
-  const WAIT=1500,WR=KEY+'_w';   /* WAIT: how long a new tab waits for the owner's ack; WR: which tab wrote the save last */
+  const WAIT=1500,WAIT_LIVE=4000,WR=KEY+'_w';   /* WAIT: how long a new tab waits for the owner's ack; WR: which tab wrote the save last */
   const raw=(k,v)=>SI.call(localStorage,k,v);
   const svIn=()=>{try{const s=localStorage.getItem(KEY);return s?+(JSON.parse(s).sv||0):0;}catch(e){return 0;}};
   const mine=()=>{try{return +(save&&save.sv||0);}catch(e){return 0;}};
@@ -217,14 +217,21 @@
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
      tab knows without waiting on an answer: a tab busy rendering a match can take seconds to hear a hello (DQ's race) */
   let hbBusy=null;const beat=()=>{if(owner&&!away)try{hbBusy=midMatch();raw(OWN,JSON.stringify({tab:TAB,at:Date.now(),hb:1,busy:hbBusy?1:0}));}catch(e){}};
-  setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);
+  setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);   /* the poll is only a refresh: */
+  /* busy is written synchronously where a match starts and ends (DQ 12:41: a tab busy rendering a match missed the 400 ms ticks, so a new
+     tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
+     (showHub), or a reload (pagehide clears the owner key). */
+  const edge=()=>{try{if(owner&&!away&&midMatch()!==hbBusy)beat();}catch(e){}};
+  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){try{return _bm.apply(this,arguments);}finally{edge();}};}
+  if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
+  if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
   window.addEventListener('pagehide',()=>{try{const o=JSON.parse(localStorage.getItem(OWN)||'null');if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
   const start=()=>{let live=null;try{live=JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){}
     if(!live||live.tab==='reload'||!(Date.now()-(live.at||0)<9000))takeOver('alone');
     else if(live.hb&&live.busy){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
-    else{send({t:'hello',wait:WAIT});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
+    else{const WAITN=live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
       try{const m=JSON.parse(localStorage.getItem(MSG)||'null');if(m&&m.t==='ack'&&m.to===TAB){on(m);return;}}catch(e){}
-      setTimeout(()=>{if(pending)takeOver('timeout',live.tab);},60);},WAIT);}};
+      setTimeout(()=>{if(pending)takeOver('timeout',live.tab);},60);},WAITN);}};
   // 2 + 4 the save itself
   const _p=persist;
   persist=function(){
