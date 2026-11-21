@@ -9,8 +9,9 @@
 # The parts run as parallel jobs (gate in two halves, saves, one per phone, ~15 min; the models: v3 gate + v3 saves); a report job merges them into one table.
 # The PASS/FAIL table is in the run summary; screenshots and the JSON are an artifact. Hayden's real-phone play stays manual.
 name: switch-on
-run-name: "switch-on on ${{ inputs.build }} (${{ inputs.parts }}, flag ${{ inputs.flag }})"
+run-name: "switch-on on ${{ inputs.build || '8f2bac2551f1bbd8be2b46213a023ccad95111dd' }} (${{ inputs.parts || 'v3gate,v3saves' }}, flag ${{ inputs.flag || 's3x' }})"
 on:
+  push: { branches: [qa-switch-proof] }
   workflow_dispatch:
     inputs:
       build: { description: 'live (the src commit of the version live now), src (src head), or a commit sha', required: true, default: 'live' }
@@ -42,7 +43,7 @@ jobs:
     steps:
       - name: Skip parts not asked for
         id: want
-        env: { PARTS: '${{ inputs.parts }}', P: '${{ matrix.p.part }}' }
+        env: { PARTS: '${{ inputs.parts || ''v3gate,v3saves'' }}', P: '${{ matrix.p.part }}' }
         run: |
           case ",$PARTS," in *",$P,"*) echo "run=1" >> $GITHUB_OUTPUT ;; *) echo "skipped: $P not in $PARTS" ;; esac
       - uses: actions/checkout@v4
@@ -54,7 +55,7 @@ jobs:
       - name: Pick the build
         id: pick
         if: steps.want.outputs.run
-        env: { BUILD: '${{ inputs.build }}', TREF: '${{ inputs.test_ref || ''src'' }}' }
+        env: { BUILD: '${{ inputs.build || ''8f2bac2551f1bbd8be2b46213a023ccad95111dd'' }}', TREF: '${{ inputs.test_ref || ''qa-switch-on'' }}' }
         run: |
           git config --global --add safe.directory '*'
           cd code; LIVE=$(node -e "console.log(require('../site/version.json').v)")
@@ -90,7 +91,7 @@ jobs:
       - name: Switch-on checks (${{ matrix.p.id }})
         if: steps.want.outputs.run
         working-directory: code
-        env: { BASELINE: '${{ matrix.p.part == ''v3gate'' && ''../base'' || '''' }}', FLAG: '${{ inputs.flag }}', GATE_ONLY: '${{ matrix.p.gate }}', PHONES: '${{ matrix.p.phone }}', OUT: '../out/${{ matrix.p.id }}.json', SHOTS: '../out/shots' }
+        env: { BASELINE: '${{ matrix.p.part == ''v3gate'' && ''../base'' || '''' }}', FLAG: '${{ inputs.flag || ''s3x'' }}', GATE_ONLY: '${{ matrix.p.gate }}', PHONES: '${{ matrix.p.phone }}', OUT: '../out/${{ matrix.p.id }}.json', SHOTS: '../out/shots' }
         run: |
           mkdir -p ../out; set +e; node tests/switch-on.js "$PWD" "${{ matrix.p.part }}" | tee ../out/${{ matrix.p.id }}.txt; rc=${PIPESTATUS[0]}
           echo "build ${{ steps.pick.outputs.c }} v${{ steps.pick.outputs.v }}" > ../out/${{ matrix.p.id }}.build; exit $rc
@@ -103,11 +104,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: '${{ inputs.test_ref || ''src'' }}', sparse-checkout: tests/switch-on.js, sparse-checkout-cone-mode: false }
+        with: { ref: '${{ inputs.test_ref || ''qa-switch-on'' }}', sparse-checkout: tests/switch-on.js, sparse-checkout-cone-mode: false }
       - uses: actions/download-artifact@v4
         with: { pattern: 'switch-on-*', path: parts }
       - name: One PASS/FAIL table
-        env: { PARTS: '${{ inputs.parts }}' }
+        env: { PARTS: '${{ inputs.parts || ''v3gate,v3saves'' }}' }
         run: |
           # every asked-for part must have its JSON (a crashed or cancelled job is a FAIL row, never a silent gap)
           F=""; for id in gate-a gate-b saves iphone13 pixel7 p360 v3-gate v3-saves; do case "$id" in gate-*) p=gate;; iphone13|pixel7|p360) p=phones;; v3-gate) p=v3gate;; v3-saves) p=v3saves;; *) p=$id;; esac
