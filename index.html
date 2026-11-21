@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<script>window.TOPS_BUILD="1795301328644";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795304740087";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -15214,7 +15214,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.27';
+window.TOPS_VER='4.28';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -18640,6 +18640,7 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
    and returns { options:[def,def,def], chosen:0..2, owned:{[cardId]:count} }.
    Card def: { id, name, no, set, rarity:'common'|'uncommon'|'rare'|'epic'|'legendary', art, cosmetic? } */
 (function (root) {
+  const s3img = u => { try { return typeof root.TOPS_S3_IMG === 'function' ? root.TOPS_S3_IMG(u) : u; } catch (e) { return u; } };   // the Season 3 picture switch; off = the URL as given
   'use strict';
   const RAR = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
   const T = { arrive: 180, stagger: 60, lift: 120, flip: 540, react: 490, othersGap: 100, quickFlip: 200 };
@@ -18696,7 +18697,10 @@ body.tc-oppwalk .ach-toasts{visibility:hidden}
   }
   function fill(c, def) {
     c.dataset.r = def.rarity; c.dataset.id = def.id;
-    c.querySelector('.tc__art').style.backgroundImage = def.art ? `url(${def.art})` : '';
+    /* EXP-S3-BINDER (live since 4.00): the Season 3 picture switch (rb/s3.js, window.TOPS_S3_IMG) is applied here, where the URL is built.
+       It used to rely on a setter patched onto CSSStyleDeclaration.prototype, which Chromium never calls for style.backgroundImage (the
+       property lives on each style object), so Chrome and Edge showed the old lifelike art on every card. */
+    c.querySelector('.tc__art').style.backgroundImage = def.art ? `url("${s3img(def.art)}")` : '';   /* quoted: the placeholder is a data: SVG with ( ) in it, which an unquoted url() rejects */
     if (def.foilMask) c.style.setProperty('--foil-mask', `url(${def.foilMask}) center/cover`);
     const nm = c.querySelector('.tc__name'); nm.textContent = def.name; nm.classList.toggle('is-long', def.name.length > 11); nm.classList.toggle('is-xlong', def.name.length > 16);
     c.querySelector('.tc__set').innerHTML = `No. ${String(def.no).padStart(3, '0')}<span class="tc__setname"> · ${esc(def.setName || def.set)}</span>`;
@@ -21551,7 +21555,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
   // TOPS_S3_HAVE (from build.js): the repo paths that have a redo at 's3/' + path. PEOPLE: the paths that show a person or a venue
   // (Director's art audit, 10-season3-build.md); one of those without a redo yet shows a plain dark placeholder (Hayden 07:55).
   // Objects (darts, trophies, badges, icons) keep their own images.
-  const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>');
+  const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>').replace(/\(/g, '%28').replace(/\)/g, '%29')   /* ( ) escaped too: an unquoted url(...) with them in it is invalid CSS, so the placeholder showed nothing (EXP-S3-BINDER) */;
   const HAVE = {}; (window.TOPS_S3_HAVE || []).forEach(p => { HAVE[p] = 1; });
   const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
@@ -22759,7 +22763,8 @@ html.rb-on img.rwhero.rb-rwphoto{height:200px!important;width:300px!important;ob
   if (!ON) return;
   try { document.documentElement.classList.add('rb-on'); } catch (e) {}
   const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
-  const IMG = 'assets/rb/';   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
+  const IMG = 'assets/rb/';
+  const s3img = v => { try { return typeof window.TOPS_S3_IMG === 'function' ? TOPS_S3_IMG(v) : v; } catch (e) { return v; } };   // the Season 3 picture switch for styles set from script (Chromium skips the prototype setter patch)   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
   const IC = {
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
@@ -22878,7 +22883,7 @@ html.rb-on img.rwhero.rb-rwphoto{height:200px!important;width:300px!important;ob
   const meFem = () => isFemModel(save.look || {}, save.name || '');
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
-    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = s3img(`url(${url}) 80% 30%/cover no-repeat,${scene}`); });   /* EXP-S3-BINDER: Chromium skips the style setter patch, so the switch runs here */
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
