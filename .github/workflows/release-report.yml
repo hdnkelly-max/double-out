@@ -10,6 +10,7 @@ on:
   workflow_run:
     workflows: [release]
     types: [completed]
+  push: { branches: [qa-release-watch] }   # PROOF ONLY
   workflow_dispatch:
     inputs:
       runs: { description: 'release.yml run ids (space-separated), or "last N" for the newest N runs on main', required: true, default: 'last 5' }
@@ -31,7 +32,7 @@ jobs:
           GH_TOKEN: '${{ github.token }}'
           RUN: '${{ github.event.workflow_run.id }}'
           ATT: '${{ github.event.workflow_run.run_attempt }}'
-          RUNS: '${{ inputs.runs }}'
+          RUNS: "${{ inputs.runs || 'last 5' }}"
         run: |
           if [ -n "$RUN" ]; then L="$RUN:$ATT"
           else case "$RUNS" in
@@ -53,3 +54,19 @@ jobs:
           r=$(curl -sS -w ' %{http_code}' -X POST "$FN" -H "Authorization: Bearer $T" -H 'Content-Type: application/json' --data @body.json)
           echo "release-report: $r"; echo "RELEASES row: $r" >> "$GITHUB_STEP_SUMMARY"
           [ "${r##* }" = 200 ] || { echo "::error::the watcher could not write the RELEASES row: $r"; exit 1; }
+      - name: PROOF - the function refuses what it should
+        run: |
+          set -u; ok=1
+          tok() { curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$1" | jq -r .value; }
+          T=$(tok tops-release-report); W=$(tok some-other-audience); echo "::add-mask::$T"; echo "::add-mask::$W"
+          F="${T%.*}.Zm9yZ2Vk"   # GitHub's header and claims with a forged signature
+          chk() { want=$1; shift; got=$(curl -sS -o /dev/null -w '%{http_code}' "$@"); echo "$want expected, got $got: $DESC" | tee -a "$GITHUB_STEP_SUMMARY"; [ "$got" = "$want" ] || ok=0; }
+          E='{"run_id":1,"attempt":1,"result":"live","branch":"main"}'
+          DESC="GET";                          chk 405 -X GET "$FN"
+          DESC="no token";                     chk 401 -X POST "$FN" -d "$E"
+          DESC="forged signature";             chk 401 -X POST "$FN" -H "Authorization: Bearer $F" -d "$E"
+          DESC="wrong audience";               chk 401 -X POST "$FN" -H "Authorization: Bearer $W" -d "$E"
+          DESC="real token, push event on this branch is allowed only for the proof, entry not from main"; chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d '{"run_id":1,"result":"live","branch":"feature"}'
+          DESC="real token, unknown result";   chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d '{"run_id":1,"result":"hacked","branch":"main"}'
+          DESC="real token, not JSON";         chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d 'x'
+          [ $ok = 1 ]
