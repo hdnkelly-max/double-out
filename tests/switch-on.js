@@ -10,7 +10,8 @@
 // usage: node tests/switch-on.js [dir] [parts]      parts: gate,saves,phones (default all)
 //        OUT=<file.json> writes the full result; SHOTS=<dir> saves a screenshot of every checked screen; PHONES='Pixel 7' runs one phone profile
 // Exit 0 only if every row passes. The last lines printed are a markdown PASS/FAIL table.
-const { chromium, devices } = require('playwright'); const path = require('path'), fs = require('fs'), cp = require('child_process');
+// --merge only reads JSON (the report job has no Playwright installed)
+const { chromium, devices } = process.argv[2] === '--merge' ? { chromium: null, devices: new Proxy({}, { get: () => ({}) }) } : require('playwright'); const path = require('path'), fs = require('fs'), cp = require('child_process');
 const dir = path.resolve(process.argv[2] || path.resolve(__dirname, '..')); const PARTS = (process.argv[3] || 'gate,saves,phones').split(',');
 const SHOTS = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null; if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 // FLAG=none opens the game with no ?s3x (and clears the stored opt-in first): use it once the default has flipped, to test what an
