@@ -80,7 +80,7 @@ All are the 390 px match face cam unless noted, with all toggles on.
 | `r7_sig21.jpg` | SIG21 off/on at Pub and Arena |
 | `r7_throw_on.jpg` / `r7_throw_off.jpg` | Pub throw strip (aim, pull, throw .6, release, fly .5, follow .5), r19 hands + fist on / off |
 | `r7_creator.jpg` | poster · round 6 · round 7 creator |
-| `r7_skin.jpg` | to follow: final skin after the measured correction |
+| `r7_skin.jpg` | poster · old skin · **doc 51 base (pick)** · measured correction S1 at Pub/Club/Arena (rejected) |
 
 ## What I see (Engine's read, for ChatGPT to confirm or overturn)
 
@@ -97,8 +97,27 @@ All are the 390 px match face cam unless noted, with all toggles on.
    | Mia | +7.9° | −0.11 | −0.02 |
    | Dazza | +3.1° | −0.05 | −0.03 |
 
-   - Two measured correction passes are running; `r7_skin` and the numbers follow.
-   - A single-step solve made Kai worse earlier, so I iterate against the measurement.
+   - **Skin update (00:25): the measured correction failed. Round 7 keeps the doc 51 base under LIGHT22, uncorrected.**
+     - One correction step on each base hex (hue, saturation, value against the error) moved the mid tones toward target on 3 of 5:
+
+       | | Mid-tone result after the step |
+       |---|---|
+       | Kai | lands at Pub and Club |
+       | Dazza | lands at Pub and Club |
+       | Mia | hue +7.9 → +4.7° |
+       | Ray | barely moved (+4.5 → +4.3°) |
+       | Tama | hue overshot (−1.6°), saturation unchanged (−0.15) |
+
+     - **Visually it is worse.** Tama turns dark red-brown and Mia's lower face redder (`r7_skin.jpg`, right three columns).
+     - A second step would have pushed the bases to extremes (Mia #ff1a09, Tama #561800), so I stopped it.
+     - Earlier the one-step material solve also made Kai worse.
+   - **Diagnosis.** The game's skin remap keeps hue. My best explanation for the remaining spread (yellow mid and lit tones, red shadows) is ACES filmic tone mapping bending bright saturated reds toward orange-yellow. A base-colour change can't fix that; it mostly moves the shadows. Not yet tested directly.
+   - **Round 8 candidates:**
+     1. A skin-only exposure or saturation adjustment after tone mapping (keeps hue even across the face).
+     2. Less warm bounce on skin.
+     3. A per-skin key trim.
+
+     I'll A/B these on the face cam.
 3. **LIGHT22 helps moderately.**
    - Gains: a tighter, whiter key highlight (forehead, Dazza's cap), a little more facial shape, and a warm rim on hair edges.
    - Ears do not go red at the face cam.
@@ -112,7 +131,7 @@ All are the 390 px match face cam unless noted, with all toggles on.
 
 ## Questions for ChatGPT
 
-1. Skin: is the doc 51 warmth right but the hue spread wrong, or is the base itself too saturated?
+1. Skin: is the doc 51 warmth right but the hue spread wrong (yellow lit tones, red shadows, `r7_cast`/`r7_skin`), or is the base itself too saturated? Engine's view: the spread, likely from tone mapping. Should round 8 attack it there?
 2. LIGHT22 on or off as the default under `?v3=1`?
 3. PROP21 and the signatures: keep as is, push harder, or drop any?
 4. Score each of the five against the poster at the face cam (round 6: Kai 8.4, Mia 8.0, Tama 8.2, Ray 8.4, Dazza 8.5; r17/r18 faces ~8.7).
