@@ -231,7 +231,10 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wk .s3-neg{color:#f08a8f}
 #rbApp .s3-wklink{align-self:center;min-height:40px;padding:0 12px;border:0;background:none;color:var(--ink2);font-weight:700;font-size:14px;cursor:pointer}
 #rbApp .s3-bkopt{width:100%;text-align:left;align-items:flex-start}
-#rbApp .rb-ghost.s3-bkopt{display:flex;flex-direction:column;gap:3px;min-height:56px;padding:10px 16px;border-radius:12px}
+#rbApp .rb-ghost.s3-bkopt{display:flex;flex-direction:column;gap:3px;height:auto;min-height:56px;padding:10px 16px;border-radius:12px}
 #rbApp .rb-ghost.s3-bkopt b{font:800 18px/1.1 var(--d);text-transform:uppercase;color:var(--ink)}
 #rbApp .rb-ghost.s3-bkopt small{font-size:12.5px;line-height:1.3;color:var(--ink2);font-weight:500}
 #rbApp .rb-primary.s3-bkopt small{line-height:1.3}
+#rbApp .s3-wkline .s3-rpoff{opacity:.8;color:var(--ink3)}
+/* 320 px: five Season 3 tabs fit their labels (PRACTICE was clipped) */
+@media (max-width:350px){html.s3-on #rbApp .rb-tabs button{font-size:12px;letter-spacing:0}}
