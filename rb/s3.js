@@ -45,8 +45,8 @@
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
   /* the build's content hash per s3/ file (TOPS_S3V), so a repainted picture under the same name is a new URL for the HTTP cache and Cache Storage (Q&D 12:02) */
   const s3u = u => { const h = (window.TOPS_S3V || {})[u]; return h ? u + '?v=' + h : u; };
-  const one = p => HAVE[p] ? s3u('s3/' + p) : PEOPLE.test(p) ? PH : null;
-  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
+  const one = p => (window.TOPS_V3FLAG === true && HAVE['v3/' + p]) ? s3u('s3/v3/' + p) : HAVE[p] ? s3u('s3/' + p) : PEOPLE.test(p) ? PH : null;   /* rel-v3-r8: a v3-only layer (s3/v3/<path>, e.g. the pro cards rendered from the v3 figures, doc 67) wins under ?v3=1; without v3 nothing changes */
+  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => ((off >= 3 && str.slice(off - 3, off) === 's3/') || (off >= 6 && str.slice(off - 6, off) === 's3/v3/')) ? m : (one(p) || m));   /* an s3/ (or s3/v3/) path is left alone */
   window.TOPS_S3_IMG = swap;
   {
     const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
