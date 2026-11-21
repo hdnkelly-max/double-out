@@ -1325,9 +1325,18 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  /* the v3 skull is the ellipsoid pushed out (cheeks, muzzle, brow) and in (flat top and back): skullF(l) = its radius over the ellipsoid's
     in the direction of the skull-space point l, so the clearance and the clip check test the real surface, not the ellipsoid x1.04 */
  function v3SkullF(FP){const R=V3P.head.r,d=new T.Vector3();return l=>{d.set(l.x/R[0],l.y/R[1],l.z/R[2]);const n=d.length();if(n<1e-6)return 1;d.multiplyScalar(1/n);const p=v3HeadPoint(d,FP.cheek,FP);return Math.hypot(p.x/R[0],p.y/R[1],p.z/R[2]);};}
+ /* doc 67: stubble as a soft speckled shadow painted into the skull map over the beard area (same mask as the doc 59 shell, wider soft edges) */
+ function v3Stubble67(x,W,H,L){const P=Object.assign({a:0.5,edge:0.2,grain:0.35},window.TOPS_CAST67P&&window.TOPS_CAST67P.stubble),sm=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
+  const c=new T.Color(L.beardC||L.hairC||0x3a2010);/* same number space as the skin canvas (the game's linear hex, as skHex) */const R=Math.round(c.r*255),G=Math.round(c.g*255),B=Math.round(c.b*255);
+  const x0=Math.floor((Math.PI/2-1.8)/(2*Math.PI)*W),x1=Math.ceil((Math.PI/2+1.8)/(2*Math.PI)*W),y0=Math.floor(1.55/Math.PI*H),y1=Math.ceil(3.0/Math.PI*H);
+  const im=x.getImageData(x0,y0,x1-x0,y1-y0),d=im.data,w=x1-x0;let sd=12345;const rn=()=>{sd=(sd*1103515245+12345)>>>0;return sd/4294967296;};
+  for(let yy=0;yy<y1-y0;yy++){const th=(y0+yy+0.5)/H*Math.PI;for(let xx=0;xx<w;xx++){const ph=(x0+xx+0.5)/W*2*Math.PI-Math.PI/2;const ap=Math.abs(ph),top=1.62+0.42*sm(1.3,0.5,ap);
+    const md=Math.hypot(ph/0.62,(th-2.36)/0.3);let a=sm(top,top+P.edge,th)*sm(1.75,1.4,ap)*sm(1.0,1.3,md)*sm(3.0,2.75,th);if(a<=0)continue;a*=P.a*(1-P.grain+P.grain*rn());
+    const q=4*(yy*w+xx);d[q]=d[q]+(R-d[q])*a;d[q+1]=d[q+1]+(G-d[q+1])*a;d[q+2]=d[q+2]+(B-d[q+2])*a;}}
+  x.putImageData(im,x0,y0);}
  function v3HeadMaps(L,sk,rough){const big=S3G==='full'?2048:1536,FW=big,FH=big/2,F0=V3P.face,face=v3FaceSheet(L,sk);
   const at=(x,W,H)=>[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
-  const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));});
+  const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));if(V3H67()&&L._cast&&L.face==='stubble')v3Stubble67(x,W,H,L);});
   const rm=document.createElement('canvas');rm.width=512;rm.height=256;{const x=rm.getContext('2d'),W=512,H=256,g=Math.round(255*rough),[ox,oy,sw,sh]=at(x,W,H),E=V3EYE;
    x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*(window.TOPS_V3EYER!=null?window.TOPS_V3EYER:.3));/* TOPS_V3EYER: eye-region roughness (test knob) *//* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
    [-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024,sh*E.ry/640,0,0,7);x.fill();});}
@@ -1467,6 +1476,9 @@ function s3BuildV3(L0){const L=Object.assign({},L0);if(!(L.base&&V3BASES.include
     the primitives taken from K. Live behind ?v2hair=1 (sticky in localStorage tops_v2hair) until Hayden turns it on; a style without an
     entry keeps today's build. */
  /* doc 66 hair pass (Director, 22 Nov): one switch per character, v3 only. TOPS_HAIR66=0 turns all five off; TOPS_H66_<R|K|T|M|D>=0 one */
+ /* doc 67 (Director, 22 Nov): the v3 cast's facial hair, v3 only, TOPS_CAST67=0 = doc 59/59b as shipped. Dazza's signature beard stays Dazza's;
+    stubble is painted into the skin map (no shell edge); the goatee's chin patch reads */
+ const V3H67=()=>window.TOPS_V3FLAG===true&&window.TOPS_CAST67!==0;
  const V3N66=(th,ph)=>0.5*Math.sin(ph*5.3+th*7.1+0.4)*Math.sin(ph*2.9-th*6.3+1.7)+0.32*Math.sin(ph*8.7-th*3.9+2.9)+0.22*Math.sin(th*11.3+ph*1.7);/* doc 66: low-frequency irregular noise over the head (about -1..1) */
  const V3H66=c=>window.TOPS_V3FLAG===true&&window.TOPS_HAIR66!==0&&window['TOPS_H66_'+c]!==0,H66P=c=>(window.TOPS_H66P||{})[c]||{};
  /* Tama: each curl gets its own highlight strength (a few bright, most mid, some dull), more spread on the top curls; blended across curl seams */
@@ -1768,7 +1780,7 @@ const V2GROOVE=(()=>{
    for(const s of [1,-1])parts.push(K.loft([[1.45,s*1.2,-0.01],[1.6,s*1.3,0.01],[1.72,s*1.33,0.006]],u=>0.03,u=>0.008,6,8));
    K.done(h,parts,cols,{top:0.04,hiAmt:0.5},[0.45,0.12]);},
   /* hair28 r8/r15 Dazza's sculpted full beard on the v3 face (r15: chin -13%, 4 partings, shadow break under the moustache): one cheek-to-chin mass (5-8% R), mouth kept clear, moustache on top */
-  beardL(h,L,K){K.seed(53);const sm=K.sm,dir=K.dir,FPd=v3FaceOf(L);const cols=L.beardC!=null&&L.beardC!==0x5a3420?K.colsFrom(L.beardC):{base:0x4A2A1C,shadow:0x24130b,hi:0x6F442F};const parts=[];const H66D=V3H66('D'),DP=Object.assign({edge:0.2,skin:0.32,sv:0.16,dk:0.36,gd:0.46,noise:0.1,mt:0.8,lv:0.86},H66P('D')),KV=[];const SGD=(window.TOPS_V3FLAG===true&&window.TOPS_SIG21!==0&&window.TOPS_SIG_DAZZA!==0);/* r21b (doc 57) Dazza signature: strand-textured beard, fuller at the jaw corners and chin, moustache tips curling up */
+  beardL(h,L,K){K.seed(53);const sm=K.sm,dir=K.dir,FPd=v3FaceOf(L);const cols=L.beardC!=null&&L.beardC!==0x5a3420?K.colsFrom(L.beardC):{base:0x4A2A1C,shadow:0x24130b,hi:0x6F442F};const parts=[];const H66D=V3H66('D'),DP=Object.assign({edge:0.2,skin:0.32,sv:0.16,dk:0.36,gd:0.46,noise:0.1,mt:0.8,lv:0.86},H66P('D')),KV=[];const SGD=(window.TOPS_V3FLAG===true&&window.TOPS_SIG21!==0&&window.TOPS_SIG_DAZZA!==0&&!(V3H67()&&L._cast));/* r21b (doc 57) Dazza signature: strand-textured beard, fuller at the jaw corners and chin, moustache tips curling up */
    const SF=(th,ph,k)=>{const p0=v3HeadPoint(dir(th,ph),FPd.cheek,FPd),p1=v3HeadPoint(dir(th+0.01,ph),FPd.cheek,FPd),p2=v3HeadPoint(dir(th,ph+0.01),FPd.cheek,FPd);
     const n=new T.Vector3().crossVectors(p1.clone().sub(p0),p2.clone().sub(p0)).normalize();if(n.dot(p0)<0)n.negate();return p0.addScaledVector(n,k);};
    const BD=window.BEARD_P||{},U=BD.U||(SGD?110:54),Vn=SGD?34:22,pos=[],idx=[],GV=[],SV=[],th1=2.95,ph0=-1.75,ph1=1.75;/* r15: 54 columns so the partings resolve */
@@ -1868,11 +1880,11 @@ const V2GROOVE=(()=>{
   const col=kind==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.4).getHex():bc;const cols=K.colsFrom(col);
   const SF=(th,ph,k)=>{const p0=v3HeadPoint(dir(th,ph),FPd.cheek,FPd),p1=v3HeadPoint(dir(th+0.01,ph),FPd.cheek,FPd),p2=v3HeadPoint(dir(th,ph+0.01),FPd.cheek,FPd);
    const n=new T.Vector3().crossVectors(p1.clone().sub(p0),p2.clone().sub(p0)).normalize();if(n.dot(p0)<0)n.negate();return p0.addScaledVector(n,k);};
-  const parts=[];
+  const parts=[];if(kind==='stubble'&&V3H67())return;/* doc 67: painted into the skin map instead (v3Stubble67) */
   if(kind==='stubble'||kind==='goatee'){const U=40,Vn=16,pos=[],idx=[],th1=2.95,ph0=kind==='goatee'?-.6:-1.75,ph1=-ph0;
    for(let j=0;j<=Vn;j++){const t=j/Vn;for(let i=0;i<=U;i++){const ph=ph0+(ph1-ph0)*i/U;const top=kind==='goatee'?2.3:1.62+.42*sm(1.3,.5,Math.abs(ph)),th=top+(th1-top)*t;
-     const inTop=sm(top,top+.08,th),side=kind==='goatee'?sm(.6,.4,Math.abs(ph)):sm(1.75,1.45,Math.abs(ph)),md=Math.hypot(ph/.62,(th-2.36)/.3),mouth=sm(1.0,1.2,md);
-     const k=(kind==='goatee'?.009:.0022)*inTop*side*mouth;const q=SF(th,ph,k-.004*(1-sm(0,.002,k)));pos.push(q.x,q.y,q.z);}}
+     const inTop=sm(top,top+.08,th),side=kind==='goatee'?sm(.6,.4,Math.abs(ph)):sm(1.75,1.45,Math.abs(ph)),G67=kind==='goatee'&&V3H67(),md=G67?Math.hypot(ph/.42,(th-2.33)/.19):Math.hypot(ph/.62,(th-2.36)/.3),mouth=sm(1.0,1.2,md);/* doc 67: the goatee starts just under the lower lip, so it reads from the front */
+     const k=(kind==='goatee'?(G67?.011:.009):.0022)*inTop*side*mouth;const q=SF(th,ph,k-.004*(1-sm(0,.002,k)));pos.push(q.x,q.y,q.z);}}
    for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i,b=a+1,c=a+U+1,d=c+1;idx.push(a,c,b,b,c,d);}
    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();parts.push(g);}
   if(kind==='goatee'||kind==='walrus'){const w=kind==='walrus'?.05:.03,dr=kind==='walrus'?.16:0;
