@@ -1,0 +1,46 @@
+[
+{
+"id": "power",
+"name": "Phil Taylor",
+"look": {
+"s3": {
+"cap": false,
+"hair": "horseshoe",
+"face": "walrus"
+}
+}
+},
+{
+"id": "nuke",
+"name": "Luke Littler"
+},
+{
+"id": "green",
+"name": "Michael van Gerwen"
+},
+{
+"id": "price",
+"name": "Gerwyn Price"
+},
+{
+"id": "wright",
+"name": "Peter Wright"
+},
+{
+"id": "smith",
+"name": "Michael Smith"
+},
+{
+"id": "barneveld",
+"name": "Raymond van Barneveld",
+"skinLift": 1.15
+},
+{
+"id": "humphries",
+"name": "Luke Humphries"
+},
+{
+"id": "anderson",
+"name": "Gary Anderson"
+}
+]
