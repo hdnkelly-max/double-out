@@ -204,7 +204,7 @@
       <div class="s3-rph s3-wkh"><b class="s3-wkup">Get back on tour</b><span class="s3-wksub">Can't afford a trip this week</span></div>
       <div class="s3-rpbar"><div class="s3-rprow"><span>Cheapest trip${cheap ? ' · ' + esc(TOWN(cheap.n).split(' · ')[0]) : ''}</span><b>${cheap ? money(cheap.cost) : '–'}</b></div><div class="s3-rprow"><span>Tour budget</span><b class="s3-neg">${money(c.bank)}</b></div>
         ${c.debt ? `<div class="s3-rprow"><span>You owe</span><b class="s3-neg">${money(c.debt)}</b></div>` : ''}</div>
-      ${ro ? opt('rec', 'rb-primary', 'Recovery entry', `${esc(ro.n)}, ${money(ro.cost)} covered. You'll owe ${money((c.debt || 0) + ro.cost)}, paid back from half of each prize.`) : ''}
+      ${ro ? opt('rec', 'rb-primary', 'Recovery entry', `${esc(ro.n)}, ${money(ro.cost)} covered. You'll owe ${money((c.debt || 0) + ro.cost)}${c.debt ? ' in total' : ''}, paid back from half of each prize.`) : ''}
       ${opt('mm', 'rb-ghost', 'Money match', `Best of 3 in the back room${mm ? `. Win it for ${money(mm)}` : ''}. Nothing to lose.`)}
       ${c.debt ? '' : opt('adv', 'rb-ghost', 'Hardship advance', 'Two entries paid now, paid back from half of each prize.')}</div>`;
   }
