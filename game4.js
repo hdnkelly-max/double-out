@@ -1043,7 +1043,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     x1.5 dark, so each base reads at its palette in every venue. The creator is untouched */
   let fk=1;if(part==='skin'){const Y=.2126*col.r+.7152*col.g+.0722*col.b;fk=1.1+.4*Math.max(0,Math.min(1,(.45-Y)/.32));}const [en,ek]=v2EnvFor(part,fk);const base=Object.assign({color:col,metalness:0,envMap:en,envMapIntensity:ek},o||{},{metalness:0});let m;
   /* phones: standard material (no clearcoat pass), a touch smoother to keep the gloss; full finish: the spec's physical clearcoat */
-  if(S3G==='full')m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,g[0]-.08*g[1])}));m.userData.s3v=true;m.userData.v2part=part;m.userData.v2fk=fk;return m;}
+  const SKV=part==='skin'&&window.TOPS_V3SKIN;/* doc 44 skin pass (test knob, off by default): {r,cc,ccr,spec,phoneCC}. spec = a multiplier on the env REFLECTION only, relative to
+     the lab (env .32): the env map is also the figure's key light here, so envMapIntensity itself can't move without relighting the skin; phoneCC: skin keeps its clearcoat on phones too */
+  if(S3G==='full'||(SKV&&SKV.phoneCC))m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:SKV&&SKV.r!=null?SKV.r:g[0],clearcoat:SKV&&SKV.cc!=null?SKV.cc:g[1],clearcoatRoughness:SKV&&SKV.ccr!=null?SKV.ccr:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,(SKV&&SKV.r!=null?SKV.r:g[0])-.08*g[1])}));
+  if(SKV&&SKV.spec!=null){const u={value:SKV.spec/.32};m.userData.v3spec=u;m.onBeforeCompile=sh=>{sh.uniforms.uV3Spec=u;sh.fragmentShader='uniform float uV3Spec;\n'+sh.fragmentShader.replace('#include <lights_fragment_maps>','#include <lights_fragment_maps>\n\tradiance*=uV3Spec;\n#ifdef CLEARCOAT\n\tclearcoatRadiance*=uV3Spec;\n#endif');};m.customProgramCacheKey=()=>'v3spec';}
+  m.userData.s3v=true;m.userData.v2part=part;m.userData.v2fk=fk;return m;}
  const v2hex=h=>'#'+new T.Color(h).getHexString();
  function v2cv(w,h,f){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');f(x,w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;}
  /* the decal's gloss maps, same layout as v2FaceTex: 'rough' (green channel x roughness .5: eyes -> .2) and 'cc' (red x clearcoat: eyes 1, rest 0) */
