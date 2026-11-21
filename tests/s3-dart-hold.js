@@ -4,13 +4,14 @@
 //   finger gap = the closest skinned finger vertex to the barrel surface (mm, negative = inside the barrel).
 // Pass (comparative, against the shipped old hands, which Q&D approved in doc 41): r19's worst thumb and index gaps no more than 6 mm larger, and its
 // deepest finger no more than 2 mm deeper into the barrel. Gaps are bone-line to barrel-surface, so absolute values include the finger radius.
+// doc 77 (rebaselined once): the candidate is r19 hands + the doc 77 grip, the reference the old hands with the grip off (TOPS_GRIP77=0).
 // node tests/s3-dart-hold.js <build dir (forced v3)> [ids]
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 (async()=>{const dir=path.resolve(process.argv[2]),only=(process.argv[3]||'').split(',').filter(Boolean);
 const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':'application/octet-stream'});r.end(d);});}).listen(0);
 const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const out={};let pe=[];
 for(const H19 of [1,0]){const p=await (await b.newContext({...devices['iPhone 13']})).newPage();p.on('pageerror',e=>pe.push(e.message));
- await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript(h=>{try{localStorage.setItem('tops_s3','1');localStorage.setItem('tops_v3','1');}catch(e){}if(!h)window.TOPS_HANDS19=0;},H19);
+ await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());await p.addInitScript(h=>{try{localStorage.setItem('tops_s3','1');localStorage.setItem('tops_v3','1');}catch(e){}if(!h){window.TOPS_HANDS19=0;window.TOPS_GRIP77=0;}},H19);/* doc 77: the reference stays the Q&D-approved old hands with today's grip off; the candidate is r19 + the doc 77 grip (defaults) */
  await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
  await p.evaluate(()=>{V.loadAnims();});await p.waitForFunction(()=>V._qa.animNames().length>0,null,{timeout:180000});
  out[H19?'r19':'old']=await p.evaluate(only=>{const Q=V._qa,T=Q.T;const boardC=new T.Vector3(0,1.73,0.045);const res={};
