@@ -145,9 +145,15 @@
   /* one render per look: heroShot draws and reads back the figure on every call, and the Locker redraws on every tab change */
   let lkMemo = { k: '', u: '' }; const lkFig = tier => { const k = JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]); if (lkMemo.k === k && lkMemo.u) return lkMemo.u;
     let u = ''; try { u = V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { u = ''; } if (u) lkMemo = { k, u }; return u; };
-  const lkLayers = (u, scene) => `url(${u}) right 5% top 0/auto 132% no-repeat,url(${IMG}lk_plate.jpg) 80% 30%/cover no-repeat,${scene}`;
-  let lkWait = 0; const v3LockerBg = (tier, scene) => { const u = lkFig(tier); clearTimeout(lkWait); if (u) return lkLayers(u, scene);
-    let n = 0; const again = () => { const e = $id('rbLkHero'); if (!e) return; const u2 = lkFig(tier); if (u2) { e.style.background = lkLayers(u2, scene); e.dataset.lk74 = 1; return; } if (++n < 24) lkWait = setTimeout(again, 500); };
+  /* the figure is its own <img> over the plate (not a background layer), so it can sit in the room: a soft shadow onto the locker behind and a
+     warm edge from the locker lamp (rb/s3.css .rb-lkfig), the whole head inside the card with headroom, and the bottom fading into the card */
+  /* a shadow pool on the locker behind the figure: grounds it and keeps the plate's filled-in patch (where the photo's person stood) dark */
+  const lkPlate = scene => `radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.78) 0,rgba(14,9,6,.5) 45%,rgba(14,9,6,0) 100%),url(${IMG}lk_plate.jpg) 80% 30%/cover no-repeat,${scene}`;
+  const lkFigTag = tier => { const u = lkMemo.u && lkMemo.k === JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]) ? lkMemo.u : '';
+    return `<img class="rb-lkfig" id="rbLkFig" alt=""${u ? ` src="${u}"` : ' hidden'}>`; };
+  let lkWait = 0; const v3LockerBg = (tier, scene) => { const u = lkFig(tier); clearTimeout(lkWait); if (u) return lkPlate(scene);
+    let n = 0; const again = () => { const e = $id('rbLkHero'), f = $id('rbLkFig'); if (!e || !f) return; const u2 = lkFig(tier);
+      if (u2) { f.onload = () => { e.style.background = lkPlate(scene); f.hidden = false; e.dataset.lk74 = 1; }; f.src = u2; return; } if (++n < 24) lkWait = setTimeout(again, 500); };
     lkWait = setTimeout(again, 500); return scene; };
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
     if (v3Lk()) return v3LockerBg(tier, scene);
@@ -161,7 +167,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') { const sh = S3 && S3.shelf ? S3.shelf() : null; return seg + (sh || trophies(M)); }   /* EXP-IDLE 3: the Season 3 shelf (behind s3x=1), else the old list */
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div>${v3Lk() ? lkFigTag(c.tier) : ''}<div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
