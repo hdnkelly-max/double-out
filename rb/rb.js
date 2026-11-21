@@ -152,8 +152,7 @@
      - a light falloff painted on the figure only (masked by its own alpha): warm toward the locker lamp, darker low and away from it;
      - a restrained contact shadow and a soft shadow onto the locker (rb/s3.css), under the name's shade so the name always reads. */
   const LK_HEAD = 10, LK_EXTRA = 40;   // px of headroom above the highest point; px the figure runs past the card bottom (waist-up)
-  const lkPlate = scene => `radial-gradient(ellipse 24% 26% at 70% 100%,rgba(8,5,3,.62) 0,rgba(8,5,3,.3) 55%,rgba(8,5,3,0) 100%),radial-gradient(ellipse 22% 55% at 76% 40%,rgba(30,17,10,.62) 0,rgba(30,17,10,.35) 55%,rgba(30,17,10,0) 100%),radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.6) 0,rgba(14,9,6,.36) 45%,rgba(14,9,6,0) 100%),url(${lkImg(IMG + 'lk_plate.jpg')}) 80% 30%/cover no-repeat,${scene}`;
-  const lkImg = p => { try { return window.TOPS_S3_IMG ? TOPS_S3_IMG(p) : p; } catch (e) { return p; } };   /* the Season 3 file switch: a style set from script after render doesn't pass through it */
+  const lkPlate = scene => `radial-gradient(ellipse 24% 26% at 70% 100%,rgba(8,5,3,.62) 0,rgba(8,5,3,.3) 55%,rgba(8,5,3,0) 100%),radial-gradient(ellipse 22% 55% at 76% 40%,rgba(30,17,10,.62) 0,rgba(30,17,10,.35) 55%,rgba(30,17,10,0) 100%),radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.6) 0,rgba(14,9,6,.36) 45%,rgba(14,9,6,0) 100%),url(${s3img(IMG + 'lk_plate.jpg')}) 80% 30%/cover no-repeat,${scene}`;
   const lkTop = {};   // render url -> [highest opaque row / height, width / height]
   const lkMeasure = (u, done) => { if (lkTop[u]) return done(lkTop[u]); const im = new Image(); im.onload = () => { let top = 0, ar = im.width / im.height || .8;
       try { const c = document.createElement('canvas'), w = 120, h = Math.round(120 / ar); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0, w, h);
