@@ -1,27 +1,50 @@
-# THROWAWAY (never merged): exercises the publish job's new step conditions with stub steps, one case per matrix leg.
+# THROWAWAY (never merged): the publish job's step conditions, copied exactly, with stub steps; one case per matrix leg.
 name: cond-test
 on: { push: { branches: [qa-cond-test] } }
 jobs:
   t:
     runs-on: ubuntu-latest
-    strategy: { fail-fast: false, matrix: { case: [first-ok, retry-ok, both-fail, live-fail] } }
+    strategy:
+      fail-fast: false
+      matrix: { case: [first-ok, retry-ok, both-fail, live-fail, retry-upload-fail, first-upload-fail, configure-fail, src-push-fail, rb-retry, prep-fail] }
+    env: { C: '${{ matrix.case }}' }
     steps:
+      - id: prep
+        run: '[ "$C" != prep-fail ] || exit 1'
+      - run: '[ "$C" != configure-fail ] || exit 1'
+      - run: '[ "$C" != first-upload-fail ] || exit 1'
       - id: deploy
         continue-on-error: true
-        run: '[ "${{ matrix.case }}" = first-ok ] || [ "${{ matrix.case }}" = live-fail ] || exit 1'
+        run: 'case "$C" in first-ok|live-fail|src-push-fail) exit 0;; *) exit 1;; esac'
       - if: steps.deploy.outcome == 'failure'
-        run: echo "RETRY-WAIT ran"
+        run: echo "RETRY-WAIT"
       - if: steps.deploy.outcome == 'failure'
-        run: echo "RETRY-UPLOAD ran"
+        run: '[ "$C" != retry-upload-fail ] || exit 1'
       - id: deploy2
         if: steps.deploy.outcome == 'failure'
-        run: '[ "${{ matrix.case }}" = retry-ok ] || exit 1'
+        run: '[ "$C" = retry-ok ] || exit 1'
       - id: live
         if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success'
-        run: 'echo "LIVE ran"; [ "${{ matrix.case }}" != live-fail ] || exit 1'
-      - run: echo "MARK-LIVE ran"
+        run: 'echo "LIVE-CHECK"; [ "$C" != live-fail ] || exit 1'
+      - run: 'echo "MARK-LIVE"; [ "$C" != src-push-fail ] || exit 1'
       - id: rbprep
-        if: failure() && (steps.live.outcome == 'failure' || steps.deploy2.outcome == 'failure')
-        run: echo "ROLLBACK ran"
+        if: failure() && steps.prep.outcome == 'success' && steps.live.outcome != 'success'
+        run: echo "ROLLBACK-PREP"
       - if: failure() && steps.rbprep.outcome == 'success'
-        run: 'echo "RESTORE-MAIN ran: $([ "${{ steps.deploy2.outcome }}" = failure ] && echo "deploy failed twice" || echo "failed live check")"'
+        run: echo "RB-UPLOAD"
+      - id: rbdeploy
+        if: failure() && steps.rbprep.outcome == 'success'
+        continue-on-error: true
+        run: '[ "$C" != rb-retry ] || exit 1'
+      - if: failure() && steps.rbdeploy.outcome == 'failure'
+        run: echo "RB-RETRY-WAIT"
+      - if: failure() && steps.rbdeploy.outcome == 'failure'
+        run: echo "RB-RETRY-UPLOAD"
+      - id: rbdeploy2
+        if: failure() && steps.rbdeploy.outcome == 'failure'
+        run: echo "RB-DEPLOY2"
+      - id: rbverify
+        if: failure() && (steps.rbdeploy.outcome == 'success' || steps.rbdeploy2.outcome == 'success')
+        run: echo "RB-VERIFY"
+      - if: failure() && steps.rbverify.outcome == 'success'
+        run: 'echo "RESTORE-MAIN: $([ "${{ steps.live.outcome }}" = failure ] && echo "failed live check" || echo "deploy failed")"'
