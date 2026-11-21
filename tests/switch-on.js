@@ -156,8 +156,10 @@ async function saves(b) {
 const SB = 'https://thyirfwoqkshsaqowdpe.supabase.co', SBKEY = 'sb-thyirfwoqkshsaqowdpe-auth-token', QA_UID = '00000000-0000-4000-8000-00000000c10d';
 function cloudServer() {
   const st = { row: null, log: [], down: new Set() };
-  const put = (data, who) => { const cur = st.row && st.row.data; const nv = +(data && data.sv || 0), cv = +(cur && cur.sv || 0);
-    if (cur && (cv > nv || (cv === nv && (cur.dev || '') !== (data.dev || '') && cv > 0))) { st.log.push({ who, sv: nv, ok: false, cv }); return { ok: false, err: 'older', sv: cv, data: cur }; }
+  // MOCK_RULE=guard answers with the proposed server guard instead (tops_save3_put(p_data, p_base): refuse unless the stored sv is exactly p_base), for a client that sends p_base
+  const put = (data, who, base) => { const cur = st.row && st.row.data; const nv = +(data && data.sv || 0), cv = +(cur && cur.sv || 0);
+    const cas = process.env.MOCK_RULE === 'guard' && base != null && (cur ? cv !== +base : false);
+    if (cur && (cas || cv > nv || (cv === nv && (cur.dev || '') !== (data.dev || '') && cv > 0))) { st.log.push({ who, sv: nv, ok: false, cv }); return { ok: false, err: 'older', sv: cv, data: cur }; }
     st.row = { data, updated_at: new Date().toISOString() }; st.log.push({ who, sv: nv, ok: true, bank: data.career && data.career.bank }); return { ok: true, sv: nv }; };
   const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url'); const exp = Math.floor(Date.now() / 1000) + 6 * 3600;
   const user = { id: QA_UID, aud: 'authenticated', role: 'authenticated', email: 'qa-cloud@example.invalid', user_metadata: { full_name: 'QA Cloud' }, app_metadata: { provider: 'google' }, created_at: '2026-01-01T00:00:00Z' };
@@ -174,7 +176,7 @@ function cloudServer() {
       if (u.pathname.startsWith('/auth/v1/user')) return J(r, 200, user);
       if (u.pathname.startsWith('/auth/v1/token')) return J(r, 200, sess);
       if (u.pathname.startsWith('/auth/v1/')) return J(r, 200, {});
-      if (u.pathname === '/rest/v1/rpc/tops_save3_put') { let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (e) {} return J(r, 200, put(b.p_data, who)); }
+      if (u.pathname === '/rest/v1/rpc/tops_save3_put') { let b = {}; try { b = JSON.parse(q.postData() || '{}'); } catch (e) {} return J(r, 200, put(b.p_data, who, b.p_base)); }
       if (u.pathname === '/rest/v1/tops_saves_s3') {
         if (m === 'GET') { const one = /pgrst\.object/.test(q.headers()['accept'] || ''); const rows = st.row ? [{ user_id: QA_UID, ...st.row }] : [];
           return one ? (rows.length ? J(r, 200, rows[0]) : J(r, 406, { code: 'PGRST116', message: 'no rows', details: 'The result contains 0 rows', hint: null })) : J(r, 200, rows); }
@@ -231,6 +233,8 @@ async function cloud(b) {
       `B: bank ${B0} -> ${want}, in the cloud ${R.cloudB === want ? 'yes' : 'NO'} (sv ${R.cloudSv}); A, offline and not seeing it, saved ${R.aSaves}x (sv ${R.a1 && R.a1.mem.sv}), back online: cloud bank ${R.cloudAfterA}${R.cloudAfterA === want ? ' (kept)' : ' (B\'s progress LOST)'}; B's next save: cloud ${R.cloudEnd}, B shows ${R.b2 && R.b2.mem.bank}${R.b2 && R.b2.mem.bank !== want ? ' (LOST on B too)' : ''}${R.a1 && R.a1.tabsCard ? '; A showed the other-tab card (' + (R.a1.why || 'why not caught') + (R.a0 && R.a0.tabsCard ? ', already before B saved' : '') + ')' : ''}`);
     // CAR-TABS' card is for two tabs of one browser; A is one tab on its own device, so the card there would be a false alarm
     row(L, 'the older device carries on (no "open in another tab" card on a single tab)', R.a1 && !R.a1.tabsCard && R.a1.mem.bank === want, R.a1 ? `A ${R.a1.tabsCard ? 'shows the other-tab card (' + (R.a1.why || '?') + ')' : 'no card'}; A shows bank ${R.a1.mem.bank}${R.a1.mem.bank === want ? ' (B\'s progress)' : ''}` : 'not reached');
+    // ChatGPT P2-3: the hub's redraw saves restart the 2.5 s push timer, so a save can sit on the phone only (lost if the phone dies or the app is killed)
+    row(L, 'a save reaches the cloud within 10 s', R.bPushS != null && R.bPushS <= 10, R.bPushS == null ? 'not in 90 s' : `B's save reached the server after ${R.bPushS} s`);
     row(L, 'stale write: server log (info)', true, `quiet after ${R.settle} s; B's push reached the server after ${R.bPushS == null ? 'NEVER (90 s)' : R.bPushS + ' s'}; ${log}`.slice(0, 300));
     row(L, 'no page errors (two devices)', !pe.length && !(R.peB || []).length, [...pe, ...(R.peB || [])].join(' | ')); }
 
