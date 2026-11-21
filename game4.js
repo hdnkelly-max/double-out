@@ -1345,6 +1345,7 @@ function V2MIACLEAR(d,r){if(d.x>=0)return r;const P=V2MIADART,MG=window.MIA_CLEA
  const wy=sm(-0.24,-0.19,y)*sm(0.13,0.07,y);if(wy<=0)return r;let lim=0.5;if(z<=P[0][0])lim=P[0][1];else if(z>=P[P.length-1][0])lim=P[P.length-1][1];else for(let i=0;i<P.length-1;i++)if(z>=P[i][0]&&z<=P[i+1][0]){const t=(z-P[i][0])/(P[i+1][0]-P[i][0]);lim=P[i][1]+(P[i+1][1]-P[i][1])*t;break;}
  lim-=MG;const ax=-x;if(ax<=lim-0.02)return r;const k=0.006,smn=-k*Math.log(Math.exp(-ax/k)+Math.exp(-lim/k)),nx=ax+(smn-ax)*wy;return r*nx/ax;}
 /* the heights-mode hair's venue contrast (see the groove material): x = valley scale, y..z = luminance band it fades over */
+const V2BAKE=new Map();window.TOPS_V2BAKE=V2BAKE;
 const V2HAIRHC={value:new T.Vector3(1,0.05,0.25)};window.TOPS_V2HAIRHC=V2HAIRHC;
 const V2GROOVE=(()=>{
   const envR=(M,dx,dy,dz)=>{let best=0;for(const m of M){const q=m._q||(m._q=new T.Quaternion().setFromEuler(new T.Euler(m[6]||0,m[7]||0,m[8]||0)).invert());
@@ -1401,14 +1402,18 @@ const V2GROOVE=(()=>{
    {const Nn=g.attributes.normal;for(let j=0;j<=Vn;j++){const a0=j*(U+1),a1=a0+U;const x=Nn.getX(a0)+Nn.getX(a1),y=Nn.getY(a0)+Nn.getY(a1),z=Nn.getZ(a0)+Nn.getZ(a1),l=Math.hypot(x,y,z)||1;Nn.setXYZ(a0,x/l,y/l,z/l);Nn.setXYZ(a1,x/l,y/l,z/l);}
     let px=0,py=0,pz=0;for(let i=0;i<=U;i++){px+=Nn.getX(i);py+=Nn.getY(i);pz+=Nn.getZ(i);}const pl=Math.hypot(px,py,pz)||1;for(let i=0;i<=U;i++)Nn.setXYZ(i,px/pl,py/pl,pz/pl);}
    /* the baked lock colour: valley shadow -> base -> highlight along each crown, mixed in sRGB (the lab's numbers) */
-   const TW=HT&&o.tw?(S3G==='full'?o.tw:Math.round(o.tw*2/3)):(S3G==='full'?512:384),TH=HT&&o.th?Math.round(o.th*TW/o.tw):TW/2,cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
+   const TW=HT&&o.tw?(S3G==='full'?o.tw:Math.round(o.tw*2/3)):(S3G==='full'?512:384),TH=HT&&o.th?Math.round(o.th*TW/o.tw):TW/2;
+   /* round 5 perf: the same hair is built several times per match (match figure, preview, portrait, hero shot): the bake depends only on the locks,
+      colours, bake options and size, so it is baked once and the texture shared (LRU of 8 looks) */
+   const BK=V2BAKE,bkey=JSON.stringify([TW,TH,+TMX.toFixed(4),cols,Ls,o,!!window.GFX_LIN]);let tex=BK.get(bkey);if(tex){BK.delete(bkey);BK.set(bkey,tex);}
+   if(!tex){const cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
    const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
    for(let y=0;y<TH;y++){const th=(y+0.5)/TH*TMX,st=Math.sin(th);for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW;const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
      const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a,hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);
      if(HT){const Hq=f[2],FLx=fl+((o.openFloor||0.62)-fl)*(1-sm(0.012,0.04,Hq));a=FLx+(1-FLx)*Math.pow(f[4],0.8);if(f[5])a*=0.95+0.13*sm(0.004,0.014,f[5]);/* r14b: the relief lock reads as a lighter form with a soft shadowed edge */if(o.combT)a*=1-o.combT*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,f[3])))*sm(0.01,0.04,Hq);hi*=sm(0.015,0.06,Hq);}/* r14: only seams between neighbouring locks go to the dark floor; open scalp stays mid-tone; comb lines along each lock */
      else a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
      const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
-   cx.putImageData(im,0,0);const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
+   cx.putImageData(im,0,0);tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;tex.userData=Object.assign(tex.userData||{},{keep:true});/* figure disposal leaves it to the cache (r128 textures have no userData by default) */BK.set(bkey,tex);if(BK.size>8){const k0=BK.keys().next().value,t0=BK.get(k0);BK.delete(k0);try{t0.dispose();}catch(e){}}}
    const m=v2M(0xffffff,'hair');m.color.setRGB(1,1,1);/* v2M's hair rule pulls white to #eaeaea; the bake carries the colour */m.map=tex;m.roughness=Math.max(.4,Math.min(.6,o.rough||0.42));if('clearcoat' in m)m.clearcoat=Math.max(0,Math.min(.16,o.cc!=null?o.cc:0.16));
    if(HT){/* round 5 (ChatGPT 39): silver separation in the big venues. The Arena's broad cool light lifts the baked valleys (hair-box 5th/25th percentile
       70/98 vs the Pub's 58/90) while the highlights barely move. Only the darkest part of the bake (luminance under .05 linear, the seams) is scaled
