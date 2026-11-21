@@ -8,7 +8,7 @@
 begin;
 drop function if exists public.tops_save3_put(jsonb);
 create function public.tops_save3_put(p_data jsonb, p_base bigint default null)
- returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $function$
+ returns jsonb language plpgsql security definer set search_path = '' as $function$
 -- security definer (ChatGPT P1-3): the only way a player writes a save. The owner is always auth.uid(), never anything in p_data.
 declare uid uuid := auth.uid(); cur jsonb; nv bigint; cv bigint; n int;
 begin
