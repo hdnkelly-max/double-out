@@ -2,7 +2,9 @@
 // default mode (no tops_v3, no ?v3) and compares, figure by figure (every base look, every seeded opponent, every pro, the player figure in the
 // creator), a hash of every mesh's geometry (positions, normals, uvs, colours, index), its material (type, colour, maps' sizes, every numeric
 // and boolean parameter, onBeforeCompile presence, program cache key) and tag, plus a pixel hash of the figure rendered alone in a fixed scene
-// and pose. Also checks the v3 flag reads false and no v3-only global switch is set. Exit 0 only if everything matches.
+// and pose. Also checks the v3 flag reads false and no v3-only global switch is set.
+// Clip pass (Q&D iso.js, 21 Nov): every figure x every clip x 10 frames, posed by the mixer and then run through TOPS_V2POST (the head and arm
+// clearance the game runs every frame), every bone's world position compared with the baseline at 0.01 mm. Exit 0 only if everything matches.
 // node tests/v3-parity.js <baseline dir> <candidate dir>
 const {chromium,devices}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
 const serve=dir=>http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':'application/octet-stream'});r.end(d);});}).listen(0);
@@ -27,7 +29,15 @@ async function snap(b,dir){const srv=serve(dir);const p=await (await b.newContex
   ['Michael van Gerwen','Luke Littler','Gerwyn Price','Peter Wright'].forEach(n=>specs.push([{},n,'pro:'+n]));
   const res={v3flag:window.TOPS_V3FLAG,globals:['TOPS_V3SKIN','TOPS_V3HOT','TOPS_V3LOGO','TOPS_MOUTH16','TOPS_COLLAR16'].filter(k=>window[k]!==undefined),figs:{}};
   for(const [look,name,id] of specs){const f=Q.makeFigure(look,name,0);if(f.userData.mixer)f.userData.mixer.stopAllAction();const a=Q.playClip(f,'idle',{t:0});if(a&&f.userData.mixer){a.time=0.5;f.userData.mixer.update(0);}
-   const s=figSig(f);const r=render(f);res.figs[id]={meshes:s.meshes,hash:s.hash,px:r.px,lit:r.lit,parts:s.parts};Q.dispose(f);}
+   const s=figSig(f);const r=render(f);res.figs[id]={meshes:s.meshes,hash:s.hash,px:r.px,lit:r.lit,parts:s.parts};
+   /* clip pass: bones after the mixer AND after V2POST, in 1e-6 m integers */
+   const bones=[];f.traverse(o=>{if(o.isBone)bones.push(o);});const cl={};const v=new T.Vector3();
+   for(const cn of Q.animNames()){const fr=[];for(let k=0;k<10;k++){if(f.userData.mixer)f.userData.mixer.stopAllAction();f.userData._v2sig=undefined;
+     const a=Q.playClip(f,cn,{t:0});if(!a||!f.userData.mixer){fr.push(null);continue;}const d=(a.getClip&&a.getClip().duration)||1;a.time=d*k/10;f.userData.mixer.update(0);
+     f.updateMatrixWorld(true);let pe=null;try{if(window.TOPS_V2POST)window.TOPS_V2POST(f,null,true);}catch(e){pe=String(e).slice(0,80);}f.updateMatrixWorld(true);
+     const o=[];for(const b of bones){v.setFromMatrixPosition(b.matrixWorld);o.push(Math.round(v.x*1e6),Math.round(v.y*1e6),Math.round(v.z*1e6));}fr.push(pe?{pe}:o);}
+    cl[cn]=fr;}
+   res.figs[id].bones=bones.map(b=>b.name);res.figs[id].clips=cl;Q.dispose(f);}
   return res;});
  await p.context().close();srv.close();out.pe=pe;return out;}
 (async()=>{const [A,B]=process.argv.slice(2).map(d=>path.resolve(d));const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});
@@ -37,5 +47,14 @@ async function snap(b,dir){const srv=serve(dir);const p=await (await b.newContex
  for(const id of ids){const x=a.figs[id],y=c.figs[id];if(!x||!y){bad++;console.log(id.padEnd(22),'MISSING in',x?'candidate':'baseline');continue;}
   const same=x.hash===y.hash&&x.px===y.px&&x.meshes===y.meshes;if(!same){bad++;const diff=x.parts.map((l,i)=>l!==y.parts[i]?i:-1).filter(i=>i>=0).slice(0,3);console.log(id.padEnd(22),'DIFF meshes',x.meshes,y.meshes,'geom/mat',x.hash===y.hash?'same':'differ','pixels',x.px===y.px?'same':'differ');diff.forEach(i=>console.log('   A:',(x.parts[i]||'').slice(0,240),'\n   B:',(y.parts[i]||'').slice(0,240)));}
   else console.log(id.padEnd(22),'same  meshes',x.meshes,'lit px',x.lit);}
+ /* clip pass: 0.01 mm = 10 units of 1e-6 m */
+ let nFr=0,nBad=0,worst=[0,''];const per={};
+ for(const id of ids){const x=a.figs[id],y=c.figs[id];if(!x||!y)continue;if((x.bones||[]).join()!==(y.bones||[]).join()){bad++;console.log(id.padEnd(22),'CLIP bones differ');continue;}
+  for(const cn of Object.keys(x.clips||{})){const A1=x.clips[cn],B1=(y.clips||{})[cn];if(!B1){bad++;console.log(id,cn,'clip missing in candidate');continue;}
+   for(let k=0;k<A1.length;k++){const p=A1[k],q=B1[k];nFr++;if(p===null&&q===null)continue;if(!p||!q||p.pe||q.pe){nBad++;per[id]=(per[id]||0)+1;continue;}
+    let m=0,mi=0;for(let i=0;i<p.length;i+=3){const dd=Math.hypot(p[i]-q[i],p[i+1]-q[i+1],p[i+2]-q[i+2]);if(dd>m){m=dd;mi=i/3;}}
+    if(m>10){nBad++;per[id]=(per[id]||0)+1;if(m>worst[0])worst=[m,id+' '+cn+' f'+k+' '+x.bones[mi]];}}}}
+ console.log('clip pass:',nFr,'clip frames through V2POST,',Object.keys(a.figs[ids[0]].clips||{}).length,'clips x 10 frames per figure;',nBad,'frames moved more than 0.01 mm'+(nBad?' | worst '+(worst[0]/1000).toFixed(2)+' mm at '+worst[1]+' | by figure '+JSON.stringify(per):''));
+ if(nBad)bad++;if(!nFr){bad++;console.log('FAIL: no clip frames sampled');}
  if(a.pe.length||c.pe.length){console.log('page errors',JSON.stringify(a.pe.slice(0,2)),JSON.stringify(c.pe.slice(0,2)));bad++;}
- console.log(bad?'V3-PARITY FAIL ('+bad+')':'V3-PARITY PASS: '+ids.length+' figures identical in geometry, materials and pixels without ?v3=1');process.exit(bad?1:0);})();
+ console.log(bad?'V3-PARITY FAIL ('+bad+')':'V3-PARITY PASS: '+ids.length+' figures identical in geometry, materials and pixels, and '+nFr+' clip frames through V2POST identical at 0.01 mm, without ?v3=1');process.exit(bad?1:0);})();
