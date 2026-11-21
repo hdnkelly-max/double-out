@@ -471,7 +471,7 @@
     if (cx && lvc && scr) { const r = lvc.getBoundingClientRect(), sr = scr.getBoundingClientRect(); cx.classList.toggle('on', r.bottom <= sr.top || r.top >= sr.bottom);   /* right away, then on scroll */
       if ('IntersectionObserver' in window) { wire.cxIO = new IntersectionObserver(es => es.forEach(en => { const x = document.querySelector('#rbApp .s3-ctx'); if (x) x.classList.toggle('on', !en.isIntersecting); }), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); } }
     if (app.querySelector('.s3-tr b')) { fitNames(app); if (!wire.fitRs) { wire.fitRs = 1; let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const a = $id('rbApp'); if (a) fitNames(a); }, 120); }); } }
-    app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
+    app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); }); cabWire();
     app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
     const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
@@ -496,6 +496,7 @@
   /* ---------- EXP-IDLE 1 · first night (behind s3x=1): before the first Circuit match, one screen that says what tonight is, who's first up,
      what winning pays and how you move up. Shown once per device; Walk on goes on into the match as before. ---------- */
   const X = (() => { try { if (q.has('s3x')) lsSet('tops_s3x', q.get('s3x') === '1' ? '1' : null); } catch (e) {} return lsGet('tops_s3x') === '1'; })();
+  try { if (X) document.documentElement.classList.add('s3x'); } catch (e) {}   /* CSS for s3x-only layout (the tab bar) */
   const FNK = 'tops_s3_firstnight';
   const CARD = ['anika', 'bigmal', 'deano', 'jonno', 'kev', 'mo', 'pete', 'phil', 'shazza', 'tama'];
   const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const c = CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
@@ -620,10 +621,9 @@
       let rows = ''; for (let i = d.level; i >= 0; i--) rows += lvRow(i);
       const nx = C.LEVELS[d.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
       /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
-      const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
+      const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) { el.outerHTML = oldSeasons(); cabWire(); } });
       const back = chipFrom ? `<button type="button" class="s3-trback" data-s3="trback">‹ Back to Circuit</button>` : '';
-      const cab = window.TC_API && TC_API.cabinet ? `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Seasons 1 & 2 trophy cabinet</button>` : '';   /* the old 3D cabinet stays reachable under s3x */
-      return back + hero + gap + bl + empty + rows + next + oldSeasons() + cab;
+      return back + hero + gap + bl + empty + rows + next + oldSeasons();
     } catch (x) { console.warn('s3 shelf', x); return null; }
   }
   /* the Season 3 record line under your best leg: the board's top row (Career's tops_bestleg_s3), a separate value from yours */
@@ -632,11 +632,19 @@
     const t = rec.you ? (leg === rec.darts ? 'You hold the Season 3 record' : `Season 3 record: ${rec.darts} darts · you`) : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`;
     return `<small id="s3TrBl">${t}</small>`;
   }
+  /* Seasons 1 & 2 card: your old records (Career's tops_history) and the link to the old 3D trophy cabinet, which is how the cabinet stays
+     reachable under s3x (Producer 22 Nov 06:51: link it from this card, don't retire it). The link shows whenever the cabinet exists, records
+     or not, so a player whose history hasn't loaded (or is offline) still gets there. */
   function oldSeasons() {
-    const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null; if (!me || (!me.s1 && !me.s2)) return `<div id="s3TrHi"></div>`;
+    const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null, rec = !!(me && (me.s1 || me.s2));
+    const cabOK = !!(window.TC_API && TC_API.cabinet); if (!rec && !cabOK) return `<div id="s3TrHi"></div>`;
     const one = (s, lab) => s ? `<li><span class="s3-lab">${lab}</span><span>${s.furthest ? esc(s.furthest.n) : '–'}</span><span>${s.bestAvg != null ? (+s.bestAvg).toFixed(1) + ' avg' : '–'}</span><span>${s.bestLeg != null ? s.bestLeg + ' darts' : '–'}</span></li>` : '';
-    return `<div class="rb-card" id="s3TrHi"><span class="rb-t2">Seasons 1 & 2 · yours</span><ol class="s3-tbl s3-trold">${one(me.s1, 'Season 1')}${one(me.s2, 'Season 2')}</ol><span class="rb-sub">Furthest level, best match average, fewest darts in a won leg. Kept from before the reset.</span></div>`;
+    let nT = 0; try { const t = TC_API.st(); nT = t && Array.isArray(t.troph) ? t.troph.length : 0; } catch (e) {}
+    const cab = cabOK ? `<button type="button" class="s3-trcab" id="rbCab" data-s3cab="1">${CUP(nT ? 'W' : 'F', 's3cupcab')}<span><b>Trophy cabinet</b><small>${nT ? `${nT} troph${nT > 1 ? 'ies' : 'y'} on the shelves` : 'The 3D cabinet from Seasons 1 & 2'}</small></span><i aria-hidden="true">›</i></button>` : '';
+    return `<div class="rb-card s3-trhi" id="s3TrHi"><span class="rb-t2">Seasons 1 & 2 · yours</span>${rec ? `<ol class="s3-tbl s3-trold">${one(me.s1, 'Season 1')}${one(me.s2, 'Season 2')}</ol><span class="rb-sub">Furthest level, best match average, fewest darts in a won leg. Kept from before the reset.</span>` : ''}${cab}</div>`;
   }
+  /* the cabinet link is wired here (not only by the shell's render) because the card is redrawn in place when the history arrives */
+  function cabWire() { document.querySelectorAll('#rbApp [data-s3cab]').forEach(b => b.onclick = () => { try { TC_API.cabinet(); } catch (e) { console.warn('s3 cabinet', e); } }); }
   /* where and when the best leg came: stamped when career().best.leg drops during a Circuit match (Career's recordBests sets the number) */
   if (typeof recordBests === 'function') { const _rb = recordBests; recordBests = function () { const c = typeof career === 'function' ? career() : null, was = c && c.best ? c.best.leg : 99; const r = _rb.apply(this, arguments);
     try { const b = c && c.best; if (b && b.leg < was && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), k = D.st(); b.legAt = { d: b.leg, ev: e ? e.n : '', week: k ? k.week : null }; } } catch (e) {} return r; }; }
