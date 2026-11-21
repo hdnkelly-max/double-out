@@ -504,7 +504,7 @@
     if (!k.live) { const v = A.view(), e = v && v.calendar.find(x => x.canAfford); if (!e) return go(); const r = A.book(e.id); if (!r || r.ok === false) return go(); }
     const v = A.view(), lv = v && v.live; if (!lv) return go();
     const e = C.eventOf(lv.id), L = C.LEVELS[e.level], n = lv.rounds.length, opp = lv.opp || {};
-    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${C.oppAvg(e.level, i, n, e.field)}</span></li>`).join('');
+    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${PLAYS(C.oppAvg(e.level, i, n, e.field), e.level)}</span></li>`).join('');
     const lad = C.LEVELS.map((x, i) => `<li class="${i === e.level ? 's3-fnnow' : ''}${i === C.LEVELS.length - 1 ? ' s3-fnend' : ''}"><i></i>${SHORT[i]}</li>`).join('');
     const have = (k.pts && k.pts[L.id]) || 0, art = oppArt(opp.name);
     const fmt = e.kind === 'groupko' ? `group of 4, then knockout` : `${e.size} players, knockout`;
