@@ -27,21 +27,25 @@ const res=await p.evaluate(([only,STEP,MARGIN,EXPORT])=>{const Q=V._qa,T=Q.T;con
   const idleA=Q.playClip(f,'idle',{t:0}),idur=idleA?idleA.getClip().duration:1;let ci=0;
   const R={min:99,at:'',fails:0,n:0,byPlace:{},hist:[0,0,0,0,0]};/* hist: <0, 0-8, 8-15, 15-30, >=30 mm */
   /* DH_EXPORT: the dart's path in the hair's own space, Director's r15 table format (z bin -> the smallest |x| the dart reaches on her throwing side,
-     y -0.24..+0.13), over every place, so a keep-out can be cut for all of them, not just the test rig */
-  let hairM=null;f.traverse(o=>{if(o.isMesh&&o.userData.hair&&o.geometry.attributes.position&&(!hairM||o.geometry.attributes.position.count>hairM.geometry.attributes.position.count))hairM=o;});const XT={},XTP={};
+     y -0.34..+0.13), over every place, so a keep-out can be cut for all of them, not just the test rig */
+  let hairM=null;f.traverse(o=>{if(o.isMesh&&o.userData.hair&&o.geometry.attributes.position&&(!hairM||o.geometry.attributes.position.count>hairM.geometry.attributes.position.count))hairM=o;});const XT={},XTP={},YB={},WP={};/* YB: z bin -> |x| bin (5 mm) -> [yLow,yHigh]; WP: the worst sample per place, with the transforms to reproduce it */
   const exp=(where)=>{if(!EXPORT||!hairM||!f.userData.dt||!f.userData.dt.visible)return;const inv=new T.Matrix4().copy(hairM.matrixWorld).invert(),v=new T.Vector3(),pl=where.split('/')[0];
-   f.userData.dt.traverse(o=>{if(!o.isMesh)return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);if(v.x>=0||v.y<-0.24||v.y>0.13)continue;const zb=(Math.round(v.z/0.02)*0.02).toFixed(2),ax=-v.x;
-    if(XT[zb]==null||ax<XT[zb])XT[zb]=ax;const q=XTP[pl]||(XTP[pl]={});if(q[zb]==null||ax<q[zb])q[zb]=ax;}});};
-  const rec=(where,r)=>{exp(where);R.n++;poses++;const mm=r.mm;R.hist[mm<0?0:mm<MARGIN?1:mm<15?2:mm<30?3:4]++;if(mm<R.min){R.min=mm;R.at=where+' ('+r.at+')';if(r.dbg)R.dbg=r.dbg;}if(mm<MARGIN){R.fails++;if(!R.first)R.first=where;}const pk=where.split('/')[0];R.byPlace[pk]=Math.min(R.byPlace[pk]??99,mm);};
-  const pose=(place,tgt,oa,lean)=>{if(f.userData.mixer)f.userData.mixer.stopAllAction();f.userData.act=null;const a=Q.playClip(f,'idle',{t:0});if(a&&f.userData.mixer){a.time=idur*((ci++*0.1379)%1);f.userData.mixer.update(0);}/* head movement: the idle clip at a different time every sample */
-   if(lean!=null)performance.now=()=>lean;try{f.updateMatrixWorld(true);Q.poseFigure(f,oa,tgt(f));}finally{performance.now=pn;}f.updateMatrixWorld(true);};
+   f.userData.dt.traverse(o=>{if(!o.isMesh)return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);if(v.x>=0||v.y<-0.34||v.y>0.13)continue;const zb=(Math.round(v.z/0.02)*0.02).toFixed(2),ax=-v.x;
+    if(XT[zb]==null||ax<XT[zb])XT[zb]=ax;{const xb=Math.round(ax/0.005),q=YB[zb]||(YB[zb]={}),e=q[xb]||(q[xb]=[9,-9]);if(v.y<e[0])e[0]=v.y;if(v.y>e[1])e[1]=v.y;}const q=XTP[pl]||(XTP[pl]={});if(q[zb]==null||ax<q[zb])q[zb]=ax;}});};
+  let cur=null;/* the pose being measured, for WP */
+  const rec=(where,r)=>{exp(where);if(EXPORT&&cur){const pl=where.split('/')[0];if(!WP[pl]||r.mm<WP[pl].mm){const hw=hairM?hairM.matrixWorld.elements.map(v=>+v.toFixed(5)):null,dw=f.userData.dt?f.userData.dt.matrixWorld.elements.map(v=>+v.toFixed(5)):null;
+    WP[pl]={mm:+r.mm.toFixed(1),where,figPos:f.position.toArray().map(v=>+v.toFixed(4)),figRotY:+f.rotation.y.toFixed(4),target:cur.tgt.toArray().map(v=>+v.toFixed(4)),pose:cur.oa,idleClipTime:+cur.ct.toFixed(4),swayClockMs:cur.lean,hairMatrixWorld:hw,dartMatrixWorld:dw};}}R.n++;poses++;const mm=r.mm;R.hist[mm<0?0:mm<MARGIN?1:mm<15?2:mm<30?3:4]++;if(mm<R.min){R.min=mm;R.at=where+' ('+r.at+')';if(r.dbg)R.dbg=r.dbg;}if(mm<MARGIN){R.fails++;if(!R.first)R.first=where;}const pk=where.split('/')[0];R.byPlace[pk]=Math.min(R.byPlace[pk]??99,mm);};
+  const pose=(place,tgt,oa,lean)=>{if(f.userData.mixer)f.userData.mixer.stopAllAction();f.userData.act=null;const a=Q.playClip(f,'idle',{t:0});let ct=0;if(a&&f.userData.mixer){ct=idur*((ci++*0.1379)%1);a.time=ct;f.userData.mixer.update(0);}/* head movement: the idle clip at a different time every sample */
+   if(lean!=null)performance.now=()=>lean;let tg;try{f.updateMatrixWorld(true);tg=tgt(f);Q.poseFigure(f,oa,tg);}finally{performance.now=pn;}f.updateMatrixWorld(true);cur={tgt:tg,oa,ct,lean:lean==null?null:lean};};
   for(const [pl,place,tgt] of places){place(f);f.updateMatrixWorld(true);
    for(const [ph,oas] of phases)for(const oa of oas){if(ph==='set'){for(const lean of [0,1047,2094,3141]){pose(pl,tgt,oa,lean);rec(pl+'/set/sway'+lean,TOPS_S3DARTHAIR(f));}continue;}
     pose(pl,tgt,oa);rec(pl+'/'+ph+(oa.k!=null?oa.k:oa.pull),TOPS_S3DARTHAIR(f));}}
   for(const [pl,place,tgt] of idleOnly){place(f);f.updateMatrixWorld(true);for(const lean of [0,1047,2094,3141]){pose(pl,tgt,{phase:'idle'},lean);rec(pl+'/sway'+lean,TOPS_S3DARTHAIR(f));}}
   /* no clip sampling: the game only shows the throwing dart while poseDarts places it in the hand (set / pull / throw); clips, walk-ons, waiting and the
      stand poses hide it (dt.visible=false), and under a clip the hidden dart is left where the last pose put it, so measuring it there means nothing */
-  if(EXPORT&&Object.keys(XT).length){const srt=o=>Object.keys(o).map(Number).sort((a,b)=>a-b).map(z=>[z,+o[z.toFixed(2)].toFixed(3)]);R.dartPath=srt(XT);R.dartPathByPlace={};for(const k in XTP)R.dartPathByPlace[k]=srt(XTP[k]);}
+  if(EXPORT&&Object.keys(XT).length){const srt=o=>Object.keys(o).map(Number).sort((a,b)=>a-b).map(z=>[z,+o[z.toFixed(2)].toFixed(3)]);R.dartPath=srt(XT);R.dartPathByPlace={};for(const k in XTP)R.dartPathByPlace[k]=srt(XTP[k]);
+   /* Director's _miaDartY format: [z, yLow, yHigh] where the dart passes within 3.5 cm of the |x| limit at that depth */
+   R.dartPathY=Object.keys(YB).map(Number).sort((a,b)=>a-b).map(z=>{const zb=z.toFixed(2),lim=XT[zb];let lo=9,hi=-9;for(const xb in YB[zb]){if(xb*0.005<=lim+0.035){lo=Math.min(lo,YB[zb][xb][0]);hi=Math.max(hi,YB[zb][xb][1]);}}return [z,+lo.toFixed(3),+hi.toFixed(3)];});R.worstByPlace=WP;}
   R.min=+R.min.toFixed(1);for(const k in R.byPlace)R.byPlace[k]=+R.byPlace[k].toFixed(1);out[id]=R;Q.scene.remove(f);Q.dispose(f);}
  return {out,poses};},[only,STEP,MARGIN,!!process.env.DH_EXPORT]);
 const fails=Object.entries(res.out).filter(([,r])=>r.err||r.fails);
