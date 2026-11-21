@@ -18,10 +18,12 @@
   // ---- a brand new Season 3 career: the Pub, the starter bank, the Circuit state (full reset, Hayden 07:45)
   if(typeof newCareer==='function'){const _nc=newCareer;newCareer=function(){const r=_nc.apply(this,arguments);try{if(on()){const c=career();if(c&&!c.run){c.circuit=C().newCareer({bank:START_BANK});c.bank=START_BANK;c.tier=0;c.stage='circuit';c.s3=1;persist();L('s3_new_career',{bank:START_BANK});}}}catch(e){}return r;};}
 
+  // CAR-OPP note (a): the average you actually play against (the Circuit band shift, Circuit matches only), not the raw engine figure
+  const plays=(a,lv)=>{try{return window.TOPS_OPP_SHIFT?TOPS_OPP_SHIFT(a,lv,true):a;}catch(e){return a;}};
   function view(){const k=circ();if(!k)return null;/* CAR-XP: matches played before the XP fix get their base XP once */try{const cu=window.C3&&C3.s3CatchUp?C3.s3CatchUp():null;if(cu&&cu.xp){L('s3_xp_catchup',{xp:cu.xp,w:cu.w,l:cu.l,lv:C3.V3().lv});persist();}}catch(e){}const c=career();k.bank=c.bank||0;const E=C(),Lv=E.LEVELS[k.level];
     const played=k.history.filter(h=>h.level===k.level).length;
-    const cal=E.calendar(k).map(e=>{const prizes={},points={};E.FIN.forEach(f=>{prizes[f]=E.prizeFor(e,f);points[f]=E.pointsFor(e,f);});return {id:e.id,n:e.n,where:e.where,kind:e.kind,size:e.size,entry:e.entry,travel:e.travel,cost:e.cost,purse:e.purse,pts:e.pts,every:e.every,jump:!!e.jump,canAfford:e.canAfford,prizes,points};});
-    let live=null;if(k.live){const e=E.eventOf(k.live.id),o=E.nextOpp(k);live={id:e.id,n:e.n,where:e.where,round:k.live.round,roundName:E.FIN_NAME[o.round]||o.round,rounds:k.live.rounds.slice(),results:(k.live.results||[]).slice(),group:k.live.g?{w:k.live.g.w,p:k.live.g.p}:null,opp:{name:oppName(k),avg:o.avg,legs:o.legs}};}
+    const cal=E.calendar(k).map(e=>{const prizes={},points={};E.FIN.forEach(f=>{prizes[f]=E.prizeFor(e,f);points[f]=E.pointsFor(e,f);});return {id:e.id,n:e.n,where:e.where,kind:e.kind,size:e.size,entry:e.entry,travel:e.travel,cost:e.cost,funded:!!e.funded,purse:e.purse,pts:e.pts,every:e.every,jump:!!e.jump,canAfford:e.canAfford,prizes,points};});
+    let live=null;if(k.live){const e=E.eventOf(k.live.id),o=E.nextOpp(k);live={id:e.id,n:e.n,where:e.where,round:k.live.round,roundName:E.FIN_NAME[o.round]||o.round,rounds:k.live.rounds.slice(),results:(k.live.results||[]).slice(),group:k.live.g?{w:k.live.g.w,p:k.live.g.p}:null,opp:{name:oppName(k),avg:plays(o.avg,k.level),raw:o.avg,legs:o.legs}};}
     const costs=Lv.events.map(E.cost);const avgCost=costs.reduce((s,x)=>s+x,0)/Math.max(1,costs.length);
     return {level:{i:k.level,id:Lv.id,n:Lv.n,s:Lv.s,avg:Lv.avg,legs:Lv.legs,up:Lv.up,need:Lv.need,pts:k.pts[Lv.id]||0,minEv:Lv.minEv,played},
       ladder:E.LEVELS.map((x,i)=>({i,id:x.id,n:x.n,avg:x.avg,state:i<k.level?'done':i===k.level?'current':i===k.level+1?'next':'locked'})),
@@ -32,11 +34,11 @@
       rest:E.restNeeded(k)?(E.restPlan?E.restPlan(k):{next:E.nextEventWeek(k)}):null,recover:k.live?null:E.recoveryOffer(Object.assign({},k,{bank:c.bank||0}))};}
   function book(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};if(k.live)return {ok:false,why:'Finish the event you are in first'};
     const e=C().eventOf(id);if(!e||e.level!==k.level||!C().calendar(Object.assign({},k,{bank:career().bank||0})).some(x=>x.id===id))return {ok:false,why:'Not on this week'};
-    const r=sync(k=>C().book(k,id));if(r&&r.ok){persist();L('s3_book',{id,cost:C().cost(e),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
+    const r=sync(k=>C().book(k,id));const k0=career()&&career().circuit,k0paid=()=>k0&&k0.live&&k0.live.paid!=null?k0.live.paid:C().cost(e),k0funded=()=>!!(k0&&k0.live&&k0.live.funded);if(r&&r.ok){persist();L('s3_book',{id,cost:k0paid(),funded:k0funded(),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
   // play(): the screens' Play button. It goes through playNext so ENG-RESET gives a fresh page between matches (its launcher replays playNext on the new page)
   function play(){if(!on())return false;const k=circ();if(!k||!k.live)return false;try{window.playNext();}catch(e){return false;}return true;}
   function playNow(){if(!on())return false;const k=circ();if(!k||!k.live)return false;const o=C().nextOpp(k),e=C().eventOf(k.live.id),nm=oppName(k);
-    beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0});
+    beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0,circuit:true});
     if(SS()){S.s3={id:e.id,round:o.round,level:k.level,recovery:k.live&&k.live.recovery?1:0};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
   function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',Object.assign({from:r.from,to:r.to,level:k.level},r.fallback?{fallback:1,fromLevel:r.fromLevel}:{}));}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
   function recover(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().recoveryEntry(k,id));if(r&&r.ok){persist();L('s3_recover',{id:r.id,cost:r.cost,debt:r.debt,level:k.level});}return r;}
@@ -97,7 +99,10 @@
   window.addEventListener('tops:s3',ev=>{const r=ev.detail||{};let n=0;const t=setInterval(()=>{const b=document.getElementById('btnResAction');if(!b&&++n<50)return;clearInterval(t);if(!b)return;
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
-  window.TOPS_S3={on,view,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
+  /* CAR-OPP: v11's save migration re-shifts a queued opponent while the page loads, before this engine (and its Season 3 FIELD_CEN) is
+     on the page, so it used the Season 2 centre. Re-derive it once now from its raw rating, the same rule as v11 (never the player). */
+  try{const c=typeof career==='function'?career():null,n=c&&c.next;if(on()&&c&&c.circuit&&!c.run&&n&&n.oppRaw!=null&&!n.intro&&window.TOPS_OPP_SHIFT){const a=TOPS_OPP_SHIFT(n.oppRaw,c.tier)+(n.routeAdj||0);if(a!==n.oppAvg){n.oppAvg=a;persist();}}}catch(e){}
+  window.TOPS_S3={on,view,plays,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
   // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
   // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are
   // the baked fallback. beginMatch freezes the values for that match, so a late read or a change applies from the next match.

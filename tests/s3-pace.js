@@ -25,7 +25,7 @@ const night = (c, id, wins) => { const cal = E.calendar(c); const e = cal.find(x
   const rw = E.restWeek(c); if (!rw.ok || rw.to !== 52) f.push('5 a mid-year arrival should rest to week 52 ' + JSON.stringify(rw)); }
 { const c = E.newCareer({ level: 3, week: 60, bank: 99999, pts: { dpnz: 300 }, res: { dpnz: [300] }, dpnzEv: 0 }); // the capped carry after a lost Worlds
   const r = night(c, null, 2); if (c.level !== 3) f.push('3 carry 300 + one event (80) must not qualify ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, ev: c.dpnzEv }));
-  const r2 = night(c, null, 2); if (c.level !== 6) f.push('3 carry 300 + two QFs (160, best 6 = 460) after 2 events should qualify ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, ev: c.dpnzEv })); }
+  const r2 = night(c, null, 4); if (c.level !== 6) f.push('3 carry 300 + a QF and a final (80 + 240, best 6 = 620) after 2 events should qualify (CAR-OPP: the final passes the results gate) ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, ev: c.dpnzEv })); }
 { const c = E.newCareer({ level: 3, week: 10, bank: 99999, pts: {} }); for (let i = 0; i < 7; i++) night(c, null, 0); // first-round exits: 20 a time
   if (c.level !== 3 || c.dpnzEv !== 7) f.push('3 seven first-round exits stay on the Tour ' + JSON.stringify({ lv: c.level, ev: c.dpnzEv }));
   const r = night(c, null, 0); if (!r.up || ![3, 4, 6].includes(r.up.to)) f.push('3 the 8th event still runs the Order of Merit ' + JSON.stringify(r.up)); }
