@@ -153,6 +153,7 @@
   function week(c) {
     const C = CI(), cal = C.calendar(c);
     /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
+    if (!cal.length && X) return restX(c);   /* EXP-IDLE 4 (behind s3x=1): the rest week in the result-screen pattern */
     if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
       /* CAR-CARD (Q&D, Producer 23:26): when the tap sends you back to the DPNZ Tour, the card says so before the tap */
       const pl = C.restPlan ? C.restPlan(c) : null;
@@ -163,12 +164,45 @@
       <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
     let h = '';
     /* CAR-DEADWK layout (Q&D): when broke, the way out comes first, above the posters you can't afford */
-    if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
+    if (C.broke(c) && X) h += brokeX(c);   /* EXP-IDLE 4 (behind s3x=1) */
+    else if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
       h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
       ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
     h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
     return h;
+  }
+  /* ---------- EXP-IDLE 4 · rest week and broke week (behind s3x=1), on Career's CAR-DEADWK data (nextEventWeek, restWeek, recoveryOffer, broke).
+     Same pattern as the result screen: a kicker, one plain headline, the facts as rows, one red action that says exactly what it does. ---------- */
+  function restX(c) {
+    const C = CI(), L = C.LEVELS[c.level], nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
+    if (nx == null) return `<div class="s3-rp s3-wk"><span class="s3-wkk">Week ${c.week} · rest week</span><div class="s3-rph"><b>Nothing on at ${esc(L.n)}</b><span>No event found in the next ${C.REST_SCAN || 156} weeks. Play a money match or practise.</span></div>
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="toprac">Practice</button></div></div>`;
+    const gap = nx - c.week, evs = C.calendar(Object.assign({}, c, { week: nx })), e = evs.slice().sort((a, b) => a.cost - b.cost)[0], win = C.prizeFor(e, 'W'), can = c.bank >= e.cost;
+    /* the weeks between: now (resting), the skipped ones, the event week. More than 5 skipped fold into one '… N weeks' cell */
+    const mid = gap - 1, cells = [`<li class="s3-rpnow s3-wkrest"><b>Wk ${c.week}</b><small>Rest</small></li>`]
+      .concat(mid > 5 ? [`<li class="s3-rpoff"><b>…</b><small>${mid} weeks</small></li>`] : Array.from({ length: mid }, (_, i) => `<li class="s3-rpoff"><b>Wk ${c.week + 1 + i}</b><small>Rest</small></li>`))
+      .concat([`<li class="s3-rpnext s3-wkev"><b>Wk ${nx}</b><small>${esc(TOWN(e.n).split(' · ')[0])}</small></li>`]).join('');
+    return `<div class="s3-rp s3-wk"><span class="s3-wkk">Week ${c.week} · rest week</span>
+      <div class="s3-rph"><b>Next up: ${esc(e.n)}</b><span>${gap > 1 ? `Week ${nx}. Nothing on at ${esc(L.n)} for ${gap} weeks.` : `Week ${nx}. Nothing on at ${esc(L.n)} this week.`}</span></div>
+      <ol class="s3-rpdraw s3-wkline" aria-label="Weeks to the next event">${cells}</ol>
+      <div class="s3-wkev2" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}"><span>${esc(e.where || L.n)}</span></div>
+      <div class="s3-rpbar"><div class="s3-rprow"><span>Winner takes</span><b>${money(win)}</b></div><div class="s3-rprow"><span>To enter${e.travel ? ' (entry + travel)' : ''}</span><b>${money(e.cost)}</b></div>
+        <div class="s3-rprow"><span>Tour budget</span><b class="${can ? '' : 's3-neg'}">${money(c.bank)}${can ? '' : ` · short ${money(e.cost - c.bank)}`}</b></div></div>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${gap > 1 ? 'Skip to week ' + nx : 'On to week ' + nx}</b><small>${gap > 1 ? gap + ' weeks on · ' : ''}${esc(TOWN(e.n).split(' · ')[0])} is next</small></button>
+      <button class="s3-wklink" type="button" data-s3="toprac">Practise first ›</button></div>`;
+  }
+  function brokeX(c) {
+    const C = CI(), ro = C.recoveryOffer ? C.recoveryOffer(c) : null, cal = C.calendar(c), cheap = cal.slice().sort((a, b) => a.cost - b.cost)[0];
+    const mm = (typeof MM_PAY !== 'undefined' && MM_PAY[c.level]) || null;
+    const opt = (k, cls, t, d) => `<button class="${cls} s3-grow s3-bkopt" type="button" data-s3="${k}"><b>${t}</b><small>${d}</small></button>`;
+    return `<div class="s3-rp s3-wk s3-bk"><span class="s3-wkk">Week ${c.week} · can't afford a trip</span>
+      <div class="s3-rph"><b>Short for every event this week</b><span>Pick a way back in. Your career keeps going either way.</span></div>
+      <div class="s3-rpbar"><div class="s3-rprow"><span>Cheapest trip${cheap ? ' · ' + esc(TOWN(cheap.n).split(' · ')[0]) : ''}</span><b>${cheap ? money(cheap.cost) : '–'}</b></div><div class="s3-rprow"><span>Tour budget</span><b class="s3-neg">${money(c.bank)}</b></div>
+        ${c.debt ? `<div class="s3-rprow"><span>You owe</span><b class="s3-neg">${money(c.debt)}</b></div>` : ''}</div>
+      ${ro ? opt('rec', 'rb-primary', 'Recovery entry', `${esc(ro.n)}, ${money(ro.cost)} covered. You'll owe ${money((c.debt || 0) + ro.cost)}, paid back from half of each prize.`) : ''}
+      ${opt('mm', 'rb-ghost', 'Money match', `Best of 3 in the back room${mm ? `. Win it for ${money(mm)}` : ''}. Nothing to lose.`)}
+      ${c.debt ? '' : opt('adv', 'rb-ghost', 'Hardship advance', 'Two entries paid now, paid back from half of each prize.')}</div>`;
   }
   function poster(c, e) {
     const C = CI(), L = C.LEVELS[e.level];
@@ -424,6 +458,7 @@
       else if (k === 'rec') { const r = D.recover(); if (r && r.ok) { toast(`<b>Entered · ${money(r.cost)} covered</b><span>Half of each prize pays it back</span>`); render(); D.play(); } else { toast(`<b>No recovery entry</b><span>${esc((r && r.why) || '')}</span>`); render(); } }
       else if (k === 'hist') histSheet();
       else if (k === 'troph' && nav) { const sc = document.querySelector('#rbMain .rb-scr'); chipFrom = { scroll: sc ? sc.scrollTop : 0 }; nav('locker', 'troph'); }
+      else if (k === 'toprac' && nav) nav('practice');
       else if (k === 'trback' && nav) { const y = chipFrom ? chipFrom.scroll : 0; chipFrom = null; nav('circuit'); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = y; } });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
     /* not while the between-match reset is about to reload the page (ENG-RESET): the result would show behind the loader and be lost */
