@@ -83,7 +83,7 @@
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
-    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
+    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (S3 && S3.navClear) S3.navClear(); if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
     let html = ''; try { html = S3 && S3.owns(tab) ? S3.view(tab) : tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tab === 'practice' ? practice(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M); if (S3) { try { S3.wire(); } catch (e) { console.warn('s3 wire', e); } }
   }
@@ -417,7 +417,7 @@
     const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
     const s = $id('rbSeason'); if (s) s.onclick = () => { tab = 'season'; render(); };
     const nx = $id('rbNext'); if (nx) nx.onclick = () => { tab = 'locker'; lk = 'load'; render(); };
-    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
+    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; if (S3 && S3.navClear) S3.navClear(); lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
     qa('#rbApp [data-sub]').forEach(b => b.onclick = () => { shopSub = b.dataset.sub; setOpen = ''; render(); });
