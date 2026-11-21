@@ -23,6 +23,13 @@ let src = fs.readFileSync(page, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
 // asks for. Check each key's s3/ copy instead and take the list out of the literal scan (a new S3-only image has no assets/ original).
 let have = []; src = src.replace(/window\.TOPS_S3_HAVE\s*=\s*(\[[^\]]*\])/, (m, arr) => { try { have = JSON.parse(arr); } catch (e) { have = null; } return 'window.TOPS_S3_HAVE=[]'; });
 const exists = p => roots.some(r => { try { return fs.statSync(path.join(r, p)).isFile(); } catch (e) { return false; } });
+// s3/manifest.json ships WITH the page, so it is read from the root the built page sits in first (the branch in ci.yml, the build
+// in release.yml), then the other roots. Reading the live site's first made every new Season 3 file fail CI until it was live
+// (EXP-IDLE, Sun 03:58). Files may still exist in any root; only which manifest counts changed.
+const pageDir = path.resolve(path.dirname(page));
+const holds = r => { const a = path.resolve(r); return pageDir === a || pageDir.startsWith(a + path.sep); };
+const own = roots.filter(holds).sort((x, y) => path.resolve(y).length - path.resolve(x).length)[0];
+const mroots = own ? [own, ...roots.filter(r => r !== own)] : roots;
 const TOP = '(?:assets|img|rig|s3|ui)';
 // literal paths: inside quotes, backticks or url(...); stop at a quote, paren, space, ? or #
 const lit = new Map();
@@ -40,7 +47,7 @@ for (let m; (m = fre.exec(src));) if (!dyn.has(m[1])) dyn.set(m[1], m.index);
 const snip = i => src.slice(Math.max(0, i - 60), i + 80).replace(/\s+/g, ' ');
 // s3/manifest.json "optional": files the code asks for only when the build shipped them (e.g. a TOPS_S3V hash check
 // before the fetch). Absent = fine; present = must also be in "files". Read before the missing-file check.
-let opt0 = []; for (const r of roots) { try { opt0 = JSON.parse(fs.readFileSync(path.join(r, 's3/manifest.json'), 'utf8')).optional || []; break; } catch (e) {} }
+let opt0 = []; for (const r of mroots) { try { opt0 = JSON.parse(fs.readFileSync(path.join(r, 's3/manifest.json'), 'utf8')).optional || []; break; } catch (e) {} }
 const missing = [...lit].filter(([p]) => !exists(p) && !opt0.includes(p));
 const fails = missing.map(([p, i]) => `missing ${p}   (named at: …${snip(i)}…)`);
 if (have === null) fails.push('window.TOPS_S3_HAVE is not a JSON list of paths');
@@ -48,7 +55,7 @@ for (const k of have || []) if (!exists('s3/' + k)) fails.push(`missing s3/${k} 
 // Season 3 manifest
 const s3lit = [...lit.keys()].filter(p => p.startsWith('s3/')), s3dyn = [...dyn.keys()].filter(p => p.startsWith('s3/'));
 let manifest = null;
-for (const r of roots) { try { manifest = JSON.parse(fs.readFileSync(path.join(r, 's3/manifest.json'), 'utf8')); break; } catch (e) {} }
+for (const r of mroots) { try { manifest = JSON.parse(fs.readFileSync(path.join(r, 's3/manifest.json'), 'utf8')); break; } catch (e) {} }
 if (s3dyn.length && !manifest) fails.push(`the page builds s3/ paths at run time (${s3dyn.join(', ')}) but there is no s3/manifest.json to check them against`);
 if (manifest) {
   const files = Array.isArray(manifest.files) ? manifest.files : [];
@@ -62,7 +69,7 @@ if (manifest) {
   const walk = (r, d) => { let o = []; try { for (const e of fs.readdirSync(path.join(r, d), { withFileTypes: true })) { const q = d + '/' + e.name; if (e.isDirectory()) o = o.concat(walk(r, q)); else o.push(q); } } catch (e) {} return o; };
   for (const r of roots) for (const f of walk(r, 's3')) if (f !== 's3/manifest.json' && !files.includes(f)) fails.push(`${f} is shipped but not listed in s3/manifest.json`);
 }
-console.log(`asset-refs: ${lit.size} literal paths (${lit.size - missing.length} present), ${have && have.length ? `TOPS_S3_HAVE ${have.length} redos, ` : ''}${dyn.size} run-time prefixes${manifest ? `, s3/manifest.json ${manifest.files.length} files` : ''}`);
+console.log(`asset-refs: manifest from ${mroots.find(r => fs.existsSync(path.join(r, 's3/manifest.json'))) || 'none'}; ${lit.size} literal paths (${lit.size - missing.length} present), ${have && have.length ? `TOPS_S3_HAVE ${have.length} redos, ` : ''}${dyn.size} run-time prefixes${manifest ? `, s3/manifest.json ${manifest.files.length} files` : ''}`);
 if (dyn.size) console.log('  run-time prefixes (not checkable statically; tests/launch-cost.js catches their 404s at run time): ' + [...dyn.keys()].join(' '));
 if (fails.length) { console.log('asset-refs FAIL\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('asset-refs PASS');
