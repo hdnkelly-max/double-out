@@ -176,9 +176,12 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
- const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
+ // CAR-OPP (Producer 22:21): a Season 3 Circuit career uses the Circuit's own field centres (TOPS_CIRCUIT.FIELD_CEN, fixed by level and round,
+ // never the player); Season 2 and the Run keep CEN. Same band width and spread, only the centre moves.
+ const cenFor=k=>{try{const C3=window.TOPS_CIRCUIT,c=window.TOPS_S3FLAG&&C3&&C3.FIELD_CEN&&career();if(c&&c.circuit&&!c.run&&isFinite(C3.FIELD_CEN[k]))return C3.FIELD_CEN[k];}catch(e){}return CEN[k];};
+ const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],cen=cenFor(k),adj=cen-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
-  const tgt=CEN[k]+rel+LVO[lv];
+  const tgt=cen+rel+LVO[lv];
   const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // inside the band (lv is always 'club' since v1.80; the Competitive/Rookie branches are inert)
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
