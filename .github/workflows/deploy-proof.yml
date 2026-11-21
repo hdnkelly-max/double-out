@@ -1,0 +1,322 @@
+name: deploy-proof
+'on':
+  push:
+    branches:
+    - qa-deploy-proof
+jobs:
+  lag:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    env:
+      WAIT_ART: "t0=$(date +%s)\nfor i in $(seq 1 36); do\n  c=$(gh api \"repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100\" --jq \"[.artifacts[] | select(.name == \\\"$N\\\"\
+        \ and (.expired | not))] | length\" 2>/dev/null || echo 0)\n  if [ \"${c:-0}\" -ge 1 ]; then echo \"ARTIFACT: $N listed after $(( $(date +%s) - t0 )) s\"; echo \"ARTIFACT: \\`$N\\` listed after\
+        \ $(( $(date +%s) - t0 )) s\" >> \"$GITHUB_STEP_SUMMARY\"; exit 0; fi\n  sleep 5\ndone\necho \"::warning::ARTIFACT: $N still not listed after $(( $(date +%s) - t0 )) s; trying the deploy anyway\"\
+        \n"
+    steps:
+    - run: mkdir -p p && echo x > p/index.html
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: p
+        name: lag-1
+    - name: 'lag-1: listed straight after upload? then wait'
+      env:
+        N: lag-1
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[]|select(.name==\"$N\")]|length"); echo "$N listed at t=0: $c" | tee -a $GITHUB_STEP_SUMMARY
+
+        eval "$WAIT_ART"'
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: p
+        name: lag-2
+    - name: 'lag-2: listed straight after upload? then wait'
+      env:
+        N: lag-2
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[]|select(.name==\"$N\")]|length"); echo "$N listed at t=0: $c" | tee -a $GITHUB_STEP_SUMMARY
+
+        eval "$WAIT_ART"'
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: p
+        name: lag-3
+    - name: 'lag-3: listed straight after upload? then wait'
+      env:
+        N: lag-3
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[]|select(.name==\"$N\")]|length"); echo "$N listed at t=0: $c" | tee -a $GITHUB_STEP_SUMMARY
+
+        eval "$WAIT_ART"'
+    - name: never-uploaded name gives up with a warning, exit 0
+      env:
+        N: does-not-exist
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: eval "$WAIT_ART"
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        s:
+        - name: clean
+          force: ''
+          livefail: '0'
+          expect: deploy=success deploy2=skipped deploy3=skipped live=success rbprep=skipped
+        - name: attempt 1 fails
+          force: deploy
+          livefail: '0'
+          expect: deploy=failure deploy2=success deploy3=skipped live=success rbprep=skipped
+        - name: attempts 1+2 fail
+          force: deploy deploy2
+          livefail: '0'
+          expect: deploy=failure deploy2=failure deploy3=success live=success rbprep=skipped
+        - name: all 3 fail -> rollback
+          force: deploy deploy2 deploy3
+          livefail: '0'
+          expect: deploy3=failure live=skipped rbprep=success rbdeploy=success rbdeploy2=skipped rbverify=success
+        - name: all fail, rollback on attempt 3
+          force: deploy deploy2 deploy3 rbdeploy rbdeploy2
+          livefail: '0'
+          expect: rbdeploy=failure rbdeploy2=failure rbdeploy3=success rbverify=success
+        - name: live check fails -> rollback
+          force: ''
+          livefail: '1'
+          expect: deploy=success live=failure rbprep=success rbdeploy=success rbverify=success
+    name: 'chain: ${{ matrix.s.name }}'
+    env:
+      WAIT_ART: "t0=$(date +%s)\nfor i in $(seq 1 36); do\n  c=$(gh api \"repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100\" --jq \"[.artifacts[] | select(.name == \\\"$N\\\"\
+        \ and (.expired | not))] | length\" 2>/dev/null || echo 0)\n  if [ \"${c:-0}\" -ge 1 ]; then echo \"ARTIFACT: $N listed after $(( $(date +%s) - t0 )) s\"; echo \"ARTIFACT: \\`$N\\` listed after\
+        \ $(( $(date +%s) - t0 )) s\" >> \"$GITHUB_STEP_SUMMARY\"; exit 0; fi\n  sleep 5\ndone\necho \"::warning::ARTIFACT: $N still not listed after $(( $(date +%s) - t0 )) s; trying the deploy anyway\"\
+        \n"
+      FORCE: ${{ matrix.s.force }}
+      LIVEFAIL: ${{ matrix.s.livefail }}
+      V: '0.00'
+    steps:
+    - id: prep
+      run: mkdir -p site && echo "<p>proof</p>" > site/index.html && echo '{"v":"0.00"}' > site/version.json
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: site
+        name: github-pages-${{ github.run_attempt }}
+    - name: Wait until the site artifact is listed
+      env:
+        N: github-pages-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: eval "$WAIT_ART"
+    - id: deploy
+      continue-on-error: true
+      env:
+        A: github-pages-${{ github.run_attempt }}
+        SID: deploy
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - name: Deploy attempt 1 failed; wait 30 s, then retry the same artifact once it is listed
+      if: steps.deploy.outcome == 'failure'
+      env:
+        N: github-pages-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: 'echo "::warning::DEPLOY: attempt 1 failed; attempt 2 in 30 s on the same artifact"; sleep 30
+
+        eval "$WAIT_ART"
+
+        '
+    - id: deploy2
+      if: steps.deploy.outcome == 'failure'
+      continue-on-error: true
+      env:
+        A: github-pages-${{ github.run_attempt }}
+        SID: deploy2
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - name: Deploy attempt 2 failed; wait 90 s, then upload the site again
+      if: steps.deploy2.outcome == 'failure'
+      run: 'echo "::warning::DEPLOY: attempt 2 failed; attempt 3 in 90 s with a fresh artifact"; sleep 90
+
+        '
+    - uses: actions/upload-pages-artifact@v3
+      if: steps.deploy2.outcome == 'failure'
+      with:
+        path: site
+        name: github-pages-retry-${{ github.run_attempt }}
+    - name: Wait until the fresh artifact is listed
+      if: steps.deploy2.outcome == 'failure'
+      env:
+        N: github-pages-retry-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: eval "$WAIT_ART"
+    - id: deploy3
+      if: steps.deploy2.outcome == 'failure'
+      env:
+        A: github-pages-retry-${{ github.run_attempt }}
+        SID: deploy3
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - name: Live check (version.json cache-busted, then a headless load with no page errors)
+      id: live
+      if: steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success' || steps.deploy3.outcome == 'success'
+      run: '[ "$LIVEFAIL" = 1 ] && { echo "::error::fake live check fails (scenario)"; exit 1; }; echo "live ok (fake)"'
+    - name: Prepare rollback to the last live release
+      id: rbprep
+      if: failure() && steps.prep.outcome == 'success' && steps.live.outcome != 'success'
+      run: mkdir -p rb && echo "<p>rb</p>" > rb/index.html && echo prev=rel-x >> $GITHUB_OUTPUT && echo pv=0.00 >> $GITHUB_OUTPUT
+    - uses: actions/upload-pages-artifact@v3
+      if: failure() && steps.rbprep.outcome == 'success'
+      with:
+        path: rb
+        name: rollback-${{ github.run_attempt }}
+    - name: Wait until the rollback artifact is listed
+      if: failure() && steps.rbprep.outcome == 'success'
+      env:
+        N: rollback-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: eval "$WAIT_ART"
+    - id: rbdeploy
+      if: failure() && steps.rbprep.outcome == 'success'
+      continue-on-error: true
+      env:
+        A: rollback-${{ github.run_attempt }}
+        SID: rbdeploy
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - name: Rollback attempt 1 failed; wait 30 s, then retry the same artifact once it is listed
+      if: failure() && steps.rbdeploy.outcome == 'failure'
+      env:
+        N: rollback-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: 'echo "::warning::ROLLBACK: attempt 1 failed; attempt 2 in 30 s on the same artifact"; sleep 30
+
+        eval "$WAIT_ART"
+
+        '
+    - id: rbdeploy2
+      if: failure() && steps.rbdeploy.outcome == 'failure'
+      continue-on-error: true
+      env:
+        A: rollback-${{ github.run_attempt }}
+        SID: rbdeploy2
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - name: Rollback attempt 2 failed; wait 90 s, then upload the rollback again
+      if: failure() && steps.rbdeploy2.outcome == 'failure'
+      run: 'echo "::warning::ROLLBACK: attempt 2 failed; attempt 3 in 90 s with a fresh artifact"; sleep 90
+
+        '
+    - uses: actions/upload-pages-artifact@v3
+      if: failure() && steps.rbdeploy2.outcome == 'failure'
+      with:
+        path: rb
+        name: rollback-retry-${{ github.run_attempt }}
+    - name: Wait until the fresh rollback artifact is listed
+      if: failure() && steps.rbdeploy2.outcome == 'failure'
+      env:
+        N: rollback-retry-${{ github.run_attempt }}
+        GH_TOKEN: ${{ github.token }}
+      run: eval "$WAIT_ART"
+    - id: rbdeploy3
+      if: failure() && steps.rbdeploy2.outcome == 'failure'
+      env:
+        A: rollback-retry-${{ github.run_attempt }}
+        SID: rbdeploy3
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: 'set -e
+
+        # deploy-pages'' own lookup: this run''s artifact list, by name (the 4.16 / 4.19 failure point)
+
+        c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$A\")] | length")
+
+        echo "FAKE deploy $SID: artifact $A listed=$c"; echo "$SID artifact $A listed=$c" >> "$GITHUB_STEP_SUMMARY"
+
+        [ "$c" -ge 1 ] || { echo "::error::No artifacts named \"$A\" were found"; exit 1; }
+
+        case " $FORCE " in *" $SID "*) echo "::error::FAKE deploy $SID failing on purpose"; exit 1;; esac
+
+        echo "page_url=https://example.invalid/" >> "$GITHUB_OUTPUT"'
+    - id: rbverify
+      name: Verify the rollback is live
+      if: failure() && (steps.rbdeploy.outcome == 'success' || steps.rbdeploy2.outcome == 'success' || steps.rbdeploy3.outcome == 'success')
+      run: echo "rollback verified (fake)"
+    - name: Check the path taken
+      if: always()
+      env:
+        EXPECT: ${{ matrix.s.expect }}
+        GOT: deploy=${{ steps.deploy.outcome }} deploy2=${{ steps.deploy2.outcome }} deploy3=${{ steps.deploy3.outcome }} live=${{ steps.live.outcome }} rbprep=${{ steps.rbprep.outcome }} rbdeploy=${{ steps.rbdeploy.outcome
+          }} rbdeploy2=${{ steps.rbdeploy2.outcome }} rbdeploy3=${{ steps.rbdeploy3.outcome }} rbverify=${{ steps.rbverify.outcome }}
+      run: 'echo "expect: $EXPECT"; echo "got:    $GOT"; echo "**${{ matrix.s.name }}** got \`$GOT\`" >> $GITHUB_STEP_SUMMARY
+
+        for kv in $EXPECT; do case " $GOT " in *" $kv "*) ;; *) echo "::error::expected $kv"; exit 1;; esac; done; echo PATH-OK'
