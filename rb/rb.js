@@ -129,8 +129,14 @@
   // Locker hero (roll-out 2, Hayden 09:05): a generated locker room with the player from behind, wearing his real shirt colour (recoloured in
   // code), so it always matches the Wearing tile; a woman's version when the player's character is a woman. Not a portrait: the face and hair
   // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
-  const meFem = () => isFemModel(save.look || {}, save.name || '');
-  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+  /* v3 switch-on (Director doc 69): with ?v3=1 the player is the v3 figure, so the Locker hero and reward photos use the v3 look (save.vlook:
+     its shirt, else the base's default; Mia or a female build is the woman's photo), not the legacy look (that was the blue shirt). */
+  const v3Look = () => { if (!window.TOPS_V3FLAG || !save.vlook || typeof save.vlook !== 'object') return null; const v = save.vlook, B = (window.TOPS_S3_LABLOOKS || {})[v.base] || {};
+    const c = v.shirt != null ? v.shirt : B.shirt, hex = c == null ? null : (typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : String(c)).toLowerCase();
+    return { hex: /^#[0-9a-f]{6}$/.test(hex || '') ? hex : null, fem: v.base === 'mia' || (v.body || B.body) === 'female' }; };
+  const meFem = () => { const v = v3Look(); return v ? v.fem : isFemModel(save.look || {}, save.name || ''); };
+  const myShirt = () => { const v = v3Look(); return (v && v.hex) || (save.look && save.look.shirt) || '#1c1c1c'; };
+  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
     const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
@@ -467,7 +473,7 @@
   let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
-      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
+      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = myShirt();
         const fb = (() => { try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } })();   // ChatGPT P2: the venue, never an empty top
         const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
     // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
@@ -480,6 +486,6 @@
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw

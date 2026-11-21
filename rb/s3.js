@@ -639,12 +639,47 @@
   if (typeof recordBests === 'function') { const _rb = recordBests; recordBests = function () { const c = typeof career === 'function' ? career() : null, was = c && c.best ? c.best.leg : 99; const r = _rb.apply(this, arguments);
     try { const b = c && c.best; if (b && b.leg < was && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), k = D.st(); b.legAt = { d: b.leg, ev: e ? e.n : '', week: k ? k.week : null }; } } catch (e) {} return r; }; }
 
+  /* ---------- v3 switch-on (Director doc 69): a one-time 'New look' card over the title. Once per ACCOUNT: the flag is in the save
+     (save.v3NewLook), so it syncs with the cloud save. Existing players only: a career started with v3 on sets the flag at once. It shows
+     the player's own v3 figure (V.heroShot, the hub's hero render) with their name; their base's v3 card stands in until that render is
+     ready. Copy is Director's draft, pending Hayden's OK. Behind TOPS_V3FLAG. ---------- */
+  const V3NL = { title: 'New look, same you', body: 'We’ve rebuilt every player and opponent from the ground up: new faces, new hair, more personality.', keep: 'Your career, cards and stats haven’t changed.', go: 'Let’s go', tweak: 'Tweak my look' };
+  function v3NewLook(n) {
+    try {
+      if (!window.TOPS_V3FLAG || !window.TOPS_S3FLAG || typeof save === 'undefined' || save.v3NewLook || $id('s3V3New')) return;
+      const c = typeof career === 'function' ? career() : null; if (!c || c.run) return;   // existing Season 3 players; the Run and a fresh account skip it
+      /* over the title only: it fades in, so wait for it (every 400 ms, about 5 s) rather than giving up on the first look */
+      const t = $id('title'), up = t && !t.hidden && getComputedStyle(t).display !== 'none' && getComputedStyle(t).visibility !== 'hidden' && t.getClientRects().length;
+      if (!up) { if ((n || 0) < 12) setTimeout(() => v3NewLook((n || 0) + 1), 400); return; }
+      const v = save.vlook || {}, base = v.base || 'dazza', nm = (save.name || '').trim() || 'You';
+      const card = swap('assets/creator/head_v3_' + base + '.png'), fig = /^s3\//.test(card) ? card : '';
+      const d = document.createElement('div'); d.id = 's3V3New'; d.className = 's3-v3nl'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3V3NewT');
+      d.innerHTML = `<div class="s3-v3nlbox"><div class="s3-v3nlfig">${fig ? `<img id="s3V3NewFig" src="${fig}" alt="">` : ''}</div>
+        <span class="s3-v3nlname">${esc(nm)}</span><h2 id="s3V3NewT">${esc(V3NL.title)}</h2><p>${esc(V3NL.body)}</p><p class="s3-v3nlkeep">${esc(V3NL.keep)}</p>
+        <button type="button" class="s3-v3nlgo" id="s3V3NewGo">${esc(V3NL.go)}</button><button type="button" class="s3-v3nltw" id="s3V3NewTw">${esc(V3NL.tweak)}</button></div>`;
+      document.body.appendChild(d);
+      const done = () => { save.v3NewLook = Date.now(); try { persist(); } catch (e) {} d.remove(); };
+      $id('s3V3NewGo').onclick = () => { done(); v3log('s3_v3newlook', { act: 'go' }); };
+      $id('s3V3NewTw').onclick = () => { done(); v3log('s3_v3newlook', { act: 'tweak' }); try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } };
+      setTimeout(() => { try { $id('s3V3NewGo').focus(); } catch (e) {} }, 50);
+      /* the player's own v3 figure: the hero render needs the rig, so try a few times; the base card stays if it never comes */
+      let n = 0; const hero = () => { if (!$id('s3V3New')) return; let u = ''; try { if (typeof V !== 'undefined' && V.heroShot) u = V.heroShot(save.look, nm, c.tier || 0, ''); } catch (e) {}
+        if (u) { const f = d.querySelector('.s3-v3nlfig'); if (f) f.innerHTML = `<img id="s3V3NewFig" class="s3-v3nlhero" src="${u}" alt="">`; } else if (++n < 12) setTimeout(hero, 500); };
+      hero();
+    } catch (e) { console.warn('v3 new look', e); }
+  }
+  const v3log = (k, o) => { try { if (window.TOPS_LOG) TOPS_LOG.log(k, o); } catch (e) {} };   /* the same log Career's s3_* events use */
+  if (typeof showTitle === 'function') { const _stn = showTitle; showTitle = function () { const r = _stn.apply(this, arguments); setTimeout(() => v3NewLook(0), 700); return r; }; }
+  setTimeout(() => v3NewLook(0), 2500);   /* the title may already be up before this hook is in */
+  /* a career started with v3 on never needs the card */
+  if (typeof newCareer === 'function') { const _ncn = newCareer; newCareer = function () { const r = _ncn.apply(this, arguments); try { if (window.TOPS_V3FLAG) { save.v3NewLook = save.v3NewLook || Date.now(); persist(); } } catch (e) {} return r; }; }
+
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: (fn, go) => { shell = fn; nav = go || null; },
-    resultBlock, shelf, shelfData, navClear: () => { chipFrom = null; },
+    resultBlock, shelf, shelfData, v3NewLook, V3NL, navClear: () => { chipFrom = null; },
     refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
