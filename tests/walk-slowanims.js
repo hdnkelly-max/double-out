@@ -25,9 +25,9 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
       save.look = Object.assign({}, save.look || {}, { base: 'kai', acc: [] }); save.vlook = { base: 'kai' }; TC_API.grant('walk_power'); TC_API.equip('walk_power'); persist();
       try { sessionStorage.removeItem('tcWalkSeen'); } catch (e) {} const n = nextOpponent(); beginMatch({ mode: 'career', tier: 0, p0: 'Hayden', oppKey: n.oppKey, oppName: n.oppName, oppAvg: 50, legs: 3, start: 501 }); });
     const pend0 = await p.evaluate(() => { try { return V.animsPending ? V.animsPending() : 'n/a'; } catch (e) { return 'err'; } });
-    if (tap) { await p.waitForFunction(() => !!window.__w.on, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(tap); await p.evaluate(() => { const o = document.getElementById('tcWalk'); if (o) o.click(); }); }
+    if (tap) { await p.waitForFunction(() => !!window.__w.on, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(tap); await p.evaluate(() => { window.__w.tap = performance.now(); const o = document.getElementById('tcWalk'); if (o) o.click(); }); }
     await p.waitForFunction(() => !!window.__w.off, null, { timeout: 40000 }).catch(() => {});
-    const w = await p.evaluate(() => ({ walked: window.__w.walk, secs: window.__w.on && window.__w.off ? +((window.__w.off - window.__w.on) / 1000).toFixed(1) : null }));
+    const w = await p.evaluate(() => ({ walked: window.__w.walk, secs: window.__w.on && window.__w.off ? +((window.__w.off - window.__w.on) / 1000).toFixed(1) : null, afterTap: window.__w.tap && window.__w.off ? +((window.__w.off - window.__w.tap) / 1000).toFixed(1) : null }));
     const r = Object.assign({ pend0 }, w, { pe: pe.slice(0, 2) }); out[tag] = r; await ctx.close(); return r; };
   for (const v3 of ['0', '1']) {
     const r = await run('slow55_v3' + v3, v3, 5500);
@@ -35,6 +35,6 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
     if (r.secs == null || r.secs > 17) fail.push(`v3=${v3}: walk-on length ${r.secs}s`);
   }
   { const r = await run('stalled', '1', Infinity); if (r.secs == null || r.secs < 9 || r.secs > 12.5) fail.push('a clip file that never lands must end the walk-on at about 10 s ' + JSON.stringify(r)); }
-  { const r = await run('tap', '1', Infinity, 1500); if (r.secs == null || r.secs > 3.5) fail.push('a tap during the hold must skip at once ' + JSON.stringify(r)); }
+  { const r = await run('tap', '1', Infinity, 1500); if (r.afterTap == null || r.afterTap > 1.5) fail.push('a tap during the hold must skip at once ' + JSON.stringify(r)); }
   for (const k of Object.keys(out)) if (out[k].pe.length) fail.push(k + ' page errors ' + out[k].pe.join('; ').slice(0, 200));
   console.log(JSON.stringify(out)); console.log(fail.length ? 'walk-slowanims FAIL: ' + fail.join('; ') : 'walk-slowanims PASS'); await b.close(); srv.close(); process.exit(fail.length ? 1 : 0); })();
