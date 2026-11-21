@@ -1,5 +1,5 @@
 <meta charset="utf-8"><base href="../">
-<script>window.TOPS_BUILD="1795258181633";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795262264461";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -14818,7 +14818,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.21';
+window.TOPS_VER='4.22';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -17165,8 +17165,8 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   // The seven levels. avg = the static field average (today's TIERS). legs = best-of. need = threshold to move up.
   // Each event: id, n (name), where, kind ('ko' | 'groupko' | 'league'), size (draw), entry, travel, purse, pts, every (weeks)
   const LEVELS = [
-    { id: 'pub', n: 'Pub', s: 'Thursday nights at the Kauri Arms', avg: 52, legs: 3, need: 150, minEv: 1,
-      up: 'Reach 150 Kauri points, or win the Kauri Cup',
+    { id: 'pub', n: 'Pub', s: 'Thursday nights at the Kauri Arms', avg: 52, legs: 3, need: 75, minEv: 1, /* pace package (Hayden 15:10): 150 -> 75 */
+      up: 'Reach 75 Kauri points, or win the Kauri Cup',
       events: [
         { id: 'pub_night', n: 'Kauri Arms league night', where: 'The Kauri Arms', kind: 'ko', size: 8, entry: 5, travel: 0, purse: 120, pts: 50, every: 1, field: -2 },
         { id: 'kauri_cup', n: 'The Kauri Cup', where: 'The Kauri Arms', kind: 'ko', size: 16, entry: 10, travel: 0, purse: 600, pts: 150, every: 4, jump: true, field: 2 }
@@ -17178,8 +17178,8 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
         { id: 'interclub', n: 'Interclub · Auckland association', where: 'Rotating clubs', kind: 'ko', size: 16, entry: 15, travel: 20, purse: 1200, pts: 120, every: 2, field: 0 },
         { id: 'assoc_open', n: 'Waitākere Open', where: 'Henderson RSA', kind: 'ko', size: 32, entry: 30, travel: 10, purse: 3000, pts: 260, every: 4, jump: true, field: 3 }
       ] },
-    { id: 'opens', n: 'Regional Opens', s: 'NZDC-ranked weekend Opens around the North Island', avg: 75, legs: 5, need: 260, minEv: 2,
-      up: 'Reach 260 NZ Opens points (your best 5 Opens count) for a DPNZ Tour place',
+    { id: 'opens', n: 'Regional Opens', s: 'NZDC-ranked weekend Opens around the North Island', avg: 75, legs: 5, need: 150, minEv: 2, /* pace package: 260 -> 150 */
+      up: 'Reach 150 NZ Opens points (your best 5 Opens count) for a DPNZ Tour place',
       events: [
         { id: 'northland', n: 'Northland Open', where: 'Whangārei', kind: 'groupko', size: 32, entry: 30, travel: 90, purse: 2600, pts: 260, every: 3, field: -3 },
         { id: 'waikato', n: 'Waikato Open', where: 'Hamilton', kind: 'groupko', size: 32, entry: 30, travel: 70, purse: 3200, pts: 340, every: 3, field: 0 },
@@ -17189,7 +17189,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
         { id: 'akl_open', n: 'Auckland Open', where: 'Auckland', kind: 'groupko', size: 64, entry: 40, travel: 40, purse: 6000, pts: 420, every: 6, jump: true, field: 4 }
       ] },
     { id: 'dpnz', n: 'DPNZ Tour', s: 'Six weekends, two events each. #1 on the Order of Merit goes to the Palace', avg: 85, legs: 5, need: 900, minEv: 2, oom: true,
-      up: 'NZ route: finish #1 on the DPNZ Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
+      up: 'Reach 400 DPNZ points (your best 6 count, at least 2 events this season) or finish #1 on the Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
       events: [
         { id: 'dpnz_wlg', n: 'DPNZ Tour · Wellington', where: 'Wellington', kind: 'ko', size: 32, entry: 60, travel: 380, purse: 8000, pts: 400, every: 1, field: 1 },
         { id: 'dpnz_ham', n: 'DPNZ Tour · Hamilton', where: 'Hamilton', kind: 'ko', size: 32, entry: 60, travel: 150, purse: 8000, pts: 400, every: 1 },
@@ -17199,14 +17199,14 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
         { id: 'dpnz_dun', n: 'DPNZ Tour · Dunedin', where: 'Dunedin', kind: 'ko', size: 32, entry: 60, travel: 450, purse: 8000, pts: 400, every: 1 }
       ] },
     { id: 'tt', n: 'Trans-Tasman', s: 'One Brisbane weekend: top 8 NZ v top 8 AUS', avg: 88, legs: 7, need: 0, minEv: 1,
-      up: 'Reach the final for the Palace (both finalists go). Semi-finalists earn a funded Q-School place (optional)',
+      up: 'Reach the semi-finals for the Palace (all four semi-finalists go)',
       events: [
         { id: 'tt_bne', n: 'Trans-Tasman Championship', where: 'Brisbane', kind: 'ko', size: 16, entry: 150, travel: 700, purse: 40000, pts: 0, every: 1 }
       ] },
     { id: 'card', n: 'Tour Card', s: 'Optional: Q-School, then the Pro Tour from a UK base', avg: 95, legs: 7, need: 0, minEv: 4, oom: true,
       up: 'Finish in the top 32 of the Pro Tour Order of Merit for a seeded Palace place',
       events: [
-        { id: 'qschool', n: 'Q-School', where: 'Leicester', kind: 'ko', size: 128, entry: 1100, travel: 2600, purse: 0, pts: 0, every: 52, once: true, card: true },
+        { id: 'qschool', n: 'Q-School', where: 'Leicester', kind: 'ko', size: 128, entry: 1100, travel: 2600, purse: 0, pts: 0, every: 52, card: true }, // CAR-CARD: once a year, not once a career (no card + Q-School used was a dead end)
         { id: 'pc_wigan', n: 'Players Championship · Wigan', where: 'Wigan', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
         { id: 'pc_mk', n: 'Players Championship · Milton Keynes', where: 'Milton Keynes', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
         { id: 'pc_hild', n: 'Players Championship · Hildesheim', where: 'Hildesheim', kind: 'ko', size: 64, entry: 120, travel: 900, purse: 40000, pts: 0, every: 2, needCard: true }
@@ -17293,9 +17293,18 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   // how you move up: a points threshold (with a minimum number of events), or a jump event won, or a route to the Palace
   function checkUp(c, e, fin) {
     const L = LEVELS[c.level], played = c.history.filter(h => h.level === c.level).length;
-    if (L.id === 'tt') { if (fin === 'W' || fin === 'F') return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : 'Trans-Tasman finalist') + ': you’re going to the Palace'); if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
-    if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace'); return null; }
-    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1; if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
+    if (L.id === 'tt') { if (fin === 'W' || fin === 'F' || fin === 'SF') { if (fin === 'SF') c.qsOffer = true; return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : fin === 'F' ? 'Trans-Tasman finalist' : 'Trans-Tasman semi-finalist') + ': you’re going to the Palace'); } /* pace package: the semi-final qualifies too */ if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
+    if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace');
+      // CAR-CARD: Q-School without a card sends you back to the DPNZ Tour (new season, 40% carried); the Q-School place (qsOffer) is kept
+      // for next year, the same way back as the Trans-Tasman and a lost Worlds
+      if (e.id === 'qschool' && !c.card) { c.qsOffer = true; newDpnzSeason(c); const r = promote(c, 3, 'No Tour Card this time (' + FIN_NAME[fin].toLowerCase() + '). Back to the DPNZ Tour for a new season: 40% of your points roll over. Your Q-School place stays for next year');
+        r.fromQs = fin; return r; }
+      return null; }
+    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;
+      // pace package (Hayden 15:10, doc 46): the DPNZ points route. 400 points (best 6) with at least 2 events this season; the carry
+      // from a new season is capped at 300, so it always takes new results
+      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points: the NZ route to the Palace');
+      if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
       newDpnzSeason(c); return { to: 3, n: 'DPNZ Tour', msg: 'Finished #' + r + '. A new DPNZ season: 40% of your points roll over' }; }
@@ -17308,6 +17317,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     return null;
   }
   const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
+  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
   const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
   // Championship-year identity (Hayden 15:10, doc 46): a yearly event (every 52: the Worlds, Q-School) has one edition per cycle,
   // edition = floor(week / 52). Each history record carries its edition, and an edition already played can't be entered again,
@@ -17348,10 +17358,33 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   const REST_SCAN = 156;
   function nextEventWeek(c) { for (let w = c.week; w <= c.week + REST_SCAN; w++) { if (calendar(Object.assign({}, c, { week: w })).length) return w; } return null; }
   const restNeeded = c => !c.live && !calendar(c).length;
+  const QS_WAIT = 4; // weeks a player without a card may rest at the Tour Card level waiting for Q-School
+  // CAR-CARD (Q&D re-check, Producer 23:26): what a rest week will do, worked out BEFORE the tap so the rest card can say it. null = no rest
+  // (an event is on, or one is live). Stable field names (Experience's s3x rest screen reads them too):
+  //   next   the week the next event at this level is on (null if none in REST_SCAN weeks)
+  //   back   'dpnz' when the tap sends you back to the DPNZ Tour instead of moving the week on, else null
+  //   why    'qschool' (no card, Q-School more than QS_WAIT weeks off) or 'none' (the safety net: nothing left at this level)
+  //   qsWeek the Q-School week (why 'qschool'), carry the DPNZ points a new season starts with (40%, capped), fromLevel the level you leave
+  function restPlan(c) {
+    if (c.live || calendar(c).length) return null;
+    const next = nextEventWeek(c), carry = Math.min(DPNZ_CARRY_CAP, Math.round(((c.pts && c.pts.dpnz) || 0) * DPNZ_CARRY));
+    if (next == null && c.level > 3) return { next: null, back: 'dpnz', why: 'none', qsWeek: null, carry, fromLevel: c.level };
+    if (next != null && c.level === 5 && !c.card && next - c.week > QS_WAIT) return { next, back: 'dpnz', why: 'qschool', qsWeek: next, carry, fromLevel: 5 };
+    return { next, back: null, why: null, qsWeek: null, carry: null, fromLevel: c.level };
+  }
   function restWeek(c) {
     if (c.live) return { ok: false, why: 'Finish the event you are in first' };
     if (calendar(c).length) return { ok: false, why: 'There is an event on this week' };
-    const to = nextEventWeek(c); if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    const to = nextEventWeek(c), plan = restPlan(c);
+    // CAR-CARD safety net: above the DPNZ Tour, a level with nothing left for this career (a rule we missed later) sends you back to the
+    // DPNZ Tour, which runs every week, instead of a dead end. Pub to DPNZ always have events, so they keep the explicit error.
+    if (plan.back === 'dpnz' && plan.why === 'none') { const fromLevel = c.level; newDpnzSeason(c); const up = promote(c, 3, 'Nothing left on at the ' + LEVELS[fromLevel].n + ' for you. Back to the DPNZ Tour for a new season: 40% of your points roll over');
+      return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel, up }; }
+    if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    // CAR-CARD: no card yet means the only Tour Card event is Q-School, once a year. Rather than up to 51 rest weeks, wait on the DPNZ Tour
+    // (weekly events) with the Q-School place kept; the Q-School offer is taken from there in its week
+    if (plan.back === 'dpnz' && plan.why === 'qschool') { c.qsOffer = true; newDpnzSeason(c); const up = promote(c, 3, 'Q-School is in week ' + to + '. Back to the DPNZ Tour until then: your Q-School place is kept, and 40% of your points roll over');
+      return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel: 5, qsWeek: to, up }; }
     const from = c.week; c.week = to; return { ok: true, from, to, skipped: to - from };
   }
   // Broke and nothing affordable on: a recovery entry books one eligible event this week with no cash up front, capped at the cheapest
@@ -17368,7 +17401,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
   }
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, edition, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, DPNZ_ROUTE, DPNZ_ROUTE_EV, edition, nextEventWeek, restNeeded, restPlan, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
 
@@ -17403,7 +17436,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
       oom:Lv.id==='dpnz'?E.dpnzTable(k).map(r=>({n:r.n,pts:r.pts,you:!!r.you})):null,
       history:k.history.slice().reverse().map(h=>Object.assign({finName:E.FIN_NAME[h.fin]||h.fin},h)),card:!!k.card,qsOffer:!!k.qsOffer,
       /* CAR-DEADWK: rest = nothing on at your level this week (next = the week the next event is on); recover = broke with an event on */
-      rest:E.restNeeded(k)?{next:E.nextEventWeek(k)}:null,recover:k.live?null:E.recoveryOffer(Object.assign({},k,{bank:c.bank||0}))};}
+      rest:E.restNeeded(k)?(E.restPlan?E.restPlan(k):{next:E.nextEventWeek(k)}):null,recover:k.live?null:E.recoveryOffer(Object.assign({},k,{bank:c.bank||0}))};}
   function book(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};if(k.live)return {ok:false,why:'Finish the event you are in first'};
     const e=C().eventOf(id);if(!e||e.level!==k.level||!C().calendar(Object.assign({},k,{bank:career().bank||0})).some(x=>x.id===id))return {ok:false,why:'Not on this week'};
     const r=sync(k=>C().book(k,id));if(r&&r.ok){persist();L('s3_book',{id,cost:C().cost(e),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
@@ -17412,7 +17445,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   function playNow(){if(!on())return false;const k=circ();if(!k||!k.live)return false;const o=C().nextOpp(k),e=C().eventOf(k.live.id),nm=oppName(k);
     beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0});
     if(SS()){S.s3={id:e.id,round:o.round,level:k.level,recovery:k.live&&k.live.recovery?1:0};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
-  function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',{from:r.from,to:r.to,level:k.level});}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
+  function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',Object.assign({from:r.from,to:r.to,level:k.level},r.fallback?{fallback:1,fromLevel:r.fromLevel}:{}));}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
   function recover(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().recoveryEntry(k,id));if(r&&r.ok){persist();L('s3_recover',{id:r.id,cost:r.cost,debt:r.debt,level:k.level});}return r;}
   function advance(){if(!on())return {ok:false,why:'Season 3 is off'};const r=sync(k=>C().advance(k));if(r&&r.ok){persist();L('s3_advance',{amt:r.amt});}return r;}
 
@@ -21015,6 +21048,8 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .rb-primary.s3-grow b{font-size:20px;line-height:1.1;overflow-wrap:anywhere}
 #rbApp .rb-primary.s3-grow small{line-height:1.3}
 #rbApp .s3-broke{display:flex;flex-direction:column;gap:10px}
+/* CAR-CARD: the back-to-tour rest button keeps "Back to the DPNZ Tour" on one line at 360 */
+@media (max-width:374px){#rbApp .s3-restback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}
 </style>
 <script>window.TOPS_S3_HAVE=["assets/cards/art/anderson.webp","assets/cards/art/anika.webp","assets/cards/art/bagofnails.webp","assets/cards/art/barneveld.webp","assets/cards/art/bigmal.webp","assets/cards/art/bounceout.webp","assets/cards/art/bust.webp","assets/cards/art/chalker.webp","assets/cards/art/club.webp","assets/cards/art/comeback.webp","assets/cards/art/db_16.webp","assets/cards/art/db_161.webp","assets/cards/art/db_164.webp","assets/cards/art/db_167.webp","assets/cards/art/db_4.webp","assets/cards/art/db_8.webp","assets/cards/art/db_bnb.webp","assets/cards/art/db_bull.webp","assets/cards/art/db_marker.webp","assets/cards/art/db_shotgun.webp","assets/cards/art/db_threebed.webp","assets/cards/art/db_top.webp","assets/cards/art/deano.webp","assets/cards/art/dpnz.webp","assets/cards/art/green.webp","assets/cards/art/humphries.webp","assets/cards/art/jonno.webp","assets/cards/art/kauri.webp","assets/cards/art/kev.webp","assets/cards/art/kw_jandals.webp","assets/cards/art/kw_jug.webp","assets/cards/art/kw_karaoke.webp","assets/cards/art/kw_leaner.webp","assets/cards/art/kw_pokies.webp","assets/cards/art/kw_quiz.webp","assets/cards/art/kw_smoko.webp","assets/cards/art/kw_tab.webp","assets/cards/art/lastorders.webp","assets/cards/art/madhouse.webp","assets/cards/art/matchdart.webp","assets/cards/art/mo.webp","assets/cards/art/nuke.webp","assets/cards/art/oche.webp","assets/cards/art/palace.webp","assets/cards/art/papakura.webp","assets/cards/art/pete.webp","assets/cards/art/phil.webp","assets/cards/art/power.webp","assets/cards/art/pr_bouncer.webp","assets/cards/art/pr_bump.webp","assets/cards/art/pr_cooker.webp","assets/cards/art/pr_flash.webp","assets/cards/art/pr_heckle.webp","assets/cards/art/pr_horn.webp","assets/cards/art/pr_nan.webp","assets/cards/art/pr_orders.webp","assets/cards/art/pr_vape.webp","assets/cards/art/pr_wobble.webp","assets/cards/art/price.webp","assets/cards/art/raffle.webp","assets/cards/art/rd_bigscreen.webp","assets/cards/art/rd_caller.webp","assets/cards/art/rd_crowd.webp","assets/cards/art/rd_draw.webp","assets/cards/art/rd_handshake.webp","assets/cards/art/rd_hotel.webp","assets/cards/art/rd_practice.webp","assets/cards/art/rd_qschool.webp","assets/cards/art/rd_sponsor.webp","assets/cards/art/rd_tourcard.webp","assets/cards/art/rd_travel.webp","assets/cards/art/regional.webp","assets/cards/art/robbed.webp","assets/cards/art/robin.webp","assets/cards/art/rsa.webp","assets/cards/art/shazza.webp","assets/cards/art/sherlock.webp","assets/cards/art/smith.webp","assets/cards/art/tama.webp","assets/cards/art/the170.webp","assets/cards/art/tl_airport.webp","assets/cards/art/tl_autograph.webp","assets/cards/art/tl_champ.webp","assets/cards/art/tl_physio.webp","assets/cards/art/tl_press.webp","assets/cards/art/tl_ref.webp","assets/cards/art/tl_ritual.webp","assets/cards/art/tl_rival.webp","assets/cards/art/tl_tunnel2.webp","assets/cards/art/tn_407.webp","assets/cards/art/tn_5am.webp","assets/cards/art/tn_biter.webp","assets/cards/art/tn_cruiser.webp","assets/cards/art/tn_daisy.webp","assets/cards/art/tn_donkey.webp","assets/cards/art/tn_hotsauce.webp","assets/cards/art/tn_king.webp","assets/cards/art/tn_maddog.webp","assets/cards/art/tn_pie.webp","assets/cards/art/tn_sammo.webp","assets/cards/art/tn_stickers.webp","assets/cards/art/tn_stu.webp","assets/cards/art/tn_tard.webp","assets/cards/art/tn_tow.webp","assets/cards/art/tn_warship.webp","assets/cards/art/transtasman.webp","assets/cards/art/tunnel.webp","assets/cards/art/water.webp","assets/cards/art/whitewash.webp","assets/cards/art/wigan.webp","assets/cards/art/wobble.webp","assets/cards/art/wright.webp","assets/cards/art/wrongdouble.webp","assets/creator/full_dazza.png","assets/creator/full_kai.png","assets/creator/full_mia.png","assets/creator/full_ray.png","assets/creator/full_tama.png","assets/creator/head_dazza.png","assets/creator/head_kai.png","assets/creator/head_mia.png","assets/creator/head_ray.png","assets/creator/head_tama.png","assets/crowd.webp","assets/rb/backroom.jpg","assets/rb/lk_f.jpg","assets/rb/lk_f_mask.png","assets/rb/lk_m.jpg","assets/rb/lk_m_mask.png","assets/rb/opp_bigmal.jpg","assets/rb/result_loss.jpg","assets/rb/result_win.jpg","assets/rb/t_arena.webp","assets/rb/t_hero.webp","assets/rb/tn_t0.jpg","assets/rb/tn_t0f.jpg","assets/rb/tn_t1.jpg","assets/rb/tn_t1f.jpg","assets/rb/tn_t2.jpg","assets/rb/tn_t2f.jpg","assets/rb/tn_t3.jpg","assets/rb/tn_t3f.jpg","assets/rb/tn_t4.jpg","assets/rb/tn_t4f.jpg","assets/rb/tn_t5.jpg","assets/rb/tn_t5f.jpg","assets/rb/tn_t6.jpg","assets/rb/tn_t6f.jpg","assets/rb/venue_t0.jpg","assets/rb/venue_t1.jpg","assets/rb/venue_t2.jpg","assets/rb/venue_t3.jpg","assets/rb/venue_t4.jpg","assets/rb/venue_t5.jpg","assets/rb/venue_t6.jpg","assets/rb/w_win_t0.jpg","assets/rb/w_win_t1.jpg","assets/rb/w_win_t2.jpg","assets/rb/w_win_t3.jpg","assets/rb/w_win_t4.jpg","assets/rb/w_win_t5.jpg","assets/rb/w_win_t6.jpg","assets/ui/bg_club.webp","assets/ui/bg_pub.webp","assets/ui/bg_stage.webp","assets/ui/card_crowd.webp","assets/ui/card_gang.webp","assets/ui/card_heckle.webp","assets/ui/card_invasion.webp","assets/ui/card_pass.webp","assets/ui/card_stare.webp","assets/ui/card_steady.webp","assets/ui/card_tap.webp","assets/ui/card_turns.webp","assets/ui/card_wing.webp","assets/ui/th_backroom.webp","assets/ui/th_local.webp","assets/ui/th_practice.webp","assets/venue/club_brew.webp","assets/venue/club_raffle.webp","assets/venue/club_team.webp","assets/venue/club_throw.webp","assets/venue/plate_5.webp","assets/venue/pub_1.webp","assets/venue/pub_2.webp","assets/venue/pub_3.webp","assets/venue/pub_4.webp","img/bets/hot.jpg","img/bets/steady.jpg","img/bets/tight.jpg","img/menu.jpg","img/menu_0.jpg","img/menu_1.jpg","img/menu_2.jpg","img/menu_3.jpg","img/splash.jpg","img/v0.jpg","img/v1.jpg","img/v2.jpg","img/v3.jpg","img/v4.jpg","img/v5.jpg","img/v6.jpg","plates/club_oche.webp","plates/club_walk.webp","plates/dpnz_oche.webp","plates/dpnz_walk.webp","plates/opens_oche.webp","plates/opens_walk.webp","plates/palace_oche.webp","plates/palace_walk.webp","plates/pub_oche.webp","plates/pub_walk.webp","plates/tc_oche.webp","plates/tc_walk.webp","plates/tt_oche.webp","plates/tt_walk.webp"];
 // TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
@@ -21171,6 +21206,11 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const C = CI(), cal = C.calendar(c);
     /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
     if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
+      /* CAR-CARD (Q&D, Producer 23:26): when the tap sends you back to the DPNZ Tour, the card says so before the tap */
+      const pl = C.restPlan ? C.restPlan(c) : null;
+      if (pl && pl.back === 'dpnz') { const lvN = esc(C.LEVELS[pl.fromLevel].n), pts = pl.carry + ' point' + (pl.carry === 1 ? '' : 's') + ' carry over';
+        return `<div class="rb-sh"><h3>${pl.why === 'qschool' ? 'Waiting for Q-School' : 'Nothing left on'}</h3></div><div class="rb-card s3-rest s3-restback"><span class="rb-t2">${pl.why === 'qschool' ? `Q-School is in week ${pl.qsWeek}. Wait on the DPNZ Tour until then` : `Nothing left on at the ${lvN} for you. Back to the DPNZ Tour for a new season`}</span><span class="rb-sub">${pl.why === 'qschool' ? 'The DPNZ Tour runs every week, so you keep playing while you wait.' : 'The DPNZ Tour runs every week.'}</span>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>Back to the DPNZ Tour</b><small>${pl.why === 'qschool' ? 'Q-School place kept · ' : ''}${pts}</small></button></div>`; }
       return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${gap > 1 ? gap + ' weeks away' : 'next week'}.</span>
       <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
     let h = '';
@@ -21313,8 +21353,8 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const C = CI(), to = C.LEVELS[up.to], down = up.to < up.from;
     const g = (c.grants && c.grants[up.to] && !down) ? [0, 60, 450, 900, 850, 0, 3000][up.to] : 0;
     const html = `<div class="s3-pmart" style="background:url(${lvArt(up.to)}) 50% 40%/cover no-repeat,${GRAD[up.to]}"></div>
-      <span class="rb-kick">${up.from === 6 ? 'Back on tour' : down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
-      <span class="rb-sub">${up.from === 6 ? `Out of the Worlds. A new season starts now with ${(c.pts && c.pts.dpnz) || 0} points carried (40%, up to 300).` : esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
+      <span class="rb-kick">${up.from >= 5 && down ? 'Back on tour' : down ? 'New season' : 'Promoted'}</span><span class="s3-pmn">${down ? esc(to.n) : 'Up to ' + esc(to.n)}</span>
+      <span class="rb-sub">${up.from >= 5 && down ? `${up.from === 6 ? 'Out of the Worlds' : 'No Tour Card this time'}. A new season starts now with ${(c.pts && c.pts.dpnz) || 0} points carried (40%, up to 300).` : esc(to.s)}</span>${g ? `<span class="s3-grant">Travel grant +${money(g)}</span>` : ''}<span class="rb-sub">${esc(to.up)}</span>`;
     sheet(html, 'See what\'s on', () => { seenSet(snap(c)); sub = 'week'; render(); }, 's3-promo');
   }
   // new best leg: Career fires window 'tops:bestleg' {detail:{darts, prev}}; kept on the device so it still shows after the reset reload
