@@ -60,9 +60,11 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (fin.bank !== 90) fail.push('bank after the night ' + fin.bank + ' (want 60 - 5 + 35 = 90)');
     if (!/50 \/ 150/.test(fin.blk || '') || /100 \/ 150/.test(fin.blk || '') || !/\+50 from this event · now 50, was 0/i.test(fin.blk || '') || fin.barB !== '0%' || !fin.barG) fail.push('Final bar: ' + JSON.stringify({ blk: fin.blk, b: fin.barB, g: fin.barG, pts: fin.pts }));
     if (!/s3-rpfin/.test(fin.cells[2] || '') || !/s3-rpw/.test(fin.cells[2] || '')) fail.push('Final draw cells ' + JSON.stringify(fin.cells));
-    out.badge = await p.evaluate(async () => { achToast({ id: 'tonavg', t: 'L', n: 'Ton average', d: 'test', ic: '' }); await new Promise(r => setTimeout(r, 1500)); const t = document.querySelector('#achToasts .ach-t:last-child');
+    out.badge = await p.evaluate(async () => {   // force the image to fail whatever the build has (the release gate's copy has assets/): point it at a file that never exists
+      const _ai = achIco; achIco = function () { const h = _ai.apply(this, arguments); return typeof h === 'string' ? h.replace(/(<img class="ach-img"[^>]*?\ssrc=")[^"]*"/, '$1s3/__missing_badge_for_test__.webp"') : h; };
+      try { achToast({ id: 'tonavg', t: 'L', n: 'Ton average', d: 'test', ic: '' }); } finally { achIco = _ai; } await new Promise(r => setTimeout(r, 1500)); const t = document.querySelector('#achToasts .ach-t:last-child');
       return t ? { img: !!t.querySelector('img.ach-img'), fb: !!t.querySelector('svg.ach-fb') } : null; });
-    if (!out.badge || out.badge.img || !out.badge.fb) fail.push('badge fallback (assets/ is absent here, so the image 404s): ' + JSON.stringify(out.badge));
+    if (!out.badge || out.badge.img || !out.badge.fb) fail.push('badge fallback (image forced to 404): ' + JSON.stringify(out.badge));
     // 2 direct renders: lost QF, group stage, promotion
     out.direct = await p.evaluate(() => { const U = TOPS_S3UI, c = career(), k = c.circuit, keep = JSON.stringify(k), r = {};
       const fakeS = (s3, won, res) => ({ s3, won, s3res: res });
