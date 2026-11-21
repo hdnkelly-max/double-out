@@ -173,3 +173,8 @@
 #rbApp .rbw-pin.s3-pin{position:sticky;bottom:0;z-index:2;margin-top:16px;padding:10px 0 calc(16px + env(safe-area-inset-bottom,0px));background:var(--bg);box-shadow:0 -12px 14px -2px var(--bg)}
 #rbApp.rb-resmode .rb-scr:has(.s3-rp){gap:8px;padding-bottom:0}   /* a sticky bar sticks inside the scroller's padding: with 24 px of padding, cards showed under the bar */
 .s3-on .ach-fb{display:block}
+/* CAR-DEADWK layout: Rest and Recovery buttons grow with their text (360 px: no text on the button edges) */
+#rbApp .rb-primary.s3-grow{height:auto;min-height:56px;flex:0 0 auto;padding:10px 16px;text-align:center;gap:3px}
+#rbApp .rb-primary.s3-grow b{font-size:20px;line-height:1.1;overflow-wrap:anywhere}
+#rbApp .rb-primary.s3-grow small{line-height:1.3}
+#rbApp .s3-broke{display:flex;flex-direction:column;gap:10px}
