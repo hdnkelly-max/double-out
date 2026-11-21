@@ -1,0 +1,10 @@
+kai k 1 forehead:177/178(-1) cheek:168/162(+6) jaw:118/63(+55)  mean|err| 20.4
+kai k 0.87 forehead:176/178(-1) cheek:167/162(+4) jaw:108/63(+45)  mean|err| 17.0
+ray k 1 forehead:174/178(-4) cheek:163/163(+0) jaw:89/64(+25)  mean|err| 9.6
+ray k 0.87 forehead:174/178(-4) cheek:162/163(-1) jaw:80/64(+16)  mean|err| 7.3
+tama k 1 cheek:96/91(+5) jaw:52/40(+12)  mean|err| 8.6
+tama k 0.87 cheek:88/91(-3) jaw:47/40(+8)  mean|err| 5.2
+mia k 1 forehead:172/176(-3) cheek:162/160(+1) jaw:94/69(+26)  mean|err| 10.1
+mia k 0.87 forehead:171/176(-5) cheek:160/160(+0) jaw:86/69(+17)  mean|err| 7.2
+dazza k 1 forehead:176/182(-7) cheek:160/156(+4) jaw:92/70(+23)  mean|err| 11.3
+dazza k 0.87 forehead:175/182(-8) cheek:155/156(-1) jaw:92/70(+23)  mean|err| 10.3
