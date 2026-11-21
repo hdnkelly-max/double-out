@@ -1123,13 +1123,13 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&!!L.base&&V3BASES.includes(L.base)&&!L.pro;}
  const V3P={H:1.6,head:{c:[0,1.31,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.535,y1:1.015,rx:0.3,rz:0.215,belly:0.05,sh:0.365},
   shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
- const V3EYE={dx:178,v:0.455,rx:83,ry:92};
+ const V3EYE={dx:178,get v(){return 0.455+(window.TOPS_EYE17!==0?(window.TOPS_EYE_DV!=null?window.TOPS_EYE_DV:0.025):0);},rx:83,ry:92};/* r17 (doc 49): eyes 2.5% of head height lower; glasses, the eye gloss map and the brows follow (they all read V3EYE.v) */
  const V3FACE={def:{brow:[1.0,0.0,1.0],browUp:0,mouth:1.18,smile:1.0,asym:0,squint:0,cheek:1.0,jaw:1.0,cheekW:1.0},
-  kai:{earTuck:0.135,browC:'#24160F',brow:[1.12,-0.02,1.15],browUp:4,browIn:6,browOut:7,cheekUp:0.035,mouth:1.18,smile:1.04,/* r12 cheeky (Director doc 28, ChatGPT 27 #2): inner brow up 6 px, outer third up 3 px more, upper cheeks up, corners +4%; eyes kept */asym:0.08,squint:0.07,cheek:1.0,jaw:1.15,cheekW:1.0},
-  ray:{browC:'#a8a39e',brow:[1.0,-0.08,1.2],browUp:10,mouth:1.0,smile:1.15,asym:0,squint:0.1,cheek:1.1,jaw:0.9,cheekW:1.0},
-  tama:{browC:'#140c0a',brow:[1.25,-0.02,1.05],browUp:2,mouth:1.08,smile:1.2,asym:0,squint:0.06,cheek:1.35,jaw:0.95,cheekW:1.25},
-  dazza:{browC:'#2a170d',brow:[1.2,-0.06,1.15],browUp:4,mouth:1.05,smile:1.1,asym:0.04,squint:0.12,cheek:1.15,jaw:1.25,cheekW:1.1},
-  mia:{browC:'#7a4c1e',brow:[0.72,-0.1,1.35],browUp:8,mouth:0.98,smile:1.12,asym:0.1,squint:0,cheek:1.1,jaw:0.75,cheekW:1.0}};
+  kai:{g18:1.03,b18:{T:40,A:22,U:8,I:6,O:0},earTuck:0.135,browC:'#24160F',brow:[1.12,-0.02,1.15],browUp:4,browIn:6,browOut:7,cheekUp:0.035,mouth:1.18,smile:1.04,/* r12 cheeky (Director doc 28, ChatGPT 27 #2): inner brow up 6 px, outer third up 3 px more, upper cheeks up, corners +4%; eyes kept */asym:0.08,squint:0.07,cheek:1.0,jaw:1.15,cheekW:1.0},
+  ray:{g18:1.1,b18:{T:34,A:22,U:16,C:'#5e5853'},browC:'#a8a39e',brow:[1.0,-0.08,1.2],browUp:10,mouth:1.0,smile:1.15,asym:0,squint:0.1,cheek:1.1,jaw:0.9,cheekW:1.0},
+  tama:{g18:1.04,b18:{T:36,A:24,U:10},browC:'#140c0a',brow:[1.25,-0.02,1.05],browUp:2,mouth:1.08,smile:1.2,asym:0,squint:0.06,cheek:1.35,jaw:0.95,cheekW:1.25},
+  dazza:{g18:1.14,b18:{T:36,A:20,U:8,I:3},browC:'#2a170d',brow:[1.2,-0.06,1.15],browUp:4,mouth:1.05,smile:1.1,asym:0.04,squint:0.12,cheek:1.15,jaw:1.25,cheekW:1.1},
+  mia:{g18:1.06,b18:{T:25,A:28,U:14,C:'#6a3f1c'},browC:'#7a4c1e',brow:[0.72,-0.1,1.35],browUp:8,mouth:0.98,smile:1.12,asym:0.1,squint:0,cheek:1.1,jaw:0.75,cheekW:1.0}};
  const v3FaceOf=L=>Object.assign({},V3FACE.def,V3FACE[L.base]||{},L.v3face||{});
  const v3smf=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);},v3gs=(x,c,w)=>Math.exp(-((x-c)*(x-c))/(2*w*w));
  /* the v3 head shape: one deformation for the skull and the painted face (vinyl3.js headPoint, unchanged) */
@@ -1159,27 +1159,47 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     rounded upper-lip frame); sk = the canvas skin colour (the squint lid) */
  function v3FaceSheet(L,sk){const c=document.createElement('canvas');c.width=1024;c.height=640;const x=c.getContext('2d'),W=1024,H=640,Fp=v3FaceOf(L),E=V3EYE;
   const ex=[W*0.5-E.dx,W*0.5+E.dx],ey=H*E.v;const RX=E.rx,RY=E.ry*1.05*(1-Fp.squint);const eyeC=Fp.eyeC||'#24170F';
-  [ex[0]-26,ex[1]+26].forEach(cx=>{const cyb=ey+130-(Fp.cheekUp||0)*200;const g=x.createRadialGradient(cx,cyb,0,cx,cyb,92*Fp.cheek);g.addColorStop(0,'rgba(240,110,100,.32)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-110,cyb-110,220,220);});
+  if(window.TOPS_BLUSH18!==0){/* r18 (doc 50, poster): rosy cheek apples, a touch higher and further out; colour and strength follow the skin's brightness (deeper rose on darker
+     skin so it still reads); TOPS_BLUSH scales cheeks and nose together (set by the skin three-way) */const sl=new T.Color(sk);const lum=0.3*sl.r+0.59*sl.g+0.11*sl.b;const BK=(window.TOPS_BLUSH!=null?window.TOPS_BLUSH:1)*(Fp.blush||1);
+   const col=lum>0.6?[236,96,92]:[196,62,66],a0=(lum>0.6?0.44:0.5)*BK;
+   [ex[0]-34,ex[1]+34].forEach(cx=>{const cyb=ey+118-(Fp.cheekUp||0)*200;const r_=96*Fp.cheek;const g=x.createRadialGradient(cx,cyb,0,cx,cyb,r_);g.addColorStop(0,`rgba(${col},${a0})`);g.addColorStop(0.55,`rgba(${col},${a0*0.55})`);g.addColorStop(1,`rgba(${col},0)`);x.fillStyle=g;x.save();x.translate(cx,cyb);x.scale(1.15,0.85);x.translate(-cx,-cyb);x.fillRect(cx-r_,cyb-r_,r_*2,r_*2);x.restore();});}
+  else [ex[0]-26,ex[1]+26].forEach(cx=>{const cyb=ey+130-(Fp.cheekUp||0)*200;const g=x.createRadialGradient(cx,cyb,0,cx,cyb,92*Fp.cheek);g.addColorStop(0,'rgba(240,110,100,.32)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-110,cyb-110,220,220);});
   ex.forEach((cx,i)=>{x.save();x.translate(cx,ey);x.fillStyle='#ffffff';x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.fill();x.save();x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.clip();
-   {const g=x.createRadialGradient(i?-6:6,14,10,i?-6:6,14,RX*0.98);g.addColorStop(0,'#120b07');g.addColorStop(0.7,eyeC);g.addColorStop(1,'#5a3420');x.fillStyle=g;}
-   x.beginPath();x.ellipse(i?-6:6,12,RX*0.97,92,0,0,7);x.fill();x.fillStyle='#0a0604';x.beginPath();x.ellipse(i?-6:6,16,RX*0.52,52,0,0,7);x.fill();
+   if(window.TOPS_EYE17!==0){/* r17 (doc 49): warm brown radial iris (#5a3a24 low and centre -> #221410 rim), iris +8%, soft dark pupil; both highlights kept */
+    const IK=window.TOPS_IRIS||1.08,ox=i?-6:6,oy=12;const g=x.createRadialGradient(ox,oy+RY*0.32,6,ox,oy+4,RX*0.97*IK);g.addColorStop(0,'#5a3a24');g.addColorStop(0.45,'#43291a');g.addColorStop(0.75,'#2a1a12');g.addColorStop(1,'#221410');x.fillStyle=g;
+    x.beginPath();x.ellipse(ox,oy,RX*0.97*IK,92*IK,0,0,7);x.fill();const gp=x.createRadialGradient(ox,oy+4,RX*0.18,ox,oy+4,RX*0.5);gp.addColorStop(0,'rgba(14,8,5,0.95)');gp.addColorStop(1,'rgba(14,8,5,0)');x.fillStyle=gp;x.beginPath();x.ellipse(ox,oy+4,RX*0.5,56,0,0,7);x.fill();}
+   else{{const g=x.createRadialGradient(i?-6:6,14,10,i?-6:6,14,RX*0.98);g.addColorStop(0,'#120b07');g.addColorStop(0.7,eyeC);g.addColorStop(1,'#5a3420');x.fillStyle=g;}
+   x.beginPath();x.ellipse(i?-6:6,12,RX*0.97,92,0,0,7);x.fill();x.fillStyle='#0a0604';x.beginPath();x.ellipse(i?-6:6,16,RX*0.52,52,0,0,7);x.fill();}
    x.fillStyle='#ffffff';x.beginPath();x.ellipse(i?-30:-18,-24,30,34,0,0,7);x.fill();x.beginPath();x.ellipse(i?18:30,40,12,13,0,0,7);x.fill();x.globalAlpha=0.6;x.beginPath();x.ellipse(i?-2:10,-40,8,8,0,0,7);x.fill();x.globalAlpha=1;
    if(Fp.squint){x.fillStyle=sk;x.fillRect(-RX-4,-RY-4,RX*2+8,RY*Fp.squint*2.2);}x.restore();
    x.strokeStyle='#1a0f0a';x.lineWidth=8;x.lineCap='round';x.beginPath();x.ellipse(0,0,RX,RY,0,Math.PI*1.06,Math.PI*1.94);x.stroke();
-   if(L.lash){x.lineWidth=8;[[-50,-40,-72,-62],[-32,-56,-48,-84],[i?44:-12,-62,i?58:-14,-92]].forEach(([a,b,c2,d])=>{const s=i?-1:1;x.beginPath();x.moveTo(a*s,b);x.lineTo(c2*s,d);x.stroke();});}x.restore();});
-  x.fillStyle=Fp.browC||v2hex(L.brow||0x3a1e10);
+   if(L.lash||(window.TOPS_EYE17!==0&&/tama/i.test(String(L.base||L.name||'')))){/* r17: lashes on Tama too */x.lineWidth=8;[[-50,-40,-72,-62],[-32,-56,-48,-84],[i?44:-12,-62,i?58:-14,-92]].forEach(([a,b,c2,d])=>{const s=i?-1:1;x.beginPath();x.moveTo(a*s,b);x.lineTo(c2*s,d);x.stroke();});}x.restore();});
+  if(window.TOPS_BROW18!==0){/* r18 (doc 50, poster): arched STROKE brows tapering from a rounded inner end to a fine outer tip, set a little higher.
+     Per character (FACE.b18): T thickness px, A arch, U lift, I inner drop, O outer drop, C colour, tp taper; TOPS_BROW18P overrides */
+   const BP=Object.assign({T:20,A:22,U:8,I:0,O:0},Fp.b18||{},(window.TOPS_BROW18P||{})[L.base]||{});x.fillStyle=BP.C||Fp.browC||v2hex(L.brow||0x3a1e10);
+   ex.forEach((cx,i)=>{const s=i?1:-1;const up=BP.U+Fp.browUp*0.5-(i?0:1)*Fp.asym*20;
+    const P0=[cx-100*s,ey-RY-24-up+BP.I],P2=[cx+112*s,ey-RY-14-up+BP.O],P1=[cx+2*s,ey-RY-26-up-BP.A*2];
+    const q=t=>[(1-t)*(1-t)*P0[0]+2*t*(1-t)*P1[0]+t*t*P2[0],(1-t)*(1-t)*P0[1]+2*t*(1-t)*P1[1]+t*t*P2[1]];
+    const N=24,top=[],bot=[];for(let k=0;k<=N;k++){const t=k/N,p=q(t),p2=q(Math.min(1,t+0.01)),p1=q(Math.max(0,t-0.01));let dx=p2[0]-p1[0],dy=p2[1]-p1[1];const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;
+     const w=BP.T*(0.82+0.5*Math.sin(Math.PI*Math.min(1,t/0.6))*0.36)*(t<0.4?1:1-(BP.tp||0.6)*Math.pow((t-0.4)/0.6,1.4))*(t<0.06?0.75+0.25*Math.sin(Math.PI/2*t/0.06):1)/2;
+     top.push([p[0]+dy*w*0.6,p[1]-w]);bot.push([p[0]-dy*w*0.6,p[1]+w]);}
+    x.beginPath();x.moveTo(top[0][0],top[0][1]);for(const p of top)x.lineTo(p[0],p[1]);for(let k=bot.length-1;k>=0;k--)x.lineTo(bot[k][0],bot[k][1]);x.closePath();x.fill();
+    x.beginPath();x.ellipse(P0[0],P0[1],BP.T*0.32,BP.T*0.41,0,0,7);x.fill();});}
+  else{x.fillStyle=Fp.browC||v2hex(L.brow||0x3a1e10);
   ex.forEach((cx,i)=>{const s=i?1:-1;const k=Fp.brow[0],ang=Fp.brow[1],arch=Fp.brow[2];const up=Fp.browUp-(i?0:1)*Fp.asym*30;const iy=ey-126+ang*60-up-(Fp.browIn||0),oy=ey-138-ang*30-up-(Fp.browOut||0),py=ey-180-arch*22-up;
    const K=k*1.4*1.13*1.15;x.beginPath();x.moveTo(cx-108*s,iy+24*K);x.quadraticCurveTo(cx-116*s,iy-6,cx-100*s,iy-26*K);x.quadraticCurveTo(cx+8*s,py-8*K,cx+114*s,oy);x.quadraticCurveTo(cx+120*s,oy+7,cx+110*s,oy+11);
-   x.quadraticCurveTo(cx+10*s,py+40*K,cx-108*s,iy+24*K);x.closePath();x.fill();});
-  const my=H*0.728,mw=215*Fp.mouth*0.84,sm_=Fp.smile,as=Fp.asym*40;const lc=[W/2-mw,my-44*sm_+as],rc=[W/2+mw,my-44*sm_-as];
+   x.quadraticCurveTo(cx+10*s,py+40*K,cx-108*s,iy+24*K);x.closePath();x.fill();});}
+  const M17=window.TOPS_MOUTH17!==0&&window.TOPS_MOUTH16!==0;/* r17 (doc 49): the mouth sits 14 px lower (a gap under the nose), opens back up to 88%, and the dark 'D' becomes a thin gap + a red tongue band */
+  const my=H*0.728+(M17?(window.TOPS_MOUTH_DY!=null?window.TOPS_MOUTH_DY:14):0),mw=215*Fp.mouth*0.84*(M17?(window.TOPS_MOUTH_W||1.0):1)*(M17&&window.TOPS_GRIN18!==0?(Fp.g18||1):1)/* r18: per-character grin width */,sm_=Fp.smile,as=Fp.asym*40;const lc=[W/2-mw,my-44*sm_+as],rc=[W/2+mw,my-44*sm_-as];
   /* r16 mouth (Director doc 45, ChatGPT 44): cavity -28% (lower edge up), corners pinch in, upper teeth ~70% of the opening as a curved row
      (warm-grey falloff, lip shadow, two faint incisor lines), a thin lower row, a sliver of tongue, dark corners. TOPS_MOUTH16=0 = the r5 mouth */
-  const M16=window.TOPS_MOUTH16!==0,MD=M16?(window.TOPS_MOUTH_DEPTH||0.72):1,mb=my-6+156*MD,mk=86*MD,CK=M16?(window.TOPS_MOUTH_CK||0.6):0.86,CK2=M16?(window.TOPS_MOUTH_CK2||0.4):0.5;
+  const M16=window.TOPS_MOUTH16!==0,MD=M16?(window.TOPS_MOUTH_DEPTH||(M17?0.88:0.72)):1,mb=my-6+156*MD,mk=86*MD,CK=M16?(window.TOPS_MOUTH_CK||0.6):0.86,CK2=M16?(window.TOPS_MOUTH_CK2||0.4):0.5;
   const path=()=>{x.beginPath();x.moveTo(lc[0],lc[1]);x.quadraticCurveTo(W/2,my-6,rc[0],rc[1]);x.bezierCurveTo(W/2+mw*CK,my+mk*sm_,W/2+mw*CK2,mb,W/2,mb);x.bezierCurveTo(W/2-mw*CK2,mb,W/2-mw*CK,my+mk*sm_,lc[0],lc[1]);x.closePath();};
   x.fillStyle='#34090c';path();x.fill();x.save();path();x.clip();
   x.fillStyle='#fbf7f0';x.beginPath();x.moveTo(lc[0]-6,lc[1]-10);x.quadraticCurveTo(W/2,my-20,rc[0]+6,rc[1]-10);
-  const tb=my-6+(mb-my+6)*(window.TOPS_TEETH||0.7);
+  const tb=my-6+(mb-my+6)*(window.TOPS_TEETH||(M17?0.66:0.7));
   if(!M16){x.lineTo(rc[0]-mw*0.07,rc[1]+31);x.bezierCurveTo(W/2+mw*0.5,my+61,W/2-mw*0.5,my+61,lc[0]+mw*0.07,lc[1]+31);}
+  else if(M17){const TI=0.1;/* r17: teeth run closer to the corners (no dark pocket at the near corner in 3/4) */x.lineTo(rc[0]-mw*TI,rc[1]+14);x.bezierCurveTo(W/2+mw*0.55,tb+4,W/2-mw*0.55,tb+4,lc[0]+mw*TI,lc[1]+14);}
   else{x.lineTo(rc[0]-mw*0.2,rc[1]+18);x.bezierCurveTo(W/2+mw*0.5,tb+4,W/2-mw*0.5,tb+4,lc[0]+mw*0.2,lc[1]+18);}
   x.closePath();
   if(!M16){x.fill();x.strokeStyle='rgba(150,120,110,.3)';x.lineWidth=3;for(let k=-3;k<=3;k++){const xx=W/2+k*mw*0.2;x.beginPath();x.moveTo(xx,my-8);x.lineTo(xx,my+40-Math.abs(k)*5);x.stroke();}}
@@ -1189,11 +1209,14 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    x.strokeStyle='rgba(140,110,100,.28)';x.lineWidth=2.5;x.lineCap='round';for(const k of [-1,0,1]){const xx=W/2+k*mw*0.24;const y1=my+(k?14:22)+Math.abs(k)*4;x.beginPath();x.moveTo(xx,my+2);x.lineTo(xx+k*2,y1);x.stroke();}
    x.restore();}
   if(!M16){x.fillStyle='#e06a6a';x.beginPath();x.ellipse(W/2,my+146,mw*0.34,36,0,0,7);x.fill();}
+  else if(M17){/* r17: a thin dark gap under the teeth, then a warm red tongue / inner-lip band; no lower teeth; small dark corners */const ry=Math.max(14,(mb-tb)*1.05);
+   const gt=x.createRadialGradient(W/2,mb-2,4,W/2,mb-2,mw*0.75);gt.addColorStop(0,'#d0545c');gt.addColorStop(0.6,'#b23c46');gt.addColorStop(1,'#7a1e28');x.fillStyle=gt;x.beginPath();x.ellipse(W/2,mb+4,mw*(window.TOPS_TONGUE||0.85),ry,0,0,7);x.fill();
+   [lc,rc].forEach(c2=>{const cr_=mw*0.12;const g=x.createRadialGradient(c2[0],c2[1]+6,2,c2[0],c2[1]+6,cr_);g.addColorStop(0,'rgba(20,4,6,.85)');g.addColorStop(1,'rgba(20,4,6,0)');x.fillStyle=g;x.fillRect(c2[0]-cr_,c2[1]-cr_,cr_*2,cr_*2);});}
   else{x.fillStyle='#d9ccc2';x.beginPath();x.ellipse(W/2,mb-2,mw*0.3,11,0,Math.PI,2*Math.PI);x.fill();
    x.fillStyle='#b8505a';x.beginPath();x.ellipse(W/2,mb+12,mw*0.22,12,0,0,7);x.fill();
    [lc,rc].forEach(c2=>{const g=x.createRadialGradient(c2[0],c2[1]+8,2,c2[0],c2[1]+8,mw*0.2);g.addColorStop(0,'rgba(20,4,6,.85)');g.addColorStop(1,'rgba(20,4,6,0)');x.fillStyle=g;x.fillRect(c2[0]-mw*0.3,c2[1]-mw*0.3,mw*0.6,mw*0.6);});}
   x.restore();
-  x.strokeStyle='#5a2418';x.lineCap='round';x.lineWidth=5;path();x.stroke();x.lineWidth=10;x.beginPath();x.moveTo(W/2-mw*0.6,my-6+126*MD);x.bezierCurveTo(W/2-mw*0.32,mb+1,W/2+mw*0.32,mb+1,W/2+mw*0.6,my-6+126*MD);x.stroke();
+  x.strokeStyle='#5a2418';x.lineCap='round';x.lineWidth=5;path();x.stroke();if(M17){x.strokeStyle='#8a3328';x.lineWidth=7;}/* r17: a warm lip line, not a heavy dark bar */else x.lineWidth=10;x.beginPath();x.moveTo(W/2-mw*0.6,my-6+126*MD);x.bezierCurveTo(W/2-mw*0.32,mb+1,W/2+mw*0.32,mb+1,W/2+mw*0.6,my-6+126*MD);x.stroke();
   x.strokeStyle='rgba(120,50,35,.55)';x.lineWidth=9;x.beginPath();x.moveTo(lc[0]-2,lc[1]-4);x.quadraticCurveTo(W/2,my-30,rc[0]+2,rc[1]-4);x.stroke();
   x.strokeStyle='rgba(140,60,40,.2)';x.lineWidth=6;[[lc,-1],[rc,1]].forEach(([c2,s])=>{x.beginPath();x.moveTo(c2[0]+s*2,c2[1]+4);x.quadraticCurveTo(c2[0]+s*18,c2[1]-4,c2[0]+s*20,c2[1]-24);x.stroke();});
   x.strokeStyle='rgba(150,70,50,.45)';x.lineWidth=6;x.beginPath();x.moveTo(lc[0]+mw*0.08,lc[1]-6);x.bezierCurveTo(W/2-mw*0.4,my-30,W/2-mw*0.12,my-22,W/2,my-14);x.bezierCurveTo(W/2+mw*0.12,my-22,W/2+mw*0.4,my-30,rc[0]-mw*0.08,rc[1]-6);x.stroke();
@@ -1208,7 +1231,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const at=(x,W,H)=>[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
   const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));});
   const rm=document.createElement('canvas');rm.width=512;rm.height=256;{const x=rm.getContext('2d'),W=512,H=256,g=Math.round(255*rough),[ox,oy,sw,sh]=at(x,W,H),E=V3EYE;
-   x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*.3);/* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
+   x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*(window.TOPS_V3EYER!=null?window.TOPS_V3EYER:.3));/* TOPS_V3EYER: eye-region roughness (test knob) *//* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
    [-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024,sh*E.ry/640,0,0,7);x.fill();});}
   const rt=new T.CanvasTexture(rm);return [col,rt];}
  /* doc 27 #6: dark skin's shadow side read slightly grey at the match cam. A small warm term only where the direct light is low
@@ -1228,7 +1251,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const SKV=window.TOPS_V3SKIN;const [map,rmap]=v3HeadMaps(L,skHex,SKV&&SKV.r!=null?SKV.r:V2MAT.skin[0]);const hm=skin.clone();if(skin._v3spec){hm.onBeforeCompile=skin._v3spec;hm.customProgramCacheKey=()=>'v3spec';}/* only the test hook: the dark-skin warm term is added to hm by v3Warm below, so it must not be copied too (it was injected twice) *//* skin test knob reaches the face too (clone drops onBeforeCompile; the roughness map bakes the skin roughness) */hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;v3Warm(hm,skin);
   const sg=new T.SphereGeometry(1,Math.round(64*S3_SEGF),Math.round(48*S3_SEGF));{const p=sg.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).normalize();const q=v3HeadPoint(v,FP.cheek,FP);p.setXYZ(i,q.x,q.y,q.z);}sg.computeVertexNormals();}
   const sk=mesh(sg,hm,head);sk.userData.tag='skull';sk.castShadow=false;
-  {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),skin,head,0,np.y,np.z-0.022).castShadow=false;}
+  {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);let nm=skin;if(window.TOPS_BLUSH18!==0){/* r18 (doc 50): rosy nose tip, a colour tint on the nose's own clone of the skin (same shader: the warm/test hooks are carried, not re-added) */nm=skin.clone();if(skin.onBeforeCompile){nm.onBeforeCompile=skin.onBeforeCompile;nm.customProgramCacheKey=skin.customProgramCacheKey;}
+   const sl=new T.Color(L.skin);const lum=0.3*sl.r+0.59*sl.g+0.11*sl.b;nm.color.lerp(new T.Color(lum>0.6?0xe0786a:0xb04a44).convertSRGBToLinear(),(window.TOPS_NOSE_BLUSH!=null?window.TOPS_NOSE_BLUSH:0.16)*(window.TOPS_BLUSH!=null?window.TOPS_BLUSH:1));}
+   mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),nm,head,0,np.y,np.z-0.022).castShadow=false;}
   const earIn=v2M(new T.Color(L.skin).multiplyScalar(0.82).getHex(),'skin');
   const tuck=(FP.earTuck||0)*(R[0]*1.07+0.032-v3HeadPoint(new T.Vector3(1,-0.074,-0.055).normalize(),FP.cheek,FP).x);/* r10: per-character ear tuck (Kai 0.135) */
   [-1,1].forEach(s=>{const ex=s*(R[0]*1.07-tuck);const e=mesh(ell(0.032,0.082,0.058,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012,0.055,0.036,12,9),earIn,head,ex+s*0.022,-0.02,-0.005);ie.rotation.y=s*0.32;e.userData.ear=ie.userData.ear=true;/* long-hair styles hide the ears they cover */
@@ -1254,7 +1279,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    else{/* r16 collar (Director doc 45, vinyl3.js build): a short black stand (open band, 3.6 cm) with red piping on its top edge, and two black
       polo points with red piping laid ON the real chest surface (a 1 cm height map, raycast once against this torso, blurred twice, monotone up
       the ledge; layers offset along the surface normal). TOPS_COLLAR16=0 = the old red collar; TOPS_PIPING, TOPS_COLLAR_P, TOPS_COLLAR_C tune it */
-    const sg=n=>Math.max(8,Math.round(n*S3_SEGF));const colM=v2M(window.TOPS_COLLAR_C||0x0e0e10,'trim'),PP=window.TOPS_PIPING!=null?window.TOPS_PIPING:0.0045,CP=window.TOPS_COLLAR_P||{};
+    const sg=n=>Math.max(8,Math.round(n*S3_SEGF));const colM=v2M(window.TOPS_COLLAR_C||0xc8202a,'trim')/* doc 49 + ChatGPT: the poster's RED stand and points (TOPS_COLLAR_C=0x0e0e10 for the black r16 option) */,PP=window.TOPS_PIPING!=null?window.TOPS_PIPING:0.0045,CP=window.TOPS_COLLAR_P||{};
     const SH=CP.h||0.036,SY0=cy+(CP.sy!=null?CP.sy:0.02),SR=[CP.rx||0.152,CP.rz||0.128];
     const stG=new T.CylinderGeometry(1.0,1.06,SH,sg(48),1,true);stG.scale(SR[0],1,SR[1]);const colD=colM.clone();colD.side=T.DoubleSide;tag(mesh(stG,colD,chest,0,SY0,0),'collar');
     const lip=new T.TorusGeometry(1,0.006/SR[0],6,sg(64));lip.rotateX(Math.PI/2);lip.scale(SR[0]+0.002,SR[0]+0.002,SR[1]+0.002);tag(mesh(lip,colM,chest,0,SY0+SH/2,0),'collar');
