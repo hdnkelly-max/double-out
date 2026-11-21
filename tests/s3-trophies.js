@@ -5,6 +5,7 @@
 //  The Circuit level card shows '1 title' and tapping it opens Locker > Trophies. A direct render with more history checks a promoted level,
 //  a runner-up (silver) and repeat wins. With s3x off the Locker keeps the old trophy list and the Circuit has no chip.
 // (the real lost final and the 320 checks are in tests/s3-trophies-final.js: CI gives each test file 600 s)
+// 360 seeds the same saved result instead of replaying the night (time).
 // usage: node tests/s3-trophies.js [dir]   (SHOTS=1 writes tests/s3_tr_<w>.png and tests/s3_tr_390_more.png)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const fail = [], out = {};
@@ -23,11 +24,11 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     await p.goto('file://' + dir + '/index.html' + qs, { timeout: 180000 }); await ready();
     await p.evaluate(() => { localStorage.removeItem('tops_s3_seen'); save.authSeen = true; save.lessonDone = true; save.name = 'Hayden'; newCareer(); save.tcWelSeen = 1; persist(); $('login').hidden = true; showHub('play'); });
     await p.waitForTimeout(2500); await p.evaluate(() => { try { delete TC_API.st().welPend; } catch (e) {} document.querySelectorAll('.tc-sheet,.tc-poster,.tcpk,.tc-back,.tc-scrim').forEach(e => e.remove()); });
-    const match = async (loseFinal) => {   // one Circuit match as the player taps it (won, or lost if it's the final and loseFinal); back on the hub afterwards
+    const match = async (loseFinal, quick) => {   // quick: legs won with one dart (QF/SF), so the test fits CI's 600 s; the deciding match is played out   // one Circuit match as the player taps it (won, or lost if it's the final and loseFinal); back on the hub afterwards
       if (await vis('#rbApp [data-s3book="pub_night"]')) await tap('#rbApp [data-s3book="pub_night"]'); else if (await vis('#rbApp [data-s3book]')) await tap('#rbApp [data-s3book]'); await p.waitForTimeout(500); await tap('#s3Go');
       for (let i = 0; i < 80 && !(await p.evaluate(() => typeof S !== 'undefined' && S && !S.done).catch(() => false)); i++) await p.waitForTimeout(250);
-      for (let i = 0; i < (loseFinal ? 5000 : 1500); i++) { const s = await p.evaluate(lf => { try { if (!S || S.done) return 'done'; if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(0, 0); } return 'play'; }
-          if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { const me = S.p[0]; S.busy = true; if (lf && S.s3 && S.s3.round === 'F') land(0, -320); else if (me.score > 200) land(0, -103); else if (me.score - 20 >= 40) land(0, -60); else { me.score = 40; land(0, -166); } }   /* T20s, single 20s, out on D20: a 14-dart leg */ const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }, !!loseFinal).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
+      for (let i = 0; i < (loseFinal ? 5000 : 1500); i++) { const s = await p.evaluate(([lf, qk]) => { try { if (!S || S.done) return 'done'; if (S.bull) { if (S.cur === 0 && !S.busy && S.bull.me == null) { S.busy = true; land(0, 0); } return 'play'; }
+          if (S.cur === 0 && !S.busy && !S.p[0].ai && S.view !== 1) { const me = S.p[0]; S.busy = true; if (lf && S.s3 && S.s3.round === 'F') land(0, -320); else if (qk) { me.score = 40; land(0, -166); } else if (me.score > 200) land(0, -103); else if (me.score - 20 >= 40) land(0, -60); else { me.score = 40; land(0, -166); } }   /* T20s, single 20s, out on D20: a 14-dart leg */ const it = document.getElementById('intro'); if (it && it.classList.contains('show')) it.click(); return 'play'; } catch (e) { return 'ERR ' + e.message; } }, [!!loseFinal, !!quick]).catch(() => 'nav'); if (s !== 'play') break; await p.waitForTimeout(120); }
       for (let i = 0; i < 60 && !(await vis('#rbApp.rb-resmode #rbRGo')); i++) await p.waitForTimeout(250); await p.waitForTimeout(800);
       const l0 = loads; for (let i = 0; i < 300 && loads === l0; i++) { for (const s of NEXT) { if (loads > l0) break; if (await tap(s)) { await p.waitForTimeout(300); break; } } await p.waitForTimeout(250); }
       if (loads > l0) await ready(); for (let i = 0; i < 20 && (await vis('#s3Ok')); i++) { await tap('#s3Ok'); await p.waitForTimeout(400); } };
@@ -47,7 +48,11 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (e.cups.length !== 2 || e.cups.some(c => !/^s3-tre/.test(c))) fail.push(w + ' empty cups ' + JSON.stringify(e.cups));
     // 2 a real Pub night, won
     await T.tap('#rbApp [data-tab="circuit"]'); await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^circuit$/i.test(x.textContent.trim())); if (t) t.click(); }); await p.waitForTimeout(500);
-    for (let i = 0; i < 3; i++) await T.match(); await T.settle();
+    if (w === 390) {   // the real night at 390: QF and SF quick (one-dart legs), then the best leg cleared so the final's played-out leg is the one that counts
+      for (let i = 0; i < 2; i++) await T.match(false, true); await p.evaluate(() => { const b = career().best; if (b) { b.leg = 99; delete b.legAt; } persist(); }); await T.match(false, false); await T.settle();
+    } else {   // 360: the same saved result, seeded (the real night ran at 390; CI gives the file 600 s)
+      await p.evaluate(() => { const k = career().circuit; (k.titles = k.titles || []).push({ ev: 'pub_night', n: 'Kauri Arms league night', level: 0, season: 3, finish: 'W', prize: 35, date: new Date().toISOString() });
+        k.history.push({ week: 1, id: 'pub_night', n: 'Kauri Arms league night', level: 0, fin: 'W', prize: 35, pts: 50 }); k.week = 2; const c = career(); c.best = c.best || {}; c.best.leg = 14; c.best.legAt = { d: 14, ev: 'Kauri Arms league night', week: 1 }; persist(); TOPS_S3UI.refreshRecords(); }); await T.settle(); }
     const live = await p.evaluate(async () => ({ hist: await TOPS_HISTORY.rows(), bl: await TOPS_BESTLEG.table() }));   // Career's live views
     await p.evaluate(() => { const t = [...document.querySelectorAll('#rbApp button')].find(x => /^circuit$/i.test(x.textContent.trim())); if (t) t.click(); }); await p.waitForTimeout(1200);
     const chip = await p.evaluate(() => { const c = document.querySelector('#rbApp .s3-trchip'); return c ? c.innerText.trim() : null; }); out['chip' + w] = chip;
