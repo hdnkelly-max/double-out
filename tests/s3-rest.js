@@ -70,7 +70,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (r.grid.length) f.push('1 levels/weeks not reaching an event in one action: ' + JSON.stringify(r.grid.slice(0, 5)) + ' (' + r.grid.length + ')');
     if (!r.palace || !r.palace.ok || r.palace.to !== 52) f.push('1 Palace week 17 -> 52: ' + JSON.stringify(r.palace));
     if (r.book.length) f.push('1 a week with an event could not be booked: ' + JSON.stringify(r.book.slice(0, 3)));
-    if (JSON.stringify(r.palaceLate.map(x => x.to)) !== JSON.stringify([156, 157, 208])) f.push('1 late Palace arrivals ' + JSON.stringify(r.palaceLate));
+    if (JSON.stringify(r.palaceLate.map(x => x.to)) !== JSON.stringify([156, 208, 208])) f.push('1 late Palace arrivals (the Worlds is on week 52 of each year only) ' + JSON.stringify(r.palaceLate));
     // car-worlds (CAR-WEAK 3): a lost Worlds goes back to the DPNZ Tour, so week 53 has the weekly DPNZ events (no rest)
     if (r.afterWorlds.week !== 53 || r.afterWorlds.rest || !/^dpnz_/.test(r.afterWorlds.cal[0] || '')) f.push('1 after losing the Worlds at week 52 the DPNZ Tour should be on at week 53 ' + JSON.stringify(r.afterWorlds));
     if (r.adv.ok) f.push('3 the advance should be refused while one is owed');

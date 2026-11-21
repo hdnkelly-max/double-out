@@ -99,7 +99,10 @@
   // what's on this week at your level (and the next level's events you've been invited to)
   function calendar(c) {
     const L = LEVELS[c.level];
-    return L.events.filter(e => (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1))
+    // events every 2-6 weeks are open for two weeks (the week and the one after); a yearly event (every 52: the Worlds, Q-School) runs on
+    // ONE week a year; finishing any event moves the week on, so it can't be entered twice (Q&D P1: on weeks 52 and 53 a World Champion could book and win the Worlds again straight away)
+    return L.events.filter(e => (e.every >= 52 ? c.week % e.every === 0
+        : (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1)))
       && !(e.once && c.history.some(h => h.id === e.id)) && !(e.needCard && !c.card) && !(e.card && c.card))
       .map(e => Object.assign({ level: c.level, cost: cost(e), canAfford: c.bank >= cost(e) }, e));
   }
