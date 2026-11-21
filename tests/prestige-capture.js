@@ -5,9 +5,9 @@
 if (process.argv.length < 3) { console.log('prestige-capture: SKIP (capture tool; pass the repo dir)'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const dir = path.resolve(process.argv[2]);
 const out = path.join(dir, 'wip/car-prestige'); fs.mkdirSync(out, { recursive: true });
-const EDS = [null, 'pub', 'dpnz', 'tt', 'card', 'worlds'];
+const EDS = (process.env.EDS ? process.env.EDS.split(',').map(x => x === 'default' ? null : x) : [null, 'pub', 'dpnz', 'tt', 'card', 'worlds']);
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const log = [];
-  for (const [model, q] of [['v2', ''], ['v3', '&v3=1']]) for (const [w, h] of [[390, 844], [360, 800]]) for (const ed of EDS) {
+  for (const [model, q] of (process.env.MODELS === 'v2' ? [['v2', '']] : [['v2', ''], ['v3', '&v3=1']])) for (const [w, h] of (process.env.W === '390' ? [[390, 844]] : [[390, 844], [360, 800]])) for (const ed of EDS) {
     const p = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); const pe = []; p.on('pageerror', e => pe.push(e.message));
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} });
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto('file://' + dir + '/index.html?s3=1' + q);
@@ -18,6 +18,7 @@ const EDS = [null, 'pub', 'dpnz', 'tt', 'card', 'worlds'];
     for (let k = 0; k < 60; k++) { const s0 = await st(); if (s0 && s0.d0 >= 3) break; if (!s0 || s0.cur !== 0 || s0.done) { await p.waitForTimeout(500); continue; }
       await p.mouse.click(w / 2, h * .16); await p.waitForTimeout(300); await p.mouse.move(w / 2, h * .7); await p.mouse.down(); await p.waitForTimeout(650); await p.mouse.move(w / 2, h * .66, { steps: 4 }); await p.mouse.up();
       for (let j = 0; j < 20; j++) { const s1 = await st(); if (!s1 || s1.d0 !== s0.d0 || s1.cur !== 0) break; await p.waitForTimeout(150); } await p.waitForTimeout(700); }
+    if (process.env.SEQ) for (let t = 0; t < 8; t++) { await p.screenshot({ path: path.join(out, `seq-${model}-${w}-${ed || 'default'}-${t}.png`), clip: { x: 0, y: 40, width: w, height: Math.round(h * .43) } }); await p.waitForTimeout(400); }
     const f = path.join(out, `${model}-${w}-${ed || 'default'}.png`); await p.screenshot({ path: f, clip: { x: 0, y: 40, width: w, height: Math.round(h * .43) } });
     const g = await p.evaluate(() => ({ gear: window.TOPS_GEAR && TOPS_GEAR() && TOPS_GEAR().id, darts: (S && S.p && S.p[0] && S.p[0].darts) || null }));
     log.push({ model, w, ed: ed || 'default', gear: g.gear || null, errs: pe.slice(0, 1) }); await p.close(); }
