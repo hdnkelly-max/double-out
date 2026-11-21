@@ -1172,12 +1172,28 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const K=k*1.4*1.13*1.15;x.beginPath();x.moveTo(cx-108*s,iy+24*K);x.quadraticCurveTo(cx-116*s,iy-6,cx-100*s,iy-26*K);x.quadraticCurveTo(cx+8*s,py-8*K,cx+114*s,oy);x.quadraticCurveTo(cx+120*s,oy+7,cx+110*s,oy+11);
    x.quadraticCurveTo(cx+10*s,py+40*K,cx-108*s,iy+24*K);x.closePath();x.fill();});
   const my=H*0.728,mw=215*Fp.mouth*0.84,sm_=Fp.smile,as=Fp.asym*40;const lc=[W/2-mw,my-44*sm_+as],rc=[W/2+mw,my-44*sm_-as];
-  const path=()=>{x.beginPath();x.moveTo(lc[0],lc[1]);x.quadraticCurveTo(W/2,my-6,rc[0],rc[1]);x.bezierCurveTo(W/2+mw*0.86,my+86*sm_,W/2+mw*0.5,my+150,W/2,my+150);x.bezierCurveTo(W/2-mw*0.5,my+150,W/2-mw*0.86,my+86*sm_,lc[0],lc[1]);x.closePath();};
+  /* r16 mouth (Director doc 45, ChatGPT 44): cavity -28% (lower edge up), corners pinch in, upper teeth ~70% of the opening as a curved row
+     (warm-grey falloff, lip shadow, two faint incisor lines), a thin lower row, a sliver of tongue, dark corners. TOPS_MOUTH16=0 = the r5 mouth */
+  const M16=window.TOPS_MOUTH16!==0,MD=M16?(window.TOPS_MOUTH_DEPTH||0.72):1,mb=my-6+156*MD,mk=86*MD,CK=M16?(window.TOPS_MOUTH_CK||0.6):0.86,CK2=M16?(window.TOPS_MOUTH_CK2||0.4):0.5;
+  const path=()=>{x.beginPath();x.moveTo(lc[0],lc[1]);x.quadraticCurveTo(W/2,my-6,rc[0],rc[1]);x.bezierCurveTo(W/2+mw*CK,my+mk*sm_,W/2+mw*CK2,mb,W/2,mb);x.bezierCurveTo(W/2-mw*CK2,mb,W/2-mw*CK,my+mk*sm_,lc[0],lc[1]);x.closePath();};
   x.fillStyle='#34090c';path();x.fill();x.save();path();x.clip();
-  x.fillStyle='#fbf7f0';x.beginPath();x.moveTo(lc[0]-6,lc[1]-10);x.quadraticCurveTo(W/2,my-20,rc[0]+6,rc[1]-10);x.lineTo(rc[0]-mw*0.07,rc[1]+31);x.bezierCurveTo(W/2+mw*0.5,my+61,W/2-mw*0.5,my+61,lc[0]+mw*0.07,lc[1]+31);x.closePath();x.fill();
-  x.strokeStyle='rgba(150,120,110,.3)';x.lineWidth=3;for(let k=-3;k<=3;k++){const xx=W/2+k*mw*0.2;x.beginPath();x.moveTo(xx,my-8);x.lineTo(xx,my+40-Math.abs(k)*5);x.stroke();}
-  x.fillStyle='#e06a6a';x.beginPath();x.ellipse(W/2,my+146,mw*0.34,36,0,0,7);x.fill();x.restore();
-  x.strokeStyle='#5a2418';x.lineCap='round';x.lineWidth=5;path();x.stroke();x.lineWidth=10;x.beginPath();x.moveTo(W/2-mw*0.6,my+120);x.bezierCurveTo(W/2-mw*0.32,my+151,W/2+mw*0.32,my+151,W/2+mw*0.6,my+120);x.stroke();
+  x.fillStyle='#fbf7f0';x.beginPath();x.moveTo(lc[0]-6,lc[1]-10);x.quadraticCurveTo(W/2,my-20,rc[0]+6,rc[1]-10);
+  const tb=my-6+(mb-my+6)*(window.TOPS_TEETH||0.7);
+  if(!M16){x.lineTo(rc[0]-mw*0.07,rc[1]+31);x.bezierCurveTo(W/2+mw*0.5,my+61,W/2-mw*0.5,my+61,lc[0]+mw*0.07,lc[1]+31);}
+  else{x.lineTo(rc[0]-mw*0.2,rc[1]+18);x.bezierCurveTo(W/2+mw*0.5,tb+4,W/2-mw*0.5,tb+4,lc[0]+mw*0.2,lc[1]+18);}
+  x.closePath();
+  if(!M16){x.fill();x.strokeStyle='rgba(150,120,110,.3)';x.lineWidth=3;for(let k=-3;k<=3;k++){const xx=W/2+k*mw*0.2;x.beginPath();x.moveTo(xx,my-8);x.lineTo(xx,my+40-Math.abs(k)*5);x.stroke();}}
+  else{x.save();x.clip();
+   const gh=x.createRadialGradient(W/2,my+10,mw*0.15,W/2,my+10,mw*1.05);gh.addColorStop(0,'#fdfaf4');gh.addColorStop(0.55,'#f1ebe2');gh.addColorStop(1,'#a89a90');x.fillStyle=gh;x.fillRect(W/2-mw*1.2,my-80,mw*2.4,240);
+   const gv=x.createLinearGradient(0,my-30,0,tb+6);gv.addColorStop(0,'rgba(90,40,30,.42)');gv.addColorStop(0.28,'rgba(90,40,30,0)');gv.addColorStop(0.85,'rgba(120,90,80,0)');gv.addColorStop(1,'rgba(120,90,80,.22)');x.fillStyle=gv;x.fillRect(W/2-mw*1.2,my-80,mw*2.4,240);
+   x.strokeStyle='rgba(140,110,100,.28)';x.lineWidth=2.5;x.lineCap='round';for(const k of [-1,0,1]){const xx=W/2+k*mw*0.24;const y1=my+(k?14:22)+Math.abs(k)*4;x.beginPath();x.moveTo(xx,my+2);x.lineTo(xx+k*2,y1);x.stroke();}
+   x.restore();}
+  if(!M16){x.fillStyle='#e06a6a';x.beginPath();x.ellipse(W/2,my+146,mw*0.34,36,0,0,7);x.fill();}
+  else{x.fillStyle='#d9ccc2';x.beginPath();x.ellipse(W/2,mb-2,mw*0.3,11,0,Math.PI,2*Math.PI);x.fill();
+   x.fillStyle='#b8505a';x.beginPath();x.ellipse(W/2,mb+12,mw*0.22,12,0,0,7);x.fill();
+   [lc,rc].forEach(c2=>{const g=x.createRadialGradient(c2[0],c2[1]+8,2,c2[0],c2[1]+8,mw*0.2);g.addColorStop(0,'rgba(20,4,6,.85)');g.addColorStop(1,'rgba(20,4,6,0)');x.fillStyle=g;x.fillRect(c2[0]-mw*0.3,c2[1]-mw*0.3,mw*0.6,mw*0.6);});}
+  x.restore();
+  x.strokeStyle='#5a2418';x.lineCap='round';x.lineWidth=5;path();x.stroke();x.lineWidth=10;x.beginPath();x.moveTo(W/2-mw*0.6,my-6+126*MD);x.bezierCurveTo(W/2-mw*0.32,mb+1,W/2+mw*0.32,mb+1,W/2+mw*0.6,my-6+126*MD);x.stroke();
   x.strokeStyle='rgba(120,50,35,.55)';x.lineWidth=9;x.beginPath();x.moveTo(lc[0]-2,lc[1]-4);x.quadraticCurveTo(W/2,my-30,rc[0]+2,rc[1]-4);x.stroke();
   x.strokeStyle='rgba(140,60,40,.2)';x.lineWidth=6;[[lc,-1],[rc,1]].forEach(([c2,s])=>{x.beginPath();x.moveTo(c2[0]+s*2,c2[1]+4);x.quadraticCurveTo(c2[0]+s*18,c2[1]-4,c2[0]+s*20,c2[1]-24);x.stroke();});
   x.strokeStyle='rgba(150,70,50,.45)';x.lineWidth=6;x.beginPath();x.moveTo(lc[0]+mw*0.08,lc[1]-6);x.bezierCurveTo(W/2-mw*0.4,my-30,W/2-mw*0.12,my-22,W/2,my-14);x.bezierCurveTo(W/2+mw*0.12,my-22,W/2+mw*0.4,my-30,rc[0]-mw*0.08,rc[1]-6);x.stroke();
@@ -1230,10 +1246,38 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
   /* collar and placket as the shipped poster shirt, sized to the v3 neck (ChatGPT round 8: the collar read a little big) */
-  const cy=t.y1-P.leg.hipY-CH-.025;{/* v3: the visible neck shows the collar from above, so its leaf turns down steeply (no flat red disc under the chin) *//* the stand hugs the neck (r ~.1, the neck is .08) and the leaf turns down to the shoulders, absolute metres [radius, y] */const cr=new T.LatheGeometry([[.16,-.04],[.15,0],[.118,.032],[.1,.056],[.103,.072],[.122,.06],[.138,.034],[.145,.018]].map(([r,y])=>new T.Vector2(r,y)),Math.round(28*S3_SEGF));cr.scale(1,1,.87);const trimD=trim2.clone();trimD.side=T.DoubleSide;tag(mesh(cr,trimD,chest,0,cy,.01),'collar');
+  const cy=t.y1-P.leg.hipY-CH-.025;{/* v3: the visible neck shows the collar from above, so its leaf turns down steeply (no flat red disc under the chin) *//* the stand hugs the neck (r ~.1, the neck is .08) and the leaf turns down to the shoulders, absolute metres [radius, y] */if(window.TOPS_COLLAR16===0){const cr=new T.LatheGeometry([[.16,-.04],[.15,0],[.118,.032],[.1,.056],[.103,.072],[.122,.06],[.138,.034],[.145,.018]].map(([r,y])=>new T.Vector2(r,y)),Math.round(28*S3_SEGF));cr.scale(1,1,.87);const trimD=trim2.clone();trimD.side=T.DoubleSide;tag(mesh(cr,trimD,chest,0,cy,.01),'collar');
    const C=V2SHIRT.collar,[fw,fl,fr]=C.flap;[-1,1].forEach(s=>{const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(fw,0);sh.quadraticCurveTo(fw*.95,-fl*.55,fr,-fl);sh.quadraticCurveTo(fr*.2,-fl*.98,0,-fl*.8);sh.lineTo(0,0);
     const g=new T.ExtrudeGeometry(sh,{depth:.01,bevelEnabled:true,bevelThickness:.006,bevelSize:.006,bevelSegments:2,curveSegments:5});if(s<0)g.scale(-1,1,1);g.scale(.9,.9,1);g.computeVertexNormals();
     const o=mesh(g,trim2,chest,s*C.gap,cy+.015,t.rz*.8*BK[1]);o.rotation.set(C.tilt,s*C.turn,s*C.splay);tag(o,'fold');});
+   }
+   else{/* r16 collar (Director doc 45, vinyl3.js build): a short black stand (open band, 3.6 cm) with red piping on its top edge, and two black
+      polo points with red piping laid ON the real chest surface (a 1 cm height map, raycast once against this torso, blurred twice, monotone up
+      the ledge; layers offset along the surface normal). TOPS_COLLAR16=0 = the old red collar; TOPS_PIPING, TOPS_COLLAR_P, TOPS_COLLAR_C tune it */
+    const sg=n=>Math.max(8,Math.round(n*S3_SEGF));const colM=v2M(window.TOPS_COLLAR_C||0x0e0e10,'trim'),PP=window.TOPS_PIPING!=null?window.TOPS_PIPING:0.0045,CP=window.TOPS_COLLAR_P||{};
+    const SH=CP.h||0.036,SY0=cy+(CP.sy!=null?CP.sy:0.02),SR=[CP.rx||0.152,CP.rz||0.128];
+    const stG=new T.CylinderGeometry(1.0,1.06,SH,sg(48),1,true);stG.scale(SR[0],1,SR[1]);const colD=colM.clone();colD.side=T.DoubleSide;tag(mesh(stG,colD,chest,0,SY0,0),'collar');
+    const lip=new T.TorusGeometry(1,0.006/SR[0],6,sg(64));lip.rotateX(Math.PI/2);lip.scale(SR[0]+0.002,SR[0]+0.002,SR[1]+0.002);tag(mesh(lip,colM,chest,0,SY0+SH/2,0),'collar');
+    if(CP.standPipe!==0){const pip=new T.TorusGeometry(1,PP/SR[0]*0.9,6,sg(64));pip.rotateX(Math.PI/2);pip.scale(SR[0]+0.006,SR[0]+0.006,SR[1]+0.006);tag(mesh(pip,trim2,chest,0,SY0+SH/2+0.002,0),'collar');}
+    const FPo=CP.f||[[0.012,0.02],[0.118,0.026],[0.05,-0.08]];
+    const outline=sx=>{const Q=FPo.map(p=>[p[0]*sx,p[1]]),n=Q.length,m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2],r_=0.18,sh=new T.Shape();const s0=m(Q[n-1],Q[0]);sh.moveTo(s0[0],s0[1]);
+     for(let i=0;i<n;i++){const pm=m(Q[(i+n-1)%n],Q[i]),q=m(Q[i],Q[(i+1)%n]);sh.lineTo(Q[i][0]+(pm[0]-Q[i][0])*r_,Q[i][1]+(pm[1]-Q[i][1])*r_);sh.quadraticCurveTo(Q[i][0],Q[i][1],Q[i][0]+(q[0]-Q[i][0])*r_,Q[i][1]+(q[1]-Q[i][1])*r_);if(i<n-1)sh.lineTo(q[0],q[1]);}return sh;};
+    const SX=[-0.17,0.17],SY=[cy-0.14,cy+0.03],SD=0.01,nx=Math.round((SX[1]-SX[0])/SD)+1,ny=Math.round((SY[1]-SY[0])/SD)+1,HM=new Float32Array(nx*ny);
+    {const rc=new T.Raycaster(),tm=new T.Mesh(tor.geometry,tor.material);tm.updateMatrixWorld(true);const o_=new T.Vector3(),d_=new T.Vector3(0,0,-1);
+     for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){o_.set(SX[0]+i*SD,SY[0]+j*SD,1);rc.set(o_,d_);const h_=rc.intersectObject(tm,false)[0];
+      const ok_=h_&&h_.point.z>0.1&&(h_.face.normal.z>0.15||h_.face.normal.y>0.5)&&(j===0||h_.point.z<=HM[(j-1)*nx+i]+0.002);HM[j*nx+i]=ok_?h_.point.z:(j>0?HM[(j-1)*nx+i]:0.2);}}
+    for(let pass=0;pass<2;pass++){const H2=HM.slice();for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){let t_=0,w_=0;for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const jj=j+dj,ii=i+di;if(jj<0||jj>=ny||ii<0||ii>=nx)continue;const ww=(di||dj)?0.5:1;t_+=H2[jj*nx+ii]*ww;w_+=ww;}HM[j*nx+i]=t_/w_;}}
+    const surf=(x,y)=>{const fx=Math.max(0,Math.min(nx-1.001,(x-SX[0])/SD)),fy=Math.max(0,Math.min(ny-1.001,(y-SY[0])/SD)),i=Math.floor(fx),j=Math.floor(fy),a=fx-i,b=fy-j;
+     return (HM[j*nx+i]*(1-a)+HM[j*nx+i+1]*a)*(1-b)+(HM[(j+1)*nx+i]*(1-a)+HM[(j+1)*nx+i+1]*a)*b;};
+    const tilt=CP.tilt!=null?CP.tilt:0.93,FY=cy-(CP.y!=null?CP.y:-0.004),LIFT=CP.lift!=null?CP.lift:0.003,cT=Math.cos(tilt);
+    const put=(x,yl,k)=>{const y=FY+yl*cT,z0=surf(x,y),hx=(surf(x+0.004,y)-surf(x-0.004,y))/0.008,hy=(surf(x,y+0.004)-surf(x,y-0.004))/0.008,nl=Math.hypot(hx,hy,1);return [x-hx/nl*k,y-hy/nl*k,z0+k/nl,-hx/nl,-hy/nl,1/nl];};
+    const FD=0.004;
+    [-1,1].forEach(s=>{const sh=outline(s);const g=new T.ExtrudeGeometry(sh,{depth:FD,bevelEnabled:true,bevelThickness:0.0015,bevelSize:0.0015,bevelSegments:2,curveSegments:6});const A=g.attributes.position,N0=g.attributes.normal.array.slice(),SN=[];
+     for(let i=0;i<A.count;i++){const q=put(A.getX(i),A.getY(i),LIFT+A.getZ(i));A.setXYZ(i,q[0],q[1],q[2]);SN.push(q[3],q[4],q[5]);}
+     g.computeVertexNormals();{const Nn=g.attributes.normal;for(let i=0;i<Nn.count;i++){const nz=N0[i*3+2];if(Math.abs(nz)>0.9){const sg_=nz>0?1:-1;Nn.setXYZ(i,SN[i*3]*sg_,SN[i*3+1]*sg_,SN[i*3+2]*sg_);}}}
+     tag(mesh(g,colM,chest,0,0,0),'fold');
+     const op=sh.getSpacedPoints(48).slice(0,-1).map(p=>{const q=put(p.x,p.y,LIFT+FD*0.5);return new T.Vector3(q[0],q[1],q[2]);});
+     tag(mesh(new T.TubeGeometry(new T.CatmullRomCurve3(op,true),sg(96),PP*0.5+0.0015,6,true),trim2,chest,0,0,0),'pipe');});}
    const pl=mesh(new T.BoxGeometry(.05,.1,.01),shirtPlain,chest,0,cy-.075,t.rz*.93*BK[1]);pl.rotation.x=-.3;tag(pl,'placket');}
   const neck=pivot(chest,0,t.y1-P.leg.hipY-CH,0);mesh(cap(0.078,0.084,0.09),skin,neck,0,0.07,0.01);
   const head=pivot(neck,0,P.head.c[1]-t.y1,P.head.c[2]);const FP=v3Head(head,L,skin,hairM);
