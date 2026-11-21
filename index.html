@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<script>window.TOPS_BUILD="1795262264461";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795271095254";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -14818,7 +14818,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.22';
+window.TOPS_VER='4.23';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -15449,7 +15449,7 @@ function rulesBtn(){let b=$('btnRules');const on=!!(S&&S.pub&&!S.done&&['hub','f
  b.hidden=!on;}
 setInterval(rulesBtn,700);
 })();
-</script><script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',0.78)</script>
+</script><script>window.TOPS_LOAD&&TOPS_LOAD.part('parse',0.77)</script>
 <style>.mpb-cards{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(198,243,107,.16);color:#C6F36B;font:700 11px/1.5 Manrope,sans-serif;letter-spacing:0;text-transform:none}</style>
 <style>
 /* v0.95: Vape Cloud is a drifting cloud, not a block. Thick in the middle of the board, wispy edges */
@@ -21030,7 +21030,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-trn{font:800 21px/1 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;color:var(--ink)}
 #rbApp .s3-trup,#rbApp .s3-trnow{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;white-space:nowrap}
 #rbApp .s3-trup{background:rgba(127,209,154,.14);color:var(--good,#7fd19a)}#rbApp .s3-trnow{background:var(--card2,#22272b);color:var(--ink2)}
-#rbApp .s3-shelf{list-style:none;margin:0;padding:0 0 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-bottom:6px solid #3a2b1e;border-radius:0 0 4px 4px;box-shadow:0 10px 12px -8px #000}
+#rbApp .s3-shelf{list-style:none;margin:0;padding:0 0 10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;border-bottom:6px solid #3a2b1e;border-radius:0 0 4px 4px;box-shadow:0 10px 12px -8px #000}
 #rbApp .s3-tr{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
 #rbApp .s3-tr b{font:800 15px/1.05 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;color:var(--ink);overflow-wrap:break-word;hyphens:auto;max-width:100%}
 #rbApp .s3-tr span{font-size:11.5px;line-height:1.25;color:var(--ink3)}#rbApp .s3-tr small{font-size:11px;color:var(--ink3)}
@@ -21050,6 +21050,40 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-broke{display:flex;flex-direction:column;gap:10px}
 /* CAR-CARD: the back-to-tour rest button keeps "Back to the DPNZ Tour" on one line at 360 */
 @media (max-width:374px){#rbApp .s3-restback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}
+#rbApp .s3-trgap{border-style:dashed;padding:10px 14px}
+#rbApp .s3-trback{align-self:flex-start;display:inline-flex;align-items:center;min-height:40px;padding:0 12px;margin:-4px 0 -4px -4px;border:0;background:none;color:var(--ink2);font-weight:700;font-size:14px;cursor:pointer}
+/* ---------- EXP-IDLE 4 · rest week and broke week (behind s3x=1) ---------- */
+#rbApp .s3-wk{gap:10px;padding:12px 14px}
+#rbApp .s3-wkk{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+#rbApp .s3-wkline li{flex-direction:column;gap:1px;height:44px;padding:0 4px}
+#rbApp .s3-wkline li small{font-size:10.5px;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rbApp .s3-wkline .s3-wkrest{color:var(--ink2)}
+#rbApp .s3-wkline .s3-wkev{background:linear-gradient(180deg,#4a1418,#2a1214);color:var(--ink);outline:1px solid rgba(215,35,45,.6)}
+#rbApp .s3-wkev2{height:64px;border-radius:10px;display:flex;align-items:flex-end;padding:8px 10px;position:relative;overflow:hidden}
+#rbApp .s3-wkev2::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(8,9,11,.85))}
+#rbApp .s3-wkev2 span{position:relative;z-index:1;font-size:12px;font-weight:700;color:var(--ink2)}
+#rbApp .s3-wk .s3-neg{color:#f08a8f}
+#rbApp .s3-wklink{align-self:center;min-height:40px;padding:0 12px;border:0;background:none;color:var(--ink2);font-weight:700;font-size:14px;cursor:pointer}
+#rbApp .s3-bkopt{width:100%;text-align:left;align-items:flex-start}
+#rbApp .rb-ghost.s3-bkopt{display:flex;flex-direction:column;gap:3px;height:auto;min-height:56px;padding:10px 16px;border-radius:12px}
+#rbApp .rb-ghost.s3-bkopt b{font:800 18px/1.1 var(--d);text-transform:uppercase;color:var(--ink)}
+#rbApp .rb-ghost.s3-bkopt small{font-size:12.5px;line-height:1.3;color:var(--ink2);font-weight:500}
+#rbApp .rb-primary.s3-bkopt small{line-height:1.3}
+#rbApp .s3-wkline .s3-rpoff{opacity:.8;color:var(--ink3)}
+/* 320 px: five Season 3 tabs fit their labels (PRACTICE was clipped) */
+@media (max-width:350px){html.s3-on #rbApp .rb-tabs button{font-size:12px;letter-spacing:0}}
+/* ---------- 4b ---------- */
+#rbApp .s3-ctx{position:sticky;top:-12px;z-index:6;margin:0 -16px -4px;padding:10px 16px 8px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .15s}
+#rbApp .s3-ctx>span{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rbApp .s3-ctx>span b{color:var(--ink)}
+#rbApp .s3-ctx.on{border-bottom-color:var(--line);box-shadow:0 8px 10px -8px rgba(0,0,0,.6)}
+#rbApp .s3-wkh{gap:3px}
+#rbApp .s3-wkh .s3-wkup{font:800 italic 30px/.95 var(--d);text-transform:uppercase;letter-spacing:.3px;color:var(--ink)}
+#rbApp .s3-wkh .s3-wkevn{font:700 20px/1.15 var(--b);text-transform:none;color:var(--ink);letter-spacing:0}
+#rbApp .s3-wkh .s3-wksub{font-size:15px;font-weight:600;color:var(--ink2)}
+#rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */
+#rbApp .s3-wkh .s3-wkup .s3-nw{white-space:nowrap;font:inherit;color:inherit;letter-spacing:inherit}
+@media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
 </style>
 <script>window.TOPS_S3_HAVE=["assets/cards/art/anderson.webp","assets/cards/art/anika.webp","assets/cards/art/bagofnails.webp","assets/cards/art/barneveld.webp","assets/cards/art/bigmal.webp","assets/cards/art/bounceout.webp","assets/cards/art/bust.webp","assets/cards/art/chalker.webp","assets/cards/art/club.webp","assets/cards/art/comeback.webp","assets/cards/art/db_16.webp","assets/cards/art/db_161.webp","assets/cards/art/db_164.webp","assets/cards/art/db_167.webp","assets/cards/art/db_4.webp","assets/cards/art/db_8.webp","assets/cards/art/db_bnb.webp","assets/cards/art/db_bull.webp","assets/cards/art/db_marker.webp","assets/cards/art/db_shotgun.webp","assets/cards/art/db_threebed.webp","assets/cards/art/db_top.webp","assets/cards/art/deano.webp","assets/cards/art/dpnz.webp","assets/cards/art/green.webp","assets/cards/art/humphries.webp","assets/cards/art/jonno.webp","assets/cards/art/kauri.webp","assets/cards/art/kev.webp","assets/cards/art/kw_jandals.webp","assets/cards/art/kw_jug.webp","assets/cards/art/kw_karaoke.webp","assets/cards/art/kw_leaner.webp","assets/cards/art/kw_pokies.webp","assets/cards/art/kw_quiz.webp","assets/cards/art/kw_smoko.webp","assets/cards/art/kw_tab.webp","assets/cards/art/lastorders.webp","assets/cards/art/madhouse.webp","assets/cards/art/matchdart.webp","assets/cards/art/mo.webp","assets/cards/art/nuke.webp","assets/cards/art/oche.webp","assets/cards/art/palace.webp","assets/cards/art/papakura.webp","assets/cards/art/pete.webp","assets/cards/art/phil.webp","assets/cards/art/power.webp","assets/cards/art/pr_bouncer.webp","assets/cards/art/pr_bump.webp","assets/cards/art/pr_cooker.webp","assets/cards/art/pr_flash.webp","assets/cards/art/pr_heckle.webp","assets/cards/art/pr_horn.webp","assets/cards/art/pr_nan.webp","assets/cards/art/pr_orders.webp","assets/cards/art/pr_vape.webp","assets/cards/art/pr_wobble.webp","assets/cards/art/price.webp","assets/cards/art/raffle.webp","assets/cards/art/rd_bigscreen.webp","assets/cards/art/rd_caller.webp","assets/cards/art/rd_crowd.webp","assets/cards/art/rd_draw.webp","assets/cards/art/rd_handshake.webp","assets/cards/art/rd_hotel.webp","assets/cards/art/rd_practice.webp","assets/cards/art/rd_qschool.webp","assets/cards/art/rd_sponsor.webp","assets/cards/art/rd_tourcard.webp","assets/cards/art/rd_travel.webp","assets/cards/art/regional.webp","assets/cards/art/robbed.webp","assets/cards/art/robin.webp","assets/cards/art/rsa.webp","assets/cards/art/shazza.webp","assets/cards/art/sherlock.webp","assets/cards/art/smith.webp","assets/cards/art/tama.webp","assets/cards/art/the170.webp","assets/cards/art/tl_airport.webp","assets/cards/art/tl_autograph.webp","assets/cards/art/tl_champ.webp","assets/cards/art/tl_physio.webp","assets/cards/art/tl_press.webp","assets/cards/art/tl_ref.webp","assets/cards/art/tl_ritual.webp","assets/cards/art/tl_rival.webp","assets/cards/art/tl_tunnel2.webp","assets/cards/art/tn_407.webp","assets/cards/art/tn_5am.webp","assets/cards/art/tn_biter.webp","assets/cards/art/tn_cruiser.webp","assets/cards/art/tn_daisy.webp","assets/cards/art/tn_donkey.webp","assets/cards/art/tn_hotsauce.webp","assets/cards/art/tn_king.webp","assets/cards/art/tn_maddog.webp","assets/cards/art/tn_pie.webp","assets/cards/art/tn_sammo.webp","assets/cards/art/tn_stickers.webp","assets/cards/art/tn_stu.webp","assets/cards/art/tn_tard.webp","assets/cards/art/tn_tow.webp","assets/cards/art/tn_warship.webp","assets/cards/art/transtasman.webp","assets/cards/art/tunnel.webp","assets/cards/art/water.webp","assets/cards/art/whitewash.webp","assets/cards/art/wigan.webp","assets/cards/art/wobble.webp","assets/cards/art/wright.webp","assets/cards/art/wrongdouble.webp","assets/creator/full_dazza.png","assets/creator/full_kai.png","assets/creator/full_mia.png","assets/creator/full_ray.png","assets/creator/full_tama.png","assets/creator/head_dazza.png","assets/creator/head_kai.png","assets/creator/head_mia.png","assets/creator/head_ray.png","assets/creator/head_tama.png","assets/crowd.webp","assets/rb/backroom.jpg","assets/rb/lk_f.jpg","assets/rb/lk_f_mask.png","assets/rb/lk_m.jpg","assets/rb/lk_m_mask.png","assets/rb/opp_bigmal.jpg","assets/rb/result_loss.jpg","assets/rb/result_win.jpg","assets/rb/t_arena.webp","assets/rb/t_hero.webp","assets/rb/tn_t0.jpg","assets/rb/tn_t0f.jpg","assets/rb/tn_t1.jpg","assets/rb/tn_t1f.jpg","assets/rb/tn_t2.jpg","assets/rb/tn_t2f.jpg","assets/rb/tn_t3.jpg","assets/rb/tn_t3f.jpg","assets/rb/tn_t4.jpg","assets/rb/tn_t4f.jpg","assets/rb/tn_t5.jpg","assets/rb/tn_t5f.jpg","assets/rb/tn_t6.jpg","assets/rb/tn_t6f.jpg","assets/rb/venue_t0.jpg","assets/rb/venue_t1.jpg","assets/rb/venue_t2.jpg","assets/rb/venue_t3.jpg","assets/rb/venue_t4.jpg","assets/rb/venue_t5.jpg","assets/rb/venue_t6.jpg","assets/rb/w_win_t0.jpg","assets/rb/w_win_t1.jpg","assets/rb/w_win_t2.jpg","assets/rb/w_win_t3.jpg","assets/rb/w_win_t4.jpg","assets/rb/w_win_t5.jpg","assets/rb/w_win_t6.jpg","assets/ui/bg_club.webp","assets/ui/bg_pub.webp","assets/ui/bg_stage.webp","assets/ui/card_crowd.webp","assets/ui/card_gang.webp","assets/ui/card_heckle.webp","assets/ui/card_invasion.webp","assets/ui/card_pass.webp","assets/ui/card_stare.webp","assets/ui/card_steady.webp","assets/ui/card_tap.webp","assets/ui/card_turns.webp","assets/ui/card_wing.webp","assets/ui/th_backroom.webp","assets/ui/th_local.webp","assets/ui/th_practice.webp","assets/venue/club_brew.webp","assets/venue/club_raffle.webp","assets/venue/club_team.webp","assets/venue/club_throw.webp","assets/venue/plate_5.webp","assets/venue/pub_1.webp","assets/venue/pub_2.webp","assets/venue/pub_3.webp","assets/venue/pub_4.webp","img/bets/hot.jpg","img/bets/steady.jpg","img/bets/tight.jpg","img/menu.jpg","img/menu_0.jpg","img/menu_1.jpg","img/menu_2.jpg","img/menu_3.jpg","img/splash.jpg","img/v0.jpg","img/v1.jpg","img/v2.jpg","img/v3.jpg","img/v4.jpg","img/v5.jpg","img/v6.jpg","plates/club_oche.webp","plates/club_walk.webp","plates/dpnz_oche.webp","plates/dpnz_walk.webp","plates/opens_oche.webp","plates/opens_walk.webp","plates/palace_oche.webp","plates/palace_walk.webp","plates/pub_oche.webp","plates/pub_walk.webp","plates/tc_oche.webp","plates/tc_walk.webp","plates/tt_oche.webp","plates/tt_walk.webp"];
 // TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
@@ -21166,7 +21200,9 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
   function pending(c) {
     const was = seenGet(), now = snap(c);
     if (!was) { seenSet(now); return null; }
-    if (now.h > was.h) { const rec = c.history[c.history.length - 1]; return { kind: 'done', rec, up: now.lv !== was.lv ? { from: was.lv, to: now.lv } : null, now }; }
+    if (now.h > was.h) { const rec = c.history[c.history.length - 1], C = CI();
+      if (!rec || typeof rec !== 'object' || !C || !C.eventOf(rec.id) || !C.LEVELS[rec.level]) { seenSet(now); return null; }   /* a broken or unknown last result: nothing to announce, never a crash */
+      return { kind: 'done', rec, up: now.lv !== was.lv ? { from: was.lv, to: now.lv } : null, now }; }
     if (now.id && now.id === was.id && (now.r > was.r || now.g > was.g)) return { kind: 'round', now };
     if (now.lv !== was.lv) return { kind: 'level', up: { from: was.lv, to: now.lv }, now };
     if (now.id !== was.id || now.r !== was.r) { seenSet(now); }   // booked a new event, nothing to announce
@@ -21200,11 +21236,12 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     return head + seg + body + records(c) + (isO ? '' : '');
   }
   /* 'N titles' on the level card: opens Locker > Trophies (EXP-IDLE 3, behind s3x=1); hidden until there's something on the shelf */
-  function trChip(c) { const ts = c.titles || [], w = ts.filter(t => t.finish === 'W').length, f = ts.length - w; if (!ts.length) return '';
+  function trChip(c) { const d = shelfData(c, CI()), w = d.titles, f = d.runnerUp; if (d.empty) return '';
     return `<button type="button" class="s3-trchip" data-s3="troph">${CUP(w ? 'W' : 'F', 's3cupchip')}<span>${w ? w + ' title' + (w > 1 ? 's' : '') : f + ' final' + (f > 1 ? 's' : '')}</span><i aria-hidden="true">›</i></button>`; }
   function week(c) {
     const C = CI(), cal = C.calendar(c);
     /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
+    if (!cal.length && X) return restX(c);   /* EXP-IDLE 4 (behind s3x=1): the rest week in the result-screen pattern */
     if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
       /* CAR-CARD (Q&D, Producer 23:26): when the tap sends you back to the DPNZ Tour, the card says so before the tap */
       const pl = C.restPlan ? C.restPlan(c) : null;
@@ -21215,14 +21252,61 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
       <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
     let h = '';
     /* CAR-DEADWK layout (Q&D): when broke, the way out comes first, above the posters you can't afford */
-    if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
+    if (C.broke(c) && X) h += brokeX(c);   /* EXP-IDLE 4 (behind s3x=1) */
+    else if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
       h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
       ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
-    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
+    const noNeed = X && C.broke(c) && C.recoveryOffer && !!C.recoveryOffer(c);   /* 4b (C): while the recovery card offers a way in, the posters drop their greyed 'Need $X' button */
+    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e, noNeed)).join('');
     return h;
   }
-  function poster(c, e) {
+  /* ---------- EXP-IDLE 4 · rest week and broke week (behind s3x=1), on Career's CAR-DEADWK data (nextEventWeek, restWeek, recoveryOffer, broke).
+     Same pattern as the result screen: a kicker, one plain headline, the facts as rows, one red action that says exactly what it does. ---------- */
+  /* 4b (A): the section header above the rest or broke card names the level and week and pins to the top of the scroller, so the level
+     isn't lost when the page opens scrolled to the card. wire() adds its divider once the level card has scrolled away. */
+  const ctxLine = (c, tag) => `<div class="s3-ctx"><span><b>${esc(CI().LEVELS[c.level].n)}</b> · Week ${c.week}${tag ? ' · ' + tag : ''}</span></div>`;
+  function restX(c) {
+    const C = CI(), L = C.LEVELS[c.level], nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
+    /* CAR-CARD (4.22): when the tap sends you back to the DPNZ Tour (no Tour Card and Q-School far off, or nothing left at this level), say
+       exactly that, in Career's words, never 'On to week N' */
+    const pl = C.restPlan ? C.restPlan(c) : null;
+    if (pl && pl.back === 'dpnz') { const qs = pl.why === 'qschool', from = C.LEVELS[pl.fromLevel], pts = pl.carry + ' point' + (pl.carry === 1 ? '' : 's') + ' carry over';
+      return ctxLine(c) + `<div class="s3-rp s3-wk s3-wkback">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">${qs ? 'Waiting for <span class="s3-nw">Q-School</span>' : 'Nothing left on'}</b><span class="s3-wksub">${qs ? `Q-School is in week ${pl.qsWeek}. Wait on the DPNZ Tour until then` : `Nothing left on at the ${esc(from.n)} for you. Back to the DPNZ Tour for a new season`}</span><span>${qs ? 'The DPNZ Tour runs every week, so you keep playing while you wait.' : 'The DPNZ Tour runs every week.'}</span></div>
+      <div class="s3-wkev2" style="background:url(${lvArt(3)}) 30% 62%/cover no-repeat,${GRAD[3]}"><span>${esc(C.LEVELS[3].n)} · every week</span></div>
+      <div class="s3-rpbar">${qs ? `<div class="s3-rprow"><span>Q-School</span><b>Week ${pl.qsWeek}</b></div><div class="s3-rprow"><span>Your Q-School place</span><b>Kept</b></div>` : ''}
+        <div class="s3-rprow"><span>DPNZ points into the new season</span><b>${pl.carry}</b></div><div class="s3-rprow"><span>Tour budget</span><b>${money(c.bank)}</b></div></div>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>Back to the DPNZ Tour</b><small>${qs ? 'Q-School place kept · ' : ''}${pts}</small></button></div>`; }
+    if (nx == null) return ctxLine(c, 'rest week') + `<div class="s3-rp s3-wk"><div class="s3-rph s3-wkh"><b class="s3-wkup">Nothing on</b><span>No event at ${esc(L.n)} in the next ${C.REST_SCAN || 156} weeks. Play a money match or practise.</span></div>
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="toprac">Practice</button></div></div>`;
+    const gap = nx - c.week, evs = C.calendar(Object.assign({}, c, { week: nx })), e = evs.slice().sort((a, b) => a.cost - b.cost)[0], win = C.prizeFor(e, 'W'), can = c.bank >= e.cost;
+    /* the weeks between: now (resting), the skipped ones, the event week. More than 5 skipped fold into one '… N weeks' cell */
+    const mid = gap - 1, cells = [`<li class="s3-rpnow s3-wkrest"><b>Wk ${c.week}</b><small>Rest</small></li>`]
+      .concat(mid > 5 ? [`<li class="s3-rpoff"><b>…</b><small>${mid} weeks</small></li>`] : Array.from({ length: mid }, (_, i) => `<li class="s3-rpoff"><b>Wk ${c.week + 1 + i}</b><small>Rest</small></li>`))
+      .concat([`<li class="s3-rpnext s3-wkev"><b>Wk ${nx}</b><small>${esc(TOWN(e.n).split(' · ')[0])}</small></li>`]).join('');
+    return ctxLine(c, 'rest week') + `<div class="s3-rp s3-wk">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">Next up</b><b class="s3-wkevn">${esc(e.n)}</b><span>${gap > 1 ? `Week ${nx}. Nothing on at ${esc(L.n)} for ${gap} weeks.` : `Week ${nx}. Nothing on at ${esc(L.n)} this week.`}</span></div>
+      <ol class="s3-rpdraw s3-wkline" aria-label="Weeks to the next event">${cells}</ol>
+      <div class="s3-wkev2" style="background:url(${lvArt(e.level)}) 30% 62%/cover no-repeat,${GRAD[e.level]}"><span>${esc(e.where || L.n)}</span></div>
+      <div class="s3-rpbar"><div class="s3-rprow"><span>Winner takes</span><b>${money(win)}</b></div><div class="s3-rprow"><span>To enter${e.travel ? ' (entry + travel)' : ''}</span><b>${money(e.cost)}</b></div>
+        <div class="s3-rprow"><span>Tour budget</span><b class="${can ? '' : 's3-neg'}">${money(c.bank)}${can ? '' : ` · short ${money(e.cost - c.bank)}`}</b></div></div>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${gap > 1 ? 'Skip to week ' + nx : 'On to week ' + nx}</b><small>${gap > 1 ? gap + ' weeks on · ' : ''}${esc(TOWN(e.n).split(' · ')[0])} is next</small></button>
+      <button class="s3-wklink" type="button" data-s3="toprac">Practise first ›</button></div>`;
+  }
+  function brokeX(c) {
+    const C = CI(), ro = C.recoveryOffer ? C.recoveryOffer(c) : null, cal = C.calendar(c), cheap = cal.slice().sort((a, b) => a.cost - b.cost)[0];
+    const mm = (typeof MM_PAY !== 'undefined' && MM_PAY[c.level]) || null;
+    const opt = (k, cls, t, d) => `<button class="${cls} s3-grow s3-bkopt" type="button" data-s3="${k}"><b>${t}</b><small>${d}</small></button>`;
+    return ctxLine(c) + `<div class="s3-rp s3-wk s3-bk">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">Get back on tour</b><span class="s3-wksub">Can't afford a trip this week</span></div>
+      <div class="s3-rpbar"><div class="s3-rprow"><span>Cheapest trip${cheap ? ' · ' + esc(TOWN(cheap.n).split(' · ')[0]) : ''}</span><b>${cheap ? money(cheap.cost) : '–'}</b></div><div class="s3-rprow"><span>Tour budget</span><b class="s3-neg">${money(c.bank)}</b></div>
+        ${c.debt ? `<div class="s3-rprow"><span>You owe</span><b class="s3-neg">${money(c.debt)}</b></div>` : ''}</div>
+      ${ro ? opt('rec', 'rb-primary', 'Recovery entry', `${esc(ro.n)}, ${money(ro.cost)} covered. You'll owe ${money((c.debt || 0) + ro.cost)}${c.debt ? ' in total' : ''}, paid back from half of each prize.`) : ''}
+      ${opt('mm', 'rb-ghost', 'Money match', `Best of 3 in the back room${mm ? `. Win it for ${money(mm)}` : ''}. Nothing to lose.`)}
+      ${c.debt ? '' : opt('adv', 'rb-ghost', 'Hardship advance', 'Two entries paid now, paid back from half of each prize.')}</div>`;
+  }
+  function poster(c, e, noNeed) {
     const C = CI(), L = C.LEVELS[e.level];
     const fmt = e.kind === 'groupko' ? `Group of 4, then ${e.size / 2}-player knockout` : `${e.size}-player knockout`;
     const win = C.prizeFor(e, 'W'), pts = C.pointsFor(e, 'W');
@@ -21232,7 +21316,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
       <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
         <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
         ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
-          : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
+          : noNeed ? '' : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
       </div></article>`;
   }
   function live(c) {
@@ -21384,7 +21468,10 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
   const s3Head = () => { try { if (typeof S === 'undefined' || !S || !S.s3 || !CI()) return; const e = CI().eventOf(S.s3.id), t = (e ? e.n + ' · ' : '') + roundName(S.s3.round);
     /* the in-match strip leads with the round, so a long venue is what gets trimmed, never the round (Delivery QA 14:42: it ran under MENU at 390) */
     const ts = roundName(S.s3.round) + (e ? ' · ' + e.n : '');
-    [['introTier', t], ['eventTier', ts]].forEach(([id, tx]) => { const el = $id(id); if (el && el.textContent !== tx && !/^Leg |^Bull up/.test(el.textContent)) { el.textContent = tx; el.title = tx; } }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
+    [['introTier', t], ['eventTier', ts]].forEach(([id, tx]) => { const el = $id(id); if (!el || el.dataset.s3v === el.innerHTML && el.dataset.s3t === tx || /^Leg |^Bull up/.test(el.textContent)) return;
+      /* the walk-on card wraps: the round sits whole on its own line ('KAURI ARMS LEAGUE NIGHT ·' / 'QUARTER-FINAL'), never split at its hyphen */
+      if (id === 'introTier' && e) el.innerHTML = `<span>${esc(e.n)}&nbsp;·</span> <span style="white-space:nowrap">${esc(roundName(S.s3.round))}</span>`; else el.textContent = tx;
+      el.title = tx; el.dataset.s3t = tx; el.dataset.s3v = el.innerHTML; }); const v = $id('introVenue'); if (v && e) v.textContent = e.where; } catch (e) {} };
   if (typeof beginMatch === 'function') { const _bm = beginMatch; beginMatch = function () { const r = _bm.apply(this, arguments); setTimeout(s3Head, 0); setTimeout(s3Head, 400); return r; }; }
 
   /* the first message after the creator: a Circuit league night, not the old 'Pub league' */
@@ -21452,10 +21539,19 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
   }
 
   /* ---------- wiring into the rebrand shell (rb.js calls these) ---------- */
-  let shell = null, nav = null, annT = 0;
+  let shell = null, nav = null, annT = 0, chipFrom = null;   /* chipFrom: Trophies was opened from the Circuit's titles chip (its ‹ Circuit button returns there) */
   function render() { if (shell) shell(); }
+  /* trophy names never break inside a word: a name whose longest word doesn't fit its card steps down 15 → 11 px (the cards keep their size) */
+  const wordSplit = el => { const n = el.firstChild; if (!n || n.nodeType !== 3) return false; const t = n.textContent; let i = 0;
+    for (const w of t.split(/([ \-])/)) { if (w && w !== ' ' && w !== '-') { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + w.length); if (new Set([...r.getClientRects()].map(q => Math.round(q.top))).size > 1) return true; } i += w.length; } return false; };
+  function fitNames(app) { app.querySelectorAll('.s3-tr b').forEach(b => { b.style.fontSize = ''; for (let px = 14; px >= 11 && (wordSplit(b) || b.scrollWidth > b.clientWidth + 1); px--) b.style.fontSize = px + 'px'; }); }
   function wire() {
     const app = $id('rbApp'); if (!app) return;
+    const cx = app.querySelector('.s3-ctx'), lvc = app.querySelector('.s3-lv'), scr = app.querySelector('.rb-scr');
+    if (wire.cxIO) { wire.cxIO.disconnect(); wire.cxIO = null; }
+    if (cx && lvc && scr) { const r = lvc.getBoundingClientRect(), sr = scr.getBoundingClientRect(); cx.classList.toggle('on', r.bottom <= sr.top || r.top >= sr.bottom);   /* right away, then on scroll */
+      if ('IntersectionObserver' in window) { wire.cxIO = new IntersectionObserver(es => es.forEach(en => { const x = document.querySelector('#rbApp .s3-ctx'); if (x) x.classList.toggle('on', !en.isIntersecting); }), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); } }
+    if (app.querySelector('.s3-tr b')) { fitNames(app); if (!wire.fitRs) { wire.fitRs = 1; let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const a = $id('rbApp'); if (a) fitNames(a); }, 120); }); } }
     app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
     app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
@@ -21467,7 +21563,9 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
       else if (k === 'rest') { const r = D.rest(); if (!r || !r.ok) toast(`<b>Can't move on</b><span>${esc((r && r.why) || '')}</span>`); render(); }
       else if (k === 'rec') { const r = D.recover(); if (r && r.ok) { toast(`<b>Entered · ${money(r.cost)} covered</b><span>Half of each prize pays it back</span>`); render(); D.play(); } else { toast(`<b>No recovery entry</b><span>${esc((r && r.why) || '')}</span>`); render(); } }
       else if (k === 'hist') histSheet();
-      else if (k === 'troph' && nav) nav('locker', 'troph'); });
+      else if (k === 'troph' && nav) { const sc = document.querySelector('#rbMain .rb-scr'); chipFrom = { scroll: sc ? sc.scrollTop : 0 }; nav('locker', 'troph'); }
+      else if (k === 'toprac' && nav) nav('practice');
+      else if (k === 'trback' && nav) { const y = chipFrom ? chipFrom.scroll : 0; chipFrom = null; nav('circuit'); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = y; } });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
     /* not while the between-match reset is about to reload the page (ENG-RESET): the result would show behind the loader and be lost */
     /* nor while the loading screen still covers the page (the fresh page after the reset): wait for it to lift, then show it once */
@@ -21552,38 +21650,68 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
       <path d="M18 10h3v9a6 6 0 0 0 1.5 4" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" fill="none" stroke-linecap="round"/>
       <rect x="12" y="39" width="24" height="5" rx="1.5" fill="#3a2b1e"/><rect x="15" y="40.5" width="18" height="2" rx="1" fill="url(#${id})" opacity=".8"/></svg>`; };
   let shelfHi = null, shelfHiAt = 0;
+  /* The shelf's numbers, from the save alone (pure, so tests can feed it real and broken saves).
+     - Trophies: Career's titles (wins W and lost finals F, kept from day one), plus any W/F in the circuit history that has no title of its own
+       (a save from before titles were kept). One event result is one trophy: each history entry pairs with at most one title.
+     - A winner is never a runner-up: W and F come from the single finish of that event.
+     - complete: the history holds every finished event (weeks 1 … week-1, one each, in order; the week only moves on when an event
+       finishes). Then a title with no result of its own is a duplicate and is dropped. If not complete, a missing trophy reads
+       "No record", never "Not won". */
+  function shelfData(k, C) {
+    k = k && typeof k === 'object' ? k : {}; const LV = C && Array.isArray(C.LEVELS) ? C.LEVELS : [];
+    const num = (x, d) => (typeof x === 'number' && isFinite(x) ? x : d), fin = x => (x === 'W' || x === 'F' ? x : null);
+    const hs = (Array.isArray(k.history) ? k.history : []).filter(h => h && typeof h === 'object');
+    const ts = (Array.isArray(k.titles) ? k.titles : []).filter(t => t && typeof t === 'object' && fin(t.finish) && t.ev);
+    const level = Math.max(0, Math.min(LV.length - 1, Math.floor(num(k.level, 0)))), week = Math.max(1, Math.floor(num(k.week, 1)));
+    const complete = hs.length === week - 1 && hs.every((h, i) => h.week === i + 1);
+    const used = new Set(), out = [];
+    ts.forEach(t => { const i = hs.findIndex((h, j) => !used.has(j) && h.id === t.ev && h.fin === t.finish); const h = i >= 0 ? hs[i] : null; if (h) used.add(i);
+      else if (complete) return;   /* every finished event is in the history, so a title with no result of its own is a second copy: dropped */
+      out.push({ ev: t.ev, finish: t.finish, prize: num(t.prize, h ? num(h.prize, null) : null), week: h && num(h.week, null) != null ? h.week : null, level: num(t.level, h ? num(h.level, null) : null) }); });
+    hs.forEach((h, j) => { if (!used.has(j) && fin(h.fin) && h.id) out.push({ ev: h.id, finish: h.fin, prize: num(h.prize, null), week: num(h.week, null), level: num(h.level, null), fromHistory: true }); });
+    const W = out.filter(t => t.finish === 'W').length, F = out.filter(t => t.finish === 'F').length;
+    const prize = Math.max(hs.reduce((a, h) => a + Math.max(0, num(h.prize, 0)), 0), out.reduce((a, t) => a + Math.max(0, t.prize || 0), 0));   // never less than the trophies' own prizes
+    const leftAt = i => { if (i >= level) return null; const l = hs.filter(h => num(h.level, -1) === i && num(h.week, null) != null).slice(-1)[0]; return l ? l.week : null; };
+    return { trophies: out, titles: W, runnerUp: F, finals: W + F, prize, complete, level, week, leftAt, empty: !out.length };
+  }
   function shelf() {
     try {
       if (!X || !CI() || !D.st()) return null;
-      const C = CI(), k = D.st(), c = typeof career === 'function' ? career() : null, ts = k.titles || [], hs = k.history || [];
-      const W = ts.filter(t => t.finish === 'W'), F = ts.filter(t => t.finish === 'F'), prize = hs.reduce((a, h) => a + (h.prize || 0), 0);
-      /* the week of each title: its own history entry (same event, same finish), taken in order */
-      const used = new Set(), weekOf = t => { const i = hs.findIndex((h, j) => !used.has(j) && h.id === t.ev && (t.finish === 'W' ? h.fin === 'W' : h.fin === 'F')); if (i < 0) return null; used.add(i); return hs[i].week; };
-      const tw = ts.map(t => Object.assign({ week: weekOf(t) }, t));
-      const lv = C.LEVELS[k.level];
-      const hero = `<section class="s3-trh"><div class="s3-lvart" style="background:url(${lvArt(k.level)}) 50% 40%/cover no-repeat,${GRAD[k.level]}"></div><div class="s3-lvsh"></div>
-        <div class="s3-trk"><div><small>Titles</small><b>${W.length}</b></div><div><small>Finals</small><b>${W.length + F.length}</b></div><div><small>Prize money</small><b>${money(prize)}</b></div></div></section>`;
-      /* best leg: career().best.leg is what lbPost sends to the board, so this number and the board's "Yours" always agree */
-      const b = c && c.best, leg = b && b.leg < 99 ? b.leg : null, at = b && b.legAt && b.legAt.d === leg ? b.legAt : null;
-      const rec = Array.isArray(blRows) && blRows[0] ? blRows[0] : null, recTxt = rec ? (rec.you ? (rec.darts === leg ? 'You hold the Season 3 record' : '') : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`) : '';
-      const bl = leg ? `<div class="s3-trbl"><b>${leg}<small>darts</small></b><div><span class="s3-trbll">Your best leg · Season 3</span><span>${at ? `${esc(at.ev)} · week ${at.week}` : 'Fewest darts in a won leg'}</span>${recTxt ? `<small>${recTxt}</small>` : ''}</div></div>`
-        : `<div class="s3-trbl s3-tre"><b>–</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>Win a 501 leg in the Circuit to set one</span></div></div>`;
-      const empty = !ts.length ? `<div class="rb-card s3-tremp"><span class="rb-t2">Your shelf is empty</span><span class="rb-sub">Win an event, or reach a final, and the trophy goes here. ${esc(lv.events[0].n)} pays ${money(C.prizeFor(C.eventOf(lv.events[0].id), 'W'))} to the winner.</span></div>` : '';
+      const C = CI(), k = D.st(), c = typeof career === 'function' ? career() : null, d = shelfData(k, C);
+      const lv = C.LEVELS[d.level];
+      const hero = `<section class="s3-trh"><div class="s3-lvart" style="background:url(${lvArt(d.level)}) 50% 40%/cover no-repeat,${GRAD[d.level]}"></div><div class="s3-lvsh"></div>
+        <div class="s3-trk"><div><small>Titles</small><b>${d.titles}</b></div><div><small>Finals</small><b>${d.finals}</b></div><div><small>Prize money</small><b>${money(d.prize)}</b></div></div></section>`;
+      const gap = d.complete ? '' : `<div class="rb-card s3-trgap"><span class="rb-sub">Some earlier results aren't in this save, so the shelf shows only what's on record.</span></div>`;
+      /* best leg: your own number is career().best.leg (what lbPost sends to the board). The Season 3 record is the board's top row, shown
+         as its own line and never in place of yours. */
+      const b = c && c.best, leg = b && typeof b.leg === 'number' && b.leg > 0 && b.leg < 99 ? b.leg : null, at = b && b.legAt && b.legAt.d === leg ? b.legAt : null;
+      const B = window.TOPS_BESTLEG; if (B && B.table) blAt = fetchOnce(() => B.table(), blAt, r => { blRows = r; }, () => { const el = $id('s3TrBl'); if (el) el.outerHTML = blLine(leg); });
+      const bl = leg ? `<div class="s3-trbl"><b>${leg}<small>darts</small></b><div><span class="s3-trbll">Your best leg · Season 3</span><span>${at ? `${esc(at.ev)}${at.week ? ' · week ' + at.week : ''}` : 'Fewest darts in a won leg'}</span>${blLine(leg)}</div></div>`
+        : `<div class="s3-trbl s3-tre"><b>–</b><div><span class="s3-trbll">Your best leg · Season 3</span><span>Win a 501 leg in the Circuit to set one</span>${blLine(null)}</div></div>`;
+      const empty = d.empty && d.complete ? `<div class="rb-card s3-tremp"><span class="rb-t2">Your shelf is empty</span><span class="rb-sub">Win an event, or reach a final, and the trophy goes here. ${esc(lv.events[0].n)} pays ${money(C.prizeFor(C.eventOf(lv.events[0].id), 'W'))} to the winner.</span></div>` : '';
       let n = 0;
-      const lvRow = i => { const L = C.LEVELS[i], up = i < k.level, last = up ? hs.filter(h => h.level === i).slice(-1)[0] : null;
-        const cards = L.events.map(e => { const w = tw.filter(t => t.ev === e.id && t.finish === 'W'), f = tw.filter(t => t.ev === e.id && t.finish === 'F'), top = w.length ? 'W' : f.length ? 'F' : '';
-          const wk = (top === 'W' ? w : f).map(t => t.week).filter(x => x != null), pz = (top === 'W' ? w : f).reduce((a, t) => a + (t.prize || 0), 0), cnt = (top === 'W' ? w : f).length;
-          const line = top === 'W' ? `Winner${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : top === 'F' ? `Runner-up${cnt > 1 ? ' ×' + cnt : ''} · ${money(pz)}` : up ? 'Not won' : 'Not won yet';
-          const more = top === 'W' && f.length ? `<small>+ ${f.length} final${f.length > 1 ? 's' : ''}</small>` : '';
-          return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}">${CUP(top, 's3cup' + (n++))}<b title="${esc(e.n)}">${esc(TOWN(e.n).split(' · ')[0])}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
-        const tag = up ? `<span class="s3-trup">Promoted${last ? ' · week ' + last.week : ''}</span>` : `<span class="s3-trnow">This level</span>`;
-        return `<section class="s3-trlv"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol></section>`; };
-      let rows = ''; for (let i = k.level; i >= 0; i--) rows += lvRow(i);
-      const nx = C.LEVELS[k.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
+      const lvRow = i => { const L = C.LEVELS[i], up = i < d.level, left = d.leftAt(i);
+        const cards = L.events.map(e => { const w = d.trophies.filter(t => t.ev === e.id && t.finish === 'W'), f = d.trophies.filter(t => t.ev === e.id && t.finish === 'F'), top = w.length ? 'W' : f.length ? 'F' : '';
+          const set = top === 'W' ? w : f, wk = set.map(t => t.week).filter(x => x != null).sort((a, b) => a - b), pz = set.reduce((a, t) => a + Math.max(0, t.prize || 0), 0), cnt = set.length, pzT = pz > 0 ? ' · ' + money(pz) : '';
+          const line = top === 'W' ? `Winner${cnt > 1 ? ' ×' + cnt : ''}${pzT}` : top === 'F' ? `Runner-up${cnt > 1 ? ' ×' + cnt : ''}${pzT}` : !d.complete ? 'No record' : up ? 'Not won' : 'Not won yet';
+          const more = top === 'W' && f.length ? `<small>+ runner-up${f.length > 1 ? ' ×' + f.length : ''}</small>` : '';
+          return `<li class="s3-tr${top ? ' s3-tr' + top : ' s3-tre'}" data-ev="${esc(e.id)}">${CUP(top, 's3cup' + (n++))}<b title="${esc(e.n)}">${esc(TOWN(e.n).split(' · ')[0])}</b><span>${line}${wk.length ? `<br>Week${wk.length > 1 ? 's' : ''} ${wk.join(', ')}` : ''}</span>${more}</li>`; }).join('');
+        const tag = up ? `<span class="s3-trup">Promoted${left ? ' · week ' + left : ''}</span>` : `<span class="s3-trnow">This level</span>`;
+        return `<section class="s3-trlv" data-lv="${i}"><div class="s3-row"><span class="s3-trn">${esc(L.n)}</span>${tag}</div><ol class="s3-shelf">${cards}</ol></section>`; };
+      let rows = ''; for (let i = d.level; i >= 0; i--) rows += lvRow(i);
+      const nx = C.LEVELS[d.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
       /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
       const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
-      return hero + bl + empty + rows + next + oldSeasons();
+      const back = chipFrom ? `<button type="button" class="s3-trback" data-s3="trback">‹ Back to Circuit</button>` : '';
+      const cab = window.TC_API && TC_API.cabinet ? `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Seasons 1 & 2 trophy cabinet</button>` : '';   /* the old 3D cabinet stays reachable under s3x */
+      return back + hero + gap + bl + empty + rows + next + oldSeasons() + cab;
     } catch (x) { console.warn('s3 shelf', x); return null; }
+  }
+  /* the Season 3 record line under your best leg: the board's top row (Career's tops_bestleg_s3), a separate value from yours */
+  function blLine(leg) {
+    const rec = Array.isArray(blRows) && blRows[0] && typeof blRows[0].darts === 'number' ? blRows[0] : null; if (!rec) return `<small id="s3TrBl"></small>`;
+    const t = rec.you ? (leg === rec.darts ? 'You hold the Season 3 record' : `Season 3 record: ${rec.darts} darts · you`) : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`;
+    return `<small id="s3TrBl">${t}</small>`;
   }
   function oldSeasons() {
     const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null; if (!me || (!me.s1 && !me.s2)) return `<div id="s3TrHi"></div>`;
@@ -21599,7 +21727,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: (fn, go) => { shell = fn; nav = go || null; },
-    resultBlock, shelf,
+    resultBlock, shelf, shelfData, navClear: () => { chipFrom = null; },
     refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
@@ -22270,7 +22398,7 @@ html.rb-on img.rwhero.rb-rwphoto{height:200px!important;width:300px!important;ob
     $id('rbName').textContent = M.name; $id('rbBank').textContent = money(M.bank); $id('rbRing').innerHTML = ring(M.pct, M.v.lv, 30);
     try { const p = V.portrait(save.look, save.name, M.c.tier, 0); if (p) $id('rbFace').style.backgroundImage = `url(${p})`; } catch (e) {}
     $id('rbTabs').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('');
-    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
+    qa('#rbTabs button').forEach(b => b.onclick = () => { const k = b.dataset.t; if (S3 && S3.navClear) S3.navClear(); if (BUILT[k]) { tab = k; render(); const sc = document.querySelector('#rbMain .rb-scr'); if (sc) sc.scrollTop = 0; } else toOld(k); });
     let html = ''; try { html = S3 && S3.owns(tab) ? S3.view(tab) : tab === 'season' ? season(M) : tab === 'locker' ? locker(M) : tab === 'shop' ? shop(M) : tab === 'practice' ? practice(M) : tonight(M); } catch (e) { console.warn('rb tonight', e); close(); return; }
     $id('rbMain').innerHTML = `<section class="rb-scr">${html}</section>`; wire(M); if (S3) { try { S3.wire(); } catch (e) { console.warn('s3 wire', e); } }
   }
@@ -22604,7 +22732,7 @@ html.rb-on img.rwhero.rb-rwphoto{height:200px!important;width:300px!important;ob
     const m2 = $id('rbMoneyTile'); if (m2) m2.onclick = mm;
     const s = $id('rbSeason'); if (s) s.onclick = () => { tab = 'season'; render(); };
     const nx = $id('rbNext'); if (nx) nx.onclick = () => { tab = 'locker'; lk = 'load'; render(); };
-    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; lk = k; render(); });
+    qa('#rbApp [data-lk]').forEach(b => b.onclick = () => { const k = b.dataset.lk; if (S3 && S3.navClear) S3.navClear(); lk = k; render(); });
     qa('#rbApp [data-st]').forEach(b => b.onclick = () => { try { const g = window.TOPS_spend && TOPS_spend(b.dataset.st); if (g) render(); } catch (e) { console.warn('rb spend', e); } });
     qa('#rbApp [data-bid]').forEach(b => b.onclick = () => { sel = b.dataset.bid; const y = $id('rbThumbs') ? $id('rbThumbs').scrollLeft : 0; render(); const t2 = $id('rbThumbs'); if (t2) t2.scrollLeft = y; });
     qa('#rbApp [data-sub]').forEach(b => b.onclick = () => { shopSub = b.dataset.sub; setOpen = ''; render(); });
