@@ -136,7 +136,19 @@
     return { hex: /^#[0-9a-f]{6}$/.test(hex || '') ? hex : null, fem: v.base === 'mia' || (v.body || B.body) === 'female' }; };
   const meFem = () => { const v = v3Look(); return v ? v.fem : isFemModel(save.look || {}, save.name || ''); };
   const myShirt = () => { const v = v3Look(); return (v && v.hex) || (save.look && save.look.shirt) || '#1c1c1c'; };
+  /* Director doc 74 (Producer 22 Nov 07:14): under v3 the Locker hero is the player's OWN figure (V.heroShot of save.look: every creator choice
+     and the real shirt colour, so a Mia player sees Mia) at the Kauri Arms locker (lk_plate.jpg: the same locker with the photo's person taken
+     out). No recolour, no masks, no fixed man/woman photo. Until the render is ready the tier's venue shows (the plate never shows alone: its
+     filled-in patch is where the figure stands), and the card fills in when it is. TOPS_LK74 = 0 brings back the photos. V is a script-level
+     const, not on window. */
+  const v3Lk = () => !!window.TOPS_V3FLAG && window.TOPS_LK74 !== 0 && typeof V !== 'undefined' && !!V.heroShot;
+  const lkFig = tier => { try { return V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { return ''; } };
+  const lkLayers = (u, scene) => `url(${u}) right 5% top 0/auto 132% no-repeat,url(${IMG}lk_plate.jpg) 80% 30%/cover no-repeat,${scene}`;
+  let lkWait = 0; const v3LockerBg = (tier, scene) => { const u = lkFig(tier); clearTimeout(lkWait); if (u) return lkLayers(u, scene);
+    let n = 0; const again = () => { const e = $id('rbLkHero'); if (!e) return; const u2 = lkFig(tier); if (u2) { e.style.background = lkLayers(u2, scene); e.dataset.lk74 = 1; return; } if (++n < 24) lkWait = setTimeout(again, 500); };
+    lkWait = setTimeout(again, 500); return scene; };
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
+    if (v3Lk()) return v3LockerBg(tier, scene);
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
     const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
@@ -147,7 +159,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') { const sh = S3 && S3.shelf ? S3.shelf() : null; return seg + (sh || trophies(M)); }   /* EXP-IDLE 3: the Season 3 shelf (behind s3x=1), else the old list */
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -472,14 +484,15 @@
   // player (in a shirt that often didn't match). They now show the generated shirt photo in the unlocked colour (the same recolour as the new
   // Result), and the card's top figure becomes the player's Locker photo in his own shirt. Only the reward overlay and the poster are watched
   // (a body childList observer, no subtree), so nothing runs during play.
-  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
+  const swapShirt = (ri, L) => { if (v3Lk()) return true;   /* doc 74: under v3 the reward tile keeps career3's own render (the figure in the reward shirt) */
+    if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
     const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
     const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
     const u = recolour(shirtBase(), r.v, shirtFb(), put); if (u) put(u); return true; };
   let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
-      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = myShirt();
+      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h && !v3Lk()) {   /* doc 74: under v3 the reward hero stays the player's own render */ h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = myShirt();
         const fb = (() => { try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } })();   // ChatGPT P2: the venue, never an empty top
         const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
     // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
@@ -492,6 +505,6 @@
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw
