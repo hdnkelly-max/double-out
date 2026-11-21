@@ -1,0 +1,55 @@
+# RELEASE WATCHER (Hayden approved Sat 19:59): every release.yml run on main fills the RELEASES row of tops_pipeline by itself.
+# When a release run finishes, tools/release-report.js reads GitHub's record of it (dispatch inputs, job/step outcomes, error
+# annotations, the log's version / rollback / artifact-wait lines) and this posts the entry to the Supabase edge function
+# "release-report" (source: tools/release-report-fn/index.ts). No stored secret: the job asks GitHub for a short-lived OIDC token
+# (audience tops-release-report); the function checks GitHub's signature, this repo's ids, this exact workflow file on main and
+# the event, then writes only the private tops_release_log table and the RELEASES row.
+# Backfill or re-send: Actions > release-report > Run workflow, runs = "last 5" or run ids separated by spaces.
+name: release-report
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      runs: { description: 'release.yml run ids (space-separated), or "last N" for the newest N runs on main', required: true, default: 'last 5' }
+permissions: { actions: read, checks: read, contents: read, id-token: write }
+concurrency: { group: release-report, cancel-in-progress: false }
+env:
+  FN: https://thyirfwoqkshsaqowdpe.supabase.co/functions/v1/release-report
+jobs:
+  report:
+    # release.yml runs from other branches are workflow tests (dry runs of a workflow change), not releases
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools/release-report.js, sparse-checkout-cone-mode: false }
+      - name: Read the release run(s)
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          RUN: '${{ github.event.workflow_run.id }}'
+          ATT: '${{ github.event.workflow_run.run_attempt }}'
+          RUNS: '${{ inputs.runs }}'
+        run: |
+          if [ -n "$RUN" ]; then L="$RUN:$ATT"
+          else case "$RUNS" in
+            last\ *) n=${RUNS#last }; [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -le 20 ] || { echo "::error::last N: N must be 1-20"; exit 1; }
+                     L=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?branch=main&status=completed&per_page=$n" --jq '.workflow_runs[].id') ;;
+            *) L="$RUNS"; for x in $L; do [[ "$x" =~ ^[0-9]+$ ]] || { echo "::error::not a run id: $x"; exit 1; }; done ;;
+          esac; fi
+          : > entries.jsonl
+          for x in $L; do node tools/release-report.js ${x%%:*} $( [[ "$x" == *:* ]] && echo ${x#*:} ) >> entries.jsonl || echo "::warning::could not read run $x"; done
+          jq -c '{run_id, result, version, reason: (.reason // "" | .[0:80])}' entries.jsonl
+          jq -s '[.[] | select(.branch == "main")]' entries.jsonl > body.json
+          echo "n=$(jq length body.json)" >> "$GITHUB_OUTPUT"
+        id: read
+      - name: Send to the RELEASES row (GitHub OIDC token, no stored secret)
+        if: steps.read.outputs.n != '0'
+        run: |
+          T=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=tops-release-report" | jq -r .value)
+          echo "::add-mask::$T"
+          r=$(curl -sS -w ' %{http_code}' -X POST "$FN" -H "Authorization: Bearer $T" -H 'Content-Type: application/json' --data @body.json)
+          echo "release-report: $r"; echo "RELEASES row: $r" >> "$GITHUB_STEP_SUMMARY"
+          [ "${r##* }" = 200 ] || { echo "::error::the watcher could not write the RELEASES row: $r"; exit 1; }
