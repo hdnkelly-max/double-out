@@ -1,5 +1,5 @@
 <meta charset="utf-8"><base href="../">
-<script>window.TOPS_BUILD="1795225458982";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795247071909";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -14310,7 +14310,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.17';
+window.TOPS_VER='4.18';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -16819,7 +16819,34 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   // broke: the way back is money matches and hardship entry (today's systems), so the career never dead-ends
   const broke = c => calendar(c).every(e => !e.canAfford);
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance };
+  // CAR-DEADWK (Producer 13:40, 20 Nov): the week only moves when an event finishes, so a week with nothing on at your level (the Opens run
+  // every 3 weeks, the Worlds once a year) stopped the career. The calendar stays the source of truth: a rest week jumps straight to the next
+  // week that has an event at your level (all the empty weeks at once), looking up to REST_SCAN weeks past this one. calendar() is also the
+  // eligibility gate (needCard, once, card, level), and book() only adds the bank check, so any week it finds can be booked.
+  const REST_SCAN = 156;
+  function nextEventWeek(c) { for (let w = c.week; w <= c.week + REST_SCAN; w++) { if (calendar(Object.assign({}, c, { week: w })).length) return w; } return null; }
+  const restNeeded = c => !c.live && !calendar(c).length;
+  function restWeek(c) {
+    if (c.live) return { ok: false, why: 'Finish the event you are in first' };
+    if (calendar(c).length) return { ok: false, why: 'There is an event on this week' };
+    const to = nextEventWeek(c); if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    const from = c.week; c.week = to; return { ok: true, from, to, skipped: to - from };
+  }
+  // Broke and nothing affordable on: a recovery entry books one eligible event this week with no cash up front, capped at the cheapest
+  // event on (entry + travel). It goes on the same debt as the hardship advance (half of each prize pays it back), normal prize and points,
+  // and it stays available after a loss, so being broke is never a new dead end. The cap is per entry (that one cheapest trip); the total
+  // owed is not capped on purpose, since any total cap would bring the dead end back (Producer's call, flagged).
+  function recoveryOffer(c) { if (c.live || !broke(c)) return null; const cal = calendar(c); if (!cal.length) return null; const e = cal.slice().sort((a, b) => a.cost - b.cost)[0]; return { id: e.id, n: e.n, cost: e.cost }; }
+  function recoveryEntry(c, id) {
+    const o = recoveryOffer(c); if (!o) return { ok: false, why: c.live ? 'Finish the event you are in first' : 'You can afford an event this week' };
+    const e = calendar(c).find(x => x.id === (id || o.id)); if (!e) return { ok: false, why: 'Not on this week' };
+    if (e.cost > o.cost) return { ok: false, why: 'A recovery entry covers the cheapest event this week' };
+    const bank = c.bank; let r; try { c.bank = e.cost; r = book(c, e.id); } finally { c.bank = bank; } if (!r || !r.ok) { c.live = null; c.booked = null; return r || { ok: false, why: 'Could not book' }; }
+    c.debt = (c.debt || 0) + e.cost; c.recovered = (c.recovered || 0) + 1; c.live.recovery = 1;
+    return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
+  }
+
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, nextEventWeek, restNeeded, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
 
@@ -16852,7 +16879,9 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
       ladder:E.LEVELS.map((x,i)=>({i,id:x.id,n:x.n,avg:x.avg,state:i<k.level?'done':i===k.level?'current':i===k.level+1?'next':'locked'})),
       week:k.week,bank:c.bank||0,debt:k.debt||0,runway:Math.floor((c.bank||0)/Math.max(1,avgCost)),calendar:cal,live,
       oom:Lv.id==='dpnz'?E.dpnzTable(k).map(r=>({n:r.n,pts:r.pts,you:!!r.you})):null,
-      history:k.history.slice().reverse().map(h=>Object.assign({finName:E.FIN_NAME[h.fin]||h.fin},h)),card:!!k.card,qsOffer:!!k.qsOffer};}
+      history:k.history.slice().reverse().map(h=>Object.assign({finName:E.FIN_NAME[h.fin]||h.fin},h)),card:!!k.card,qsOffer:!!k.qsOffer,
+      /* CAR-DEADWK: rest = nothing on at your level this week (next = the week the next event is on); recover = broke with an event on */
+      rest:E.restNeeded(k)?{next:E.nextEventWeek(k)}:null,recover:k.live?null:E.recoveryOffer(Object.assign({},k,{bank:c.bank||0}))};}
   function book(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};if(k.live)return {ok:false,why:'Finish the event you are in first'};
     const e=C().eventOf(id);if(!e||e.level!==k.level||!C().calendar(Object.assign({},k,{bank:career().bank||0})).some(x=>x.id===id))return {ok:false,why:'Not on this week'};
     const r=sync(k=>C().book(k,id));if(r&&r.ok){persist();L('s3_book',{id,cost:C().cost(e),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
@@ -16860,13 +16889,16 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   function play(){if(!on())return false;const k=circ();if(!k||!k.live)return false;try{window.playNext();}catch(e){return false;}return true;}
   function playNow(){if(!on())return false;const k=circ();if(!k||!k.live)return false;const o=C().nextOpp(k),e=C().eventOf(k.live.id),nm=oppName(k);
     beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0});
-    if(SS()){S.s3={id:e.id,round:o.round,level:k.level};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
+    if(SS()){S.s3={id:e.id,round:o.round,level:k.level,recovery:k.live&&k.live.recovery?1:0};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
+  function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',{from:r.from,to:r.to,level:k.level});}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
+  function recover(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().recoveryEntry(k,id));if(r&&r.ok){persist();L('s3_recover',{id:r.id,cost:r.cost,debt:r.debt,level:k.level});}return r;}
   function advance(){if(!on())return {ok:false,why:'Season 3 is off'};const r=sync(k=>C().advance(k));if(r&&r.ok){persist();L('s3_advance',{amt:r.amt});}return r;}
 
   // ---- the hub's old "Play" goes to the Circuit: the next round of your event, or (until the Circuit screen books for you) the first
   //      event on this week you can afford; broke = the hardship advance. Never the Season 2 league.
   if(typeof playNext==='function'){const _pn=playNext;playNext=function(){if(!on())return _pn.apply(this,arguments);const c=career();if(!c||c.run)return _pn.apply(this,arguments);
-    const k=circ();if(!k.live){const v=view();let e=v.calendar.find(x=>x.canAfford);if(!e){const a=advance();if(a&&a.ok)e=view().calendar.find(x=>x.canAfford);}
+    const k=circ();if(!k.live){let v=view();if(v.rest){restWeek();v=view();}/* CAR-DEADWK: a rest week jumps to the next event */let e=v.calendar.find(x=>x.canAfford);if(!e){const a=advance();if(a&&a.ok)e=view().calendar.find(x=>x.canAfford);}
+      if(!e&&view().recover){const rr=recover();if(rr&&rr.ok){playNow();return;}}
       if(!e){try{showMsg({from:'Tour budget',lines:['Nothing on this week you can afford.','Money matches pay. Come back with the cash.'],replies:[['OK','ok']]},()=>showHub());}catch(x){}return;}book(e.id);}
     playNow();};}
 
@@ -16890,7 +16922,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     try{S.s3xp=(window.C3&&C3.s3MatchXP)?C3.s3MatchXP():null;}catch(e){S.s3xp=null;}/* CAR-XP: player XP + levels, no cash (career3.js) */
     S.s3res=r;persist();setTimeout(()=>{try{lbPost();}catch(e){}},1500);
     const me0=S.p[0],op0=S.p[1],lv=id=>{try{return window.TOPS_LofT?Math.round(TOPS_LofT(id)*75+20):null;}catch(e){return null;}};
-    L('s3_result',{xp:S.s3xp?S.s3xp.xp:null,lv:S.s3xp?S.s3xp.after.lv:null,tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level});
+    L('s3_result',{xp:S.s3xp?S.s3xp.xp:null,lv:S.s3xp?S.s3xp.after.lv:null,tw:S.tune?S.tune.win:null,tr:S.tune?+S.tune.ramp.toFixed(1):null,tsrc:S.tune?S.tune.src:null,tat:S.tune?S.tune.at:null,avg:me0&&me0.darts?+(me0.pts/me0.darts*3).toFixed(1):null,oavg:op0&&op0.darts?+(op0.pts/op0.darts*3).toFixed(1):null,rh:lv('rh'),ct:lv('ct'),sc:lv('sc'),id:S.s3.id,round:S.s3.round,won:S.won?1:0,done:r.done?1:0,fin:r.fin||null,prize:r.prize||0,pts:r.pts||0,up:r.up?(r.up.to!=null?r.up.to:'champ'):null,bank:c.bank,level:c.circuit.level,debt:c.circuit.debt||0,rec:c.circuit.recovered||0,recm:S.s3.recovery?1:0});
     try{window.dispatchEvent(new CustomEvent('tops:s3',{detail:r}));}catch(e){}
   };}
 
@@ -16917,7 +16949,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   window.addEventListener('tops:s3',ev=>{const r=ev.detail||{};let n=0;const t=setInterval(()=>{const b=document.getElementById('btnResAction');if(!b&&++n<50)return;clearInterval(t);if(!b)return;
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
-  window.TOPS_S3={on,view,book,play,advance,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
+  window.TOPS_S3={on,view,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
   // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
   // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are
   // the baked fallback. beginMatch freezes the values for that match, so a late read or a change applies from the next match.
@@ -20456,6 +20488,11 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 /* the level card's titles chip */
 #rbApp .s3-trchip{position:absolute;right:12px;top:12px;z-index:2;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 6px;border-radius:17px;border:1px solid rgba(241,198,75,.5);background:rgba(16,18,20,.78);color:#f3f4f2;font-weight:700;font-size:13px;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 #rbApp .s3-trchip .s3-cup{width:22px;height:22px}#rbApp .s3-trchip i{font-style:normal;color:#f1c64b}
+/* CAR-DEADWK layout: Rest and Recovery buttons grow with their text (360 px: no text on the button edges) */
+#rbApp .rb-primary.s3-grow{height:auto;min-height:56px;flex:0 0 auto;padding:10px 16px;text-align:center;gap:3px}
+#rbApp .rb-primary.s3-grow b{font-size:20px;line-height:1.1;overflow-wrap:anywhere}
+#rbApp .rb-primary.s3-grow small{line-height:1.3}
+#rbApp .s3-broke{display:flex;flex-direction:column;gap:10px}
 </style>
 <script>window.TOPS_S3_HAVE=["assets/cards/art/anderson.webp","assets/cards/art/anika.webp","assets/cards/art/bagofnails.webp","assets/cards/art/barneveld.webp","assets/cards/art/bigmal.webp","assets/cards/art/bounceout.webp","assets/cards/art/bust.webp","assets/cards/art/chalker.webp","assets/cards/art/club.webp","assets/cards/art/comeback.webp","assets/cards/art/db_16.webp","assets/cards/art/db_161.webp","assets/cards/art/db_164.webp","assets/cards/art/db_167.webp","assets/cards/art/db_4.webp","assets/cards/art/db_8.webp","assets/cards/art/db_bnb.webp","assets/cards/art/db_bull.webp","assets/cards/art/db_marker.webp","assets/cards/art/db_shotgun.webp","assets/cards/art/db_threebed.webp","assets/cards/art/db_top.webp","assets/cards/art/deano.webp","assets/cards/art/dpnz.webp","assets/cards/art/green.webp","assets/cards/art/humphries.webp","assets/cards/art/jonno.webp","assets/cards/art/kauri.webp","assets/cards/art/kev.webp","assets/cards/art/kw_jandals.webp","assets/cards/art/kw_jug.webp","assets/cards/art/kw_karaoke.webp","assets/cards/art/kw_leaner.webp","assets/cards/art/kw_pokies.webp","assets/cards/art/kw_quiz.webp","assets/cards/art/kw_smoko.webp","assets/cards/art/kw_tab.webp","assets/cards/art/lastorders.webp","assets/cards/art/madhouse.webp","assets/cards/art/matchdart.webp","assets/cards/art/mo.webp","assets/cards/art/nuke.webp","assets/cards/art/oche.webp","assets/cards/art/palace.webp","assets/cards/art/papakura.webp","assets/cards/art/pete.webp","assets/cards/art/phil.webp","assets/cards/art/power.webp","assets/cards/art/pr_bouncer.webp","assets/cards/art/pr_bump.webp","assets/cards/art/pr_cooker.webp","assets/cards/art/pr_flash.webp","assets/cards/art/pr_heckle.webp","assets/cards/art/pr_horn.webp","assets/cards/art/pr_nan.webp","assets/cards/art/pr_orders.webp","assets/cards/art/pr_vape.webp","assets/cards/art/pr_wobble.webp","assets/cards/art/price.webp","assets/cards/art/raffle.webp","assets/cards/art/rd_bigscreen.webp","assets/cards/art/rd_caller.webp","assets/cards/art/rd_crowd.webp","assets/cards/art/rd_draw.webp","assets/cards/art/rd_handshake.webp","assets/cards/art/rd_hotel.webp","assets/cards/art/rd_practice.webp","assets/cards/art/rd_qschool.webp","assets/cards/art/rd_sponsor.webp","assets/cards/art/rd_tourcard.webp","assets/cards/art/rd_travel.webp","assets/cards/art/regional.webp","assets/cards/art/robbed.webp","assets/cards/art/robin.webp","assets/cards/art/rsa.webp","assets/cards/art/shazza.webp","assets/cards/art/sherlock.webp","assets/cards/art/smith.webp","assets/cards/art/tama.webp","assets/cards/art/the170.webp","assets/cards/art/tl_airport.webp","assets/cards/art/tl_autograph.webp","assets/cards/art/tl_champ.webp","assets/cards/art/tl_physio.webp","assets/cards/art/tl_press.webp","assets/cards/art/tl_ref.webp","assets/cards/art/tl_ritual.webp","assets/cards/art/tl_rival.webp","assets/cards/art/tl_tunnel2.webp","assets/cards/art/tn_407.webp","assets/cards/art/tn_5am.webp","assets/cards/art/tn_biter.webp","assets/cards/art/tn_cruiser.webp","assets/cards/art/tn_daisy.webp","assets/cards/art/tn_donkey.webp","assets/cards/art/tn_hotsauce.webp","assets/cards/art/tn_king.webp","assets/cards/art/tn_maddog.webp","assets/cards/art/tn_pie.webp","assets/cards/art/tn_sammo.webp","assets/cards/art/tn_stickers.webp","assets/cards/art/tn_stu.webp","assets/cards/art/tn_tard.webp","assets/cards/art/tn_tow.webp","assets/cards/art/tn_warship.webp","assets/cards/art/transtasman.webp","assets/cards/art/tunnel.webp","assets/cards/art/water.webp","assets/cards/art/whitewash.webp","assets/cards/art/wigan.webp","assets/cards/art/wobble.webp","assets/cards/art/wright.webp","assets/cards/art/wrongdouble.webp","assets/creator/full_dazza.png","assets/creator/full_kai.png","assets/creator/full_mia.png","assets/creator/full_ray.png","assets/creator/full_tama.png","assets/creator/head_dazza.png","assets/creator/head_kai.png","assets/creator/head_mia.png","assets/creator/head_ray.png","assets/creator/head_tama.png","assets/crowd.webp","assets/rb/backroom.jpg","assets/rb/lk_f.jpg","assets/rb/lk_f_mask.png","assets/rb/lk_m.jpg","assets/rb/lk_m_mask.png","assets/rb/opp_bigmal.jpg","assets/rb/result_loss.jpg","assets/rb/result_win.jpg","assets/rb/t_arena.webp","assets/rb/t_hero.webp","assets/rb/tn_t0.jpg","assets/rb/tn_t0f.jpg","assets/rb/tn_t1.jpg","assets/rb/tn_t1f.jpg","assets/rb/tn_t2.jpg","assets/rb/tn_t2f.jpg","assets/rb/tn_t3.jpg","assets/rb/tn_t3f.jpg","assets/rb/tn_t4.jpg","assets/rb/tn_t4f.jpg","assets/rb/tn_t5.jpg","assets/rb/tn_t5f.jpg","assets/rb/tn_t6.jpg","assets/rb/tn_t6f.jpg","assets/rb/venue_t0.jpg","assets/rb/venue_t1.jpg","assets/rb/venue_t2.jpg","assets/rb/venue_t3.jpg","assets/rb/venue_t4.jpg","assets/rb/venue_t5.jpg","assets/rb/venue_t6.jpg","assets/rb/w_win_t0.jpg","assets/rb/w_win_t1.jpg","assets/rb/w_win_t2.jpg","assets/rb/w_win_t3.jpg","assets/rb/w_win_t4.jpg","assets/rb/w_win_t5.jpg","assets/rb/w_win_t6.jpg","assets/ui/bg_club.webp","assets/ui/bg_pub.webp","assets/ui/bg_stage.webp","assets/ui/card_crowd.webp","assets/ui/card_gang.webp","assets/ui/card_heckle.webp","assets/ui/card_invasion.webp","assets/ui/card_pass.webp","assets/ui/card_stare.webp","assets/ui/card_steady.webp","assets/ui/card_tap.webp","assets/ui/card_turns.webp","assets/ui/card_wing.webp","assets/ui/th_backroom.webp","assets/ui/th_local.webp","assets/ui/th_practice.webp","assets/venue/club_brew.webp","assets/venue/club_raffle.webp","assets/venue/club_team.webp","assets/venue/club_throw.webp","assets/venue/plate_5.webp","assets/venue/pub_1.webp","assets/venue/pub_2.webp","assets/venue/pub_3.webp","assets/venue/pub_4.webp","img/bets/hot.jpg","img/bets/steady.jpg","img/bets/tight.jpg","img/menu.jpg","img/menu_0.jpg","img/menu_1.jpg","img/menu_2.jpg","img/menu_3.jpg","img/splash.jpg","img/v0.jpg","img/v1.jpg","img/v2.jpg","img/v3.jpg","img/v4.jpg","img/v5.jpg","img/v6.jpg","plates/club_oche.webp","plates/club_walk.webp","plates/dpnz_oche.webp","plates/dpnz_walk.webp","plates/opens_oche.webp","plates/opens_walk.webp","plates/palace_oche.webp","plates/palace_walk.webp","plates/pub_oche.webp","plates/pub_walk.webp","plates/tc_oche.webp","plates/tc_walk.webp","plates/tt_oche.webp","plates/tt_walk.webp"];
 // TOPS Season 3 · Experience (EXP-S3C). Everything here is behind the Season 3 flag; with the flag off this file installs nothing
@@ -20554,6 +20591,8 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     book(id) { if (!isDev()) return API().book(id); const r = CI().book(devState(), id); devSave(); return r; },
     play() { if (!isDev()) { if (!API().play()) toast('<b>Can\'t walk on</b><span>The event isn\'t running</span>'); return; } devTap = 1; render(); },
     advance() { if (!isDev()) return API().advance(); const r = CI().advance(devState()); devSave(); return r; },
+    rest() { if (!isDev()) return API().rest(); const r = CI().restWeek(devState()); devSave(); return r; },
+    recover() { if (!isDev()) return API().recover(); const r = CI().recoveryEntry(devState()); devSave(); return r; },
     moneyMatch() { if (!isDev() && API().moneyMatch) return API().moneyMatch(); try { moneyMatch(); } catch (e) { console.warn('s3 money match', e); } },
     devResult(won) { const r = CI().result(devState(), won); devSave(); devTap = 0; return r; }
   };
@@ -20591,7 +20630,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     <div class="rb-card s3-prog">
       ${need ? `<div class="s3-row"><span class="s3-lab">To move up · ${bestTxt}</span><b class="s3-num">${have} <small>/ ${need} pts</small></b></div><div class="rb-bar"><i style="width:${Math.min(100, 100 * have / need)}%"></i></div>` : ''}
       <span class="rb-sub">${esc(L.up)}</span>
-      ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
+      ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)} · half of each prize until it's clear</span>` : ''}
       <ol class="s3-ladder" aria-label="The seven levels, you're on ${esc(L.n)}">${ladder}</ol>
     </div>`;
     const isO = L.oom || L.id === 'tt';
@@ -20608,10 +20647,17 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     return `<button type="button" class="s3-trchip" data-s3="troph">${CUP(w ? 'W' : 'F', 's3cupchip')}<span>${w ? w + ' title' + (w > 1 ? 's' : '') : f + ' final' + (f > 1 ? 's' : '')}</span><i aria-hidden="true">›</i></button>`; }
   function week(c) {
     const C = CI(), cal = C.calendar(c);
-    let h = `<div class="rb-sh"><h3>On this week · pick one</h3></div>` + cal.map(e => poster(c, e)).join('');
-    if (!cal.length) h += `<div class="rb-card"><span class="rb-t2">Nothing on at this level this week</span></div>`;
-    if (C.broke(c)) h += `<div class="rb-card"><span class="rb-t2">Can't afford a trip this week</span><span class="rb-sub">A money match in the back room pays for the next one. Or take the hardship advance: two entries, paid back from half of each prize.</span>
-      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button></div></div>`;
+    /* CAR-DEADWK (Producer 13:40): a week with nothing on at your level is a rest week with one way on: straight to the next event */
+    if (!cal.length) { const nx = C.nextEventWeek ? C.nextEventWeek(c) : null, gap = nx != null ? nx - c.week : 0;
+      return `<div class="rb-sh"><h3>Rest week</h3></div><div class="rb-card s3-rest"><span class="rb-t2">${nx != null ? `Nothing on at this level until week ${nx}` : 'Nothing on at this level'}</span><span class="rb-sub">Rest up. The next event is ${gap > 1 ? gap + ' weeks away' : 'next week'}.</span>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${nx != null ? 'Advance to week ' + nx : 'Advance'}</b><small>${nx != null ? (gap > 1 ? 'Skips ' + gap + ' weeks' : 'One week on') + ' · the next event at your level' : ''}</small></button></div>`; }
+    let h = '';
+    /* CAR-DEADWK layout (Q&D): when broke, the way out comes first, above the posters you can't afford */
+    if (C.broke(c)) { const ro = C.recoveryOffer ? C.recoveryOffer(c) : null;
+      h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
+      ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
+      <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
+    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
     return h;
   }
   function poster(c, e) {
@@ -20702,7 +20748,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const rows = hs.map(h => `<li><span><b>${esc(h.n)}</b><small>Week ${h.week} · ${esc(C.FIN_NAME[h.fin])}</small></span><span class="s3-neg">−${money(h.cost)}</span><span class="s3-pos">${h.prize ? '+' + money(h.prize) : '$0'}</span></li>`).join('');
     return `<div class="rb-card s3-bank"><span class="s3-lab">Tour budget</span><b class="s3-huge">${money(c.bank)}</b><span class="rb-sub">${runTxt} (avg trip ${money(avg)})</span>
         <div class="rb-bar"><i style="width:${Math.min(100, run / 8 * 100)}%"></i></div>
-        ${c.debt ? `<span class="s3-warn">Advance to pay back: ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
+        ${c.debt ? `<span class="s3-warn">You owe ${money(c.debt)}. Half of each prize goes to it until it's clear.</span>` : ''}</div>
       <div class="rb-card"><span class="rb-t2">Every dollar has a job</span><span class="rb-sub">Entry and travel are paid when you book. Prize money comes from how far you get. Moving up a level pays a one-off travel grant.</span></div>
       <div class="rb-card"><div class="s3-row"><span class="rb-t2">In and out</span><span class="rb-sub">${hs.length ? `last ${hs.length}: <span class="s3-pos">+${money(tin)}</span> · <span class="s3-neg">−${money(tout)}</span>` : ''}</span></div>
         ${rows ? `<ol class="s3-res s3-mon">${rows}</ol>` : `<span class="rb-sub">Nothing yet. Book an event on the Circuit tab.</span>`}</div>`;
@@ -20853,9 +20899,11 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
     const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
     app.querySelectorAll('[data-s3dev]').forEach(b => b.onclick = () => { D.devResult(b.dataset.s3dev === '1'); render(); });
-    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3;
+    app.querySelectorAll('[data-s3]').forEach(b => b.onclick = () => { const k = b.dataset.s3; if ((k === 'rest' || k === 'rec') && b.dataset.busy) return; if (k === 'rest' || k === 'rec') { b.dataset.busy = 1; b.disabled = true; } /* one tap acts once */
       if (k === 'mm') D.moneyMatch();
       else if (k === 'adv') { const r = D.advance(); toast(r && r.ok ? `<b>Advance +${money(r.amt)}</b><span>Half of each prize pays it back</span>` : `<b>No advance</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rest') { const r = D.rest(); if (!r || !r.ok) toast(`<b>Can't move on</b><span>${esc((r && r.why) || '')}</span>`); render(); }
+      else if (k === 'rec') { const r = D.recover(); if (r && r.ok) { toast(`<b>Entered · ${money(r.cost)} covered</b><span>Half of each prize pays it back</span>`); render(); D.play(); } else { toast(`<b>No recovery entry</b><span>${esc((r && r.why) || '')}</span>`); render(); } }
       else if (k === 'hist') histSheet();
       else if (k === 'troph' && nav) nav('locker', 'troph'); });
     const c = D.st(); if (c) { const bk = $id('rbBank'); if (bk) bk.textContent = money(c.bank); }
