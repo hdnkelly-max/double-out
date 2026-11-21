@@ -19,9 +19,10 @@ for(const base of ['kai','ray','tama','mia','dazza']){const ctx=await b.newConte
  for(const [si,[m,fn]] of steps.entries()){await p.evaluate(`(${fn.toString()})()`);await p.waitForTimeout(600);
   if(m==='defeated'){/* match end: the 3D is behind the result screen, so 'defeated' shows on the player's result portrait */const d=await p.evaluate(()=>{const im=document.querySelector('#rsPt0 img');const neutral=V.portrait(save.look,save.name,0,0,0);return {has:!!im,diff:!!im&&im.src!==neutral};});
    if(!d.has||!d.diff)fails.push(`${base}/defeated: result portrait ${d.has?'unchanged':'missing'}`);else held++;if(out)await p.screenshot({path:`${out}/${base}_${si}_defeated_result.png`,clip:{x:0,y:180,width:390,height:150}});continue;}
+  if(out)await p.screenshot({path:`${out}/${base}_${si}_${m}${si===3?'_bust':''}.png`});
   const r=await p.evaluate(()=>{const f=V._qa.fpFig();if(!f)return {err:'no fpFig'};const now=f.userData.persNow||null;const c=window.TOPS_S3CLIP?TOPS_S3CLIP(f):null;const bad=[];if(c)for(const k of ['pants','arm','cuff','collar','trim','head','fist','skull','dart'])if(c[k])bad.push(k+':'+c[k]);return {now,checked:c?c.checked:0,bad,ex:c&&c.ex?c.ex.slice(0,2):[]};});
   if(r.err){fails.push(`${base}/${m}: ${r.err}`);continue;}checks+=r.checked;if(r.now===m)held++;else fails.push(`${base}/${m}: figure holds ${r.now}`);if(r.bad.length)fails.push(`${base}/${m}: clip ${r.bad.join(' ')} ${r.ex.join(' ')}`);
-  if(out)await p.screenshot({path:`${out}/${base}_${si}_${m}${si===3?'_bust':''}.png`});}
+  }
  /* release: a new pull takes over a held moment (checked after 'sig' on a fresh hold) */
  const rel=await p.evaluate(async()=>{S.done=false;const h=S.p.findIndex(q=>!q.ai);persHold(S.p[h],'celebrate',5000);await new Promise(r=>setTimeout(r,400));const a=V._qa.fpFig().userData.persNow;S.pulling=true;S.pull=.5;await new Promise(r=>setTimeout(r,400));const b=V._qa.fpFig().userData.persNow;S.pulling=false;return {a,b};});
  if(rel.a!=='celebrate'||rel.b)fails.push(`${base}: release: held ${rel.a}, after a pull ${rel.b}`);
