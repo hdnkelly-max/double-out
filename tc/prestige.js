@@ -60,7 +60,7 @@
   window.TOPS_GEARCAM = (() => { try { const q = new URLSearchParams(location.search).get('gearcam'); if (q === '1' || q === '0') localStorage.setItem('tops_gearcam', q); return localStorage.getItem('tops_gearcam') === '1'; } catch (e) { return false; } })();
   const GC_MS = 1200, LAB = { '180': 'ONE HUNDRED AND EIGHTY', match: 'GAME SHOT AND THE MATCH', nine: 'NINE-DARTER' };
   function pane() {   // the board pane: under the match header, down to where the pull pad starts (or the board's bottom edge)
-    let top = 0, bot = 0; try { const h = document.querySelector('#hud .hudTop, #hudTop, .hud-top'); if (h) top = Math.round(h.getBoundingClientRect().bottom); } catch (e) {}
+    let top = 0, bot = 0; try { const m = document.getElementById('btnMenu').getBoundingClientRect(); if (m.height > 0 && m.bottom < innerHeight * .2) top = Math.round(m.bottom); } catch (e) {}   // the match header ends under its MENU button
     try { const r = document.getElementById('pullPad').getBoundingClientRect(); if (r.height > 40 && r.top > top + 80) bot = Math.round(r.top); } catch (e) {}
     if (!bot) try { const b = V.boardBottomY(); if (b > top + 80) bot = Math.round(b); } catch (e) {}
     if (!bot) bot = Math.round(innerHeight * .45); return { top, h: bot - top }; }
@@ -68,13 +68,13 @@
     const VV = typeof V !== 'undefined' ? V : null; if (!window.TOPS_GEARCAM || !VV || !VV.gearShot) return false; const P = pane(); const shot = VV.gearShot(innerWidth / P.h); if (!shot) return false;
     const old = document.getElementById('gearCam'); if (old) old.remove();
     const d = document.createElement('div'); d.id = 'gearCam'; d.setAttribute('role', 'img'); d.setAttribute('aria-label', 'Your darts, close up');
-    d.style.cssText = `position:fixed;left:0;right:0;top:${P.top}px;height:${P.h}px;z-index:60;overflow:hidden;background:#000;opacity:0;transition:opacity .12s;touch-action:none`;
-    shot.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;transform:scale(1);transition:transform 1.2s cubic-bezier(.2,.6,.3,1)';
+    d.style.cssText = `position:fixed;left:0;right:0;top:${P.top}px;height:${P.h}px;z-index:2147483000;overflow:hidden;background:#000;opacity:1;touch-action:none;pointer-events:auto`;
+    shot.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
     d.appendChild(shot); const t = document.createElement('div'); t.textContent = LAB[kind] || ''; t.style.cssText = 'position:absolute;left:12px;bottom:10px;font:800 13px/1 "Saira Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:1.5px;color:#f3f4f2;background:rgba(10,11,13,.72);padding:6px 9px;border-left:3px solid #c6f36b'; d.appendChild(t);
-    document.body.appendChild(d); requestAnimationFrame(() => { d.style.opacity = '1'; shot.style.transform = 'scale(1.06)'; });
-    let gone = false; const end = () => { if (gone) return; gone = true; d.style.opacity = '0'; setTimeout(() => d.remove(), 160); };
+    document.body.appendChild(d); const Q = window.TOPS_GEARCAM_QA || {}; if (!Q.still) try { d.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120 }); shot.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }], { duration: GC_MS, fill: 'forwards', easing: 'cubic-bezier(.2,.6,.3,1)' }); } catch (e) {}
+    let gone = false; const end = () => { if (gone) return; gone = true; try { d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }); } catch (e) {} setTimeout(() => d.remove(), 150); };
     const skip = e => { try { e.preventDefault(); e.stopPropagation(); } catch (x) {} end(); };   // the tap that skips never reaches the aim pad
-    d.addEventListener('pointerdown', skip, true); d.addEventListener('touchstart', skip, { capture: true, passive: false }); setTimeout(end, GC_MS);
+    d.addEventListener('pointerdown', skip, true); d.addEventListener('touchstart', skip, { capture: true, passive: false }); setTimeout(end, Q.hold || GC_MS);   // QA captures: {still, hold} (slow software GL drops frames)
     window.TOPS_GEARCAM_LAST = { kind, at: Date.now(), w: shot.width, h: shot.height }; return true; };
   window.TOPS_PRESTIGE = { ED, paint, PARTS };
 })();

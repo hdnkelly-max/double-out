@@ -14,13 +14,13 @@ const MODELS = process.env.MODELS ? process.env.MODELS.split(',') : ['v2', 'v3']
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} });
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto('file://' + dir + '/index.html?s3=1&gearcam=1' + (model === 'v3' ? '&v3=1' : '&v3=0'));
     await p.waitForFunction(() => window.TOPS_S3 && window.C3 && window.TOPS_GEARCAM_FIRE && typeof V !== 'undefined' && V.gearShot, null, { timeout: 180000 }); await p.waitForTimeout(2000);
-    await p.evaluate(ed => { save.authSeen = true; $('login').hidden = true; save.name = 'Hayden'; newCareer(); persist(); window.TOPS_GEAR_PREVIEW = ed === 'default' ? null : ed; const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); }, ed);
+    await p.evaluate(ed => { save.authSeen = true; $('login').hidden = true; save.name = 'Hayden'; newCareer(); persist(); window.TOPS_GEAR_PREVIEW = ed === 'default' ? null : ed; window.TOPS_GEARCAM_QA = { still: 1, hold: 8000 }; const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); }, ed);
     for (let i = 0; i < 60; i++) { const ok = await p.evaluate(() => typeof S !== 'undefined' && S && !S.bull && S.cur === 0 && !S.done).catch(() => false); if (ok) break; await p.waitForTimeout(500); }
     await p.waitForTimeout(1200);
     const fired = await p.evaluate(() => new Promise(res => { V.clearDarts(); const from = V.handWorld(); let n = 0; const land = [[-6, -103], [1, -100.5], [7, -104.5]];
       land.forEach(([x, y], i) => setTimeout(() => V.fly(from, x, y, 0, 380, .02, () => { if (++n === 3) setTimeout(() => res(TOPS_GEARCAM_FIRE('180')), 650); }), i * 450)); }));
-    await p.waitForTimeout(600); const pane = await p.evaluate(() => { const d = document.getElementById('gearCam'); if (!d) return null; const r = d.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+    await p.waitForTimeout(2500); const pane = await p.evaluate(() => { const d = document.getElementById('gearCam'); if (!d) return null; const r = d.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
     const f = path.join(out, `gc-${model}-${w}-${ed}.png`); if (pane) await p.screenshot({ path: f, clip: { x: 0, y: pane.y, width: w, height: pane.h } });
-    await p.waitForTimeout(900); const gone = await p.evaluate(() => !document.getElementById('gearCam'));
+    const gone = await p.evaluate(() => { window.TOPS_GEARCAM_QA = {}; const d = document.getElementById('gearCam'); if (d) d.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return new Promise(r => setTimeout(() => r(!document.getElementById('gearCam')), 600)); });   // a tap skips it
     log.push({ model, w, ed, fired, pane, gone, last: await p.evaluate(() => window.TOPS_GEARCAM_LAST), errs: pe.slice(0, 1) }); await p.close(); }
   await b.close(); console.log(JSON.stringify(log)); })();

@@ -2828,7 +2828,7 @@ window.TOPS_S3DARTCLEAR=s3DartClear;window.TOPS_S3DARTHAIR=s3DartHair;
     camera, turn timing or any throw number. Returns a canvas cropped to the board pane's aspect, or null. Engine: hook note on the build board (CAR-PRESTIGE, Sun 22 Nov). */
  function gearShot(aspect,mine){try{const own=stuck.filter(d=>d.userData&&d.userData.who===0);const ds=(mine===false?stuck:own).slice(-3);if(ds.length<1)return null;
    const c=new T.Vector3();ds.forEach(d=>c.add(d.position));c.multiplyScalar(1/ds.length);let r=0;ds.forEach(d=>{r=Math.max(r,d.position.distanceTo(c));});
-   const cv0=renderer.domElement,W=cv0.width,H=cv0.height;const K=Object.assign({fov:24,d:.6,dr:2.2,ox:.34,oy:-.30,oz:.89,lx:-.012,ly:0,lz:.14},window.TOPS_GC_TUNE||{});const cam=new T.PerspectiveCamera(K.fov,W/H,.01,6);const dist=K.d+r*K.dr;
+   const cv0=renderer.domElement,W=cv0.width,H=cv0.height;const K=Object.assign({fov:24,d:.6,dr:2.2,ox:-.2,oy:-.42,oz:.89,lx:.008,ly:0,lz:.14},window.TOPS_GC_TUNE||{});const cam=new T.PerspectiveCamera(K.fov,W/H,.01,6);const dist=K.d+r*K.dr;
    cam.position.set(c.x+dist*K.ox,c.y+dist*K.oy,c.z+dist*K.oz);cam.lookAt(c.x+K.lx,c.y+K.ly,c.z+K.lz);cam.updateProjectionMatrix();
    const wob=ds.map(d=>[d.rotation.x,d.rotation.y]);ds.forEach(d=>{d.rotation.x=0;d.rotation.y=0;});renderer.render(scene,cam);ds.forEach((d,i)=>{d.rotation.x=wob[i][0];d.rotation.y=wob[i][1];});
    let cw=W,ch=Math.round(W/aspect);if(ch>H){ch=H;cw=Math.round(H*aspect);}const out=document.createElement('canvas');out.width=cw;out.height=ch;out.getContext('2d').drawImage(cv0,(W-cw)/2,(H-ch)/2,cw,ch,0,0,cw,ch);return out;}catch(e){console.warn('gearShot',e);return null;}}
