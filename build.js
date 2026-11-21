@@ -28,7 +28,8 @@ const v12=fs.existsSync('v12.js')?fs.readFileSync('v12.js','utf8'):'';
 const v13=fs.existsSync('v13.js')?fs.readFileSync('v13.js','utf8'):'';
 const v14=fs.existsSync('v14.js')?fs.readFileSync('v14.js','utf8'):'';
 const v15=fs.existsSync('v15.js')?fs.readFileSync('v15.js','utf8'):'';/* CAR-S career backup + confirm */
-const v16=fs.existsSync('v16.js')?fs.readFileSync('v16.js','utf8'):'';/* ENG-RESET fresh page between matches */
+const v16=fs.existsSync('v16.js')?fs.readFileSync('v16.js','utf8'):'';
+const v17=fs.existsSync('v17.js')?fs.readFileSync('v17.js','utf8'):'';/* CAR-TABS: one tab owns the save; never overwrite a newer save *//* ENG-RESET fresh page between matches */
 const s3c=fs.existsSync('tc/s3.js')?`<script>${fs.readFileSync('tc/circuit.js','utf8')}\n${fs.readFileSync('tc/s3.js','utf8')}</script>\n`:'';/* S3 Circuit career (Career): engine + wiring, off unless the s3 flag is on */
 const dg=fs.existsSync('dartgeo.json')?`<script>window.TOPS_DG_RAW=${fs.readFileSync('dartgeo.json','utf8')}</script>\n`:'';
 // collectibles (cards, packs, cabinet, exhibitions): tc/
@@ -43,7 +44,7 @@ const s3walk=d=>fs.existsSync(d)?fs.readdirSync(d,{withFileTypes:true}).flatMap(
 const s3man=[...new Set(s3walk('s3').filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).map(f=>f.slice(3)).concat(fs.existsSync('s3/have.json')?JSON.parse(fs.readFileSync('s3/have.json','utf8')):[]))].sort();
 const s3=fs.existsSync('rb/s3.js')?`<style>${fs.existsSync('rb/s3.css')?fs.readFileSync('rb/s3.css','utf8'):''}</style>\n<script>window.TOPS_S3_HAVE=${JSON.stringify(s3man)};\n${fs.readFileSync('rb/s3.js','utf8')}</script>\n`:'';
 const rb=s3+(fs.existsSync('rb/rb.js')?`<style>${fs.existsSync('rb/rb-lime.css')?fs.readFileSync('rb/rb-lime.css','utf8'):''}${fs.readFileSync('rb/rb.css','utf8')}</style>\n<script>${fs.readFileSync('rb/rb.js','utf8')}</script>\n`:'');
-const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+s3c+tc+rb+v16;
+const page0=upd+head+envs+dg+body+g+c3+v3+v4+v41+v5+v51+v6+v7+v8+v9+v10+v11+v12+v13+v14+v15+s3c+tc+rb+v16+v17;
 // ENG-FLASH real progress (Experience, Overseer 17:58) + Q&D 18:23: every shipped file is parsed top to bottom, so how far the parser has got IS the
 // load progress. After the loader, a tiny TOPS_LOAD.part('parse', f) goes in after the first </script> past every 10 % of THAT file (always top
 // level: the HTML parser ends a script at </script>), f = the real fraction at that point; weighted in TOPS_LOAD.part with the page parsed (8 %) and
