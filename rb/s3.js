@@ -652,8 +652,8 @@
   /* ---------- v3 switch-on (Director doc 69): a one-time 'New look' card over the title. Once per ACCOUNT: the flag is in the save
      (save.v3NewLook), so it syncs with the cloud save. Existing players only: a career started with v3 on sets the flag at once. It shows
      the player's own v3 figure (V.heroShot, the hub's hero render) with their name; their base's v3 card stands in until that render is
-     ready. Copy is Director's draft, pending Hayden's OK. Behind TOPS_V3FLAG. ---------- */
-  const V3NL = { title: 'New look, same you', body: 'We’ve rebuilt every player and opponent from the ground up: new faces, new hair, more personality.', keep: 'Your career, cards and stats haven’t changed.', go: 'Let’s go', tweak: 'Tweak my look' };
+     ready. Copy approved by Hayden as written (22 Nov 12:20): locked, s3-v3newlook checks it word for word. Behind TOPS_V3FLAG. ---------- */
+  const V3NL = Object.freeze({ title: 'New look, same you', body: 'We’ve rebuilt every player and opponent from the ground up: new faces, new hair, more personality.', keep: 'Your career, cards and stats haven’t changed.', go: 'Let’s go', tweak: 'Tweak my look' });
   function v3NewLook(n) {
     try {
       if (!window.TOPS_V3FLAG || !window.TOPS_S3FLAG || typeof save === 'undefined' || save.v3NewLook || $id('s3V3New')) return;
