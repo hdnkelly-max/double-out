@@ -935,7 +935,7 @@
   /* #17: every exit that isn't a completed walk (quit, back to the hub or title, the next beginMatch) ends the walk-on the same way:
      figures it hid come back, the player figure goes back to how the walk found it, its clip stops, lights/overlay/body class clear. */
   function walkAbort() {
-    const w = WK; if (!w) return; WK = null;
+    const w = WK; if (!w) return; walkInsertEnd(w); WK = null;
     try { if (w.hid) w.hid.forEach(o => { o.visible = true; }); } catch (e) {}
     try { if (w.act) w.act.stop(); } catch (e) {}
     try { if (w.me && w.vis0 !== undefined) w.me.visible = !!w.vis0; } catch (e) {}
@@ -1025,7 +1025,7 @@
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
       walkLights(null);
       me.visible = !!WK.vis0;   // #17/#18: hand the figure back as the walk-on found it. Left visible, a whole extra skinned figure rendered every frame for the rest of the match and stood where the opponent throws.
-      WK = null; walkEnd(); return null;
+      walkInsertEnd(WK); WK = null; walkEnd(); return null;
     }
     // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold
     const e = Math.min(1, k / WA), ease = 1 - Math.pow(1 - e, 2.2);
@@ -1055,6 +1055,13 @@
       { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
         if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
     }
+    // doc 76 (Director, for Experience): v3 walk-on cameras. TOPS_WALK76=1 (or ?walk76=1) pulls the tracking shot back: v3 heads are about
+    // twice the old rig's, so today's tracking camera sits inside the head. =2 also cuts to a 0.55 s darts-in-hand insert at k .30-.42 (taken
+    // from the start of the tracking beat, so the walk-on stays 4.8 s). v3 only; off or v2 = today's walk-on exactly.
+    { const W76 = walk76();
+      if (W76 >= 1 && k >= .29 && k < WA) { cam = tgt.clone().add(cam.clone().sub(tgt).multiplyScalar(2.3)); cam.y = 1.25; tgt = tgt.clone(); tgt.y = 1.15; fov = 38; }
+      const ins = W76 >= 2 && k >= .3 && k < .42 ? walkInsert(v.T, me, cam, (k - .3) / .12) : null;
+      if (ins) { cam = ins.cam; tgt = ins.tgt; fov = ins.fov; } else walkInsertEnd(WK); }
     // lightning shake: 2–3 px for a quarter second
     if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
     const shot = k < .29 ? 0 : k < WA ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
@@ -1062,6 +1069,32 @@
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
     return { fov: fov + (1 - blend) * 4 };
   };
+  // doc 76: which walk-on cameras (0 today, 1 pull-back, 2 pull-back + darts-in-hand insert); v3 only.
+  // Experience's default under v3 is 1 (phone-size run, 22 Nov: today's tracking shot sits inside the v3 head on every base; the pull-back
+  // reads on all of them). The insert stays opt-in: at 360 the shirt fills most of the pane and the default flights sit small in a corner,
+  // so it waits for the edition spares (doc 75) and a framing pass. TOPS_WALK76=0 or ?walk76=0 brings back today's camera.
+  function walk76() { if (window.TOPS_V3FLAG !== true) return 0; let w = window.TOPS_WALK76;
+    if (w == null) { try { const q = new URLSearchParams(location.search).get('walk76'); if (q != null) w = q; } catch (e) {} }
+    if (w == null) w = 1; w = +w || 0; return w >= 2 ? 2 : w >= 1 ? 1 : 0; }
+  // doc 76: the darts-in-hand insert. Aims at the flights of your two spare darts (left hand), from outward of the body plus a little toward
+  // the walk camera and slightly above, so the torso and sleeve never block it; 0.5 m (TOPS_WALK76D), fov 18, so the flights fill about a third of the pane.
+  // The spares are scaled 1.5x for the insert only (the vinyl hands are 1.15x and the darts true size, so at 1.0 the flights hide in the fist),
+  // and put back as soon as the insert ends, the walk-on ends or is aborted. A slow 5 degree drift so it reads as a shot, not a freeze.
+  function walkInsert(T, me, cam, q) {
+    const B = me.userData && me.userData.B; if (!B || !B.LeftHand) return null;
+    const sp = B.LeftHand.children.filter(c => c.userData && c.userData.spare && c.visible !== false); if (!sp.length) return null;
+    if (!WK.ins) { WK.ins = sp.map(d => [d, d.scale.clone()]); sp.forEach(d => d.scale.multiplyScalar(1.5)); }
+    me.updateMatrixWorld(true); const bx = new T.Box3();
+    sp.forEach(d => d.traverse(o => { if (o.isMesh && o.geometry && o.geometry.type === 'ShapeGeometry') bx.expandByObject(o); }));   // the flights
+    if (bx.isEmpty()) sp.forEach(d => bx.expandByObject(d));
+    const tgt = bx.getCenter(new T.Vector3()), c0 = new T.Vector3(); (B.Spine2 || B.Spine || me).getWorldPosition(c0);
+    const out = tgt.clone().sub(c0); out.y = 0; if (out.lengthSq() < 1e-8) out.set(1, 0, 0); out.normalize();
+    const fw = cam.clone().sub(tgt); fw.y = 0; if (fw.lengthSq() > 1e-8) fw.normalize();
+    const dir = out.addScaledVector(fw, .7); dir.y = 0; dir.normalize();
+    const a = (q - .5) * 5 * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a); dir.set(dir.x * ca - dir.z * sa, .25, dir.x * sa + dir.z * ca).normalize();
+    return { cam: tgt.clone().addScaledVector(dir, +(window.TOPS_WALK76D || .5)), tgt, fov: 18 };
+  }
+  function walkInsertEnd(w) { if (w && w.ins) { try { w.ins.forEach(([d, sc]) => d.scale.copy(sc)); } catch (e) {} w.ins = null; } }
   // walk-on lighting: a warm follow spot above the player and a cool rim light behind; the lightning flashes the rim
   function walkLights(v, me, now) {
     const L = walkLights.L;
