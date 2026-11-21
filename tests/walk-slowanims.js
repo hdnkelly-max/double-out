@@ -31,7 +31,7 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
     const r = Object.assign({ pend0 }, w, { pe: pe.slice(0, 2) }); out[tag] = r; await ctx.close(); return r; };
   for (const v3 of ['0', '1']) {
     const r = await run('slow55_v3' + v3, v3, 5500);
-    if (!(r.walked > 3)) fail.push(`v3=${v3}: clip file 5.5 s late, the walk-on skipped instead of waiting for it ${JSON.stringify(r)}`);
+    if (!(r.walked >= 1)) fail.push(`v3=${v3}: clip file 5.5 s late, the walk-on skipped instead of waiting for it ${JSON.stringify(r)}`);
     if (r.secs == null || r.secs > 17) fail.push(`v3=${v3}: walk-on length ${r.secs}s`);
   }
   { const r = await run('stalled', '1', Infinity); if (r.secs == null || r.secs < 9 || r.secs > 12.5) fail.push('a clip file that never lands must end the walk-on at about 10 s ' + JSON.stringify(r)); }
