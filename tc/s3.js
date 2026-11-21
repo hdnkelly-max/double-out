@@ -97,6 +97,9 @@
   window.addEventListener('tops:s3',ev=>{const r=ev.detail||{};let n=0;const t=setInterval(()=>{const b=document.getElementById('btnResAction');if(!b&&++n<50)return;clearInterval(t);if(!b)return;
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
+  /* CAR-OPP: v11's save migration re-shifts a queued opponent while the page loads, before this engine (and its Season 3 FIELD_CEN) is
+     on the page, so it used the Season 2 centre. Re-derive it once now from its raw rating, the same rule as v11 (never the player). */
+  try{const c=typeof career==='function'?career():null,n=c&&c.next;if(on()&&c&&c.circuit&&!c.run&&n&&n.oppRaw!=null&&!n.intro&&window.TOPS_OPP_SHIFT){const a=TOPS_OPP_SHIFT(n.oppRaw,c.tier)+(n.routeAdj||0);if(a!==n.oppAvg){n.oppAvg=a;persist();}}}catch(e){}
   window.TOPS_S3={on,view,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
   // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
   // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are

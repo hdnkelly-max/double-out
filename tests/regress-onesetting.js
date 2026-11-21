@@ -7,7 +7,7 @@ const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--allow-file-access-from-files']});const p=await b.newPage({viewport:{width:390,height:844}});
  await p.route(/jsdelivr|supabase\.co|googleapis|gstatic/,r=>r.abort());const errs=[];p.on('pageerror',e=>errs.push(e.message));
  await p.goto('file://'+path.resolve(__dirname,'../index.html'));await p.waitForTimeout(800);await p.evaluate(()=>localStorage.clear());await p.reload();await p.waitForTimeout(4500);
- const f=[];const want=await p.evaluate(()=>TOPS_OPP_SHIFT(70,2));
+ const f=[];const want=await p.evaluate(()=>{save.authSeen=true;newCareer();return TOPS_OPP_SHIFT(70,2);}); // CAR-OPP: the career's own centre (Season 3 uses the Circuit's FIELD_CEN), so the expected value comes with a career on the page
  const plant=lv=>p.evaluate(lv=>{save.authSeen=true;save.lessonDone=true;$('login').hidden=true;newCareer();const c=career();c.tier=2;c.stage=null;c.bank=500;
   c.next={oppName:'Queued',oppRaw:70,oppAvg:lv==='comp'?76:63,legs:3,_d:2};const cloud=JSON.parse(JSON.stringify(save));cloud.diff={lv,darts:300,pts:21000,place:0};cloud.season=SEASON;cloud.sv=(save.sv||0)+5;cloud.dev='other-device';return cloud;},lv);
  const read=()=>p.evaluate(()=>({lv:save.diff&&save.diff.lv,next:career().next&&career().next.oppAvg}));
