@@ -245,15 +245,16 @@
     let line, btn = '';
     if (!st.ready) line = 'Joins the shop with the new kits';
     else if (!st.won) line = (ed.id === 'worlds' ? 'Win the World Championship' : 'Win a ' + esc(L ? L.n : '') + ' title') + ' to unlock · ' + $m(ed.price);
-    else if (!st.owned) { line = 'Your title unlocked it · cosmetic only'; btn = st.canAfford ? `<button type="button" class="s3-edb" data-ed-buy="${ed.id}"><b>Buy · ${$m(ed.price)}</b></button>` : `<button type="button" class="s3-edb" disabled><b>${$m(ed.price)}</b><small>Keep ${$m(st.fee)} for your next entry</small></button>`; }
+    else if (!st.owned) { line = 'Your title unlocked it · cosmetic only'; const armed = ARM.id === ed.id && Date.now() - ARM.at < 3000; btn = st.canAfford ? `<button type="button" class="s3-edb" data-ed-buy="${ed.id}">${armed ? `<b>Tap again to buy</b><small>${$m(ed.price)}</small>` : `<b>Buy · ${$m(ed.price)}</b>`}</button>` : `<button type="button" class="s3-edb" disabled><b>${$m(ed.price)}</b><small>Keep ${$m(st.fee)} for your next entry</small></button>`; }
     else if (PARTS[ed.id]) { line = st.worn ? 'On your darts' : 'Yours'; btn = `<button type="button" class="s3-edb s3-edw" data-ed-wear="${st.worn ? '' : ed.id}"><b>${st.worn ? 'Take off' : 'Wear'}</b></button>`; }
     else line = 'Yours';
     const img = thumb(ed.id); return `<div class="s3-ed${st.owned ? ' s3-edown' : st.won && st.ready ? ' s3-edopen' : ''}" data-edrow="${lv}">${img ? `<img src="${img}" alt="">` : '<i></i>'}<div><span>Title edition</span><b>${esc(ed.n)}</b><small>${line}</small></div>${btn}</div>`; }
+  const ARM = { id: null, at: 0 };   // the first tap arms a buy for 3 s (kept here, so a shelf redraw in between doesn't lose it)
   const redraw = lv => { const r = document.querySelector(`[data-edrow="${lv}"]`); if (r) r.outerHTML = row(lv); };
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-ed-buy],[data-ed-wear]'); if (!b) return; e.preventDefault(); e.stopPropagation();
     const r = b.closest('[data-edrow]'), lv = r ? +r.dataset.edrow : null;
-    if (b.dataset.edBuy) { if (!b.dataset.armed) { b.dataset.armed = 1; b.innerHTML = '<b>Tap again to buy</b><small>' + $m(ED.find(x => x.id === b.dataset.edBuy).price) + '</small>'; setTimeout(() => { if (b.isConnected) redraw(lv); }, 3000); return; }
-      const res = buy(b.dataset.edBuy); if (!res.ok) { b.innerHTML = '<b>' + esc(res.why || 'Not bought') + '</b>'; setTimeout(() => redraw(lv), 1800); return; } redraw(lv);
+    if (b.dataset.edBuy) { const id = b.dataset.edBuy; if (!(ARM.id === id && Date.now() - ARM.at < 3000)) { ARM.id = id; ARM.at = Date.now(); redraw(lv); setTimeout(() => { if (ARM.id === id) { ARM.id = null; redraw(lv); } }, 3050); return; }
+      ARM.id = null; const res = buy(id); if (!res.ok) { b.innerHTML = '<b>' + esc(res.why || 'Not bought') + '</b>'; setTimeout(() => redraw(lv), 1800); return; } redraw(lv);
       try { const bk = document.getElementById('rbBank'); if (bk) bk.textContent = $m(career().bank); } catch (x) {} }
     else { wear(b.dataset.edWear || null); redraw(lv); } }, true);
   window.TOPS_PRESTIGE = { ED, paint, PARTS, READY, state, buy, wear, floorFee, row };
