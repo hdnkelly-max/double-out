@@ -1,0 +1,29 @@
+// Engine: renders the v3 pro card art (doc 67 spec, doc 71 per-card pose + camera, SHIPPING flags: s3pros off). node tests/v3-cards-render.js <built dir, forced v3> <outdir> "$(cat <spec json [{id,name}]>)" '{}'  then python3 tests/v3-cards-comp.py <outdir> <outdir>/webp s3/img/v6.jpg '<{id:cx} from TOPS_V3CARDPOSE.table[id].plate.cx>' <ids...>
+// doc 67 card-render spec, Engine version: node cardrender.js <dir (forced v3)> <outdir> <specJSON [{id,name}]> [globalsJSON]
+// figure = makeFigure(lookFor(name), name, 0) under the flags given (v3 + V3CAST [+ s3pros]); pose = clip 'cheer' at .40 of its length (or the PERS23 signature
+// if the figure has one); dart hidden; camera fov 30, 4.4 m from the head bone at yaw -22 deg (the figure's right 3/4), .30 m below the head, looking .42 m
+// below it; the match light rig at match exposure; 1400x2100 with alpha solved over black and white. Writes <outdir>/<id>_fig.png (RGBA, 1400x2100)
+const {chromium}=require('playwright');const http=require('http'),fs=require('fs'),path=require('path');
+(async()=>{const dir=path.resolve(process.argv[2]),out=process.argv[3],specs=JSON.parse(process.argv[4]),G=JSON.parse(process.argv[5]||'{}');fs.mkdirSync(out,{recursive:true});
+const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);if(u==='/')u='/index.html';fs.readFile(path.join(dir,u),(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':/\.html$/.test(u)?'text/html':/\.js$/.test(u)?'text/javascript':'application/octet-stream'});r.end(d);});}).listen(0);
+const b=await chromium.launch({args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});const p=await (await b.newContext({viewport:{width:700,height:700}})).newPage();const pe=[];p.on('pageerror',e=>pe.push(e.message));
+await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/,r=>r.abort());
+await p.addInitScript(([G])=>{try{localStorage.setItem('tops_s3','1');localStorage.setItem('tops_s3_welcome','1');localStorage.setItem('tops_v3','1');localStorage.setItem('tops_v3cast','1');if(G.S3PROS)localStorage.setItem('tops_s3pros','1');}catch(e){}Object.assign(window,G);},[G]);
+await p.goto(`http://127.0.0.1:${srv.address().port}/index.html?s3=1&s3gloss=full&v3cast=1${G.S3PROS?'&s3pros=1':''}`);await p.waitForFunction(()=>typeof V!=='undefined'&&V._qa&&V._qa.rigReady&&V._qa.rigReady(),null,{timeout:240000});
+await p.evaluate(()=>{V.loadAnims();});await p.waitForFunction(()=>V._qa.animNames().length>0,null,{timeout:180000});
+for(const sp of specs){const r=await p.evaluate(async(sp)=>{const Q=V._qa,T=Q.T,R0=Q.renderer;let f;try{f=Q.makeFigure(lookFor(sp.name),sp.name,0);}catch(e){return {err:e.message};}
+  try{TOPS_V2LIGHT.setMode('match');}catch(e){}try{TOPS_V2LIGHT.relight(f);}catch(e){}
+  const sc=new T.Scene();sc.add(f);f.position.set(0,0,0);f.rotation.set(0,0,0);if(f.userData.mixer)f.userData.mixer.stopAllAction();f.userData.act=null;
+  let pose='cheer';const CP=window.TOPS_V3CARDPOSE,spec=CP&&CP.table[sp.id];if(spec&&CP.apply(f,sp.id))pose='card71';else if(f.userData.persBase&&Q.pers(f,'sig',0.5))pose='sig';else{const a=Q.playClip(f,'cheer',{});if(a){a.time=a.getClip().duration*0.40;f.userData.mixer.update(0);}}
+  if(f.userData.dt)f.userData.dt.visible=false;f.traverse(o=>{if(o.userData&&(o.userData.spare||o.userData.dart))o.visible=false;});f.updateMatrixWorld(true);try{TOPS_V2LIGHT.relight(f);}catch(e){}let clip=null;try{const c=TOPS_S3CLIP(f);clip=c?{n:c.checked,bad:['pants','arm','cuff','collar','trim','head','fist','skull','dart'].filter(k=>c[k]).map(k=>k+':'+c[k])}:null;}catch(e){clip={err:String(e)};}
+  const h=f.userData.B.Head.getWorldPosition(new T.Vector3()),W=1400,H=2100,C=(spec&&pose==='card71')?spec.cam:{yaw:-22,dist:4.4,y:-.3,ly:-.42,px:0,fov:30},cam=new T.PerspectiveCamera(C.fov||30,W/H,.05,60),rr=C.yaw*Math.PI/180,rt=new T.Vector3(Math.cos(rr),0,Math.sin(rr));
+  cam.position.set(h.x+Math.sin(rr)*C.dist,h.y+C.y,h.z-Math.cos(rr)*C.dist).addScaledVector(rt,-(C.px||0));cam.lookAt(new T.Vector3(h.x,h.y+C.ly,h.z).addScaledVector(rt,-(C.px||0)));/* doc 71: per-card camera (yaw, dist, height, look height, side shift, fov) */
+  const sz=R0.getSize(new T.Vector2()),pr=R0.getPixelRatio(),cc=R0.getClearColor(new T.Color()),ca=R0.getClearAlpha(),st=R0.getScissorTest(),cv0=R0.domElement;
+  const grab=bg=>{R0.setRenderTarget(null);R0.setScissorTest(false);R0.setViewport(0,0,W,H);R0.setClearColor(bg,1);R0.clear();R0.render(sc,cam);const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(cv0,0,0,W,H,0,0,W,H);return c.getContext('2d').getImageData(0,0,W,H).data;};
+  R0.setPixelRatio(1);R0.setSize(W,H,false);let K,Wt;try{K=grab(0x000000);Wt=grab(0xffffff);}finally{R0.setPixelRatio(pr);R0.setSize(sz.x,sz.y,false);R0.setClearColor(cc,ca);R0.setScissorTest(st);}
+  const big=document.createElement('canvas');big.width=W;big.height=H;const bx=big.getContext('2d'),im=bx.createImageData(W,H),o=im.data;
+  for(let i=0;i<o.length;i+=4){const al=Math.max(0,Math.min(1,1-((Wt[i]-K[i])+(Wt[i+1]-K[i+1])+(Wt[i+2]-K[i+2]))/(3*255)));o[i+3]=Math.round(al*255);if(al>0.004){o[i]=Math.min(255,K[i]/al);o[i+1]=Math.min(255,K[i+1]/al);o[i+2]=Math.min(255,K[i+2]/al);}}
+  bx.putImageData(im,0,0);let top=-1;for(let y=0;y<H&&top<0;y++)for(let x=0;x<W;x+=2)if(o[(y*W+x)*4+3]>40){top=y;break;}
+  const res={png:big.toDataURL('image/png'),pose,v3:!!(f.userData.s3rig&&f.userData.s3rig.v3),top,clip,cx:spec&&spec.plate?spec.plate.cx:null};Q.dispose(f);return res;},sp);
+ if(r.err){console.log(sp.id,'ERR',r.err);continue;}fs.writeFileSync(`${out}/${sp.id}_fig.png`,Buffer.from(r.png.split(',')[1],'base64'));console.log(sp.id,JSON.stringify({pose:r.pose,v3:r.v3,topPx700:Math.round(r.top/2),clip:r.clip,cx:r.cx}));}
+if(pe.length)console.log('ERR',pe.slice(0,2).join(' | '));await b.close();srv.close();})();

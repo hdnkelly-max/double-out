@@ -1350,9 +1350,12 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   for(let yy=0;yy<y1-y0;yy++){const th=(y0+yy+0.5)/H*Math.PI;for(let xx=0;xx<w;xx++){const ph=(x0+xx+0.5)/W*2*Math.PI-Math.PI/2;const md=Math.hypot(ph/P.hw,(th-P.cy)/P.hh);
     let a=sm(P.in,P.out,md)*(1-sm(1.25,1.5,md))*(th>2.2||Math.abs(ph)>0.3?1:0.5);if(a<=0)continue;a*=P.a*(0.75+0.25*rn());const q=4*(yy*w+xx);for(let c=0;c<3;c++)d[q+c]=d[q+c]+(P.col[c]-d[q+c])*a;}}
   x.putImageData(im,x0,y0);}
+ /* the skin-map paint passes over the face sheet (doc 67 stubble, doc 68 Dazza junction), shared by the build and v3Mood */
+ function v3SkinPaint(x,W,H,L){if(V3H67()&&(L._cast||L._p70)&&L.face==='stubble')v3Stubble67(x,W,H,L);if(V3D68('D')&&L.base==='dazza')v3BeardRing68(x,W,H);}
+ const v3NeedsSkinPaint=L=>!!L&&((V3H67()&&(L._cast||L._p70)&&L.face==='stubble')||(V3D68('D')&&L.base==='dazza'));
  function v3HeadMaps(L,sk,rough){const big=S3G==='full'?2048:1536,FW=big,FH=big/2,F0=V3P.face,face=v3FaceSheet(L,sk);
   const at=(x,W,H)=>[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
-  const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));if(V3H67()&&(L._cast||L._p70)&&L.face==='stubble')v3Stubble67(x,W,H,L);if(V3D68('D')&&L.base==='dazza')v3BeardRing68(x,W,H);});
+  const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));v3SkinPaint(x,W,H,L);});
   const rm=document.createElement('canvas');rm.width=512;rm.height=256;{const x=rm.getContext('2d'),W=512,H=256,g=Math.round(255*rough),[ox,oy,sw,sh]=at(x,W,H),E=V3EYE;
    x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*(window.TOPS_V3EYER!=null?window.TOPS_V3EYER:.3));/* TOPS_V3EYER: eye-region roughness (test knob) *//* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
    const KR=(L.base==='kai'&&V3D68('K'))?D68P('K',{gr:0.84}).gr:1;/* doc 68 Kai: the glossy eye patch pulled inside the eye, so no bright reflection crescent rims it */[-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024*KR,sh*E.ry/640*KR*(KR<1?0.9:1),0,0,7);x.fill();});}
@@ -2626,11 +2629,11 @@ window.TOPS_S3DARTCLEAR=s3DartClear;window.TOPS_S3DARTHAIR=s3DartHair;
  function v3Mood(fig,spec){let m=null;fig.traverse(o=>{if(!m&&o.isMesh&&o.material&&o.material.userData&&o.material.userData.v3m)m=o.material.userData.v3m;});if(!m)return false;
   const key=spec?JSON.stringify(spec):'';if(m.cur===key)return true;m.cache=m.cache||{};let sh=m.cache[key];if(!sh){sh=m.cache[key]=v3FaceSheet(spec?Object.assign({},m.L,{v3ex:spec}):m.L,m.sk);}
   const cv=m.map.image,W=cv.width,H=cv.height,F0=V3P.face,r=[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
-  const x=cv.getContext('2d');x.fillStyle=m.sk;x.fillRect(r[0],r[1],r[2],r[3]);x.drawImage(sh,...r);m.map.needsUpdate=true;m.cur=key;return true;}
+  const x=cv.getContext('2d');if(window.TOPS_DOC71!==0&&window.TOPS_V3FLAG===true&&v3NeedsSkinPaint(m.L)){/* doc 71 fix: a mood redraw used to wipe the painted stubble / Dazza's beard junction inside the face rect. Re-paint on a scratch copy, then copy the rect back */const sc=document.createElement('canvas');sc.width=W;sc.height=H;const sx=sc.getContext('2d');sx.fillStyle=m.sk;sx.fillRect(r[0],r[1],r[2],r[3]);sx.drawImage(sh,...r);v3SkinPaint(sx,W,H,m.L);x.clearRect(r[0],r[1],r[2],r[3]);x.drawImage(sc,r[0],r[1],r[2],r[3],r[0],r[1],r[2],r[3]);}else{x.fillStyle=m.sk;x.fillRect(r[0],r[1],r[2],r[3]);x.drawImage(sh,...r);}m.map.needsUpdate=true;m.cur=key;return true;}
  function v3PersFrame(fig){const q=fig.getWorldQuaternion(new T.Quaternion());const fwd=new T.Vector3(0,0,-1).applyQuaternion(q),up=new T.Vector3(0,1,0),rt=new T.Vector3(-fwd.z,0,fwd.x).normalize();
   return {fwd,up,rt,d:a=>new T.Vector3().addScaledVector(fwd,a[0]).addScaledVector(rt,a[1]).addScaledVector(up,a[2]).normalize()};}
  /* apply a moment at time t (s). Returns false when the figure isn't a v3 base or the switch is off, so callers fall back to today's pose. */
- function v3PersApply(fig,moment,t){const u=fig.userData,base=u.persBase;if(!PERS23||!base||!V3PERS[base])return false;const S=V3PERS[base][moment];if(!S)return false;
+ function v3PersApply(fig,moment,t,SP){const u=fig.userData,base=u.persBase;if(!SP&&(!PERS23||!base||!V3PERS[base]))return false;const S=SP||V3PERS[base][moment];if(!S)return false;/* doc 71: SP = an explicit pose spec (the card poses), any v3 figure */
   const B=u.B,R=RIG.rest;t=t||0;fig.updateWorldMatrix(true,true);
   /* 1 the clip: everything from the clip at its moment (legs, hips, spine, arms) */
   let clipped=false;if(S.clip){try{if(u.mixer)u.mixer.stopAllAction();u.act=null;const a=playClip(fig,S.clip,{});if(a&&u.mixer){const d=a.getClip().duration;a.time=Math.min(d*.999,d*(S.at||0)+t*(S.speed||1));u.mixer.update(0);clipped=true;}}catch(e){}}
@@ -2655,7 +2658,40 @@ window.TOPS_S3DARTCLEAR=s3DartClear;window.TOPS_S3DARTHAIR=s3DartHair;
   /* 5 the face */
   if(S.face)v3Mood(fig,S.face);fig.updateWorldMatrix(true,true);u.persNow=moment;return true;}
  function v3PersReset(fig){if(fig&&fig.userData.persNow){v3Mood(fig,null);fig.userData.persNow=null;}}
- window.TOPS_PERS=(fig,m,t)=>v3PersApply(fig,m,t);window.TOPS_PERS_ON=()=>PERS23;
+ window.TOPS_PERS=(fig,m,t)=>v3PersApply(fig,m,t);
+ /* doc 71 (Director, 22 Nov): one pose and composition per pro card (ChatGPT: the 9 read templated), from the game's clips plus additive offsets
+    (the PERS23 spec: clip/at, spine/head, R/L arm aims in the figure frame, hand shapes, dart, face mood). cam: yaw (deg, + = the figure's left),
+    dist (m from the head), y (camera height off the head), ly (look-at height off the head), px (look-at side shift, m, + = frame right), fov.
+    plate: cx = the 2:3 crop centre on s3/img/v6.jpg. Body language only: nothing here adds likeness beyond each pro's recipe. */
+ const V3CARDPOSE={
+  nuke:{/* the big moment: arms flung wide and high, chest out, roaring; low camera, fills the card */
+   pose:{clip:'breathe',at:.3,spine:[6,0,0],head:[6,0,0],R:{u:[.1,.92,.3],f:[.05,.75,.65],h:[0,.5,.85],c:'fist'},L:{u:[.1,-.92,.3],f:[.05,-.75,.65],h:[0,-.5,.85],c:'fist'},dart:{g:'none'},face:{mouth:'shout',md:1.5,mw:1,sm:.7,bU:12}},
+   cam:{yaw:-8,dist:4.9,y:-.35,ly:-.36,px:0,fov:30},plate:{cx:836}},
+  green:{/* the double fist pump: elbows down, fists by the shoulders, leaning in; tight waist-up crop, figure left of centre */
+   pose:{clip:'breathe',at:.25,spine:[10,0,0],head:[-6,0,0],R:{u:[.3,.6,-.75],f:[.3,.3,.92],h:[.1,.1,1],c:'fist'},L:{u:[.3,-.6,-.75],f:[.3,-.3,.92],h:[.1,-.1,1],c:'fist'},dart:{g:'none'},face:{mouth:'shout',md:1.6,mw:1.05,sm:.6,bU:4,bI:-8}},
+   cam:{yaw:-28,dist:4.1,y:-.15,ly:-.3,px:.05,fov:30},plate:{cx:1100}},
+  price:{/* the flex: both arms up and bent, square to camera, low and wide; the biggest silhouette after the Nuke */
+   pose:{clip:'breathe',at:.4,spine:[5,0,0],head:[4,0,0],R:{u:[.15,1,-.3],f:[.15,.75,.65],h:[0,.45,.9],c:'fist'},L:{u:[.15,-1,-.3],f:[.15,-.75,.65],h:[0,-.45,.9],c:'fist'},dart:{g:'none'},face:{mouth:'grin',sm:1.05,bU:-4,bI:-10,lid:[.2,.2]}},
+   cam:{yaw:0,dist:4.9,y:-.5,ly:-.32,px:0,fov:30},plate:{cx:836}},
+  humphries:{/* calm and sure: one finger to the sky, the other hand easy; seen from his left, figure right of centre */
+   pose:{clip:'breathe',at:.3,spine:[-3,6,0],head:[-10,-6,0],R:{u:[.1,.3,.95],f:[0,.1,1],h:[0,0,1],c:'point'},L:V3PG.Lh,dart:{g:'none'},face:{mouth:'smile',mw:.8,lid:[.15,.15],bU:4,look:[0,-8]}},
+   cam:{yaw:26,dist:3.9,y:-.15,ly:-.42,px:-.2,fov:30},plate:{cx:620}},
+  wright:{/* the showman: a playful shimmy, one arm high with the dart, hip out, head tilted, a big grin; high camera */
+   pose:{clip:'happy',at:.5,spine:[-2,-10,8],head:[-4,8,-12],R:{u:[.2,.6,.75],f:[.1,.2,1],h:[0,0,1],c:'fist'},L:{u:[.1,-.35,-.9],f:[.6,-.3,-.3],h:[.6,-.2,-.2],c:'open'},dart:{g:'fist',dir:[0,0,1]},face:{mouth:'grin',sm:1.15,as:14,bU:10,lid:[.08,.08]}},
+   cam:{yaw:-20,dist:4.0,y:.25,ly:-.45,px:.1,fov:30},plate:{cx:980}},
+  smith:{/* straight at you: pointing down the lens, leaning in, jaw set; tight and front-on */
+   pose:{clip:'breathe',at:.4,spine:[8,0,0],head:[-4,0,0],R:{u:[.7,.5,-.05],f:[1,.25,.08],h:[1,.15,0],c:'point'},L:{u:[.05,-.2,-1],f:[.3,-.1,-.9],h:[.2,0,-1],c:'fist'},dart:{g:'none'},face:{mouth:'smirk',side:1,mw:.75,bI:-12,bO:4,lid:[.25,.25]}},
+   cam:{yaw:-14,dist:3.6,y:-.1,ly:-.4,px:-.05,fov:30},plate:{cx:900}},
+  barneveld:{/* arms up in a V, face to the lights; a wider shot, the figure smaller under the rig */
+   pose:{clip:'breathe',at:.45,spine:[6,0,0],head:[18,0,0],R:{u:[0,.45,.9],f:[0,.3,1],h:[0,.2,1],c:'open'},L:{u:[0,-.45,.9],f:[0,-.3,1],h:[0,-.2,1],c:'open'},dart:{g:'none'},face:{mouth:'shout',md:1.3,mw:.95,sm:.8,bU:14,look:[0,-20]}},
+   cam:{yaw:-14,dist:5.6,y:-.45,ly:-.5,px:0,fov:30},plate:{cx:836}},
+  anderson:{/* unbothered: a thumbs-up at the chest, weight on one leg, a small smile; three-quarter from his right */
+   pose:{clip:'shift',at:.35,spine:[-2,-6,-3],head:[-4,10,-4],R:{u:[.4,.25,-.8],f:[.9,-.25,.35],h:[.5,-.2,.8],c:'thumb'},L:V3PG.Lh,dart:{g:'none'},face:{mouth:'smile',mw:.75,lid:[.22,.22],bU:2,look:[-4,0]}},
+   cam:{yaw:-34,dist:3.6,y:-.1,ly:-.4,px:.15,fov:30},plate:{cx:1040}},
+  power:{/* the old master: one fist punched high, the other clenched low, chin up; low three-quarter, the raised arm leads the frame */
+   pose:{clip:'breathe',at:.3,spine:[4,4,0],head:[6,-4,0],R:{u:[.15,.5,.85],f:[.05,.25,1],h:[0,.1,1],c:'fist'},L:{u:[.15,-.25,-.95],f:[.5,-.2,-.6],h:[.3,0,-.9],c:'fist'},dart:{g:'none'},face:{mouth:'grin',sm:1,bU:8,lid:[.12,.12]}},
+   cam:{yaw:-22,dist:4.9,y:-.45,ly:-.3,px:.1,fov:30},plate:{cx:760}}};
+ window.TOPS_V3CARDPOSE={table:V3CARDPOSE,apply:(fig,id)=>!!V3CARDPOSE[id]&&v3PersApply(fig,null,0,V3CARDPOSE[id].pose)};window.TOPS_PERS_ON=()=>PERS23;
  function standRigged(fig,kind){const B=fig.userData.B;fig.updateWorldMatrix(true,true);if(kind==='set'){poseRigged(fig,{phase:'idle'},fig.localToWorld(new T.Vector3(0,1.73,-2.4)));return;}
   const fwd=new T.Vector3(0,0,-1).applyQuaternion(fig.getWorldQuaternion(new T.Quaternion())),down=new T.Vector3(0,-1,0);
   const arm=(side,dirU,dirF,handDir)=>{const rt=new T.Vector3(-fwd.z,0,fwd.x);const nrm=new T.Vector3().copy(rt).multiplyScalar(side==='Right'?-1:1);aimBone(B[side+'Arm'],B[side+'ForeArm'],dirU,0);aimFrame(B[side+'ForeArm'],B[side+'Hand'],dirF,nrm);aimFrame(B[side+'Hand'],B[side+'HandMiddle1'],handDir,nrm);curl(B,side,[.35,.4,.45,.5,.2]);};
