@@ -193,7 +193,8 @@ async function v3saves(b) {
           Q.scene.add(f); f.position.set(0, 0, 0); f.rotation.set(0, Math.PI, 0); f.updateMatrixWorld(true); const R = Q.renderer; R.setRenderTarget(rt); R.clear(); R.render(Q.scene, cam); R.readRenderTargetPixels(rt, 0, 0, 256, 256, px); R.setRenderTarget(null);
           Q.scene.remove(f); if (pp) pp.add(f); f.position.copy(pos); f.rotation.copy(rot); f.visible = vis; keep.forEach(c => c.visible = true);
           let a = 2166136261, lit = 0; for (let i = 0; i < px.length; i += 4) { const q = (px[i] >> 2) << 16 | (px[i + 1] >> 2) << 8 | (px[i + 2] >> 2); a = Math.imul(a ^ q, 16777619); if (px[i + 3]) lit++; } return { px: a >>> 0, lit }; };
-        const build = async vl => { save.vlook = vl; try { V.setPlayerLook(save.look, save.flight, save.name, tier); } catch (e) { return { err: e.message }; } await sl(600); const o = sig(); if (o) Object.assign(o, pic(V._qa.meFig())); return o; };
+        const build = async vl => { const f0 = V._qa.meFig(); save.vlook = vl; try { V.setPlayerLook(save.look, save.flight, save.name, tier); } catch (e) { return { err: e.message }; }
+          for (let i = 0; i < 20 && V._qa.meFig() === f0; i++) await sl(250); await sl(400); if (!V._qa.meFig() || V._qa.meFig() === f0) return { err: 'figure not rebuilt' }; const o = sig(); if (o) Object.assign(o, pic(V._qa.meFig())); return o; };   /* a NEW figure each time, or it says so */
         const out = { v3: window.TOPS_V3FLAG === true, full: await build(v), without: {}, base: (window.TOPS_S3_LOOK && TOPS_S3_LOOK(v.base)) || null }; if (!out.full) return { err: 'setPlayerLook built no figure' };
         // swap each choice for another value from the game's own option list: if the figure doesn't change, the game ignores that choice
         const OPT = window.TOPS_S3_OPTIONS || {}; out.alt = {};
@@ -205,7 +206,9 @@ async function v3saves(b) {
         const again = await build(v); out.stable = !!(again && out.full && again.px === out.full.px); save.vlook = v; return out; });   /* control: the same look twice must give the same picture */
       // 1. the models on: the New look card once, then the figure
       await p.goto(url(1), { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500); await title(); R.card1 = await card(); await T.shot('v3_' + fx.id + '_card');
-      if (R.card1) { await T.tap('#s3V3NewGo'); await p.waitForTimeout(600); } R.flag1 = await p.evaluate(() => !!save.v3NewLook);
+      // Let's go: retried (a fade-in can take the first tap); a card that won't go after 5 taps is a finding, and the tries are reported
+      R.goTries = 0; if (R.card1) for (let k = 0; k < 5 && (await p.evaluate(() => !!document.getElementById('s3V3New'))); k++) { R.goTries++; await p.waitForTimeout(500); await T.tap('#s3V3NewGo'); await p.waitForTimeout(800); }
+      R.cardStuck = await p.evaluate(() => !!document.getElementById('s3V3New')); R.flag1 = await p.evaluate(() => !!save.v3NewLook);
       await hub(); await T.tab('locker'); await p.waitForTimeout(1500); R.fig = await fig(); R.lookOn = await T.look(true); await T.shot('v3_' + fx.id + '_locker');
       R.on = await rd();
       // 2. the way back: the same save opened with the models off (what the default-off release gives a player), then on again
@@ -219,7 +222,7 @@ async function v3saves(b) {
       await p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; save.authSeen = true; showTitle(); } catch (e) {} }); await p.waitForTimeout(1600);
       await p.waitForSelector('#s3V3New', { timeout: 7000 }).catch(() => {}); card3 = await p.evaluate(() => !!document.getElementById('s3V3New')); }) : [];
     const J = s => { try { return JSON.parse(s || 'null'); } catch (e) { return null; } }; const on = J(R.on), off = J(R.off), on2 = J(R.on2);
-    row(L, 'New look card once per account', R.card1 && R.flag1 && !R.cardOff && !R.card2 && card3 === false, `first open with the models on: ${R.card1 ? 'shown' : 'NOT shown'}, flag ${R.flag1 ? 'saved' : 'NOT saved'}; models off: ${R.cardOff ? 'SHOWN' : 'none'}; on again: ${R.card2 ? 'SHOWN AGAIN' : 'none'}; same save on a second phone: ${card3 ? 'SHOWN AGAIN' : card3 === false ? 'none' : 'not run'}`);
+    row(L, 'New look card once per account', R.card1 && !R.cardStuck && R.flag1 && !R.cardOff && !R.card2 && card3 === false, `first open with the models on: ${R.card1 ? 'shown' : 'NOT shown'}, Let's go ${R.cardStuck ? 'did NOT close it in ' + R.goTries + ' taps' : 'closed it (' + R.goTries + ' tap' + (R.goTries === 1 ? '' : 's') + ')'}, flag ${R.flag1 ? 'saved' : 'NOT saved'}; models off: ${R.cardOff ? 'SHOWN' : 'none'}; on again: ${R.card2 ? 'SHOWN AGAIN' : 'none'}; same save on a second phone: ${card3 ? 'SHOWN AGAIN' : card3 === false ? 'none' : 'not run'}`);
     // creator choices: what each choice changes on the figure (vs the same player without it), plus where beard and hair sit
     const F = R.fig, probs = [], notes = []; const t = (F && F.full && F.full.tags) || {};
     if (!F || F.err || !F.full) probs.push('no player figure' + (F && F.err ? ': ' + F.err : '')); else if (!F.v3) probs.push('the models flag did not switch on'); else if (F.full.err) probs.push('rebuild failed: ' + F.full.err);
@@ -227,8 +230,8 @@ async function v3saves(b) {
     if (F && F.full && !F.full.err) {
       const shows = s => s.px;   // the rendered picture of the figure
       for (const [k, w] of Object.entries(F.without)) { if (!w || w.err) { probs.push(k + ': rebuild failed'); continue; }
-        const same = shows(F.full) === shows(w); const sw = `${JSON.stringify(v[k])} -> ${JSON.stringify(F.alt[k])}`;
-        if (same) probs.push(`${k} is ignored: ${sw} leaves the rendered figure identical`); notes.push(`${k} ${sw}: ${same ? 'NO CHANGE' : 'changes the picture'}`); }
+        const same = shows(F.full) === shows(w) && (k !== 'body' || JSON.stringify(F.full.box) === JSON.stringify(w.box)); const sw = `${JSON.stringify(v[k])} -> ${JSON.stringify(F.alt[k])}`;
+        if (same) probs.push(`${k} is ignored: ${sw} leaves the rendered figure identical`); notes.push(`${k} ${sw}: ${same ? 'NO CHANGE' : 'changes the picture'}${k === 'body' ? ' (size ' + JSON.stringify(F.full.box) + ' vs ' + JSON.stringify(w.box) + ')' : ''}`); }
       const acc = Array.isArray(v.acc) && (v.accSet || v.acc.length) ? v.acc : null;
       if (acc && acc.includes('cap') !== !!t.cap) probs.push(acc.includes('cap') ? 'chosen cap missing' : 'a cap the player did not choose');
       if (v.face) { const want = BEARDS.includes(v.face); if (want !== !!t.beard) probs.push(want ? 'chosen ' + v.face + ' missing' : 'a beard on a clean face');
