@@ -48,7 +48,7 @@
         { id: 'akl_open', n: 'Auckland Open', where: 'Auckland', kind: 'groupko', size: 64, entry: 40, travel: 40, purse: 6000, pts: 420, every: 6, jump: true, field: 4 }
       ] },
     { id: 'dpnz', n: 'DPNZ Tour', s: 'Six weekends, two events each. #1 on the Order of Merit goes to the Palace', avg: 85, legs: 5, need: 900, minEv: 2, oom: true,
-      up: 'Reach 400 DPNZ points (best 6, at least 2 events this season) with a final or two semi-finals, or finish #1 on the Order of Merit, for the Palace. Top 10 earns the Trans-Tasman',
+      up: 'Reach 400 DPNZ points (best 6, at least 2 events this season) with a semi-final or better, or finish #1 on the Order of Merit, for the Palace. Top 10 earns the Trans-Tasman',
       events: [
         { id: 'dpnz_wlg', n: 'DPNZ Tour · Wellington', where: 'Wellington', kind: 'ko', size: 32, entry: 60, travel: 380, purse: 8000, pts: 400, every: 1, field: 1 },
         { id: 'dpnz_ham', n: 'DPNZ Tour · Hamilton', where: 'Hamilton', kind: 'ko', size: 32, entry: 60, travel: 150, purse: 8000, pts: 400, every: 1 },
@@ -160,12 +160,18 @@
       if (e.id === 'qschool' && !c.card) { c.qsOffer = true; newDpnzSeason(c); const r = promote(c, 3, 'No Tour Card this time (' + FIN_NAME[fin].toLowerCase() + '). Back to the DPNZ Tour for a new season: 40% of your points roll over. Your Q-School place stays for next year');
         r.fromQs = fin; return r; }
       return null; }
-    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;
+    if (L.id === 'dpnz') {
+      // B1 (Q&D 01:25): a save from before the gate has no counters, so its own results this season (David: a win at Hamilton) would not
+      // count. Backfill both once from this season's DPNZ history: the last dpnzEv DPNZ records before this event's (pushed just above).
+      if (c.dpnzF == null && c.dpnzSF == null) { const n = c.dpnzEv || 0, ids = new Set(L.events.map(x => x.id));
+        const mine = n ? (c.history || []).filter(h => ids.has(h.id)).slice(0, -1).slice(-n) : []; c.dpnzF = mine.filter(h => h.fin === 'W' || h.fin === 'F').length; c.dpnzSF = mine.filter(h => h.fin === 'SF').length; }
+      c.dpnzEv = (c.dpnzEv || 0) + 1;
       // pace package (Hayden 15:10, doc 46): the DPNZ points route. 400 points (best 6) with at least 2 events this season; the carry
       // from a new season is capped at 300, so it always takes new results
-      // results gate (Producer 22:21): plus one final (or a win) OR two semi-finals this season, so six quarter-finals (480) can't do it
+      // results gate (Producer 22:21, C1 02:05): plus at least one semi-final or better this season (so it sits in the route's best 6);
+      // six quarter-finals (480) can't do it
       if (fin === 'W' || fin === 'F') c.dpnzF = (c.dpnzF || 0) + 1; else if (fin === 'SF') c.dpnzSF = (c.dpnzSF || 0) + 1;
-      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE && routeGate(c)) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points with ' + ((c.dpnzF || 0) ? 'a final' : 'two semi-finals') + ': the NZ route to the Palace');
+      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE && routeGate(c)) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points with ' + ((c.dpnzF || 0) ? 'a final' : 'a semi-final') + ': the NZ route to the Palace');
       if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
@@ -183,7 +189,7 @@
   // the mid profile at ~50-55%; DPNZ, Trans-Tasman, Tour Card, Palace unchanged (76/84/91/97). Fitted by tests/pace-lever-sim.js.
   const FIELD_CEN = [54.5, 65.5, 70, 76, 84, 91, 97]; // was CEN [58, 63, 69, ...]: weak enters the Pub at 25%, mid the Club at 52% and the Opens at 49% (500 careers)
   const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
-  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
+  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
   const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
   // Championship-year identity (Hayden 15:10, doc 46): a yearly event (every 52: the Worlds, Q-School) has one edition per cycle,
   // edition = floor(week / 52). Each history record carries its edition, and an edition already played can't be entered again,

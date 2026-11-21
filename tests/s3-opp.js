@@ -1,8 +1,11 @@
 // CAR-OPP (Producer 21 Nov 22:21, agreed with ChatGPT): opponent recalibration plus the three rules that keep it honest
 //   1 field centres: Season 3 uses TOPS_CIRCUIT.FIELD_CEN per Circuit level (Pub fitted to the weak profile, Club and Opens to mid; DPNZ
-//     and up unchanged); fixed by level, never the player. On the page v11's shift uses them in Season 3 only, Season 2 keeps CEN
-//   2 DPNZ route results gate: 400 (best 6) after 2+ events AND one final (or a win) OR two semi-finals this season. Six quarter-finals
-//     (480) don't qualify; one semi-final doesn't; two do; a final does; the counters start again with each new DPNZ season
+//     and up unchanged); fixed by level, never the player. On the page v11's shift uses them for Circuit matches only (C2, Producer
+//     02:05): money matches, local nights, Season 2 and the Run keep CEN as on 4.22. The cards show the average you actually play (note a)
+//   2 DPNZ route results gate (C1, Producer 02:05): 400 (best 6) after 2+ events AND at least one semi-final or better this season. Six
+//     quarter-finals (480) don't qualify; four QFs + one SF do; a final does; the counters start again with each new DPNZ season
+//   2b B1 (Q&D 01:25): a save from before the gate (no counters) backfills them once from this season's DPNZ history: David's shape (one
+//     win at Hamilton, 400 points, dpnzEv 1) qualifies on any result in his next DPNZ event; a pre-gate save with five QFs + a QF stays
 //   3 Pub best 6: twenty first-round-and-out nights stay at the Pub (6 x 10 = 60); five QFs and one knockout win (68) still stay; two
 //     knockout wins (76) or any title reach the Club
 //   4 funded Worlds trip: qualifying sets the package for the next edition; that Worlds shows travel paid, booking it costs the entry only
@@ -22,9 +25,18 @@ const night = (c, wins) => { const cal = E.calendar(c); if (!cal.length) E.restW
 const dp = () => E.newCareer({ level: 3, week: 10, bank: 99999, pts: {} });
 { const c = dp(); for (let i = 0; i < 6; i++) night(c, 2); out.qf6 = { pts: c.pts.dpnz, lv: c.level, ev: c.dpnzEv };
   if (c.level !== 3 || c.pts.dpnz !== 480) f.push('2 six quarter-finals (480) must not qualify ' + JSON.stringify(out.qf6)); }
-{ const c = dp(); night(c, 2); night(c, 2); night(c, 2); night(c, 2); night(c, 3); out.sf1 = { pts: c.pts.dpnz, lv: c.level };
-  if (c.level !== 3) f.push('2 four QFs + one SF (464) must not qualify ' + JSON.stringify(out.sf1));
-  const r = night(c, 3); if (c.level !== 6 || !r.up || !/two semi-finals/.test(r.up.msg)) f.push('2 a second semi-final qualifies ' + JSON.stringify({ lv: c.level, up: r.up })); out.sf2 = r.up && r.up.msg; }
+{ const c = dp(); night(c, 2); night(c, 2); night(c, 2); out.sf0 = c.level; const r0 = night(c, 3); // 3 QFs + SF = 384: under 400
+  if (c.level !== 3) f.push('2 three QFs + one SF (384) is under 400 ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz }));
+  const r = night(c, 2); if (c.level !== 6 || !r.up || !/a semi-final/.test(r.up.msg)) f.push('2 four QFs + one SF (464) qualify ' + JSON.stringify({ lv: c.level, up: r.up })); out.sf2 = r.up && r.up.msg; }
+// 2b B1: saves from before the gate (no dpnzF / dpnzSF)
+for (const w of [0, 1, 2, 3]) { const c = dp(); night(c, 5); delete c.dpnzF; delete c.dpnzSF; // David: one win at an event, 400 points, dpnzEv 1
+  if (c.pts.dpnz !== 400 || c.dpnzEv !== 1) f.push('2b setup ' + JSON.stringify({ pts: c.pts.dpnz, ev: c.dpnzEv }));
+  const r = night(c, w); if (c.level !== 6 || !/with a final/.test((r.up || {}).msg || '')) f.push('2b David\'s pre-gate save must qualify on any result (wins ' + w + ') ' + JSON.stringify({ lv: c.level, up: r.up, F: c.dpnzF }));
+  if (w === 0) out.david = r.up && r.up.msg; }
+{ const c = dp(); for (let i = 0; i < 5; i++) night(c, 2); delete c.dpnzF; delete c.dpnzSF; night(c, 2);
+  if (c.level !== 3 || c.dpnzF !== 0 || c.dpnzSF !== 0) f.push('2b a pre-gate save with six QFs still stays ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, F: c.dpnzF, SF: c.dpnzSF })); }
+{ const c = dp(); night(c, 3); night(c, 2); delete c.dpnzF; delete c.dpnzSF; c.dpnzEv = 1; // only this season's records count: the SF was last season
+  night(c, 2); if (c.dpnzSF !== 0 || c.level !== 3) f.push('2b the backfill counts only this season\'s events ' + JSON.stringify({ SF: c.dpnzSF, lv: c.level })); }
 { const c = dp(); night(c, 2); night(c, 2); const r = night(c, 4); if (c.level !== 6 || !/a final/.test((r.up || {}).msg || '')) f.push('2 two QFs + a final (400) qualify ' + JSON.stringify({ lv: c.level, pts: c.pts.dpnz, up: r.up })); }
 { const c = E.newCareer({ level: 6, week: 52, bank: 99999, pts: { dpnz: 900 }, grants: { 6: 1 }, dpnzF: 1, dpnzSF: 1, dpnzEv: 8 }); // a lost Worlds starts a new DPNZ season
   E.book(c, 'worlds'); for (let i = 0; i < 8; i++) { const r = E.result(c, false); if (r.done) break; }
@@ -58,7 +70,11 @@ const dp = () => E.newCareer({ level: 3, week: 10, bank: 99999, pts: {} });
   await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto('file://' + path.join(dir, 'index.html') + '?s3=1');
   await p.waitForFunction(() => window.TOPS_S3 && window.C3 && window.TOPS_OPP_SHIFT, null, { timeout: 120000 }); await p.waitForTimeout(1200);
   const pg = await p.evaluate(() => { const o = {}; try { save.authSeen = true; newCareer(); const c = career(), k = c.circuit;
-    o.s3 = [0, 1, 2, 3].map(t => TOPS_OPP_SHIFT(TIERS[t].avg, t)); const keep = window.TOPS_S3FLAG; window.TOPS_S3FLAG = false; o.s2 = [0, 1, 2, 3].map(t => TOPS_OPP_SHIFT(TIERS[t].avg, t)); window.TOPS_S3FLAG = keep;
+    o.s3 = [0, 1, 2, 3].map(t => TOPS_OPP_SHIFT(TIERS[t].avg, t, true)); o.plain = [0, 1, 2, 3].map(t => TOPS_OPP_SHIFT(TIERS[t].avg, t)); const keep = window.TOPS_S3FLAG; window.TOPS_S3FLAG = false; o.s2 = [0, 1, 2, 3].map(t => TOPS_OPP_SHIFT(TIERS[t].avg, t)); window.TOPS_S3FLAG = keep;
+    // C2: a money match in a Circuit career plays at the 4.22 figure; note (a): the view shows what the Circuit match then plays
+    V.walkOn = () => {}; beginMatch({ mode: 'career', tier: 3, p0: 'T', oppName: 'Money', oppAvg: 70, legs: 3, purse: 50 }); o.money = S.oppAvg; o.moneyWant = (() => { const f = window.TOPS_S3FLAG; window.TOPS_S3FLAG = false; const v = TOPS_OPP_SHIFT(70, 3); window.TOPS_S3FLAG = f; return v; })(); try { S.done = true; } catch (e) {}
+    o.card = []; for (const lv of [0, 3]) { k.live = null; k.booked = null; k.level = lv; c.tier = lv; k.week = lv ? 10 : 1; c.bank = 99999; persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); const v = TOPS_S3.view().live.opp; TOPS_S3._playNow(); o.card.push({ lv, shown: v.avg, raw: v.raw, plays: S.oppAvg }); try { S.done = true; } catch (e) {} }
+    k.live = null; k.booked = null;
     k.level = 6; c.tier = 6; k.week = 52; c.bank = 0; k.wfund = 1; k.grants = { 3: 1, 4: 1, 6: 1 }; persist();
     const w = TOPS_S3.view().calendar.find(e => e.id === 'worlds'); o.view = w && { funded: w.funded, cost: w.cost, canAfford: w.canAfford };
     const r = TOPS_S3.book('worlds'); o.book = r && r.ok; o.bank = c.bank; o.paid = k.live && k.live.paid; } catch (e) { o.err = String(e.stack || e).slice(0, 300); } return o; });
@@ -67,10 +83,13 @@ const dp = () => E.newCareer({ level: 3, week: 10, bank: 99999, pts: {} });
   await p.screenshot({ path: path.join(dir, 'wip/car-opp/s3-opp-worlds-390.jpg'), quality: 80 }).catch(() => {});
   await b.close(); out.page = pg; out.poster = poster;
   if (pg.err) f.push('5 page ' + pg.err);
-  else { if (JSON.stringify(pg.s3.slice(0, 3)) === JSON.stringify(pg.s2.slice(0, 3)) || pg.s3[3] !== pg.s2[3]) f.push('1 page: Season 3 centres differ from Season 2 at the Pub/Club/Opens and match at the DPNZ ' + JSON.stringify({ s3: pg.s3, s2: pg.s2 }));
+  else { if (JSON.stringify(pg.s3.slice(0, 3)) === JSON.stringify(pg.s2.slice(0, 3)) || pg.s3[3] !== pg.s2[3]) f.push('1 page: Circuit centres differ from Season 2 at the Pub/Club/Opens and match at the DPNZ ' + JSON.stringify({ s3: pg.s3, s2: pg.s2 }));
+    if (JSON.stringify(pg.plain) !== JSON.stringify(pg.s2)) f.push('1 C2: non-Circuit matches in a Season 3 career keep the 4.22 centres ' + JSON.stringify({ plain: pg.plain, s2: pg.s2 }));
+    if (pg.money !== pg.moneyWant) f.push('1 C2: a money match plays as on 4.22 ' + JSON.stringify({ money: pg.money, want: pg.moneyWant }));
+    for (const x of pg.card || []) if (x.shown !== x.plays || x.shown === x.raw && x.lv === 0) f.push('1 note (a): the card shows what you play ' + JSON.stringify(x));
     if (!pg.view || !pg.view.funded || pg.view.cost !== 0 || !pg.view.canAfford || !pg.book || pg.bank !== 0 || pg.paid !== 0) f.push('5 page funded Worlds ' + JSON.stringify(pg)); }
   if (!poster.paid || !poster.pkg) f.push('5 poster should read "Book it · trip paid" ' + JSON.stringify(poster));
   if (errs.length) f.push('page errors ' + errs.slice(0, 2).join(' | '));
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  console.log(`PASS: Season 3 field centres ${JSON.stringify(out.cen)} (DPNZ and up unchanged; on the page Pub/Club/Opens opponents at the tier average play as ${pg.s3.slice(0, 3).join('/')} in Season 3, ${pg.s2.slice(0, 3).join('/')} in Season 2); six DPNZ quarter-finals (480) don't qualify, four QFs + one SF don't, a second SF does ("${out.sf2}"), two QFs + a final do, a new season restarts the counters; Pub best 6: twenty first-round exits stay on 60, one knockout win 68 stays, two reach the Club; qualifying funds the next Worlds trip (edition ${out.fund.wfund}): $0 to book with $0 in the bank, no cash beyond the prize and the one-off $3,000 grant, the record says funded, a spent package never pays twice, the next qualification funds the next edition; the page marks it funded and the poster reads "Book it · trip paid"`);
+  console.log(`PASS: Season 3 field centres ${JSON.stringify(out.cen)} (DPNZ and up unchanged; on the page Pub/Club/Opens opponents at the tier average play as ${pg.s3.slice(0, 3).join('/')} in Season 3, ${pg.s2.slice(0, 3).join('/')} in Season 2); Circuit matches only: money matches and local nights play the 4.22 figures (money match tier 3 = ${pg.money}); the opponent shown is the one you play (Pub ${pg.card[0].raw} raw shows and plays ${pg.card[0].plays}, DPNZ ${pg.card[1].raw} -> ${pg.card[1].plays}); six DPNZ quarter-finals (480) don't qualify, four QFs + one SF do ("${out.sf2}"), two QFs + a final do, a new season restarts the counters; pre-gate saves backfill once: David's shape (one win, 400, one event) qualifies on any next result ("${out.david}"), six QFs still stay, last season's SF doesn't count; Pub best 6: twenty first-round exits stay on 60, one knockout win 68 stays, two reach the Club; qualifying funds the next Worlds trip (edition ${out.fund.wfund}): $0 to book with $0 in the bank, no cash beyond the prize and the one-off $3,000 grant, the record says funded, a spent package never pays twice, the next qualification funds the next edition; the page marks it funded and the poster reads "Book it · trip paid"`);
 })();

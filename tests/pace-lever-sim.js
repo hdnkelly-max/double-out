@@ -50,8 +50,8 @@ const VARIANTS = {
   // CAR-OPP pace levers on top of the gate (Producer 22:21), all raw = this branch
   gateKeep: { raw: true, text: [['function newDpnzSeason(c) { c.dpnzEv = 0; c.dpnzF = 0; c.dpnzSF = 0;', 'function newDpnzSeason(c) { c.dpnzEv = 0;'], ['function promote(c, to, msg) { if (to === 6) c.wfund = nextWorldsEd(c.week);', 'function promote(c, to, msg) { if (to === 6) { c.wfund = nextWorldsEd(c.week); c.dpnzF = 0; c.dpnzSF = 0; }']] },
   gateRoute350: { raw: true, text: [['const DPNZ_ROUTE = 400,', 'const DPNZ_ROUTE = 350,']] },
-  gateSF1: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2;', 'const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1;']] },
-  noGate: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2;', 'const routeGate = c => true;']] },
+  gateF2SF: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1;', 'const routeGate = c => (c.dpnzF || 0) >= 1 || (c.dpnzSF || 0) >= 2;']] }, // the first build (a final or two SFs), for comparison
+  noGate: { raw: true, text: [['const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1;', 'const routeGate = c => true;']] },
   branch_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000']] }, branch_pub6_wtravel0: { raw: true, text: [['entry: 0, travel: 3000, purse: 300000', 'entry: 0, travel: 0, purse: 300000'], ['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 6,']] },
   branch_pub6: { raw: true, text: [['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 6,']] }, branch_pub5: { raw: true, text: [['const BEST_N = { pub: 6,', 'const BEST_N = { pub: 5,']] },
   // (1) a lost Worlds sends you back to the DPNZ Tour (new season, 40% carry)
