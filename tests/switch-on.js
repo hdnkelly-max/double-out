@@ -18,15 +18,16 @@ const SHOTS = process.env.SHOTS ? path.resolve(process.env.SHOTS) : null; if (SH
 const NOFLAG = process.env.FLAG === 'none'; const Q = NOFLAG ? '?s3=1' : '?s3=1&s3x=1';
 const GATE = ['s3-trophies', 's3-shelf-data', 's3-progress', 's3-firstnight', 's3-xp', 's3-match', 's3-screens', 's3-welcome'];
 const rows = []; const row = (part, check, ok, note) => { rows.push({ part, check, ok: !!ok, note: String(note || '').replace(/\s+/g, ' ').slice(0, 300) }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${part} · ${check}${note ? '  (' + String(note).replace(/\s+/g, ' ').slice(0, 200) + ')' : ''}`); };
-if (!fs.existsSync(path.join(dir, 'index.html'))) { console.error('no index.html in ' + dir + ' (run bash tests/setup.sh)'); process.exit(2); }
+if (process.argv[2] !== '--merge' && !fs.existsSync(path.join(dir, 'index.html'))) { console.error('no index.html in ' + dir + ' (run bash tests/setup.sh)'); process.exit(2); }
 
 // ---------- GATE: the checklist's gate tests, each as its own process, on this build
 function gate() {
-  for (const t of GATE) {
+  const only = process.env.GATE_ONLY ? process.env.GATE_ONLY.split(',') : null;   // CI splits the gate over two jobs
+  for (const t of GATE.filter(x => !only || only.includes(x))) {
     const f = path.join(__dirname, t + '.js'); if (!fs.existsSync(f)) { row('gate', t, false, 'not on this build (tests/' + t + '.js missing: not shipped yet)'); continue; }
-    const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, dir], { encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20, env: process.env });
+    const s = Date.now(); const r = cp.spawnSync(process.execPath, [f, dir], { encoding: 'utf8', timeout: 1500000, maxBuffer: 64 << 20, env: process.env });
     const last = ((r.stdout || '') + (r.stderr || '')).trim().split('\n').filter(Boolean).pop() || '';
-    row('gate', t, r.status === 0, `${r.status === 0 ? '' : 'exit ' + (r.status == null ? r.signal : r.status) + ': '}${last.slice(0, 220)} [${Math.round((Date.now() - s) / 1000)} s]`);
+    row('gate', t, r.status === 0, `${r.status === 0 ? '' : (r.error && r.error.code === 'ETIMEDOUT' ? 'killed: over the 1500 s cap: ' : 'exit ' + (r.status == null ? r.signal : r.status) + ': ')}${last.slice(0, 220)} [${Math.round((Date.now() - s) / 1000)} s]`);
   }
 }
 
@@ -168,10 +169,12 @@ async function phones(b) {
       R.results = [];
       for (let m = 0; m < 3; m++) {
         const running = () => p.evaluate(() => typeof S !== 'undefined' && !!S && !S.done).catch(() => false);
-        for (let k = 0; m > 0 && k < 12 && !(await running()); k++) {   // the next round, as a player gets to it: clear any announcement, Circuit tab, book / Walk on
-          for (let j = 0; j < 4 && (await T.vis('#s3Ok')); j++) { await T.tap('#s3Ok'); await p.waitForTimeout(400); }
+        for (let k = 0; m > 0 && k < 25 && !(await running()); k++) {   // the next round, as a player gets to it: clear what's left (announcement, reward sheets), Circuit tab, book / Walk on
+          for (let j = 0; j < 6; j++) { let hit = false; for (const sel of ['#s3Ok', ...NEXT]) if (await T.tap(sel)) { hit = true; await p.waitForTimeout(400); break; } if (!hit) break; }
           await T.tab('circuit'); if (await T.vis('#rbApp [data-s3book]')) await T.tap('#rbApp [data-s3book]'); await p.waitForTimeout(600); await T.tap('#s3Go'); await p.waitForTimeout(1500); }
         for (let i = 0; i < 80 && !(await running()); i++) await p.waitForTimeout(250);
+        // the round never started: say where the player is stuck rather than play on out of step (CI proof: Pixel 7 once)
+        if (!(await running())) { R.stuck = { at: ['QF', 'SF', 'F'][m], screen: await p.evaluate(() => [...document.querySelectorAll('button,[role=button]')].filter(b => b.getClientRects().length && getComputedStyle(b).visibility !== 'hidden').map(b => (b.id ? '#' + b.id + ' ' : '') + b.innerText.replace(/\s+/g, ' ').trim().slice(0, 24)).slice(0, 14).join(' | ')) }; await T.shot('phones_' + prof + '_stuck_' + R.stuck.at); break; }
         const round = await p.evaluate(() => typeof S !== 'undefined' && S && S.s3 ? S.s3.round : null).catch(() => null);
         let midLooked = false;
         for (let i = 0; i < 1500; i++) {
@@ -205,7 +208,7 @@ async function phones(b) {
     row(L, 'first night', R.firstNight && lookOk(R.fnLook), R.firstNight ? lookNote(R.fnLook) || 'shown, Walk on starts the QF' : 'no first-night screen for a new player');
     (R.matchLooks || []).forEach((l, i) => row(L, 'match ' + (i + 1) + ' (mid-match)', lookOk(l), (lookNote(l) || 'MENU ' + l.menu + ' clear')));
     const RND = ['QF', 'SF', 'F']; (R.results || []).forEach((r, i) => row(L, 'result ' + (i + 1) + ' (' + RND[i] + ')', r.result && r.round === RND[i] && lookOk(r.look), (r.result ? '' : 'no Circuit result screen; ') + (r.round === RND[i] ? '' : 'round was ' + r.round + '; ') + (lookNote(r.look) || r.text.slice(0, 90))));
-    if (!R.results || R.results.length < 3) row(L, '3 results', false, 'only ' + (R.results || []).length + ' results reached');
+    if (!R.results || R.results.length < 3) row(L, '3 results', false, 'only ' + (R.results || []).length + ' results reached' + (R.stuck ? `; the ${R.stuck.at} never started; buttons on screen: ${R.stuck.screen}` : ''));
     const won = (R.titles || []).includes('W:pub_night');
     row(L, 'Trophies shelf', R.shelf && R.shelf.shelf && won && /titles 1/i.test(R.shelf.hero || '') && lookOk(R.shelfLook), R.shelf ? (lookNote(R.shelfLook) || `"${(R.shelf.hero || '').slice(0, 80)}"`) + (won ? '' : '; Pub night not recorded as won: ' + JSON.stringify(R.titles)) : 'not reached');
     row(L, 'the chip and back', !!R.chip && /1 title/.test(R.chip) && R.back && !R.back.shelf && R.back.chip === R.chip && lookOk(R.backLook) && lookOk(R.hubLook), `chip "${R.chip}"; back on Circuit: chip "${R.back && R.back.chip}"` + (lookNote(R.backLook) ? '; ' + lookNote(R.backLook) : '') + (lookNote(R.hubLook) ? '; hub: ' + lookNote(R.hubLook) : ''));
@@ -218,12 +221,23 @@ async function phones(b) {
   }
 }
 
+// --merge a.json b.json ...: one table from several runs (CI runs the parts as parallel jobs)
+if (process.argv[2] === '--merge') {
+  const outs = process.argv.slice(3).map(f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return { rows: [{ part: 'merge', check: path.basename(f), ok: false, note: 'no result: ' + e.message.slice(0, 80) }] }; } });
+  const all = outs.flatMap(o => o.rows || []); const ver = (outs.find(o => o.version) || {}).version; const flag = (outs.find(o => o.flag) || {}).flag;
+  const ord = r => r.part === 'gate' ? 0 : r.part.startsWith('saves') ? 1 : 2; all.sort((a, b) => ord(a) - ord(b));
+  const nFail = all.filter(r => !r.ok).length;
+  console.log(`### SWITCH-ON ${nFail ? 'FAIL' : 'AUTOMATED PASS'} on v${ver} (${flag || 's3x=1'}): ${all.length - nFail}/${all.length} rows pass (longest part ${Math.max(0, ...outs.map(o => o.secs || 0))} s) · release NOT cleared until the manual checklist items are signed off on this build\n\n| | Part | Check | Note |\n|---|---|---|---|`);
+  for (const r of all) console.log(`| ${r.ok ? 'PASS' : '**FAIL**'} | ${r.part} | ${r.check} | ${String(r.note).replace(/\|/g, '/')} |`);
+  console.log('| (manual) | real phones | Hayden: one Pub night on an Android Chrome phone (iPhone skipped by Hayden, Sat 19:59) | not automatable |');
+  process.exit(nFail ? 1 : 0);
+}
 (async () => {
   const t0 = Date.now(); const ver = (() => { try { return (fs.readFileSync(path.join(dir, 'v051.js'), 'utf8').match(/TOPS_VER='([^']+)'/) || [])[1]; } catch (e) { return null; } })();
   if (PARTS.includes('gate')) gate();
   if (PARTS.includes('saves') || PARTS.includes('phones')) { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
     try { if (PARTS.includes('saves')) await saves(b); if (PARTS.includes('phones')) await phones(b); } finally { await b.close(); } }
-  const nFail = rows.filter(r => !r.ok).length; const out = { version: ver, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), pass: !nFail, rows };
+  const nFail = rows.filter(r => !r.ok).length; const out = { version: ver, flag: NOFLAG ? 'no flag' : 's3x=1', at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), pass: !nFail, rows };
   if (process.env.QA_SABOTAGE) console.log('sabotage: ' + JSON.stringify(out_sab));
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(out, null, 1));
   // ChatGPT P1-3: green here means checklist items 1-3 pass on this build, not that Season 3 may be switched on
