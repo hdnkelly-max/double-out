@@ -251,3 +251,15 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */
 #rbApp .s3-wkh .s3-wkup .s3-nw{white-space:nowrap;font:inherit;color:inherit;letter-spacing:inherit}
 @media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
+/* ---------- v3 switch-on: the one-time 'New look' card (on <body>, so it carries its own tokens) ---------- */
+.s3-on .s3-v3nl{--bg:#121517;--card:#1a1e21;--line:#343a3e;--ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,9,11,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.s3-on .s3-v3nlbox{width:100%;max-width:420px;max-height:100%;overflow:auto;background:radial-gradient(120% 70% at 50% 0%,#3a1418 0%,var(--card) 62%);border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;box-shadow:0 18px 48px rgba(0,0,0,.6)}
+.s3-on .s3-v3nlfig{width:200px;height:200px;flex:none;display:flex;align-items:flex-end;justify-content:center;margin-top:-4px}
+.s3-on .s3-v3nlfig img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.55))}
+.s3-on .s3-v3nlname{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.s3-on .s3-v3nlbox h2{margin:0;font:800 italic 34px/.95 var(--d);text-transform:uppercase;letter-spacing:.3px;text-wrap:balance}
+.s3-on .s3-v3nlbox p{margin:0;color:var(--ink2);max-width:34ch}
+.s3-on .s3-v3nlbox .s3-v3nlkeep{color:var(--ink);font-weight:600}
+.s3-on .s3-v3nlgo{margin-top:8px;width:100%;min-height:52px;border:0;border-radius:12px;background:var(--red);color:#fff;font:800 22px/1 var(--d);text-transform:uppercase;letter-spacing:.6px;cursor:pointer}
+.s3-on .s3-v3nltw{width:100%;min-height:46px;border:1px solid #6b7276;border-radius:12px;background:none;color:var(--ink);font-weight:600;font-size:15px;cursor:pointer}
