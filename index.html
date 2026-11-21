@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<script>window.TOPS_BUILD="1795271095254";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
+<script>window.TOPS_BUILD="1795274611976";(function(){try{if(location.protocol==='file:')return;function chk(){try{if(window.TOPS_RESETTING)return;var q=new URLSearchParams(location.search);var base=location.pathname.replace(/[^/]*$/,'');fetch(base+'version.json?cb='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){var v=j&&String(j.build||'');if(!/^\d+$/.test(v)||v===window.TOPS_BUILD||+v<+window.TOPS_BUILD)return;if(document.body&&document.body.classList.contains('lk-match'))return;var k='tops-upd-'+v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');q.set('v',v);location.replace(location.pathname+'?'+q.toString());}).catch(function(){});}catch(e){}}if(document.readyState==='complete')setTimeout(chk,3000);else addEventListener('load',function(){setTimeout(chk,3000);});}catch(e){}})();</script>
 <meta charset="utf-8">
 <title>TOPS</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%230b0e12%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2722%27 fill=%27none%27 stroke=%27%23e8382c%27 stroke-width=%2711%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2727.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2716.5%27 fill=%27none%27 stroke=%27%23d7d2c6%27 stroke-width=%271.5%27/%3E%3C/svg%3E">
@@ -14818,7 +14818,7 @@ addEventListener('pagehide',flush);})();
 </script>
 <script>
 /* ===== v0.51: version tag on the title, menus follow your look ===== */
-window.TOPS_VER='4.23';
+window.TOPS_VER='4.24';
 (function(){
 const _st=showTitle;showTitle=function(){const r=_st.apply(this,arguments);try{let el=$('tlVer');if(!el){el=document.createElement('p');el.id='tlVer';el.className='tl-ver';const t=$('title');const n=$('tlAuth');(n&&n.parentNode||t).appendChild(el);}el.textContent='TOPS v'+window.TOPS_VER+' · Season 1'+(window.TOPS_DG_ERR?' · dm: '+window.TOPS_DG_ERR:'');}catch(e){}return r;};
 let lt=null;
@@ -16311,9 +16311,13 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
- const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
+ // CAR-OPP (Producer 22:21; C2 02:05): Circuit matches only (shift's 3rd argument, set by TOPS_S3's playNow) use the Circuit's own
+ // field centres (TOPS_CIRCUIT.FIELD_CEN, fixed by level and round, never the player). Money matches, local nights, Season 2 and the Run
+ // keep CEN exactly as on 4.22. Same band width and spread, only the centre moves.
+ const cenFor=(k,circ)=>{if(circ)try{const C3=window.TOPS_CIRCUIT,c=window.TOPS_S3FLAG&&C3&&C3.FIELD_CEN&&career();if(c&&c.circuit&&!c.run&&isFinite(C3.FIELD_CEN[k]))return C3.FIELD_CEN[k];}catch(e){}return CEN[k];};
+ const shift=(v,t,circ)=>{const k=tierOf(t),[lo,hi]=BAND[k],cen=cenFor(k,circ),adj=cen-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
-  const tgt=CEN[k]+rel+LVO[lv];
+  const tgt=cen+rel+LVO[lv];
   const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // inside the band (lv is always 'club' since v1.80; the Competitive/Rookie branches are inert)
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
@@ -16337,7 +16341,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
  const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
  const SHIFTED=new WeakSet();
- const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier,!!opts.circuit),_diffOff:o});SHIFTED.add(opts);}
   else if(opts&&viaNext&&c.next.oppRaw!=null){const a=shift(c.next.oppRaw,opts.tier)+(c.next.routeAdj||0);opts=Object.assign({},opts,{oppRaw:c.next.oppRaw,oppAvg:a});c.next.oppAvg=a;}}catch(e){}
   const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
@@ -17159,7 +17163,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   const PURSE_SPLIT = { W: .28, F: .14, SF: .07, QF: .035, L16: .016, L32: .008, L64: .004, L128: .002, G: 0 };
   const PTS_SPLIT = { W: 1, F: .6, SF: .36, QF: .2, L16: .1, L32: .05, L64: .02, L128: .01, G: .02 };
   // only your best N results at a level count, so playing more events is not the same as playing well (ChatGPT review)
-  const BEST_N = { pub: 99, club: 6, opens: 5, dpnz: 6 };
+  const BEST_N = { pub: 6, club: 6, opens: 5, dpnz: 6 }; // Pub best 6 (Producer 22:21): six quarter-final exits make 60, under the 75 need, so a never-winner stays at the Pub
 
   // ---------------------------------------------------------------------------------------------
   // The seven levels. avg = the static field average (today's TIERS). legs = best-of. need = threshold to move up.
@@ -17189,7 +17193,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
         { id: 'akl_open', n: 'Auckland Open', where: 'Auckland', kind: 'groupko', size: 64, entry: 40, travel: 40, purse: 6000, pts: 420, every: 6, jump: true, field: 4 }
       ] },
     { id: 'dpnz', n: 'DPNZ Tour', s: 'Six weekends, two events each. #1 on the Order of Merit goes to the Palace', avg: 85, legs: 5, need: 900, minEv: 2, oom: true,
-      up: 'Reach 400 DPNZ points (your best 6 count, at least 2 events this season) or finish #1 on the Order of Merit for the Palace. Top 10 earns the Trans-Tasman',
+      up: 'Reach 400 DPNZ points (best 6, at least 2 events this season) with a semi-final or better, or finish #1 on the Order of Merit, for the Palace. Top 10 earns the Trans-Tasman',
       events: [
         { id: 'dpnz_wlg', n: 'DPNZ Tour · Wellington', where: 'Wellington', kind: 'ko', size: 32, entry: 60, travel: 380, purse: 8000, pts: 400, every: 1, field: 1 },
         { id: 'dpnz_ham', n: 'DPNZ Tour · Hamilton', where: 'Hamilton', kind: 'ko', size: 32, entry: 60, travel: 150, purse: 8000, pts: 400, every: 1 },
@@ -17245,15 +17249,16 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     return L.events.filter(e => (e.every >= 52 ? c.week % e.every === 0 && !playedEdition(c, e)
         : (c.week % e.every === 0 || e.every === 1 || (e.every > 1 && c.week % e.every === 1)))
       && !(e.once && c.history.some(h => h.id === e.id)) && !(e.needCard && !c.card) && !(e.card && c.card))
-      .map(e => Object.assign({ level: c.level, cost: cost(e), canAfford: c.bank >= cost(e) }, e));
+      .map(e => Object.assign({ level: c.level, cost: costFor(c, e), canAfford: c.bank >= costFor(c, e) }, e, fundedTrip(c, e) ? { funded: true } : {}));
   }
   // book an event: pay entry + travel up front
   function book(c, id) {
     const e = eventOf(id); if (!e) throw new Error('no event ' + id);
-    if (c.bank < cost(e)) return { ok: false, why: 'Not enough in the tour budget' };
-    c.bank -= cost(e); c.booked = id;
+    const pay = costFor(c, e), funded = fundedTrip(c, e);
+    if (c.bank < pay) return { ok: false, why: 'Not enough in the tour budget' };
+    c.bank -= pay; c.booked = id; if (funded) c.wfundUsed = c.wfund; // the package pays this edition's trip once, straight to the travel, never into the bank
     const rounds = e.kind === 'groupko' ? ['G'].concat(roundsFor(e.size / 2)) : roundsFor(e.size);
-    c.live = { id, round: 0, rounds, lost: false, results: [] };
+    c.live = { id, round: 0, rounds, lost: false, results: [], paid: pay }; if (funded) c.live.funded = 1;
     return { ok: true, live: c.live };
   }
   // the next opponent for the live event: static by level and round
@@ -17285,7 +17290,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     c.pts[L.id] = c.res[L.id].slice().sort((a, b) => b - a).slice(0, BEST_N[L.id] || 99).reduce((s, x) => s + x, 0);
     if (OOM_BY_MONEY[L.id]) c.oom[L.id] = (c.oom[L.id] || 0) + prize;
     if (e.card && (fin === 'W' || fin === 'F' || fin === 'SF')) c.card = true;
-    const rec = { week: c.week, id: e.id, n: e.n, level: e.level, fin, prize, pts, cost: cost(e) }; if (e.every >= 52) rec.ed = edition(e, c.week);
+    const rec = { week: c.week, id: e.id, n: e.n, level: e.level, fin, prize, pts, cost: lv.paid != null ? lv.paid : cost(e) }; if (lv.funded) rec.funded = 1; if (e.every >= 52) rec.ed = edition(e, c.week);
     c.history.push(rec); c.live = null; c.booked = null; c.week++;
     const up = checkUp(c, e, fin);
     return Object.assign({ done: true, fin, finName: FIN_NAME[fin], prize, pts }, up ? { up } : {});
@@ -17300,10 +17305,18 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
       if (e.id === 'qschool' && !c.card) { c.qsOffer = true; newDpnzSeason(c); const r = promote(c, 3, 'No Tour Card this time (' + FIN_NAME[fin].toLowerCase() + '). Back to the DPNZ Tour for a new season: 40% of your points roll over. Your Q-School place stays for next year');
         r.fromQs = fin; return r; }
       return null; }
-    if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;
+    if (L.id === 'dpnz') {
+      // B1 (Q&D 01:25): a save from before the gate has no counters, so its own results this season (David: a win at Hamilton) would not
+      // count. Backfill both once from this season's DPNZ history: the last dpnzEv DPNZ records before this event's (pushed just above).
+      if (c.dpnzF == null && c.dpnzSF == null) { const n = c.dpnzEv || 0, ids = new Set(L.events.map(x => x.id));
+        const mine = n ? (c.history || []).filter(h => ids.has(h.id)).slice(0, -1).slice(-n) : []; c.dpnzF = mine.filter(h => h.fin === 'W' || h.fin === 'F').length; c.dpnzSF = mine.filter(h => h.fin === 'SF').length; }
+      c.dpnzEv = (c.dpnzEv || 0) + 1;
       // pace package (Hayden 15:10, doc 46): the DPNZ points route. 400 points (best 6) with at least 2 events this season; the carry
       // from a new season is capped at 300, so it always takes new results
-      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points: the NZ route to the Palace');
+      // results gate (Producer 22:21, C1 02:05): plus at least one semi-final or better this season (so it sits in the route's best 6);
+      // six quarter-finals (480) can't do it
+      if (fin === 'W' || fin === 'F') c.dpnzF = (c.dpnzF || 0) + 1; else if (fin === 'SF') c.dpnzSF = (c.dpnzSF || 0) + 1;
+      if (c.dpnzEv >= DPNZ_ROUTE_EV && (c.pts.dpnz || 0) >= DPNZ_ROUTE && routeGate(c)) return promote(c, 6, DPNZ_ROUTE + ' DPNZ points with ' + ((c.dpnzF || 0) ? 'a final' : 'a semi-final') + ': the NZ route to the Palace');
       if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
@@ -17316,8 +17329,12 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     if (played >= L.minEv && ((c.pts[L.id] || 0) >= L.need || (e.jump && fin === 'W'))) return promote(c, c.level + 1, 'Up to ' + LEVELS[c.level + 1].n);
     return null;
   }
+  // CAR-OPP (Producer 22:21, ChatGPT agreed): Season 3 field centres per Circuit level, read by v11's band shift in Season 3 in place of
+  // CEN. Fixed by level and round, never the player. Pub fitted to the weak profile (Hayden's timing) at ~25-30% entering, Club and Opens to
+  // the mid profile at ~50-55%; DPNZ, Trans-Tasman, Tour Card, Palace unchanged (76/84/91/97). Fitted by tests/pace-lever-sim.js.
+  const FIELD_CEN = [54.5, 65.5, 70, 76, 84, 91, 97]; // was CEN [58, 63, 69, ...]: weak enters the Pub at 25%, mid the Club at 52% and the Opens at 49% (500 careers)
   const TT_CUT = 10; // top 10 on the DPNZ OOM go to the Trans-Tasman
-  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
+  const DPNZ_ROUTE = 400, DPNZ_ROUTE_EV = 2; const routeGate = c => (c.dpnzF || 0) + (c.dpnzSF || 0) >= 1; // pace package: 400 DPNZ points (best 6) after at least 2 events this season = the Palace
   const DPNZ_SEASON = 8; // events per DPNZ season (6 weekends x 2 in real life, 8 picks in TOPS)
   // Championship-year identity (Hayden 15:10, doc 46): a yearly event (every 52: the Worlds, Q-School) has one edition per cycle,
   // edition = floor(week / 52). Each history record carries its edition, and an edition already played can't be entered again,
@@ -17326,9 +17343,14 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   const playedEdition = (c, e) => (c.history || []).some(h => h.id === e.id && (h.ed != null ? h.ed : edition(e, h.week)) === edition(e, c.week));
   // carry into a new DPNZ season: 40%, capped below the Palace route so a new season always needs new results (doc 46)
   const DPNZ_CARRY = .4, DPNZ_CARRY_CAP = 300;
-  function newDpnzSeason(c) { c.dpnzEv = 0; const carry = Math.min(DPNZ_CARRY_CAP, Math.round((c.pts.dpnz || 0) * DPNZ_CARRY)); c.res = c.res || {}; c.res.dpnz = carry ? [carry] : []; c.pts.dpnz = carry; c.dpnzYear = (c.dpnzYear || 0) + 1; }
+  function newDpnzSeason(c) { c.dpnzEv = 0; c.dpnzF = 0; c.dpnzSF = 0; const carry = Math.min(DPNZ_CARRY_CAP, Math.round((c.pts.dpnz || 0) * DPNZ_CARRY)); c.res = c.res || {}; c.res.dpnz = carry ? [carry] : []; c.pts.dpnz = carry; c.dpnzYear = (c.dpnzYear || 0) + 1; }
   const GRANT = [0, 60, 450, 900, 850, 0, 3000]; // paid when you arrive at a level: rep-squad fund, DPNZ travel subsidy, NZ team flights, Palace travel
-  function promote(c, to, msg) { c.grants = c.grants || {}; const g = to > c.level && !c.grants[to] ? GRANT[to] : 0; if (g) c.grants[to] = 1; c.level = to; c.bank += g; return { to, n: LEVELS[to].n, msg, grant: g }; }
+  // (D, Producer 22:21) funded qualification package: qualifying for the Palace pays the next Worlds trip directly (travel and entry),
+  // once per qualified edition, and never puts cash in the bank. The first-arrival travel grant is unchanged.
+  const WORLDS_EVERY = 52, nextWorldsEd = w => w % WORLDS_EVERY === 0 ? w / WORLDS_EVERY : Math.floor(w / WORLDS_EVERY) + 1;
+  const fundedTrip = (c, e) => e.id === 'worlds' && c.wfund != null && c.wfund === edition(e, c.week) && c.wfundUsed !== c.wfund;
+  const costFor = (c, e) => fundedTrip(c, e) ? e.entry : cost(e); // the package pays the travel; the entry (none at the Worlds) stays
+  function promote(c, to, msg) { if (to === 6) c.wfund = nextWorldsEd(c.week); c.grants = c.grants || {}; const g = to > c.level && !c.grants[to] ? GRANT[to] : 0; if (g) c.grants[to] = 1; c.level = to; c.bank += g; return { to, n: LEVELS[to].n, msg, grant: g }; }
   // hardship advance: two entries at your level, paid back from half of each prize until cleared (once at a time)
   function advance(c) { if (c.debt) return { ok: false, why: 'Pay back the last advance first' }; const L = LEVELS[c.level], ch = L.events.map(cost).sort((a, b) => a - b)[0]; const amt = ch * 2; c.bank += amt; c.debt = amt; return { ok: true, amt }; }
   function repay(c, prize) { if (!c.debt || !prize) return; const p = Math.min(c.debt, Math.round(prize / 2)); c.debt -= p; c.bank -= p; }
@@ -17401,7 +17423,7 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
     return { ok: true, id: e.id, cost: e.cost, debt: c.debt, live: c.live };
   }
 
-  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, DPNZ_ROUTE, DPNZ_ROUTE_EV, edition, nextEventWeek, restNeeded, restPlan, restWeek, recoveryOffer, recoveryEntry };
+  const API = { FIN, FIN_NAME, LEVELS, BEST_N, roundsFor, oppAvg, eventOf, cost, prizeFor, pointsFor, newCareer, calendar, book, nextOpp, result, finish, dpnzTable, dpnzRank, broke, advance, REST_SCAN, DPNZ_CARRY, DPNZ_CARRY_CAP, DPNZ_ROUTE, DPNZ_ROUTE_EV, FIELD_CEN, costFor, fundedTrip, edition, nextEventWeek, restNeeded, restPlan, restWeek, recoveryOffer, recoveryEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.TOPS_CIRCUIT = API;
 })(this);
 
@@ -17425,10 +17447,12 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   // ---- a brand new Season 3 career: the Pub, the starter bank, the Circuit state (full reset, Hayden 07:45)
   if(typeof newCareer==='function'){const _nc=newCareer;newCareer=function(){const r=_nc.apply(this,arguments);try{if(on()){const c=career();if(c&&!c.run){c.circuit=C().newCareer({bank:START_BANK});c.bank=START_BANK;c.tier=0;c.stage='circuit';c.s3=1;persist();L('s3_new_career',{bank:START_BANK});}}}catch(e){}return r;};}
 
+  // CAR-OPP note (a): the average you actually play against (the Circuit band shift, Circuit matches only), not the raw engine figure
+  const plays=(a,lv)=>{try{return window.TOPS_OPP_SHIFT?TOPS_OPP_SHIFT(a,lv,true):a;}catch(e){return a;}};
   function view(){const k=circ();if(!k)return null;/* CAR-XP: matches played before the XP fix get their base XP once */try{const cu=window.C3&&C3.s3CatchUp?C3.s3CatchUp():null;if(cu&&cu.xp){L('s3_xp_catchup',{xp:cu.xp,w:cu.w,l:cu.l,lv:C3.V3().lv});persist();}}catch(e){}const c=career();k.bank=c.bank||0;const E=C(),Lv=E.LEVELS[k.level];
     const played=k.history.filter(h=>h.level===k.level).length;
-    const cal=E.calendar(k).map(e=>{const prizes={},points={};E.FIN.forEach(f=>{prizes[f]=E.prizeFor(e,f);points[f]=E.pointsFor(e,f);});return {id:e.id,n:e.n,where:e.where,kind:e.kind,size:e.size,entry:e.entry,travel:e.travel,cost:e.cost,purse:e.purse,pts:e.pts,every:e.every,jump:!!e.jump,canAfford:e.canAfford,prizes,points};});
-    let live=null;if(k.live){const e=E.eventOf(k.live.id),o=E.nextOpp(k);live={id:e.id,n:e.n,where:e.where,round:k.live.round,roundName:E.FIN_NAME[o.round]||o.round,rounds:k.live.rounds.slice(),results:(k.live.results||[]).slice(),group:k.live.g?{w:k.live.g.w,p:k.live.g.p}:null,opp:{name:oppName(k),avg:o.avg,legs:o.legs}};}
+    const cal=E.calendar(k).map(e=>{const prizes={},points={};E.FIN.forEach(f=>{prizes[f]=E.prizeFor(e,f);points[f]=E.pointsFor(e,f);});return {id:e.id,n:e.n,where:e.where,kind:e.kind,size:e.size,entry:e.entry,travel:e.travel,cost:e.cost,funded:!!e.funded,purse:e.purse,pts:e.pts,every:e.every,jump:!!e.jump,canAfford:e.canAfford,prizes,points};});
+    let live=null;if(k.live){const e=E.eventOf(k.live.id),o=E.nextOpp(k);live={id:e.id,n:e.n,where:e.where,round:k.live.round,roundName:E.FIN_NAME[o.round]||o.round,rounds:k.live.rounds.slice(),results:(k.live.results||[]).slice(),group:k.live.g?{w:k.live.g.w,p:k.live.g.p}:null,opp:{name:oppName(k),avg:plays(o.avg,k.level),raw:o.avg,legs:o.legs}};}
     const costs=Lv.events.map(E.cost);const avgCost=costs.reduce((s,x)=>s+x,0)/Math.max(1,costs.length);
     return {level:{i:k.level,id:Lv.id,n:Lv.n,s:Lv.s,avg:Lv.avg,legs:Lv.legs,up:Lv.up,need:Lv.need,pts:k.pts[Lv.id]||0,minEv:Lv.minEv,played},
       ladder:E.LEVELS.map((x,i)=>({i,id:x.id,n:x.n,avg:x.avg,state:i<k.level?'done':i===k.level?'current':i===k.level+1?'next':'locked'})),
@@ -17439,11 +17463,11 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
       rest:E.restNeeded(k)?(E.restPlan?E.restPlan(k):{next:E.nextEventWeek(k)}):null,recover:k.live?null:E.recoveryOffer(Object.assign({},k,{bank:c.bank||0}))};}
   function book(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};if(k.live)return {ok:false,why:'Finish the event you are in first'};
     const e=C().eventOf(id);if(!e||e.level!==k.level||!C().calendar(Object.assign({},k,{bank:career().bank||0})).some(x=>x.id===id))return {ok:false,why:'Not on this week'};
-    const r=sync(k=>C().book(k,id));if(r&&r.ok){persist();L('s3_book',{id,cost:C().cost(e),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
+    const r=sync(k=>C().book(k,id));const k0=career()&&career().circuit,k0paid=()=>k0&&k0.live&&k0.live.paid!=null?k0.live.paid:C().cost(e),k0funded=()=>!!(k0&&k0.live&&k0.live.funded);if(r&&r.ok){persist();L('s3_book',{id,cost:k0paid(),funded:k0funded(),bank:career().bank});}return r&&r.ok?{ok:true}:{ok:false,why:(r&&r.why)||'Could not book'};}
   // play(): the screens' Play button. It goes through playNext so ENG-RESET gives a fresh page between matches (its launcher replays playNext on the new page)
   function play(){if(!on())return false;const k=circ();if(!k||!k.live)return false;try{window.playNext();}catch(e){return false;}return true;}
   function playNow(){if(!on())return false;const k=circ();if(!k||!k.live)return false;const o=C().nextOpp(k),e=C().eventOf(k.live.id),nm=oppName(k);
-    beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0});
+    beginMatch({mode:'career',tier:k.level,p0:save.name||'You',oppKey:nm,oppName:nm,oppAvg:o.avg,legs:o.legs,purse:0,fee:0,circuit:true});
     if(SS()){S.s3={id:e.id,round:o.round,level:k.level,recovery:k.live&&k.live.recovery?1:0};}L('s3_match',{id:e.id,round:o.round,opp:o.avg,legs:o.legs});return true;}
   function restWeek(){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().restWeek(k));if(r&&r.ok){persist();L('s3_rest',Object.assign({from:r.from,to:r.to,level:k.level},r.fallback?{fallback:1,fromLevel:r.fromLevel}:{}));}else if(r&&r.error)L('s3_rest_none',{week:k.week,level:k.level});return r;}
   function recover(id){if(!on())return {ok:false,why:'Season 3 is off'};const k=circ();if(!k)return {ok:false,why:'No career'};const r=sync(k=>C().recoveryEntry(k,id));if(r&&r.ok){persist();L('s3_recover',{id:r.id,cost:r.cost,debt:r.debt,level:k.level});}return r;}
@@ -17504,7 +17528,10 @@ window.TOPS_CAREER_BAK={list,backup,restore,played,_line:line};
   window.addEventListener('tops:s3',ev=>{const r=ev.detail||{};let n=0;const t=setInterval(()=>{const b=document.getElementById('btnResAction');if(!b&&++n<50)return;clearInterval(t);if(!b)return;
     const k=circ(),v=k&&k.live?view():null;b.innerHTML=v&&v.live?`To the next round<small>${v.live.n} · ${v.live.roundName}</small>`:`Back to the Circuit<small>${r.done?(r.finName+(r.prize?' · '+money(r.prize):'')):''}</small>`;
     /* its click still goes through btnResultNext -> afterResult -> the hub (ENG-RESET may reload between matches); the Circuit screen plays the next round */},100);});
-  window.TOPS_S3={on,view,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
+  /* CAR-OPP: v11's save migration re-shifts a queued opponent while the page loads, before this engine (and its Season 3 FIELD_CEN) is
+     on the page, so it used the Season 2 centre. Re-derive it once now from its raw rating, the same rule as v11 (never the player). */
+  try{const c=typeof career==='function'?career():null,n=c&&c.next;if(on()&&c&&c.circuit&&!c.run&&n&&n.oppRaw!=null&&!n.intro&&window.TOPS_OPP_SHIFT){const a=TOPS_OPP_SHIFT(n.oppRaw,c.tier)+(n.routeAdj||0);if(a!==n.oppAvg){n.oppAvg=a;persist();}}}catch(e){}
+  window.TOPS_S3={on,view,plays,book,play,advance,rest:restWeek,recover,withdraw(){return {ok:false,why:'Not yet'};},_circ:circ,_playNow:playNow};
   // ---- CAR-TUNE (Overseer 19:45, Hayden): per-tier perfect-window scale and near-miss ramp width, the same for every player at a tier.
   // Read once at game load from tops_tune (players can read it, only the Overseer's service role can write it); the values below are
   // the baked fallback. beginMatch freezes the values for that match, so a late read or a change applies from the next match.
@@ -21157,6 +21184,8 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const money = n => '$' + Math.round(+n || 0).toLocaleString('en-NZ');
   const CI = () => window.TOPS_CIRCUIT;
+  // CAR-OPP note (a): show the average you actually play (the Circuit band shift), not the raw engine number
+  const PLAYS = (a, lv) => { try { return window.TOPS_OPP_SHIFT ? TOPS_OPP_SHIFT(a, lv, true) : a; } catch (e) { return a; } };
   /* a round's name (the engine's FIN_NAME names a FINISH: losing the final = Runner-up; the round itself is the Final) */
   const RN = { G: 'Group match', F: 'Final', SF: 'Semi-final', QF: 'Quarter-final', L16: 'Last 16', L32: 'Last 32', L64: 'Last 64', L128: 'Last 128' };
   const roundName = r => RN[r] || r || ''; window.TOPS_S3_ROUND = roundName;
@@ -21313,9 +21342,9 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const left = c.bank - e.cost;
     return `<article class="s3-post">
       <div class="s3-part" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}">${e.jump ? '<span class="s3-tag">Win it to move up</span>' : ''}<h3>${esc(e.n)}</h3></div>
-      <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
-        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
-        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
+      <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${PLAYS(L.avg + (e.field || 0), e.level)}</span>
+        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${e.funded && !e.cost ? 'Paid' : money(e.cost)}</b><span>${e.funded ? 'qualifier’s trip' : e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
+        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${e.funded && !e.cost ? 'trip paid' : money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
           : noNeed ? '' : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
       </div></article>`;
   }
@@ -21326,7 +21355,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
     let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
       <ol class="s3-draw" aria-label="The draw">${cells}</ol>
-      <div class="s3-row"><div><span class="s3-lab">Next opponent${D.oppName() ? ' · ' + esc(D.oppName()) : ''}</span><b class="s3-big">${o.avg}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
+      <div class="s3-row"><div><span class="s3-lab">Next opponent${D.oppName() ? ' · ' + esc(D.oppName()) : ''}</span><b class="s3-big">${PLAYS(o.avg, e.level)}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
         <div style="text-align:right"><span class="s3-lab">${esc(rn)}</span><b class="s3-mid">${money(winNow)}</b><span class="rb-sub">to the winner</span></div></div>
       ${safe ? `<span class="rb-sub">Lose now and you still take ${money(safe)}</span>` : ''}
       <button class="rb-primary" type="button" id="s3Go"><b>Walk on</b><small>${esc(rn)}${L.legs ? ' · best of ' + L.legs : ''}</small></button>`;
@@ -21420,7 +21449,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     if (p.kind === 'round') {
       seenSet(p.now); const o = C.nextOpp(c); if (!o) return;
       const nm = o.round === 'G' ? 'next group match' : roundName(o.round);
-      toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${o.avg}</span>`); return;
+      toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${PLAYS(o.avg, c.level)}</span>`); return;
     }
     if (p.kind === 'done') {
       const r = p.rec, won = r.fin === 'W', L = C.LEVELS[r.level];
@@ -21592,9 +21621,9 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
     const d = document.createElement('div'); d.id = 's3Fn'; d.className = 's3-fn'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3FnH');
     d.innerHTML = `<div class="s3-fnart" style="background-image:url(${lvArt(e.level)})"><div class="s3-fntop"><span class="s3-fnk">Your first night</span><h2 class="s3-fnt" id="s3FnH">${esc(e.n)}</h2><span class="s3-fnsub">${esc(e.where)} · ${fmt}</span></div></div>
       <div class="s3-fnb">
-        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${C.oppAvg(e.level, 0, n, e.field)} · best of ${L.legs} legs</span></div></div>` : ''}
+        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${PLAYS(C.oppAvg(e.level, 0, n, e.field), e.level)} · best of ${L.legs} legs</span></div></div>` : ''}
           <span class="s3-fnl">Win ${n} matches to take it</span><ol class="s3-fndraw">${draw}</ol>
-          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(C.cost(e))}</b><span>entry, paid</span></div></div></div>
+          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(lv.paid != null ? lv.paid : C.cost(e))}</b><span>entry, paid</span></div></div></div>
         ${L.need ? `<div class="s3-fnc"><span class="s3-fnl">How you move up</span><ol class="s3-fnlad">${lad}</ol>
           <div class="s3-fnrow"><span class="s3-fnsm">${esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points')}</span><b>${have} / ${L.need}</b></div><div class="s3-fnbar"><i style="width:${Math.min(100, 100 * have / L.need)}%"></i></div>
           <span class="s3-fnsm">${esc(L.up.replace(/\.$/, ''))}${C.LEVELS[e.level + 1] ? ', and you\'re up to the ' + esc(C.LEVELS[e.level + 1].n) : ''}.<span class="s3-fnmore"> Each week you pick an event, pay to enter and climb toward the Palace.</span></span></div>` : ''}
@@ -21624,7 +21653,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
         cashVal = '+' + money(r.prize || 0); }
       else if (k.live) { const o = C.nextOpp(k), lv = k.live, gp = o.round === 'G'; let nm = ''; try { const v = API().view(); nm = v && v.live && v.live.opp ? v.live.opp.name : ''; } catch (x) {}
         head = gp ? `Group: ${lv.g ? lv.g.w + ' won, ' + (lv.g.p - lv.g.w) + ' lost' : ''} · next group match` : `${esc(roundName(o.round))} next`;
-        sub = `Next: ${nm ? esc(nm) + ' · ' : ''}avg ${o.avg}`; const bank = C.prizeFor(e, o.round); cashLab = 'Banked so far'; cashVal = money(bank); sub += ` · ${money(C.prizeFor(e, 'W'))} if you win it`; }
+        sub = `Next: ${nm ? esc(nm) + ' · ' : ''}avg ${PLAYS(o.avg, k.level)}`; const bank = C.prizeFor(e, o.round); cashLab = 'Banked so far'; cashVal = money(bank); sub += ` · ${money(C.prizeFor(e, 'W'))} if you win it`; }
       let bar = '';
       if (L.need) { const now = Math.max(0, (k.pts && k.pts[L.id]) || 0), before = done ? Math.max(0, now - (r.pts || 0)) : now, pot = done ? now : Math.min(L.need, now + C.pointsFor(e, 'W'));
         const pc = v => Math.min(100, 100 * v / L.need), up = r.up && r.up.to > e.level;
