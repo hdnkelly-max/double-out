@@ -181,7 +181,7 @@
     return `<div class="s3-rp s3-wk"><span class="s3-wkk">Week ${c.week} · rest week</span>
       <div class="s3-rph"><b>Next up: ${esc(e.n)}</b><span>${gap > 1 ? `Week ${nx}. Nothing on at ${esc(L.n)} for ${gap} weeks.` : `Week ${nx}. Nothing on at ${esc(L.n)} this week.`}</span></div>
       <ol class="s3-rpdraw s3-wkline" aria-label="Weeks to the next event">${cells}</ol>
-      <div class="s3-wkev2" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}"><span>${esc(e.where || L.n)}</span></div>
+      <div class="s3-wkev2" style="background:url(${lvArt(e.level)}) 30% 62%/cover no-repeat,${GRAD[e.level]}"><span>${esc(e.where || L.n)}</span></div>
       <div class="s3-rpbar"><div class="s3-rprow"><span>Winner takes</span><b>${money(win)}</b></div><div class="s3-rprow"><span>To enter${e.travel ? ' (entry + travel)' : ''}</span><b>${money(e.cost)}</b></div>
         <div class="s3-rprow"><span>Tour budget</span><b class="${can ? '' : 's3-neg'}">${money(c.bank)}${can ? '' : ` · short ${money(e.cost - c.bank)}`}</b></div></div>
       <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>${gap > 1 ? 'Skip to week ' + nx : 'On to week ' + nx}</b><small>${gap > 1 ? gap + ' weeks on · ' : ''}${esc(TOWN(e.n).split(' · ')[0])} is next</small></button>
@@ -592,7 +592,8 @@
       /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
       const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
       const back = chipFrom ? `<button type="button" class="s3-trback" data-s3="trback">‹ Back to Circuit</button>` : '';
-      return back + hero + gap + bl + empty + rows + next + oldSeasons();
+      const cab = window.TC_API && TC_API.cabinet ? `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Seasons 1 & 2 trophy cabinet</button>` : '';   /* the old 3D cabinet stays reachable under s3x */
+      return back + hero + gap + bl + empty + rows + next + oldSeasons() + cab;
     } catch (x) { console.warn('s3 shelf', x); return null; }
   }
   /* the Season 3 record line under your best leg: the board's top row (Career's tops_bestleg_s3), a separate value from yours */
