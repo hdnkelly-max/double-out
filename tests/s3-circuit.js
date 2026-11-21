@@ -39,8 +39,11 @@ const {chromium}=require('playwright');const path=require('path');
  }catch(e){out.err=String(e&&e.stack||e);}return out;});
  // 7b the hub's old Play (playNext); ENG-RESET may reload the page first, so check after it settles
  const b0=await p.evaluate(()=>{S.done=true;career().circuit.live=null;persist();setTimeout(()=>playNext(),0);return career().bank;});
- await p.waitForTimeout(15000);
- r.pn=await p.evaluate(b0=>({live:!!(career()&&career().circuit&&career().circuit.live),s3:!!(typeof S!=='undefined'&&S&&S.s3),paid:b0-career().bank}),b0).catch(e=>({err:String(e)}));
+ // Q&D (Producer 23:50): ENG-RESET reloads the page and replays it in ~11.5 s locally, slower on CI, so a fixed 15 s wait flaked.
+ // Poll for the live event and S.s3 (the match under way) up to 60 s; an evaluate during the reload just tries again.
+ { const t0=Date.now(); r.pn={err:'not live after 60 s'};
+   while(Date.now()-t0<60000){ const s=await p.evaluate(b0=>{try{return {live:!!(career()&&career().circuit&&career().circuit.live),s3:!!(typeof S!=='undefined'&&S&&S.s3),paid:b0-career().bank};}catch(e){return null;}},b0).catch(()=>null);
+     if(s&&s.live&&s.s3){r.pn=s;r.pnMs=Date.now()-t0;break;} if(s)r.pn=Object.assign({},s,{waiting:true}); await p.waitForTimeout(500); } }
  const want=['bank','calendar','card','debt','history','ladder','level','live','oom','qsOffer','recover','rest','runway','week'];
  if(r.err)f.push('error: '+r.err);else{
   if(!r.start.on||r.start.tier!==0||r.start.bank!==60||!r.start.circ||r.start.level!==0)f.push('new career is not a fresh Pub start '+JSON.stringify(r.start));
@@ -67,5 +70,5 @@ const {chromium}=require('playwright');const path=require('path');
  if(errs.length)f.push('page errors: '+errs.slice(0,3).join(' | '));
  await b.close();
  if(f.length){console.log('FAIL\n- '+f.join('\n- '));process.exit(1);}
- console.log(`PASS: fresh Pub career (bank 60); view() frozen shape; booking takes $5 once; play() runs a career match vs ${r.match.name} (${r.match.oppAvg}); three wins = Winner, +$${r.evs[2].prize}, 50 pts, week 2; a round-2 loss = Semi-final; history + Best Leg read the views; flag off = no Circuit`);
+ console.log(`PASS: fresh Pub career (bank 60); view() frozen shape; booking takes $5 once; play() runs a career match vs ${r.match.name} (${r.match.oppAvg}); three wins = Winner, +$${r.evs[2].prize}, 50 pts, week 2; a round-2 loss = Semi-final; history + Best Leg read the views; old hub Play live after ${r.pnMs} ms (polled, up to 60 s); flag off = no Circuit`);
 })();
