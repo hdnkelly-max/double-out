@@ -41,7 +41,7 @@ const {chromium}=require('playwright');const path=require('path');
  const b0=await p.evaluate(()=>{S.done=true;career().circuit.live=null;persist();setTimeout(()=>playNext(),0);return career().bank;});
  await p.waitForTimeout(15000);
  r.pn=await p.evaluate(b0=>({live:!!(career()&&career().circuit&&career().circuit.live),s3:!!(typeof S!=='undefined'&&S&&S.s3),paid:b0-career().bank}),b0).catch(e=>({err:String(e)}));
- const want=['bank','calendar','card','debt','history','ladder','level','live','oom','qsOffer','runway','week'];
+ const want=['bank','calendar','card','debt','history','ladder','level','live','oom','qsOffer','recover','rest','runway','week'];
  if(r.err)f.push('error: '+r.err);else{
   if(!r.start.on||r.start.tier!==0||r.start.bank!==60||!r.start.circ||r.start.level!==0)f.push('new career is not a fresh Pub start '+JSON.stringify(r.start));
   if(JSON.stringify(r.keys)!==JSON.stringify(want))f.push('view() keys '+r.keys.join(','));
