@@ -327,8 +327,9 @@
     const tile = (k, l, val) => `<div class="rbw-t${best === k ? ' rbw-best' : ''}"><small>${l}${best === k ? ' <i>Best</i>' : ''}</small><b class="rb-num">${val}</b></div>`;
     const tiles = `<div class="rbw-tiles">${tile('avg', 'Average', a || '–')}${tile('co', 'Checkout', co != null ? co + '%' : '–')}${tile('x', third[0], third[1])}</div>`;
     const need = M.need, pNow = Math.min(1, v.xp / need), pPrev = up ? 0 : Math.max(0, Math.min(pNow, (v.xp - xp) / need));
-    const cashLab = s3m ? (s3m.done ? 'Prize money' : 'Prize money · paid at the end') : won || cash <= 0 ? 'Prize' : 'Appearance money';
-    const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
+    const s3b = s3m && S3 && S3.resultBlock ? S3.resultBlock(S, c) : null;   /* EXP-IDLE 2 (s3x=1): progress + move-up bar */
+    const cashLab = s3b ? s3b.cashLab : s3m ? (s3m.done ? 'Prize money' : 'Prize money · paid at the end') : won || cash <= 0 ? 'Prize' : 'Appearance money';
+    const rw = `<div class="rbw-rw${won && cash > 0 ? ' rbw-gold' : ''}"><div class="rbw-cash"><small>${cashLab}</small><b class="rb-num" id="rbRCash">${s3b ? s3b.cashVal : cash < 0 ? '−' + money(-cash) : '+' + money(cash)}</b></div><div class="rbw-xp"><small>Career XP</small><b class="rb-num" id="rbRXp">+${xp} XP</b><div class="rbw-bar"><span>Lv ${v.lv}</span><i><em style="width:${pPrev * 100}%"></em><em class="rbw-gain" style="left:${pPrev * 100}%;width:${(pNow - pPrev) * 100}%"></em></i><span class="rbw-nx">${v.lv + 1}</span></div></div></div>`;
     // unlock cards: the level reward big (image for its kind), the next dart and achievements quieter
     let main = '';
     if (up) { const { rs, pick } = pickUnlock(pre0.lv, v.lv);
@@ -339,9 +340,11 @@
     if (nb) { const cost = price(nb.price), left = Math.max(0, cost - c.bank); want = `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_darts.jpg)"><div class="rbw-x"><small class="rbw-gk">Next dart</small><b>${esc(nb.n.replace(/ \d+g$/, '').replace(new RegExp('^' + nb.brand + ' '), ''))}</b><span>${left ? money(left) + ' to go' : 'You can buy it now'}</span></div></div>`; }
     const ach = won && extra ? `<div class="rbw-uc rbw-sec" style="background-image:url(${IMG}w_rw_trophy.jpg)"><div class="rbw-x"><small class="rbw-gk">${extra} achievement${extra > 1 ? 's' : ''} and contracts</small><b>Nice work</b><span>See them in Locker · Trophies</span></div></div>` : '';
     let tbl = '';
-    if (s3m) tbl = s3m.line ? `<div class="rbw-row"><span>${esc(s3m.line)}</span><em>${esc(s3m.sub)}</em></div>` : '';
+    if (s3b) tbl = s3b.html;
+    else if (s3m) tbl = s3m.line ? `<div class="rbw-row"><span>${esc(s3m.line)}</span><em>${esc(s3m.sub)}</em></div>` : '';
     else if (!money0 && M.rows && M.yi >= 0) tbl = `<div class="rbw-row"><span>Season · ${won ? 'now' : 'still'} ${ord(M.yi + 1)}</span><em>${M.yi <= 1 ? 'Top two go up' : (M.rows[1].pts - M.rows[M.yi].pts) + ' pts off 2nd'}</em></div>`;
-    const act = `<div class="rb-pin rbw-pin"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    const act = `<div class="rb-pin rbw-pin${s3b && s3b.pin ? ' ' + s3b.pin : ''}"><button class="rbw-go${(go ? go.textContent.trim() : 'Continue').length > 13 ? ' rbw-go-l' : ''}" type="button" id="rbRGo">${esc(go ? go.textContent.trim() : 'Continue')}</button>${keep ? `<button class="rb-ghost" type="button" id="rbRKeep" style="align-self:center">${esc(keep.textContent)}</button>` : ''}</div>`;
+    if (s3b) return head + tbl + tiles + rw + main + want + ach + act;   /* EXP-IDLE 2: where you are in the event comes first */
     return head + tiles + rw + main + want + ach + tbl + act;
   }
   let resMO = null, bodyMO = null;

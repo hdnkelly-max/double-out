@@ -433,11 +433,45 @@
     try { const k = API()._circ && API()._circ(); if (!lsGet(FNK) && !$id('s3Fn') && k && !(k.history || []).length && !(k.live && (k.live.results || []).length)) return firstNight(go); } catch (e) { console.warn('s3 first night', e); }
     return go(); }; }
 
+  /* ---------- EXP-IDLE 2 · event progress + move-up bar on the Circuit result (behind s3x=1). A won round reads as progress (the draw with
+     this round ticked, the next opponent, the prize already banked), an event end shows the finish and the level's points bar filling. ---------- */
+  function resultBlock(S, c) {
+    try {
+      if (!X || !S || !S.s3 || !CI() || !c || !c.circuit) return null;
+      const C = CI(), e = C.eventOf(S.s3.id), r = S.s3res || {}, k = c.circuit; if (!e) return null;
+      const L = C.LEVELS[e.level], won = !!S.won, done = !!r.done;
+      const rounds = e.kind === 'groupko' ? ['G'].concat(C.roundsFor(e.size / 2)) : C.roundsFor(e.size), at = Math.max(0, rounds.indexOf(S.s3.round));
+      const short = x => ({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[x] || x;
+      const cells = rounds.map((x, i) => { const cls = i < at ? 's3-rpw' : i === at ? (won ? 's3-rpw s3-rpnow' : 's3-rpl s3-rpnow') : (done ? 's3-rpoff' : i === at + 1 ? 's3-rpnext' : '');
+        const mark = i < at || (i === at && won) ? '<i aria-hidden="true">✓</i>' : i === at && !won ? '<i aria-hidden="true">✕</i>' : '';
+        return `<li class="${cls}${i === rounds.length - 1 ? ' s3-rpfin' : ''}">${mark}<b>${esc(short(x))}</b></li>`; }).join('');
+      let head = '', sub = '', cashLab = 'Prize money', cashVal = '';
+      if (done) { const winA = r.fin === 'W'; head = winA ? 'Winner' : `Out in the ${esc(roundName(S.s3.round).toLowerCase())}`; sub = r.prize ? `${money(r.prize)} prize money` : 'No prize money this time';
+        cashVal = '+' + money(r.prize || 0); }
+      else if (k.live) { const o = C.nextOpp(k), lv = k.live, gp = o.round === 'G'; let nm = ''; try { const v = API().view(); nm = v && v.live && v.live.opp ? v.live.opp.name : ''; } catch (x) {}
+        head = gp ? `Group: ${lv.g ? lv.g.w + ' won, ' + (lv.g.p - lv.g.w) + ' lost' : ''} · next group match` : `${esc(roundName(o.round))} next`;
+        sub = `Next: ${nm ? esc(nm) + ' · ' : ''}avg ${o.avg}`; const bank = C.prizeFor(e, o.round); cashLab = 'Banked so far'; cashVal = money(bank); sub += ` · ${money(C.prizeFor(e, 'W'))} if you win it`; }
+      let bar = '';
+      if (L.need) { const now = Math.max(0, (k.pts && k.pts[L.id]) || 0), before = done ? Math.max(0, now - (r.pts || 0)) : now, pot = done ? now : Math.min(L.need, now + C.pointsFor(e, 'W'));
+        const pc = v => Math.min(100, 100 * v / L.need), up = r.up && r.up.to > e.level;
+        bar = `<div class="s3-rpbar"><div class="s3-rprow"><span>${up ? 'Promoted to ' + esc(C.LEVELS[r.up.to].n) : esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points') + ' · to move up'}</span><b>${up ? '' : Math.min(now, L.need) + ' / ' + L.need}${done && r.pts ? ` <em>+${r.pts}</em>` : ''}</b></div>
+          <div class="s3-rpm"><i class="s3-rpb" style="width:${up ? 100 : pc(before)}%"></i>${done && !up ? `<i class="s3-rpg" style="left:${pc(before)}%;width:${pc(now) - pc(before)}%"></i>` : ''}${!done ? `<i class="s3-rpp" style="left:${pc(now)}%;width:${pc(pot) - pc(now)}%"></i>` : ''}</div>
+          ${!done ? `<small>Potential +${C.pointsFor(e, 'W')} if you win</small>` : ''}</div>`; }
+      return { pin: 's3-pin', html: `<div class="s3-rp"><ol class="s3-rpdraw" aria-label="The draw">${cells}</ol><div class="s3-rph"><b>${head}</b><span>${sub}</span></div>${bar}</div>`, cashLab, cashVal };
+    } catch (x) { console.warn('s3 result block', x); return null; }
+  }
+
+  /* an achievement badge that fails to load shows a trophy instead of a broken-image box (Producer 13:28 P1b) */
+  if (typeof achIco === 'function') { const _ai = achIco; achIco = function () { const h = _ai.apply(this, arguments);
+    return typeof h === 'string' ? h.replace('<img class="ach-img"', '<img class="ach-img" onerror="this.outerHTML=window.TOPS_S3_TROPHY||\'\'"') : h; }; }
+  window.TOPS_S3_TROPHY = '<svg class="ach-fb" viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path fill="#f1c64b" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3Zm0 4H6v1a2 2 0 0 0 1.2 1.8A5 5 0 0 1 7 8V7Zm10 0v1c0 .6-.1 1.2-.2 1.8A2 2 0 0 0 18 8V7h-1Z"/><rect x="6" y="20" width="12" height="2" rx="1" fill="#f1c64b"/></svg>';
+
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: fn => { shell = fn; },
+    resultBlock,
     refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };
