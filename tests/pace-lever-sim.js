@@ -23,9 +23,22 @@ const shift = (v, k) => { const [lo, hi] = BAND[k], adj = CEN[k] - (lo + hi) / 2
 const PALACE_BACK = ["if (L.id === 'palace') return fin === 'W' ? { champion: true, msg: 'World Champion. Champion’s Year starts next season' } : null;",
   "if (L.id === 'palace') { if (fin === 'W') return { champion: true, msg: 'World Champion. Champion’s Year starts next season' }; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour'); }"];
 const DPNZ_NEED = n => ["if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;", "if (L.id === 'dpnz' && (c.pts.dpnz || 0) >= " + n + " && played >= 2) return promote(c, 6, 'DPNZ points: the Palace'); if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1;"];
+// (b) recovery entries earn a share of ranking points; (a) a debt cap of K x the level's cheapest trip: at the cap the entry is still
+// offered (no dead end) but adds no debt and earns no points ("the tour covers it")
+const REC_PTS = m => ["const prize = prizeFor(e, fin), pts = pointsFor(e, fin);", "const prize = prizeFor(e, fin), pts = Math.round(pointsFor(e, fin) * (lv.capped ? 0 : lv.recovery ? " + m + " : 1));"];
+const DEBT_CAP = k => ["c.debt = (c.debt || 0) + e.cost; c.recovered = (c.recovered || 0) + 1; c.live.recovery = 1;",
+  "const capAmt = " + k + " * LEVELS[c.level].events.map(cost).sort((a, b) => a - b)[0]; if ((c.debt || 0) + e.cost > capAmt) { c.live.capped = 1; } else c.debt = (c.debt || 0) + e.cost; c.recovered = (c.recovered || 0) + 1; c.live.recovery = 1;"];
 const lv = (L, id) => L.find(x => x.id === id);
 const VARIANTS = {
   base: {},
+  // economy follow-ups, on the live rules (Palace loss stays at the Palace) and with (1) (raw = this branch's engine)
+  recHalf: { text: [REC_PTS(.5)] }, recZero: { text: [REC_PTS(0)] }, cap6: { text: [DEBT_CAP(6)] }, cap6half: { text: [DEBT_CAP(6), REC_PTS(.5)] }, cap10half: { text: [DEBT_CAP(10), REC_PTS(.5)] },
+  pubBest10: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 10,"]] }, pubBest12: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 12,"]] },
+  pubBest6: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 6,"]] }, pubBest8: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 8,"]] },
+  winToScore: { text: [["const prize = prizeFor(e, fin), pts = pointsFor(e, fin);", "const prize = prizeFor(e, fin), pts = lv.results.some(x => x.won) ? pointsFor(e, fin) : 0;"]] },
+  W_pubBest6cap6half: { raw: true, text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 6,"], DEBT_CAP(6), REC_PTS(.5)] },
+  W_base: { raw: true }, W_recHalf: { raw: true, text: [REC_PTS(.5)] }, W_recZero: { raw: true, text: [REC_PTS(0)] }, W_cap6half: { raw: true, text: [DEBT_CAP(6), REC_PTS(.5)] }, W_cap10half: { raw: true, text: [DEBT_CAP(10), REC_PTS(.5)] },
+
   // the engine exactly as it is on this branch (car-worlds: the lost-Worlds rule in tc/circuit.js), no patches
   branch: { raw: true },
   // (1) a lost Worlds sends you back to the DPNZ Tour (new season, 40% carry)
@@ -61,7 +74,7 @@ const VARIANTS = {
 function career(E, curve, cap) {
   const A = v => { const xs = curve.map(r => r[0]), ys = curve.map(r => r[1]); if (v <= xs[0]) return ys[0]; for (let i = 1; i < xs.length; i++) if (v <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (v - xs[i - 1]) / (xs[i] - xs[i - 1]); return ys[ys.length - 1]; };
   const c = E.newCareer({ bank: 60 }); const st = { sc: 20, fi: 20, ct: 20, rh: 20, co: 20 }; let plv = 1, xp = 0, pts = 0, seen = 1;
-  const out = { lv: {}, matches: 0, palaceAt: null, champion: false, worlds: 0 }; const R = () => (out.lv[c.level] = out.lv[c.level] || { m: 0, w: 0, ev: 0, first: [], last: [] });
+  const out = { lv: {}, matches: 0, palaceAt: null, champion: false, worlds: 0, rec: 0, capped: 0, debtMax: 0, recPub: 0, recPts: 0 }; const R = () => (out.lv[c.level] = out.lv[c.level] || { m: 0, w: 0, ev: 0, first: [], last: [] });
   let guard = 0;
   while (out.matches < cap && guard++ < 20000) {
     if (plv > seen) { pts += plv - seen; seen = plv; }
@@ -69,16 +82,16 @@ function career(E, curve, cap) {
     if (!c.live) { if (E.restNeeded(c)) { const r = E.restWeek(c); if (!r.ok) return Object.assign(out, { end: 'stall' }); }
       let e = E.calendar(c).find(x => x.canAfford);
       if (!e && !c.debt) { const a = E.advance(c); if (a.ok) e = E.calendar(c).find(x => x.canAfford); }
-      if (e) E.book(c, e.id); else { const rc = E.recoveryEntry(c); if (!rc.ok) return Object.assign(out, { end: 'stall broke' }); }
+      if (e) E.book(c, e.id); else { const rc = E.recoveryEntry(c); if (!rc.ok) return Object.assign(out, { end: 'stall broke' }); out.rec++; if (c.level === 0) out.recPub++; if (c.live.capped) out.capped++; }
       R().ev++; if (c.live.id === 'worlds') out.worlds++; }
     const o = E.nextOpp(c), me = A((st.sc + st.fi + st.ct + st.rh) / 4); const opp = SHIFT ? shift(o.avg, c.level) : o.avg; const won = Math.random() < 1 / (1 + Math.pow(10, (opp - me) / 12));
     const L0 = c.level, r = R(); r.m++; if (!out.left || !out.left[L0]) r.m1 = (r.m1 || 0) + 1; if (won) r.w++; (r.first.length < 10 ? r.first : r.last).push(won ? 1 : 0); if (r.last.length > 10) r.last.shift();
     out.matches++; xp += (60 + (won ? 100 : 0)) * XPMUL[L0] + (won ? 60 : 0); while (xp >= lvNeed(plv)) { xp -= lvNeed(plv); plv++; }
-    const res = E.result(c, won); if (c.level !== L0) { out.left = out.left || {}; out.left[L0] = 1; }
+    const wasRec = !!(c.live && c.live.recovery); const res = E.result(c, won); out.debtMax = Math.max(out.debtMax, c.debt || 0); if (res && res.done && wasRec) out.recPts += res.pts || 0; if (c.level !== L0) { out.left = out.left || {}; out.left[L0] = 1; }
     if (res && res.up && res.up.champion) { out.champion = true; break; }
     if (c.level === 6 && out.palaceAt == null) out.palaceAt = out.matches;
   }
-  out.end = out.champion ? 'champion' : 'cap'; out.bank = c.bank; out.plv = plv; return out;
+  out.end = out.champion ? 'champion' : 'cap'; out.bank = c.bank; out.debtEnd = c.debt || 0; out.maxLevel = Math.max(...Object.keys(out.lv).map(Number)); out.plv = plv; return out;
 }
 const want = (process.argv[4] || Object.keys(VARIANTS).join(',')).split(',');
 const res = {};
@@ -91,5 +104,5 @@ for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {};
       lvl[L] = { reached: xs.length, mMed: q(xs.map(x => x.m), .5), m1Med: q(xs.map(x => x.m1 || 0), .5), evMed: q(xs.map(x => x.ev), .5), win: +(xs.reduce((s, x) => s + x.w, 0) / xs.reduce((s, x) => s + x.m, 0)).toFixed(2),
         entry: f.length ? +(f.reduce((s, x) => s + x, 0) / f.length).toFixed(2) : null, exit: l.length ? +(l.reduce((s, x) => s + x, 0) / l.length).toFixed(2) : null }; }
     res[v][who] = { palace: pa.length + '/' + N, toPalaceP50: q(pa, .5), toPalaceP25: q(pa, .25), toPalaceP75: q(pa, .75), champ: runs.filter(r => r.champion).length + '/' + N,
-      matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), lvl }; } }
+      matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), recP50: q(runs.map(r => r.rec), .5), recPubP50: q(runs.map(r => r.recPub), .5), cappedP50: q(runs.map(r => r.capped), .5), debtMaxP50: q(runs.map(r => r.debtMax), .5), debtMaxP90: q(runs.map(r => r.debtMax), .9), debtMaxMax: Math.max(...runs.map(r => r.debtMax)), debtEndP50: q(runs.map(r => r.debtEnd), .5), recPtsP50: q(runs.map(r => r.recPts), .5), reachClub: runs.filter(r => r.maxLevel >= 1).length, reachDpnz: runs.filter(r => r.maxLevel >= 3).length, clubAtP50: q(runs.map(r => r.lv[0] ? r.lv[0].m : null).filter(x => x != null), .5), lvl }; } }
 console.log(JSON.stringify(res));
