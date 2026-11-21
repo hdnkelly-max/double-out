@@ -969,7 +969,9 @@
     let k = (now - WK.t0) / WK.dur; if (window.TC_WALK_FREEZE != null) k = window.TC_WALK_FREEZE;
     // EXP-1d (Q&D 22:46): never a T-pose. Until the walk clip plays (clipOn asks for anims.glb and returns null until the clip and a
     // mixer exist; a rebuilt figure starts without one) the figure stays hidden on an establishing shot. Held time doesn't count
-    // against the timeline; after 4 s held in total the walk-on skips cleanly to its end.
+    // against the timeline; after 4 s held in total the walk-on skips cleanly to its end, unless the clip file (anims.glb) is still
+    // downloading: then it keeps holding up to 10 s (the first walk-on of a session on a slow connection used to be lost to a 4 s skip;
+    // Engine + Producer 22 Nov). A tap still skips at any time. v2 and v3 alike.
     if (WK.me && WK.me !== v.me) { WK.walking = false; WK.arrived = false; WK.me = v.me; }   // the figure was rebuilt mid-walk (models landing): its clip starts again before it's shown (ChatGPT P1)
     if (!WK.walking && !WK.holdSkip && (k < WA || WK.hold0)) {   // once holding, the timeline is paused: a slow frame mustn't carry k past the walk and show an unposed figure
       if (WK.vis0 === undefined) WK.vis0 = !!v.me.visible;
@@ -977,7 +979,8 @@
       if (a) { WK.walking = true; WK.me = v.me; if (WK.hold0) { const d = now - WK.hold0; WK.held = (WK.held || 0) + d; WK.t0 += d; WK.hold0 = 0; } WK.holding = false; k = (now - WK.t0) / WK.dur; }
       else {
         if (!WK.hold0) WK.hold0 = now;
-        if ((WK.held || 0) + now - WK.hold0 < 4000) {
+        const heldMs = (WK.held || 0) + now - WK.hold0, dl = (() => { try { return typeof V !== 'undefined' && V.animsPending && V.animsPending(); } catch (e) { return false; } })();
+        if (heldMs < 4000 || (dl && heldMs < 10000)) {
           WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
           const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board
           return { fov: 52 };
