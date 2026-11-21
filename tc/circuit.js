@@ -65,7 +65,7 @@
     { id: 'card', n: 'Tour Card', s: 'Optional: Q-School, then the Pro Tour from a UK base', avg: 95, legs: 7, need: 0, minEv: 4, oom: true,
       up: 'Finish in the top 32 of the Pro Tour Order of Merit for a seeded Palace place',
       events: [
-        { id: 'qschool', n: 'Q-School', where: 'Leicester', kind: 'ko', size: 128, entry: 1100, travel: 2600, purse: 0, pts: 0, every: 52, once: true, card: true },
+        { id: 'qschool', n: 'Q-School', where: 'Leicester', kind: 'ko', size: 128, entry: 1100, travel: 2600, purse: 0, pts: 0, every: 52, card: true }, // CAR-CARD: once a year, not once a career (no card + Q-School used was a dead end)
         { id: 'pc_wigan', n: 'Players Championship · Wigan', where: 'Wigan', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
         { id: 'pc_mk', n: 'Players Championship · Milton Keynes', where: 'Milton Keynes', kind: 'ko', size: 64, entry: 120, travel: 450, purse: 40000, pts: 0, every: 1, needCard: true },
         { id: 'pc_hild', n: 'Players Championship · Hildesheim', where: 'Hildesheim', kind: 'ko', size: 64, entry: 120, travel: 900, purse: 40000, pts: 0, every: 2, needCard: true }
@@ -153,7 +153,12 @@
   function checkUp(c, e, fin) {
     const L = LEVELS[c.level], played = c.history.filter(h => h.level === c.level).length;
     if (L.id === 'tt') { if (fin === 'W' || fin === 'F') return promote(c, 6, (fin === 'W' ? 'Trans-Tasman champion' : 'Trans-Tasman finalist') + ': you’re going to the Palace'); if (fin === 'SF') c.qsOffer = true; newDpnzSeason(c); return promote(c, 3, 'Back to the DPNZ Tour for a new season' + (c.qsOffer ? '. A funded Q-School place is yours if you want it' : '')); }
-    if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace'); return null; }
+    if (L.id === 'card') { if (c.card && (c.oom.card || 0) >= 30000) return promote(c, 6, 'Top 32 on the Pro Tour: seeded at the Palace');
+      // CAR-CARD: Q-School without a card sends you back to the DPNZ Tour (new season, 40% carried); the Q-School place (qsOffer) is kept
+      // for next year, the same way back as the Trans-Tasman and a lost Worlds
+      if (e.id === 'qschool' && !c.card) { c.qsOffer = true; newDpnzSeason(c); const r = promote(c, 3, 'No Tour Card this time (' + FIN_NAME[fin].toLowerCase() + '). Back to the DPNZ Tour for a new season: 40% of your points roll over. Your Q-School place stays for next year');
+        r.fromQs = fin; return r; }
+      return null; }
     if (L.id === 'dpnz') { c.dpnzEv = (c.dpnzEv || 0) + 1; if (c.dpnzEv < DPNZ_SEASON) return null; const r = dpnzRank(c);
       if (r === 1) return promote(c, 6, 'DPNZ #1: the NZ route to the Palace');
       if (r <= TT_CUT) { c.dpnzLast = r; return promote(c, 4, 'Finished #' + r + ' on the DPNZ Order of Merit: the Trans-Tasman'); }
@@ -200,10 +205,20 @@
   const REST_SCAN = 156;
   function nextEventWeek(c) { for (let w = c.week; w <= c.week + REST_SCAN; w++) { if (calendar(Object.assign({}, c, { week: w })).length) return w; } return null; }
   const restNeeded = c => !c.live && !calendar(c).length;
+  const QS_WAIT = 4; // weeks a player without a card may rest at the Tour Card level waiting for Q-School
   function restWeek(c) {
     if (c.live) return { ok: false, why: 'Finish the event you are in first' };
     if (calendar(c).length) return { ok: false, why: 'There is an event on this week' };
-    const to = nextEventWeek(c); if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    const to = nextEventWeek(c);
+    // CAR-CARD safety net: above the DPNZ Tour, a level with nothing left for this career (a rule we missed later) sends you back to the
+    // DPNZ Tour, which runs every week, instead of a dead end. Pub to DPNZ always have events, so they keep the explicit error.
+    if (to == null && c.level > 3) { const fromLevel = c.level; newDpnzSeason(c); const up = promote(c, 3, 'Nothing left on at the ' + LEVELS[fromLevel].n + ' for you. Back to the DPNZ Tour for a new season: 40% of your points roll over');
+      return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel, up }; }
+    if (to == null) return { ok: false, error: true, why: 'No event found in the next ' + REST_SCAN + ' weeks' };
+    // CAR-CARD: no card yet means the only Tour Card event is Q-School, once a year. Rather than up to 51 rest weeks, wait on the DPNZ Tour
+    // (weekly events) with the Q-School place kept; the Q-School offer is taken from there in its week
+    if (c.level === 5 && !c.card && to - c.week > QS_WAIT) { c.qsOffer = true; newDpnzSeason(c); const up = promote(c, 3, 'Q-School is in week ' + to + '. Back to the DPNZ Tour until then: your Q-School place is kept, and 40% of your points roll over');
+      return { ok: true, from: c.week, to: c.week, skipped: 0, fallback: true, fromLevel: 5, qsWeek: to, up }; }
     const from = c.week; c.week = to; return { ok: true, from, to, skipped: to - from };
   }
   // Broke and nothing affordable on: a recovery entry books one eligible event this week with no cash up front, capped at the cheapest
