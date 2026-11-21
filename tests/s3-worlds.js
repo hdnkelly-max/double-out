@@ -3,7 +3,7 @@
 //   2 the next week has DPNZ events (weekly), so no rest weeks
 //   3 win the Worlds: champion, still at the Palace (unchanged)
 //   4 back again via OOM #1 or the Trans-Tasman final: no second Palace grant
-//   5 Trans-Tasman and DPNZ rules unchanged (TT semi -> DPNZ + Q-School offer; OOM 2..10 -> TT)
+//   5 Trans-Tasman semi-final -> the Palace with the Q-School place kept (pace package); OOM 2..10 -> TT
 //   6 page: a lost Worlds through TOPS_S3 moves the career to the DPNZ Tour, logs s3_result up 3, and the result, then a "Back on tour · DPNZ Tour" sheet with "N points carried (40%, up to 300)"
 // usage: node tests/s3-worlds.js [dir]
 const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
@@ -28,9 +28,9 @@ function playWorlds(c, winRounds) { const r0 = E.book(c, 'worlds'); if (!r0.ok) 
 // 4b back via the Trans-Tasman final: no second grant
 { const c = atPalace(); playWorlds(c, 0); c.level = 4; c.bank = 9999; E.book(c, 'tt_bne'); let res; for (let i = 0; i < 4; i++) { res = E.result(c, i < 3); if (res.done) break; }
   if (c.level !== 6 || res.up.grant) f.push('4b TT final back to the Palace, no second grant ' + JSON.stringify(res.up)); }
-// 5 TT semi unchanged
+// 5 TT semi-final: the Palace since the pace package (Hayden 15:10), Q-School place kept
 { const c = E.newCareer({ level: 4, week: 10, bank: 9999, pts: { dpnz: 1000 } }); E.book(c, 'tt_bne'); let res; for (let i = 0; i < 4; i++) { res = E.result(c, i < 2); if (res.done) break; }
-  if (c.level !== 3 || !c.qsOffer || res.fin !== 'SF') f.push('5 TT semi-final rule changed ' + JSON.stringify(res)); }
+  if (c.level !== 6 || !c.qsOffer || res.fin !== 'SF') f.push('5 TT semi-final should reach the Palace (pace package) ' + JSON.stringify(res)); }
 (async () => {
   const { chromium } = require('playwright'); const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--allow-file-access-from-files'] }); const p = await b.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message)); await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort());
@@ -61,5 +61,5 @@ function playWorlds(c, winRounds) { const r0 = E.book(c, 'worlds'); if (!r0.ok) 
   if (!pg.sheetVisible || !/^Back on tour/i.test(pg.second || '') || !/DPNZ Tour/i.test(pg.second || '') || !/with 200 points carried/.test(pg.second || '') || /Promoted|grant/i.test(pg.second || '')) f.push('6 page: no "Back on tour" level sheet ' + JSON.stringify(pg));
   if (errs.length) f.push('page errors: ' + errs.slice(0, 3).join(' | '));
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ')); process.exit(1); }
-  console.log('PASS: a lost Worlds (last 128 or the final) goes back to the DPNZ Tour: new season, 40% of 1500 capped at 300 points carried, no grant, bank = before - $3,000 travel + prize, week 53 has DPNZ events (no rest); a Worlds win is still champion; back to the Palace via OOM #1 or the Trans-Tasman final with no second grant; Trans-Tasman semi rule unchanged; on the page the career moves to the DPNZ Tour and the result, then a "Back on tour · DPNZ Tour" sheet with "N points carried (40%, up to 300)"');
+  console.log('PASS: a lost Worlds (last 128 or the final) goes back to the DPNZ Tour: new season, 40% of 1500 capped at 300 points carried, no grant, bank = before - $3,000 travel + prize, week 53 has DPNZ events (no rest); a Worlds win is still champion; back to the Palace via OOM #1 or the Trans-Tasman final with no second grant; a Trans-Tasman semi-final reaches the Palace (pace package); on the page the career moves to the DPNZ Tour and the result, then a "Back on tour · DPNZ Tour" sheet with "N points carried (40%, up to 300)"');
 })();
