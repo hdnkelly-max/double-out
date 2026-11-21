@@ -6,6 +6,7 @@
 const S3_DEFAULT=true;
 window.TOPS_S3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('s3');if(q==='1'||q==='0')localStorage.setItem('tops_s3',q);const v=localStorage.getItem('tops_s3');return v==='1'||(v!=='0'&&S3_DEFAULT);}catch(e){return S3_DEFAULT;}})();
 /* Vinyl v2 switch (Overseer 17:05; default ON since Hayden 17:21): ?v2=0 turns it off and sticks (localStorage tops_v2), ?v2=1 back on; off = the 4.02 figures exactly */
+window.TOPS_V3FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('v3');if(q==='1'||q==='0')localStorage.setItem('tops_v3',q);return localStorage.getItem('tops_v3')==='1';}catch(e){return false;}})();/* Vinyl v3 port (doc 23), test-only: ?v3=1 sticks (tops_v3), ?v3=0 off; read once at load, before any figure is built, so a match never swaps rig */
 window.TOPS_V2FLAG=(()=>{try{const q=new URLSearchParams(location.search).get('v2');if(q==='1'||q==='0')localStorage.setItem('tops_v2',q);return localStorage.getItem('tops_v2')!=='0';}catch(e){return true;}})();/* default ON (Hayden 17:21): ?v2=0 / tops_v2='0' is the opt-out */
 window.TOPS_SAVE_NS=TOPS_S3FLAG?{key:'doubleout_s3',table:'tops_saves_s3',rpc:'tops_save3_put',bak:'tops_career_bak_s3',lb:'tops_players_s3',lbRpc:'tops_upsert3',season:3}:{key:'doubleout2',table:'tops_saves',rpc:'tops_save_put',bak:'tops_career_bak',lb:'tops_players',lbRpc:'tops_upsert',season:2};
 ENGINE
@@ -1015,7 +1016,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    for(let i=0;i<p.count;i++){const y=p.getY(i)/10;const RG=V2LIGHT.rig;const a=new T.Color(RG.sky[0]).lerp(new T.Color(RG.sky[1]),Math.max(0,y));if(y<-.05)a.set(RG.floor);c.push(a.r,a.g,a.b);}g.setAttribute('color',new T.Float32BufferAttribute(c,3));
    sc.add(new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide})));
    /* figure frame: the figure faces -z (the board); panels: [dir x,y,z (toward the light), w, h, colour, strength] */
-   V2LIGHT.rig.panels.forEach(([x,y,z,w,h,col,k])=>{
+   V2LIGHT.rig.panels.concat(window.TOPS_V3HOT||[]).forEach(([x,y,z,w,h,col,k])=>{/* TOPS_V3HOT: extra small panels (test knob, doc 44 skin highlights) */
     const m=new T.MeshBasicMaterial({color:(window.GFX_LIN?new T.Color(col):new T.Color(col).convertSRGBToLinear()).multiplyScalar(k),side:T.DoubleSide});const q=new T.Mesh(new T.PlaneGeometry(w,h),m);q.position.set(x,y,z).normalize().multiplyScalar(8);q.lookAt(0,0,0);sc.add(q);});
    const pm=new T.PMREMGenerator(renderer);v2RigT=pm.fromScene(sc,.04).texture;pm.dispose();g.dispose();}catch(e){v2RigT=undefined;}return v2RigT;}
  /* which environment and how strong, for a figure material of this part, in the current mode */
@@ -1042,7 +1043,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     x1.5 dark, so each base reads at its palette in every venue. The creator is untouched */
   let fk=1;if(part==='skin'){const Y=.2126*col.r+.7152*col.g+.0722*col.b;fk=1.1+.4*Math.max(0,Math.min(1,(.45-Y)/.32));}const [en,ek]=v2EnvFor(part,fk);const base=Object.assign({color:col,metalness:0,envMap:en,envMapIntensity:ek},o||{},{metalness:0});let m;
   /* phones: standard material (no clearcoat pass), a touch smoother to keep the gloss; full finish: the spec's physical clearcoat */
-  if(S3G==='full')m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:g[0],clearcoat:g[1],clearcoatRoughness:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,g[0]-.08*g[1])}));m.userData.s3v=true;m.userData.v2part=part;m.userData.v2fk=fk;return m;}
+  const SKV=part==='skin'&&window.TOPS_V3SKIN;/* doc 44 skin pass (test knob, off by default): {r,cc,ccr,spec,phoneCC}. spec = a multiplier on the env REFLECTION only, relative to
+     the lab (env .32): the env map is also the figure's key light here, so envMapIntensity itself can't move without relighting the skin; phoneCC: skin keeps its clearcoat on phones too */
+  if(S3G==='full'||(SKV&&SKV.phoneCC))m=new T.MeshPhysicalMaterial(Object.assign(base,{roughness:SKV&&SKV.r!=null?SKV.r:g[0],clearcoat:SKV&&SKV.cc!=null?SKV.cc:g[1],clearcoatRoughness:SKV&&SKV.ccr!=null?SKV.ccr:g[2]}));else m=new T.MeshStandardMaterial(Object.assign(base,{roughness:Math.max(.08,(SKV&&SKV.r!=null?SKV.r:g[0])-.08*g[1])}));
+  if(SKV&&SKV.spec!=null){const u={value:SKV.spec/.32};m.userData.v3spec=u;m._v3spec=sh=>{sh.uniforms.uV3Spec=u;sh.fragmentShader='uniform float uV3Spec;\n'+sh.fragmentShader.replace('#include <lights_fragment_maps>','#include <lights_fragment_maps>\n\tradiance*=uV3Spec;\n#ifdef CLEARCOAT\n\tclearcoatRadiance*=uV3Spec;\n#endif');};m.onBeforeCompile=m._v3spec;m.customProgramCacheKey=()=>'v3spec';}
+  m.userData.s3v=true;m.userData.v2part=part;m.userData.v2fk=fk;return m;}
  const v2hex=h=>'#'+new T.Color(h).getHexString();
  function v2cv(w,h,f){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');f(x,w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;}
  /* the decal's gloss maps, same layout as v2FaceTex: 'rough' (green channel x roughness .5: eyes -> .2) and 'cc' (red x clearcoat: eyes 1, rest 0) */
@@ -1074,7 +1079,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const SW=window.TOPS_V2SHIRTSW||S.sweeps;SW.forEach(([ua,ub,v0,u1,v1,bow])=>{x.beginPath();x.moveTo(...P(ua,v0));x.lineTo(...P(ub,v0));x.quadraticCurveTo(...P((ub+u1)/2,(v0+v1)/2-bow),...P(u1,v1));x.quadraticCurveTo(...P((ua+u1)/2,(v0+v1)/2+bow),...P(ua,v0));x.closePath();x.fill();});
    /* the same sweeps on the back, smaller, so a turned figure still wears the poster shirt */
    SW.slice(0,2).forEach(([ua,ub,v0,u1,v1,bow],i)=>{const w=(ub-ua)*.7,r=.99-i*.07;x.beginPath();x.moveTo(...P(r-w,v0));x.lineTo(...P(r,v0));x.quadraticCurveTo(...P(r-.04,v1*.4),...P(r-.17,v1*.75));x.quadraticCurveTo(...P(r-w-.06,v1*.3),...P(r-w,v0));x.closePath();x.fill();});
-   const lg=S.logo;x.fillStyle=new T.Color(sc).getHSL({}).l>.7?'#191b1e':v2hex(S.white);x.font='900 '+lg.px+'px Arial Black, Arial, Helvetica, sans-serif';x.textAlign='center';x.textBaseline='middle';
+   const lg=Object.assign({},S.logo,L._logo||{});x.fillStyle=new T.Color(sc).getHSL({}).l>.7?'#191b1e':v2hex(S.white);x.font='900 '+lg.px+'px Arial Black, Arial, Helvetica, sans-serif';x.textAlign='center';x.textBaseline='middle';
    x.save();const [lx,ly]=P(lg.u,lg.v);x.translate(lx,ly);x.scale(1,1.12);try{x.letterSpacing=lg.track+'px';}catch(e){}x.fillText('TOPS',0,0);x.restore();});}
  function v2ell(rx,ry,rz,ws,hs){const g=new T.SphereGeometry(1,ws||Math.round(24*S3_SEGF),hs||Math.round(16*S3_SEGF));g.scale(rx,ry,rz);return g;}
  function v2cap(r0,r1,len,seg){const pts=[];const n=8;for(let i=0;i<=n;i++){const a=-Math.PI/2+i/n*Math.PI/2;pts.push(new T.Vector2(Math.cos(a)*r1,-len+Math.sin(a)*r1*.9+r1*.9));}for(let i=0;i<=n;i++){const a=i/n*Math.PI/2;pts.push(new T.Vector2(Math.cos(a)*r0,Math.sin(a)*r0*.9));}return new T.LatheGeometry(pts.sort((a,b)=>a.y-b.y),seg||Math.round(16*S3_SEGF));}
@@ -1108,6 +1113,189 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const lL=leg(-1),lR=leg(1);tag(mesh(ell(.19*BK[0],.085,.15*BK[1]),pantM,hips,0,-.03,0),'pants');
   /* the shirt's lower half follows the hips (the Lab skinShirt, v2 heights): the game's spine leans in idle and the throw, which swung the hem off the thighs */
   return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[v2tor,v2hem],skinY:[-.05,-.25,-.18],thighs:[lL,lR].map(l=>[l.th,P.leg.r*1.02,P.leg.len*.5]),v2:true,skinM:skin,fem};}
+ /* ===== Vinyl v3 in the game (doc 23, port now): Director's claude/director/vinyl2/vinyl3.js (base v2 + the locked face system, r6 face
+    painted on the skull) built into the same pivots as s3BuildV2, so s3Dress puts it on the game's skeleton and every clip, the throw,
+    the clearance and the dart grip work unchanged. Test-only: ?v3=1 (TOPS_V3FLAG), read before any figure is built; Kai only (V3BASES).
+    Kept from the game's v2: materials (v2M, V2SKIN, venue light), the poster shirt texture + collar, fingers on the finger bones, the hair
+    kit (V2HAIRS, from hair28) until Director's hair r8 file lands. Phones get a 1536 px head sheet (desktop 2048) and S3_SEGF segments. */
+ const V3BASES=['kai','ray','tama','mia','dazza'];/* doc 25: Ray and Tama on v3; doc 33: Mia (hair28 bunL) and Dazza (hair28 backwards cap, hair under it, sculpted beard) too */
+ const V3HAIRMAP={quiff:'quiffL',swept:'sweptR',curly:'curlyL',bun:'bunL',under:'underL'};/* Director's r9 lock builds on v3 heads (doc 24); r14: Ray = the lock-built sweptR (Producer 20 Nov 14:02), sweptL kept for rollback (TOPS_V3HAIRMAP) */
+ function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&!!L.base&&V3BASES.includes(L.base)&&!L.pro;}
+ const V3P={H:1.6,head:{c:[0,1.31,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.535,y1:1.015,rx:0.3,rz:0.215,belly:0.05,sh:0.365},
+  shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
+ const V3EYE={dx:178,v:0.455,rx:83,ry:92};
+ const V3FACE={def:{brow:[1.0,0.0,1.0],browUp:0,mouth:1.18,smile:1.0,asym:0,squint:0,cheek:1.0,jaw:1.0,cheekW:1.0},
+  kai:{earTuck:0.135,browC:'#24160F',brow:[1.12,-0.02,1.15],browUp:4,browIn:6,browOut:7,cheekUp:0.035,mouth:1.18,smile:1.04,/* r12 cheeky (Director doc 28, ChatGPT 27 #2): inner brow up 6 px, outer third up 3 px more, upper cheeks up, corners +4%; eyes kept */asym:0.08,squint:0.07,cheek:1.0,jaw:1.15,cheekW:1.0},
+  ray:{browC:'#a8a39e',brow:[1.0,-0.08,1.2],browUp:10,mouth:1.0,smile:1.15,asym:0,squint:0.1,cheek:1.1,jaw:0.9,cheekW:1.0},
+  tama:{browC:'#140c0a',brow:[1.25,-0.02,1.05],browUp:2,mouth:1.08,smile:1.2,asym:0,squint:0.06,cheek:1.35,jaw:0.95,cheekW:1.25},
+  dazza:{browC:'#2a170d',brow:[1.2,-0.06,1.15],browUp:4,mouth:1.05,smile:1.1,asym:0.04,squint:0.12,cheek:1.15,jaw:1.25,cheekW:1.1},
+  mia:{browC:'#7a4c1e',brow:[0.72,-0.1,1.35],browUp:8,mouth:0.98,smile:1.12,asym:0.1,squint:0,cheek:1.1,jaw:0.75,cheekW:1.0}};
+ const v3FaceOf=L=>Object.assign({},V3FACE.def,V3FACE[L.base]||{},L.v3face||{});
+ const v3smf=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);},v3gs=(x,c,w)=>Math.exp(-((x-c)*(x-c))/(2*w*w));
+ /* the v3 head shape: one deformation for the skull and the painted face (vinyl3.js headPoint, unchanged) */
+ function v3HeadPoint(d,cheek,FP){const R=V3P.head.r;let sx=1,sy=1,sz=1;const smf=v3smf,gs=v3gs;
+  sy*=1-0.045*smf(0.45,1,d.y);sz*=1-0.04*smf(-0.25,-1,d.z);sx*=1+0.03*smf(-0.1,0.5,d.y)*smf(-0.2,0.6,d.z);
+  sx*=1+(0.085+0.06*FP.cheekW)*smf(-0.05,-0.55,d.y)*smf(-0.3,0.4,d.z)*(1-0.6*smf(-0.75,-1,d.y));sy*=1-0.06*smf(-0.7,-1,d.y);
+  sx*=1-0.035*smf(0.55,0.95,Math.abs(d.x))*smf(-0.2,0.3,d.y);sx*=1+0.05*smf(-0.72,-0.95,d.y)*smf(-0.1,0.5,d.z);sx*=1+0.045*FP.jaw*smf(-0.6,-0.85,d.y)*smf(0,0.5,d.z);
+  const p=new T.Vector3(d.x*R[0]*sx,d.y*R[1]*sy,d.z*R[2]*sz);const ph=Math.atan2(d.x,d.z),th=Math.acos(Math.max(-1,Math.min(1,d.y)));
+  const ch=0.095*(cheek||1)*(gs(ph,0.66,0.24)+gs(ph,-0.66,0.24))*gs(th,1.98-(FP.cheekUp||0),0.22),mz=0.05*gs(ph,0,0.45)*gs(th,2.25,0.2),br=0.05*(gs(ph,0.34,0.2)+gs(ph,-0.34,0.2))*gs(th,1.31,0.065);
+  p.multiplyScalar(1+ch+mz+br);p.z+=0.032*R[2]*(cheek||1)*(gs(ph,0.66,0.26)+gs(ph,-0.66,0.26))*gs(th,1.98-(FP.cheekUp||0),0.22);return p;}
+ /* the v3 torso shell (vinyl3.js torsoGeo): trapezoid, belly, built-in sloped shoulders; lathe-style UV so the poster shirt texture fits */
+ function v3TorsoGeo(BK,dy){const t=V3P.torso,h=t.y1-t.y0,U=Math.round(48*S3_SEGF),Vn=Math.round(26*S3_SEGF),pos=[],uv=[],idx=[],smf=v3smf,gs=v3gs;
+  for(let j=0;j<=Vn;j++){const v=j/Vn;let rx=0.276-0.008*gs(v,0.26,0.1)+(t.rx-0.272)*smf(0.3,0.66,v)+(t.sh-t.rx)*smf(0.62,0.82,v);let rz=t.rz*(0.95+0.06*smf(0.35,0.7,v));const y=v*h;
+   if(v>0.8){const q=(v-0.8)/0.2;const c=Math.pow(Math.max(0,1-Math.pow(q,2.4)),1/2.4);rx=0.11+(rx-0.11)*c;rz=0.1+(rz-0.1)*Math.pow(Math.max(0,1-q*q),0.5);}
+   for(let i=0;i<=U;i++){const u=i/U,a=u*2*Math.PI,ca=-Math.cos(a),sa=-Math.sin(a);const yv=y-0.044*smf(0.6,0.95,v)*Math.pow(Math.abs(sa),2);const ex=2/2.3;
+    let x=Math.sign(sa)*Math.pow(Math.abs(sa),ex)*rx*BK[0],z=Math.sign(ca)*Math.pow(Math.abs(ca),ex)*rz*BK[1];
+    if(z>0)z+=(t.belly+BK[2])*gs(v,0.3,0.16)*Math.pow(Math.max(0,ca),1.6)+0.034*gs(v,0.68,0.13)*Math.pow(Math.max(0,ca),2);if(z<0)z*=0.92;
+    if(v<0.06){const q=1-v/0.06;x*=1-0.05*q*q;z*=1-0.05*q*q;}pos.push(x,t.y0-V3P.leg.hipY+yv+dy,z);uv.push(u,v);}}
+  for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i,b=a+1,c=a+U+1,d=c+1;idx.push(a,b,c,b,d,c);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;}
+ /* the same outline for the clearance (fists and darts kept out of the shirt): ellipse half-widths at chest-local y, inside the superellipse */
+ function v3TorsoR(y,BK){const t=V3P.torso,y0=t.y0-V3P.leg.hipY-.3,h=t.y1-t.y0,v=(y-y0)/h;if(v<0||v>1)return null;const smf=v3smf,gs=v3gs;
+  let rx=0.276-0.008*gs(v,0.26,0.1)+(t.rx-0.272)*smf(0.3,0.66,v)+(t.sh-t.rx)*smf(0.62,0.82,v),rz=t.rz*(0.95+0.06*smf(0.35,0.7,v));
+  if(v>0.8){const q=(v-0.8)/0.2;rx=0.11+(rx-0.11)*Math.pow(Math.max(0,1-Math.pow(q,2.4)),1/2.4);rz=0.1+(rz-0.1)*Math.pow(Math.max(0,1-q*q),0.5);}
+  return [rx*BK[0]*1.045,(rz+(t.belly+BK[2])*gs(v,0.3,0.16)+0.034*gs(v,0.68,0.13))*BK[1]*1.045];}/* x1.045: the shell is a superellipse (p 2.3), up to 4.5% outside the ellipse on the diagonals */
+ /* the locked v3 face sheet (vinyl3.js faceTex, r5/r6: poster eyes, thick soft-arched brows, narrower smile with one row of teeth,
+    rounded upper-lip frame); sk = the canvas skin colour (the squint lid) */
+ function v3FaceSheet(L,sk){const c=document.createElement('canvas');c.width=1024;c.height=640;const x=c.getContext('2d'),W=1024,H=640,Fp=v3FaceOf(L),E=V3EYE;
+  const ex=[W*0.5-E.dx,W*0.5+E.dx],ey=H*E.v;const RX=E.rx,RY=E.ry*1.05*(1-Fp.squint);const eyeC=Fp.eyeC||'#24170F';
+  [ex[0]-26,ex[1]+26].forEach(cx=>{const cyb=ey+130-(Fp.cheekUp||0)*200;const g=x.createRadialGradient(cx,cyb,0,cx,cyb,92*Fp.cheek);g.addColorStop(0,'rgba(240,110,100,.32)');g.addColorStop(1,'rgba(240,110,100,0)');x.fillStyle=g;x.fillRect(cx-110,cyb-110,220,220);});
+  ex.forEach((cx,i)=>{x.save();x.translate(cx,ey);x.fillStyle='#ffffff';x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.fill();x.save();x.beginPath();x.ellipse(0,0,RX,RY,0,0,7);x.clip();
+   {const g=x.createRadialGradient(i?-6:6,14,10,i?-6:6,14,RX*0.98);g.addColorStop(0,'#120b07');g.addColorStop(0.7,eyeC);g.addColorStop(1,'#5a3420');x.fillStyle=g;}
+   x.beginPath();x.ellipse(i?-6:6,12,RX*0.97,92,0,0,7);x.fill();x.fillStyle='#0a0604';x.beginPath();x.ellipse(i?-6:6,16,RX*0.52,52,0,0,7);x.fill();
+   x.fillStyle='#ffffff';x.beginPath();x.ellipse(i?-30:-18,-24,30,34,0,0,7);x.fill();x.beginPath();x.ellipse(i?18:30,40,12,13,0,0,7);x.fill();x.globalAlpha=0.6;x.beginPath();x.ellipse(i?-2:10,-40,8,8,0,0,7);x.fill();x.globalAlpha=1;
+   if(Fp.squint){x.fillStyle=sk;x.fillRect(-RX-4,-RY-4,RX*2+8,RY*Fp.squint*2.2);}x.restore();
+   x.strokeStyle='#1a0f0a';x.lineWidth=8;x.lineCap='round';x.beginPath();x.ellipse(0,0,RX,RY,0,Math.PI*1.06,Math.PI*1.94);x.stroke();
+   if(L.lash){x.lineWidth=8;[[-50,-40,-72,-62],[-32,-56,-48,-84],[i?44:-12,-62,i?58:-14,-92]].forEach(([a,b,c2,d])=>{const s=i?-1:1;x.beginPath();x.moveTo(a*s,b);x.lineTo(c2*s,d);x.stroke();});}x.restore();});
+  x.fillStyle=Fp.browC||v2hex(L.brow||0x3a1e10);
+  ex.forEach((cx,i)=>{const s=i?1:-1;const k=Fp.brow[0],ang=Fp.brow[1],arch=Fp.brow[2];const up=Fp.browUp-(i?0:1)*Fp.asym*30;const iy=ey-126+ang*60-up-(Fp.browIn||0),oy=ey-138-ang*30-up-(Fp.browOut||0),py=ey-180-arch*22-up;
+   const K=k*1.4*1.13*1.15;x.beginPath();x.moveTo(cx-108*s,iy+24*K);x.quadraticCurveTo(cx-116*s,iy-6,cx-100*s,iy-26*K);x.quadraticCurveTo(cx+8*s,py-8*K,cx+114*s,oy);x.quadraticCurveTo(cx+120*s,oy+7,cx+110*s,oy+11);
+   x.quadraticCurveTo(cx+10*s,py+40*K,cx-108*s,iy+24*K);x.closePath();x.fill();});
+  const my=H*0.728,mw=215*Fp.mouth*0.84,sm_=Fp.smile,as=Fp.asym*40;const lc=[W/2-mw,my-44*sm_+as],rc=[W/2+mw,my-44*sm_-as];
+  /* r16 mouth (Director doc 45, ChatGPT 44): cavity -28% (lower edge up), corners pinch in, upper teeth ~70% of the opening as a curved row
+     (warm-grey falloff, lip shadow, two faint incisor lines), a thin lower row, a sliver of tongue, dark corners. TOPS_MOUTH16=0 = the r5 mouth */
+  const M16=window.TOPS_MOUTH16!==0,MD=M16?(window.TOPS_MOUTH_DEPTH||0.72):1,mb=my-6+156*MD,mk=86*MD,CK=M16?(window.TOPS_MOUTH_CK||0.6):0.86,CK2=M16?(window.TOPS_MOUTH_CK2||0.4):0.5;
+  const path=()=>{x.beginPath();x.moveTo(lc[0],lc[1]);x.quadraticCurveTo(W/2,my-6,rc[0],rc[1]);x.bezierCurveTo(W/2+mw*CK,my+mk*sm_,W/2+mw*CK2,mb,W/2,mb);x.bezierCurveTo(W/2-mw*CK2,mb,W/2-mw*CK,my+mk*sm_,lc[0],lc[1]);x.closePath();};
+  x.fillStyle='#34090c';path();x.fill();x.save();path();x.clip();
+  x.fillStyle='#fbf7f0';x.beginPath();x.moveTo(lc[0]-6,lc[1]-10);x.quadraticCurveTo(W/2,my-20,rc[0]+6,rc[1]-10);
+  const tb=my-6+(mb-my+6)*(window.TOPS_TEETH||0.7);
+  if(!M16){x.lineTo(rc[0]-mw*0.07,rc[1]+31);x.bezierCurveTo(W/2+mw*0.5,my+61,W/2-mw*0.5,my+61,lc[0]+mw*0.07,lc[1]+31);}
+  else{x.lineTo(rc[0]-mw*0.2,rc[1]+18);x.bezierCurveTo(W/2+mw*0.5,tb+4,W/2-mw*0.5,tb+4,lc[0]+mw*0.2,lc[1]+18);}
+  x.closePath();
+  if(!M16){x.fill();x.strokeStyle='rgba(150,120,110,.3)';x.lineWidth=3;for(let k=-3;k<=3;k++){const xx=W/2+k*mw*0.2;x.beginPath();x.moveTo(xx,my-8);x.lineTo(xx,my+40-Math.abs(k)*5);x.stroke();}}
+  else{x.save();x.clip();
+   const gh=x.createRadialGradient(W/2,my+10,mw*0.15,W/2,my+10,mw*1.05);gh.addColorStop(0,'#fdfaf4');gh.addColorStop(0.55,'#f1ebe2');gh.addColorStop(1,'#a89a90');x.fillStyle=gh;x.fillRect(W/2-mw*1.2,my-80,mw*2.4,240);
+   const gv=x.createLinearGradient(0,my-30,0,tb+6);gv.addColorStop(0,'rgba(90,40,30,.42)');gv.addColorStop(0.28,'rgba(90,40,30,0)');gv.addColorStop(0.85,'rgba(120,90,80,0)');gv.addColorStop(1,'rgba(120,90,80,.22)');x.fillStyle=gv;x.fillRect(W/2-mw*1.2,my-80,mw*2.4,240);
+   x.strokeStyle='rgba(140,110,100,.28)';x.lineWidth=2.5;x.lineCap='round';for(const k of [-1,0,1]){const xx=W/2+k*mw*0.24;const y1=my+(k?14:22)+Math.abs(k)*4;x.beginPath();x.moveTo(xx,my+2);x.lineTo(xx+k*2,y1);x.stroke();}
+   x.restore();}
+  if(!M16){x.fillStyle='#e06a6a';x.beginPath();x.ellipse(W/2,my+146,mw*0.34,36,0,0,7);x.fill();}
+  else{x.fillStyle='#d9ccc2';x.beginPath();x.ellipse(W/2,mb-2,mw*0.3,11,0,Math.PI,2*Math.PI);x.fill();
+   x.fillStyle='#b8505a';x.beginPath();x.ellipse(W/2,mb+12,mw*0.22,12,0,0,7);x.fill();
+   [lc,rc].forEach(c2=>{const g=x.createRadialGradient(c2[0],c2[1]+8,2,c2[0],c2[1]+8,mw*0.2);g.addColorStop(0,'rgba(20,4,6,.85)');g.addColorStop(1,'rgba(20,4,6,0)');x.fillStyle=g;x.fillRect(c2[0]-mw*0.3,c2[1]-mw*0.3,mw*0.6,mw*0.6);});}
+  x.restore();
+  x.strokeStyle='#5a2418';x.lineCap='round';x.lineWidth=5;path();x.stroke();x.lineWidth=10;x.beginPath();x.moveTo(W/2-mw*0.6,my-6+126*MD);x.bezierCurveTo(W/2-mw*0.32,mb+1,W/2+mw*0.32,mb+1,W/2+mw*0.6,my-6+126*MD);x.stroke();
+  x.strokeStyle='rgba(120,50,35,.55)';x.lineWidth=9;x.beginPath();x.moveTo(lc[0]-2,lc[1]-4);x.quadraticCurveTo(W/2,my-30,rc[0]+2,rc[1]-4);x.stroke();
+  x.strokeStyle='rgba(140,60,40,.2)';x.lineWidth=6;[[lc,-1],[rc,1]].forEach(([c2,s])=>{x.beginPath();x.moveTo(c2[0]+s*2,c2[1]+4);x.quadraticCurveTo(c2[0]+s*18,c2[1]-4,c2[0]+s*20,c2[1]-24);x.stroke();});
+  x.strokeStyle='rgba(150,70,50,.45)';x.lineWidth=6;x.beginPath();x.moveTo(lc[0]+mw*0.08,lc[1]-6);x.bezierCurveTo(W/2-mw*0.4,my-30,W/2-mw*0.12,my-22,W/2,my-14);x.bezierCurveTo(W/2+mw*0.12,my-22,W/2+mw*0.4,my-30,rc[0]-mw*0.08,rc[1]-6);x.stroke();
+  return c;}
+ /* the face sheet drawn into the skull's own equirect map (one surface, no decal layer: r6), and a matching roughness map that keeps
+    the painted eyes glossy (V2EYEGLOSS) on a skin-rough face */
+ function v3EyeOnHead(s,FP){const F=V3P.face,ph=Math.PI/2+s*V3EYE.dx/1024*F.phi[1],th=F.theta[0]+V3EYE.v*F.theta[1];return v3HeadPoint(new T.Vector3(-Math.cos(ph)*Math.sin(th),Math.cos(th),Math.sin(ph)*Math.sin(th)),FP.cheek,FP);}
+ /* the v3 skull is the ellipsoid pushed out (cheeks, muzzle, brow) and in (flat top and back): skullF(l) = its radius over the ellipsoid's
+    in the direction of the skull-space point l, so the clearance and the clip check test the real surface, not the ellipsoid x1.04 */
+ function v3SkullF(FP){const R=V3P.head.r,d=new T.Vector3();return l=>{d.set(l.x/R[0],l.y/R[1],l.z/R[2]);const n=d.length();if(n<1e-6)return 1;d.multiplyScalar(1/n);const p=v3HeadPoint(d,FP.cheek,FP);return Math.hypot(p.x/R[0],p.y/R[1],p.z/R[2]);};}
+ function v3HeadMaps(L,sk,rough){const big=S3G==='full'?2048:1536,FW=big,FH=big/2,F0=V3P.face,face=v3FaceSheet(L,sk);
+  const at=(x,W,H)=>[(Math.PI/2-F0.phi[1]/2)/(2*Math.PI)*W,F0.theta[0]/Math.PI*H,F0.phi[1]/(2*Math.PI)*W,F0.theta[1]/Math.PI*H];
+  const col=v2cv(FW,FH,(x,W,H)=>{x.fillStyle=sk;x.fillRect(0,0,W,H);x.drawImage(face,...at(x,W,H));});
+  const rm=document.createElement('canvas');rm.width=512;rm.height=256;{const x=rm.getContext('2d'),W=512,H=256,g=Math.round(255*rough),[ox,oy,sw,sh]=at(x,W,H),E=V3EYE;
+   x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(0,0,W,H);const e=Math.round(255*.3);/* .3 not V2EYEGLOSS .2: the v3 irises are big and near-black, and a sharper env reflection greyed them in the pane */x.fillStyle=`rgb(${e},${e},${e})`;
+   [-1,1].forEach(s=>{x.beginPath();x.ellipse(ox+sw*(0.5+s*E.dx/1024),oy+sh*E.v,sw*E.rx/1024,sh*E.ry/640,0,0,7);x.fill();});}
+  const rt=new T.CanvasTexture(rm);return [col,rt];}
+ /* doc 27 #6: dark skin's shadow side read slightly grey at the match cam. A small warm term only where the direct light is low
+    (no blanket brightening), scaled by how dark the skin is: full on Tama's tone, zero on the light skins. TOPS_V3SHWU.value is the
+    shared linear radiance (pre tone map), tuned so Tama's shadow cheek gains ~+5 R / +3 G in the pane */
+ const V3SHWU=window.TOPS_V3SHWU={value:new T.Vector3(.0095,.0032,0)};
+ function v3Warm(m,ref){const c=(ref||m).color.clone();if(window.GFX_LIN)c.convertLinearToSRGB();const g=Math.max(1,c.r,c.g,c.b);c.multiplyScalar(1/g);
+  const lum=.299*c.r+.587*c.g+.114*c.b,k=Math.max(0,Math.min(1,(.55-lum)/.18));if(k<=0)return m;
+  const prev=Object.prototype.hasOwnProperty.call(m,'onBeforeCompile')?m.onBeforeCompile:null,pk=m.customProgramCacheKey?m.customProgramCacheKey():'';const uk={value:k};
+  m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);sh.uniforms.uShW=V3SHWU;sh.uniforms.uShK=uk;
+   sh.fragmentShader=sh.fragmentShader.replace('void main() {','uniform vec3 uShW;uniform float uShK;\nvoid main() {').replace('#include <lights_fragment_end>','#include <lights_fragment_end>\n{float dl=dot(reflectedLight.directDiffuse,vec3(.299,.587,.114))/max(1e-4,dot(diffuseColor.rgb,vec3(.299,.587,.114)));reflectedLight.indirectDiffuse+=uShW*uShK*(1.-smoothstep(.03,.28,dl));}');};
+  m.customProgramCacheKey=()=>pk+'|v3shw';m.userData.v3shw=k;m.needsUpdate=true;return m;}
+ function v3Head(head,L,skin,hairM){const R=V3P.head.r,mesh=v2mesh,ell=v2ell,FP=v3FaceOf(L);
+  /* the skull carries the face: canvas painted in the skin colour the material system chose (V2SKIN or the HSL rule), the material keeps
+     only the linear gain above 1 and the pane lift (v2fk), so the painted skin and the body skin match */
+  const lc=skin.color.clone(),gn=Math.max(1,lc.r,lc.g,lc.b),cc=lc.clone().multiplyScalar(1/gn),skHex='#'+cc.getHexString();
+  const SKV=window.TOPS_V3SKIN;const [map,rmap]=v3HeadMaps(L,skHex,SKV&&SKV.r!=null?SKV.r:V2MAT.skin[0]);const hm=skin.clone();if(skin._v3spec){hm.onBeforeCompile=skin._v3spec;hm.customProgramCacheKey=()=>'v3spec';}/* only the test hook: the dark-skin warm term is added to hm by v3Warm below, so it must not be copied too (it was injected twice) *//* skin test knob reaches the face too (clone drops onBeforeCompile; the roughness map bakes the skin roughness) */hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;v3Warm(hm,skin);
+  const sg=new T.SphereGeometry(1,Math.round(64*S3_SEGF),Math.round(48*S3_SEGF));{const p=sg.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).normalize();const q=v3HeadPoint(v,FP.cheek,FP);p.setXYZ(i,q.x,q.y,q.z);}sg.computeVertexNormals();}
+  const sk=mesh(sg,hm,head);sk.userData.tag='skull';sk.castShadow=false;
+  {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),skin,head,0,np.y,np.z-0.022).castShadow=false;}
+  const earIn=v2M(new T.Color(L.skin).multiplyScalar(0.82).getHex(),'skin');
+  const tuck=(FP.earTuck||0)*(R[0]*1.07+0.032-v3HeadPoint(new T.Vector3(1,-0.074,-0.055).normalize(),FP.cheek,FP).x);/* r10: per-character ear tuck (Kai 0.135) */
+  [-1,1].forEach(s=>{const ex=s*(R[0]*1.07-tuck);const e=mesh(ell(0.032,0.082,0.058,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012,0.055,0.036,12,9),earIn,head,ex+s*0.022,-0.02,-0.005);ie.rotation.y=s*0.32;e.userData.ear=ie.userData.ear=true;/* long-hair styles hide the ears they cover */
+   if(L.earring){const er=mesh(new T.TorusGeometry(.032,.008,6,16),v2M(L.earring,'trim'),head,s*R[0],-.11,0);er.rotation.y=Math.PI/2;er.userData.ear=true;}});
+  const bc=L.beardC||L.hairC||0x3a2010;if(L.face==='full')V2HAIRS.beardL(head,L,V2HK());/* hair28 sculpted beard on the v3 face (Dazza) */else if(L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
+  v2Hair(head,Object.assign({},L,{_v3:true}),hairM);
+  sk.userData.eyeAt=s=>v3EyeOnHead(s,FP);
+  if(L.glasses){/* lenses centred on the painted v3 eyes (on the shaped skull), sized from the v3 eye; no temple arms */const gm=v2M(0x111111,'shoe'),F=V3P.face;const lr=V3EYE.rx/1024*F.phi[1]*R[0]*1.35,lh=V3EYE.ry/640*F.theta[1]*R[1]*1.12;
+   [-1,1].forEach(s=>{const e=v3EyeOnHead(s,FP);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(.962,.12,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});/* doc 27 #5 / Director r12: outer diameter -6.7%, rim 25% thinner; the opening stays the same size */
+   const l=v3EyeOnHead(-1,FP),r=v3EyeOnHead(1,FP);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.01,.01),gm,head,0,l.y+lh*.25,Math.max(l.z,r.z)+.03).castShadow=false;}
+  return FP;}
+ function s3BuildV3(L0){const L=Object.assign({},L0);const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
+  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY.standard;/* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
+  L._logo=Object.assign({u:.59,v:.80,px:35},window.TOPS_V3LOGO||{});/* doc 44 #3: up and out on the wearer's left chest, +17% (30 -> 35 px), clear of the r16 collar point; never under the throwing arm (checked through the throw); v .82+ foreshortens on the chest ledge in the face cam *//* TOPS_V3LOGO {u,v,px,track}: test knob for the logo move (doc 44 #3) *//* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');v3Warm(skin);const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
+  const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
+  const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
+  /* collar and placket as the shipped poster shirt, sized to the v3 neck (ChatGPT round 8: the collar read a little big) */
+  const cy=t.y1-P.leg.hipY-CH-.025;{/* v3: the visible neck shows the collar from above, so its leaf turns down steeply (no flat red disc under the chin) *//* the stand hugs the neck (r ~.1, the neck is .08) and the leaf turns down to the shoulders, absolute metres [radius, y] */if(window.TOPS_COLLAR16===0){const cr=new T.LatheGeometry([[.16,-.04],[.15,0],[.118,.032],[.1,.056],[.103,.072],[.122,.06],[.138,.034],[.145,.018]].map(([r,y])=>new T.Vector2(r,y)),Math.round(28*S3_SEGF));cr.scale(1,1,.87);const trimD=trim2.clone();trimD.side=T.DoubleSide;tag(mesh(cr,trimD,chest,0,cy,.01),'collar');
+   const C=V2SHIRT.collar,[fw,fl,fr]=C.flap;[-1,1].forEach(s=>{const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(fw,0);sh.quadraticCurveTo(fw*.95,-fl*.55,fr,-fl);sh.quadraticCurveTo(fr*.2,-fl*.98,0,-fl*.8);sh.lineTo(0,0);
+    const g=new T.ExtrudeGeometry(sh,{depth:.01,bevelEnabled:true,bevelThickness:.006,bevelSize:.006,bevelSegments:2,curveSegments:5});if(s<0)g.scale(-1,1,1);g.scale(.9,.9,1);g.computeVertexNormals();
+    const o=mesh(g,trim2,chest,s*C.gap,cy+.015,t.rz*.8*BK[1]);o.rotation.set(C.tilt,s*C.turn,s*C.splay);tag(o,'fold');});
+   }
+   else{/* r16 collar (Director doc 45, vinyl3.js build): a short black stand (open band, 3.6 cm) with red piping on its top edge, and two black
+      polo points with red piping laid ON the real chest surface (a 1 cm height map, raycast once against this torso, blurred twice, monotone up
+      the ledge; layers offset along the surface normal). TOPS_COLLAR16=0 = the old red collar; TOPS_PIPING, TOPS_COLLAR_P, TOPS_COLLAR_C tune it */
+    const sg=n=>Math.max(8,Math.round(n*S3_SEGF));const colM=v2M(window.TOPS_COLLAR_C||0x0e0e10,'trim'),PP=window.TOPS_PIPING!=null?window.TOPS_PIPING:0.0045,CP=window.TOPS_COLLAR_P||{};
+    const SH=CP.h||0.036,SY0=cy+(CP.sy!=null?CP.sy:0.02),SR=[CP.rx||0.152,CP.rz||0.128];
+    const stG=new T.CylinderGeometry(1.0,1.06,SH,sg(48),1,true);stG.scale(SR[0],1,SR[1]);const colD=colM.clone();colD.side=T.DoubleSide;tag(mesh(stG,colD,chest,0,SY0,0),'collar');
+    const lip=new T.TorusGeometry(1,0.006/SR[0],6,sg(64));lip.rotateX(Math.PI/2);lip.scale(SR[0]+0.002,SR[0]+0.002,SR[1]+0.002);tag(mesh(lip,colM,chest,0,SY0+SH/2,0),'collar');
+    if(CP.standPipe!==0){const pip=new T.TorusGeometry(1,PP/SR[0]*0.9,6,sg(64));pip.rotateX(Math.PI/2);pip.scale(SR[0]+0.006,SR[0]+0.006,SR[1]+0.006);tag(mesh(pip,trim2,chest,0,SY0+SH/2+0.002,0),'collar');}
+    const FPo=CP.f||[[0.012,0.02],[0.118,0.026],[0.05,-0.08]];
+    const outline=sx=>{const Q=FPo.map(p=>[p[0]*sx,p[1]]),n=Q.length,m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2],r_=0.18,sh=new T.Shape();const s0=m(Q[n-1],Q[0]);sh.moveTo(s0[0],s0[1]);
+     for(let i=0;i<n;i++){const pm=m(Q[(i+n-1)%n],Q[i]),q=m(Q[i],Q[(i+1)%n]);sh.lineTo(Q[i][0]+(pm[0]-Q[i][0])*r_,Q[i][1]+(pm[1]-Q[i][1])*r_);sh.quadraticCurveTo(Q[i][0],Q[i][1],Q[i][0]+(q[0]-Q[i][0])*r_,Q[i][1]+(q[1]-Q[i][1])*r_);if(i<n-1)sh.lineTo(q[0],q[1]);}return sh;};
+    const SX=[-0.17,0.17],SY=[cy-0.14,cy+0.03],SD=0.01,nx=Math.round((SX[1]-SX[0])/SD)+1,ny=Math.round((SY[1]-SY[0])/SD)+1,HM=new Float32Array(nx*ny);
+    {const rc=new T.Raycaster(),tm=new T.Mesh(tor.geometry,tor.material);tm.updateMatrixWorld(true);const o_=new T.Vector3(),d_=new T.Vector3(0,0,-1);
+     for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){o_.set(SX[0]+i*SD,SY[0]+j*SD,1);rc.set(o_,d_);const h_=rc.intersectObject(tm,false)[0];
+      const ok_=h_&&h_.point.z>0.1&&(h_.face.normal.z>0.15||h_.face.normal.y>0.5)&&(j===0||h_.point.z<=HM[(j-1)*nx+i]+0.002);HM[j*nx+i]=ok_?h_.point.z:(j>0?HM[(j-1)*nx+i]:0.2);}}
+    for(let pass=0;pass<2;pass++){const H2=HM.slice();for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){let t_=0,w_=0;for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const jj=j+dj,ii=i+di;if(jj<0||jj>=ny||ii<0||ii>=nx)continue;const ww=(di||dj)?0.5:1;t_+=H2[jj*nx+ii]*ww;w_+=ww;}HM[j*nx+i]=t_/w_;}}
+    const surf=(x,y)=>{const fx=Math.max(0,Math.min(nx-1.001,(x-SX[0])/SD)),fy=Math.max(0,Math.min(ny-1.001,(y-SY[0])/SD)),i=Math.floor(fx),j=Math.floor(fy),a=fx-i,b=fy-j;
+     return (HM[j*nx+i]*(1-a)+HM[j*nx+i+1]*a)*(1-b)+(HM[(j+1)*nx+i]*(1-a)+HM[(j+1)*nx+i+1]*a)*b;};
+    const tilt=CP.tilt!=null?CP.tilt:0.93,FY=cy-(CP.y!=null?CP.y:-0.004),LIFT=CP.lift!=null?CP.lift:0.003,cT=Math.cos(tilt);
+    const put=(x,yl,k)=>{const y=FY+yl*cT,z0=surf(x,y),hx=(surf(x+0.004,y)-surf(x-0.004,y))/0.008,hy=(surf(x,y+0.004)-surf(x,y-0.004))/0.008,nl=Math.hypot(hx,hy,1);return [x-hx/nl*k,y-hy/nl*k,z0+k/nl,-hx/nl,-hy/nl,1/nl];};
+    const FD=0.004;
+    [-1,1].forEach(s=>{const sh=outline(s);const g=new T.ExtrudeGeometry(sh,{depth:FD,bevelEnabled:true,bevelThickness:0.0015,bevelSize:0.0015,bevelSegments:2,curveSegments:6});const A=g.attributes.position,N0=g.attributes.normal.array.slice(),SN=[];
+     for(let i=0;i<A.count;i++){const q=put(A.getX(i),A.getY(i),LIFT+A.getZ(i));A.setXYZ(i,q[0],q[1],q[2]);SN.push(q[3],q[4],q[5]);}
+     g.computeVertexNormals();{const Nn=g.attributes.normal;for(let i=0;i<Nn.count;i++){const nz=N0[i*3+2];if(Math.abs(nz)>0.9){const sg_=nz>0?1:-1;Nn.setXYZ(i,SN[i*3]*sg_,SN[i*3+1]*sg_,SN[i*3+2]*sg_);}}}
+     tag(mesh(g,colM,chest,0,0,0),'fold');
+     const op=sh.getSpacedPoints(48).slice(0,-1).map(p=>{const q=put(p.x,p.y,LIFT+FD*0.5);return new T.Vector3(q[0],q[1],q[2]);});
+     tag(mesh(new T.TubeGeometry(new T.CatmullRomCurve3(op,true),sg(96),PP*0.5+0.0015,6,true),trim2,chest,0,0,0),'pipe');});}
+   const pl=mesh(new T.BoxGeometry(.05,.1,.01),shirtPlain,chest,0,cy-.075,t.rz*.93*BK[1]);pl.rotation.x=-.3;tag(pl,'placket');}
+  const neck=pivot(chest,0,t.y1-P.leg.hipY-CH,0);mesh(cap(0.078,0.084,0.09),skin,neck,0,0.07,0.01);
+  const head=pivot(neck,0,P.head.c[1]-t.y1,P.head.c[2]);const FP=v3Head(head,L,skin,hairM);
+  const arm=s=>{const sh=pivot(chest,s*(P.shoulder.x*BK[0]+BK[2]),P.shoulder.y-P.leg.hipY-CH,0);
+   /* the v3 sleeve: a tapered tube buried in the sloped shoulder, the fitted red cuff on its end (one group, so they move together) */
+   const sg=new T.Group();sg.position.set(s*.012,-.005,0);sg.rotation.z=s*.12;sh.add(sg);tag(mesh(cap(0.112,0.104,0.15),shirtPlain,sg),'sleeve');/* the root sits lower than vinyl3's (+.03): the game's clips raise the arm beside the low v3 head and the buried top swung into the jaw */
+   const CF=V2SHIRT.cuff,cr0=.108,cr1=.103,cuff=new T.LatheGeometry([new T.Vector2(cr0-.006,CF.h/2),new T.Vector2(cr0,CF.h/2-.004),new T.Vector2((cr0+cr1)/2+.002,0),new T.Vector2(cr1,-CF.h/2+.004),new T.Vector2(cr1-.006,-CF.h/2)],Math.round(16*S3_SEGF));tag(mesh(cuff,trim2,sg,0,-.128,0),'cuff');
+   tag(mesh(cap(P.arm.r0,P.arm.r1,P.arm.upper),skin,sh,0,-0.07,0),'upperarm');const el=pivot(sh,0,-P.arm.upper-0.04,0);mesh(cap(P.arm.r1*0.98,P.arm.r2,P.arm.fore),skin,el,0,0,0);
+   const wr=pivot(el,0,-P.arm.fore-0.01,0);const k=(fem?.9:1)*1.2;/* v3 hands ~20% bigger (vinyl3 palm 2.05x); the fingers scale with rig.handK */mesh(ell(.088*k,.078*k,.06*k,14,10),skin,wr,0,-.06*k,.008);
+   if(L.band&&s<0){const b=new T.TorusGeometry(.078,.024,8,20);b.rotateX(Math.PI/2);mesh(b,v2M(L.shirt==null?0xd81e2a:L.shirt,'trim'),el,0,-P.arm.fore+.01,0);}
+   wr.traverse(o=>{if(o.isMesh)o.castShadow=false;});return {sh,el,wr};};
+  const aL=arm(-1),aR=arm(1);
+  const leg=s=>{const th=pivot(hips,s*P.leg.hipX*BK[0],0,0);tag(mesh(cap(P.leg.r,P.leg.r*.97,P.leg.len*.6+.05),pantM,th,0,-.1,0),'pants');const kn=pivot(th,0,-P.leg.len*.5,0);mesh(cap(P.leg.rs,P.leg.rs*.94,P.leg.len*.58),pantM,kn,0,.02,0);
+   const an=pivot(kn,0,-P.leg.len*.5,0);const S=P.shoe;const g=new T.SphereGeometry(1,Math.round(24*S3_SEGF),Math.round(14*S3_SEGF),0,Math.PI*2,0,Math.PI*.62);{const p=g.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);p.setX(i,p.getX(i)*(1+0.18*v3smf(-0.3,0.6,z)));}}g.computeVertexNormals();g.scale(S.w/2,S.h,S.len/2);mesh(g,shoeM,an,0,-S.h+.045,S.toe);
+   const sole=new T.CylinderGeometry(1,1,.045,Math.round(24*S3_SEGF));{const p=sole.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i);p.setX(i,p.getX(i)*(1+0.18*v3smf(-0.3,0.6,z)));}}sole.computeVertexNormals();sole.scale(S.w/2*1.04,1,S.len/2*1.04);mesh(sole,v2M(0x3a3634,'dark'),an,0,-S.h+.03,S.toe);return {th,kn,an};};
+  const lL=leg(-1),lR=leg(1);tag(mesh(ell(.22*BK[0],.1,.16*BK[1]),pantM,hips,0,-.01,0),'pants');
+  return {root,hips,spine:null,chest,neck,head,lL,lR,aL,aR,S:{},SKIN:[tor],skinY:[-.05,-.25,-.18],thighs:[lL,lR].map(l=>[l.th,P.leg.r*1.02,P.leg.len*.5]),v2:true,v3:true,P,torsoR:v3TorsoR,headM:1.08,skullF:v3SkullF(FP),armM:1.25,handK:1.2,skinM:skin,fem};}
+ window.TOPS_V3={P:V3P,want:v3Want,bases:V3BASES};
  function v2Head(head,L,skin,hairM){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;mesh(ell(R[0],R[1],R[2],Math.round(32*S3_SEGF),Math.round(22*S3_SEGF)),skin,head).userData.tag='skull';
   const F=V2P.face;const fg=new T.SphereGeometry(1,Math.round(28*S3_SEGF),Math.round(18*S3_SEGF),Math.PI/2-F.phi[1]/2,F.phi[1],F.theta[0],F.theta[1]);fg.scale(R[0]*1.008,R[1]*1.008,R[2]*1.008);
   const [fen,fek]=v2EnvFor('face'),G=V2EYEGLOSS,fo={map:v2FaceTex(L),transparent:true,metalness:0,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,envMap:fen,envMapIntensity:fek,roughness:G.face,roughnessMap:v2EyeMask('rough')};
@@ -1158,9 +1346,9 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const outUp=(u,p)=>p.clone().normalize();
   function loft(cp,w,h,N,Sg){const pts=cp.map((c,i)=>S(c[0],c[1],i===0?Math.min(c[2],-.008):c[2]));return sweep(new T.CatmullRomCurve3(pts,false,'centripetal'),w,h,N||16,Sg||10,outUp);}
   function ribbon(pts,w,h,N,Sg,up,twist){return sweep(new T.CatmullRomCurve3(pts,false,'centripetal'),w,h,N||18,Sg||8,up||outUp,twist);}
-  function cluster(th,ph,size,ht,lobes){const parts=[];const n=nrm(th,ph);const base=S(th,ph,.012);const t1=new T.Vector3().crossVectors(n,new T.Vector3(0,1,.001)).normalize(),t2=new T.Vector3().crossVectors(n,t1).normalize();
+  function cluster(th,ph,size,ht,lobes,seg){const parts=[];const n=nrm(th,ph);const base=S(th,ph,.012);const t1=new T.Vector3().crossVectors(n,new T.Vector3(0,1,.001)).normalize(),t2=new T.Vector3().crossVectors(n,t1).normalize();
    const L=lobes||(rnd()<.6?2:3);
-   for(let l=0;l<L;l++){const g=new T.SphereGeometry(1,9,3,0,2*Math.PI,0,Math.PI*.6);const a=rnd()*6.28,off=l===0?0:size*(.22+.12*rnd());
+   for(let l=0;l<L;l++){const g=new T.SphereGeometry(1,seg?seg[0]:9,seg?seg[1]:3,0,2*Math.PI,0,Math.PI*.6);const a=rnd()*6.28,off=l===0?0:size*(.22+.12*rnd());
     const s=size*(l===0?.5:.36+.08*rnd()),hh=ht*(l===0?1:.75+.2*rnd());const c=base.clone().addScaledVector(t1,Math.cos(a)*off).addScaledVector(t2,Math.sin(a)*off);
     const p=g.attributes.position;const nm=[];const ph0=rnd()*6;const sy=(hh*1.3+.016)/1.31;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const az=Math.atan2(x,z);const lump=1+.07*Math.cos(3*az+ph0);
      const N=new T.Vector3().addScaledVector(t1,x/(s*lump)).addScaledVector(t2,-z/(s*.85*lump)).addScaledVector(n,y/sy).normalize();nm.push(N.x,N.y,N.z);
@@ -1193,7 +1381,241 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   return ()=>K||(K=make());})();
  /* the styles (hair28 v2.8, ChatGPT 13d: Kai 7.8, Tama 8.6 passed). Keys are the game's style names (horseshoe -> swept, ponytail -> bun are
     mapped before lookup); 'under' is the hair below Dazza's cap */
+ /* hair r9 lock builds (Director, claude/director/24-vinyl3-port-notes.md + vinyl2/hair28.js H28.envR / envS / groove / quiffL): ONE
+    continuous sculpted shell whose radius is the smooth union of the approved block-out masses minus a valley between lock flow lines; the
+    lock colour is baked per texel (512x256) once per build. Ported as data + the same maths; the field is allocation-free (it runs for
+    every texel), and the baked colours are mixed in sRGB as the lab does, then written to an sRGB canvas (GFX_LIN-aware). */
+ /* hair28 r15: the throwing dart's path past Mia's right side (the game's throw exported in head space by Director, 20 Nov): |x| limit by z, minus a
+   margin; only her throwing side (x<0), y -0.24..+0.10 with soft edges. Hair beyond the limit is pulled in radially (smooth min, no wall).
+   If the throw animation changes this table needs a re-export (Director's claude/director/clearance/mia-dart-export.js). */
+/* r15b: the corridor's real vertical span at each depth z (Director's k .01 export): [z, yLow, yHigh], head space */
+/* r15c (doc 43): keep-out fitted to every place the dart is posed (match, portrait, opponent, test rig, creator preview, hero; Engine's k .01
+   s3-dart-hair samples, 3 mm cloud). Grid over head-space (y,z) at 1 cm: the |x| the hair may reach, i.e. dart |x| minus a 20 mm sphere, Lipschitz-smoothed
+   (slope 0.8) so the dip has no walls. Two base-36 chars per cell in mm, '..' = no limit. Re-export with Director's clearance/mia-dart-cloud.js + mkgrid.py
+   whenever the throw, the idle clip or any dart place changes; tests/s3-dart-hair.js is the guard */
+const V2MIAGRID={"y0":-0.36,"z0":-0.24,"d":0.01,"nz":77,"rows":["........................................................................................847x7r7m7i7f7d7c7c7c7e7g7j7f7c7874716z6x6w6v6w6w6t6r6r6r6r6r6t6w6z","..................bubpbkbgbdbbbababbbdbgbkbobu........................................827w7r7l7g7b787575747576797673706y6w6t6r6p6o6n6o6p6m6k6j6j6j6j6m6p6s","..............bybpbjbebab7b5b3b2b2b2b3b5b8bcbhbmbs..................................8c7w7o7i7b75706w6t6r6r6r6t6w6y6w6t6r6p6m6i6e6b68666666686b6b6b6c6e6h6m","............bhb3axatapamajahagahajamaqavb0b6bbbgbmc5................................867h79746z6v6s6p6m6j6j6j6m6o6r6o6m6j6g6c686563615y5x5x5x5z616364676b6g","..........c0b6awaqamaiaeaca9a8a9acafajanasaxb5babgbq................................7u7c746y6s6o6k6i6e6c6b6c6e6g6k6h6e6b6a65615y5v5t5r5p5p5p5s5u5v5v5v5v5x","..........brb1aqakafaba7a4a1a0a1a4a8acahamasayb5bbbkc0cp..........................8m7n776z6s6m6h6d6a6764636466696c696764625y5u5q5o5m5j5i5h5i5k5n5n5n5n5o5q","..........blawamafa9a4a09w9u9s9u9xa1a6abahamasb0b7bfbuc6ch........................8g7i726v6o6h6b6662605x5v5x5y6265625z5x5u5s5n5k5g5e5b5a595a5c5f5f5f5f5g5i","..........bhasaiaba49y9t9p9m9k9m9r9u9za6abahanavb4bbbpbzcach....................8v7y7d6y6r6k6d66605v5t5p5n5p5r5v5y5u5r5p5m5k5h5c5957545251535558575757585b","..........bdapaea7a09t9m9i9f9c9g9j9o9ua0a6acajaqb1b8bfbmc2cbcm..................8q7t796v6o6g69625v5o5l5j5f5h5k5o5s5n5m5j5j5h5c56524z4w4u4t4v4y504z4z4z5153","..........baanada59x9p9i9b97949a9d9j9o9va1a8afamawb3b9bdbjc3cecp..............95867o766t6l6e665y5s5l5d5b58595d5j5p5m5m5j5j5h5a524u4r4p4m4l4n4t4s4r4r4r4t4x","..........b8amaca49w9o9g98908y92999d9k9r9xa4abajasayb2b8bdbjbwc3ck..........988o817k746t6l6d655x5p5h5b5957595c5i5q5n5m5m5j5d57504s4p4o4m4j4j4l4k4j4j4j4l4t","..........b6amaca49w9o9g98908y8y929a9f9m9ta1a9ahanarawb1b6bbbhbsajada8a39z9l938g7w7h726t6l6d655x5p5h5b5a5a5c5h5n5r5p5n5l5e58524w4s4q4q4m4m4i4g4g4g4g4g4i4q","..........b5anada59x9p9i9b938z8y8z949c9k9sa0a6acagalaqavb0b5baaha9a49z9v9o9f8j8a7s7f726t6l6d655x5p5h5e5d5e5h5k5q5t5s5p5i5b544x4s4k4i4k4l4k4h4g4g4g4g4g4i4q","..........b6apaea7a09t9l9f9a939091949a9i9q9ua1a5aaafakapauazaq9y9s9n9j9g9d8t8e867p7d716t6l6d655x5p5j5h5h5i5n5r5v5w5v5n5f57504t4m4g4g4i4i4g4h4g4g4g4g4g4i4q","..........b6asaiaba39w9q9l9e9a9695969b9h9j9q9u9ya4a8aeaiaoat9z9n9i9d9996918n89827n7c726u6m6f67605t5n5m5n5p5t5y62615t5m5e564y4q4i4g4g4g4g4g4i4j4g4g4g4g4i4q","..........b8awalaea7a19w9q9l9h9e9b9a9a9f9g9j9n9t9xa2a7acaha79t9i9c97928z8u8i857y7m7c746w6o6g68605t5q5q5q5t5z6465605s5k5d554x4p4i4g4g4g4j4i4k4m4j4h4g4g4i4q","..........bcb1apajada7a19w9s9o9m9g9c9d9d9g9g9h9n9r9wa1a6a9a29p9d97918w8r8o8e827u7l7c746w6o6g68605v5t5t5w5z646a675z5r5j5b534v4o4i4g4i4h4l4n4s4p4n4l4i4i4l4t","..........bgb6auaoaiaca7a39z9v9r9o9h9e9d9d9d9d9g9l9q9v9za29x9k99928w8q8k8h8b7z7r7k7d756x6p6h69645z5y5z62676a6c675z5r5j5b534v4q4m4k4l4p4s4v4v4t4s4p4n4m4o4w","..........bkbdazauaoaiaeaaa6a29x9t9n9h9e9d9d9d9d9e9k9p9s9u9t9g968z8r8k8e89867x7p7h7a726v6n6g6a666565676a6d6h6h68605s5k5d564z4u4s4s4t4w4z53524z4x4u4s4r4t50","..........bpbib6azauapalahada8a49y9s9n9h9d9b9a9c9d9e9i9k9m9p9d938w8p8h8983807w7o7g78706s6k6f6d69686b6e6g6k6m6i6a625v5n5f59524z4x50515356585653504y4w4u4x54","..........bubnbhb6b1awasaoakafaaa49y9t9n9h9b9997989a9a9d9f9h9b918u8m8e87807s7o7n7g79716t6l6h6g6f6e6g6l6o6r6p6h69615t5l5f5a58565558595a5e5d5b59575451515358","..........c8bsbnbibab5b0avaqalafaaa49y9s9m9g999794929295979b9a918t8l8d857x7p7k7j7d766y6s6p6m6l6l6m6o6s6w6v6o6g68605s5l5i5f5f5e5d5f5h5i5k5h5f5c5a575553555d","............c5bvbqbibbb4axaqalahafaaa49y9r9k9e978z8w8x8x8z9395918u8m8e87807s7l7h79726x6t6s6q6r6t6u6w6y6y6r6m6e66625u5q5o5n5n5m5l5m5p5q5o5m5i5h5e5b5b5b5d5g","..............c4bobgb8b1atanafa9a8ada9a19t9l9d958x8v8r8q8t8v8x8x8u8m8f877z7r7j7e78736y6y6y6x6z717274736v6n6g6b66615y5w5u5v5v5u5t5u5x5w5t5q5n5l5j5h5j5j5l5n","..............cebnbfb7azarajaba5a4a6a9a29u9m9f98908v8q8p8n8n8p8p8p8m8e867y7q7i7d79777473757577797a726x6t6m6g6b6965656462636362616264615y5w5t5q5o5n5r5p5s5u","..............cdbobgb8b1atamaea6a4a4a4a39v9n9f98928u8p8m8j8j8j8j8h8k8e877z7t7o7g7d7d7b7b7d7d7f7c756z6u6s6o6k6h6g6d6d6c6a6b6b6a696a6764625z5w5v5u5v5v5t5x62","..............cdbqbibab3avaoaha9a5a4a4a19u9m9e968y8q8m8m8l8j8j8h8g8i8e8a847y7s7o7l7l7j7j7l7i7f7b75706y6v6t6r6p6n6l6l6k6i6j6j6i6h6e6b6865626363625y5x5v5z67","..............cdbsbkbdb5azaralaga9a6a4a19v9n9f98918t8n8m8m8n8m8l8i8j8h8d89837y7v7t7t7r7p7l7j7f7d7a757473716z6x6u6t6t6r6q6r6r6o6m6i6f6c6a6a6a6a67646261666b","..............cfbvbnbgb9b2awaralahaea7a59x9q9i9a948y8u8r8q8t8u8t8q8p8n8k8e89868281807y7t7q7n7k7k7h7d7c7a7976757271716z6y6x6u6r6o6m6k6i6h6i6h6e6b6766666b6h","..............chbzbrbkbdb7b2awaraoajafa7a09s9l9f9895928z8y9192908y8x8v8q8k8g8d8a898885817y7v7s7s7n7l7k7i7h7e7c7a79797774706y6v6s6r6r6q6o6m6k6g6d6c6b6c6i6m","..............ckc4bvbpbjbdb7b2azauapajaaa39x9p9j9b98979796989a979695918v8r8n8k8i8h8g8b888582807y7v7t7s7q7o7m7k7i7g7d7a78757271706z6z6u6r6p6o6m6j6j6j6k6o6t","..............cocac0bubpbjbdb9b5b0atamaea7a09t9m9j9g9b9e9e9g9h9f9e9c97928y8v8s8q8p8m8j8g8d8a88858281807x7v7t7p7m7i7g7e7c7978797774726z6w6t6t6u6r6r6r6s6u6z","..............cscmc5c0bubpbkbgbbb7awapaiaba49y9t9q9n9j9m9m9n9p9m9m9j9g9d999593908x8t8p8m8k8h8e8c8a8784817y7v7t7q7p7n7m7k7h7f7d79777473726y70716z6z6z707275","..............cycqckc5c0bvbrbmbibeb0atamafa9a4a09x9t9r9t9u9v9w9u9t9r9n9k9g9d9a9794908u8q8o8l8i8g8d8b88858481807y7v7s7r7o7m7i7g7c7c7a7a7976787977777778797c","..............d6cwcqclcac3bybtbpbmb5axaqakafaba8a4a19za1a2a3a5a3a19y9v9r9n9k9i9f9b95928y8w8s8p8m8k8i8e8c888784827y7u7t7q7o7n7m7k7k7i7i7g7e7g7g7f7f7f7g7h7j","................d3cwcrcmchccc6c2bxbbb2awaqamaiafaba8a7a8abadaaaaa7a4a2a09x9v9r9m9g9c989693908w8q8k8j8g8e8a88878582817y7x7u7u7u7s7s7q7q7n7m7n7o7n7n7n7o7p7r","....................d0cucpclcfc9c3bmb7b2axataqamaiagafagafafafacababa8a5a5a29x9s9n9j9g9d9a97928v8r8n8k8j8f8f8d8a8889868582828180807y7y7v7u7v7w7v7v7w7y7z83","........................d2cvckcec8c2bwbbb6b1axataqaoanalahagagagagadadaaa9a6a39y9t9q9n9l9i9d97928y8v8s8q8n8n8l8i8g8g8e8c8a8a89888786858382838586888b8e8i8n","............................cvcjcdc7c1bubobhbcb7b2ayawarajagagagaeadadaaaaa7a5a4a19x9v9s9o9i9d999592908x8v8v8s8q8o8n8m8k8i8i8h8g8f8e8c8a8a8a8c8f8i8m8r8w94","..............................ctciccc5bzbtbobibdb9b6b1auarajagagagaeadadabaaa9a8a6a3a29z9t9o9k9f9c99989493928z8x8w8v8u8r8q8q8p8o8n8m8m8n8o8p8s8v8z9499....","................................crchcac4bzbubobkbgbcb6b1avarajahagagagaeadaeacadadabaaa59z9v9q9m9k9h9f9c9b9997959493918z8y8y8x8w8x8z9194989c9i9n..........","..................................crcfcac5c0bvbrbnbhbcb6b1auaramalamalalajakakalalajagaba6a19x9u9r9p9m9k9j9h9e9c9c9b9997969697989a9d9h9m9r................","....................................cqcgcbc6c2bybsbnbhbcb6b1axauatauatatarasasatasaranahaca8a4a19z9w9t9r9r9o9m9k9k9k9l9m9n9r9v9za5ad......................","......................................cycnchc9c4bybtbnbhbcb8b4b2b1b2b1b0azb0b0b1b0azazaxauaoajafaca8a5a3a3a3a5a8acaham....................................","..........................................cqcfc9c4bybsbnbjbfbbbab9bab9b8b7b8b8b9b8b7b7b5b3b2b2b1b1b2b4b7bbbgbl............................................","............................................cocfcac4bybubqbmbjbibhbibhbgbfbgbgbhbgbfbfbdbbbabbbdbfbibmbrbx................................................","..............................................cocfcac5c1bxbtbrbqbpbqbpbnbnbnbobpbpbobobpbqbubyc2c8........................................................","................................................cqcicdc8c4c1bzbybxbybxbvbvbvbxbzc1c4c8cdci................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................","..........................................................................................................................................................",".........................................................................................................................................................."]};let V2MIAGF=null;
+function V2MIALIM(y,z){const G=V2MIAGRID;if(!V2MIAGF){const ny=G.rows.length;V2MIAGF=new Float32Array(ny*G.nz);for(let i=0;i<ny;i++)for(let j=0;j<G.nz;j++){const c=G.rows[i].substr(j*2,2);V2MIAGF[i*G.nz+j]=c==='..'?0.6:parseInt(c,36)/1000;}}
+ const ny=G.rows.length,fy=(y-G.y0)/G.d,fz=(z-G.z0)/G.d;if(fy<0||fz<0||fy>ny-1||fz>G.nz-1)return 0.6;const i=Math.min(ny-2,Math.floor(fy)),j=Math.min(G.nz-2,Math.floor(fz)),a=fy-i,b=fz-j,F=V2MIAGF,n=G.nz;
+ return (F[i*n+j]*(1-b)+F[i*n+j+1]*b)*(1-a)+(F[(i+1)*n+j]*(1-b)+F[(i+1)*n+j+1]*b)*a;}
+function V2MIACLEAR(d,r,sk){if(d.x>=0)return r;const sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};const SW=window.MIA_SWELL!=null?window.MIA_SWELL:0.1;
+ const lim=V2MIALIM(d.y*r,d.z*r);if(lim>=0.55)return r;let rr=r;if(sk&&SW)rr=r+SW*sm(0.54,0.44,lim)*Math.max(0,r-sk);/* swell where the limit is loose: the side still frames the face */
+ const ax=-d.x*rr;if(ax<=lim-0.02)return rr;const k=0.004,smn=-k*Math.log(Math.exp(-ax/k)+Math.exp(-lim/k));return rr*smn/ax;}
+const V2BAKE=new Map();window.TOPS_V2BAKE=V2BAKE;
+const V2HAIRHC={value:new T.Vector3(1,0.05,0.25)};window.TOPS_V2HAIRHC=V2HAIRHC;
+const V2GROOVE=(()=>{
+  const envR=(M,dx,dy,dz)=>{let best=0;for(const m of M){const q=m._q||(m._q=new T.Quaternion().setFromEuler(new T.Euler(m[6]||0,m[7]||0,m[8]||0)).invert());
+    const o=m._o||(m._o=new T.Vector3(-m[0],-m[1],-m[2]).applyQuaternion(q));const v=_gv.set(dx,dy,dz).applyQuaternion(q);
+    const ox=o.x/m[3],oy=o.y/m[4],oz=o.z/m[5],vx=v.x/m[3],vy=v.y/m[4],vz=v.z/m[5];const A=vx*vx+vy*vy+vz*vz,B=2*(ox*vx+oy*vy+oz*vz),C=ox*ox+oy*oy+oz*oz-1,D=B*B-4*A*C;if(D<0)continue;const t=(-B+Math.sqrt(D))/(2*A);if(t>best)best=t;}return best;};
+  const _gv=new T.Vector3();
+  const envS=(M,dx,dy,dz,k)=>{k=k||0.012;let mx=0;const ts=[];for(const m of M){const t=envR([m],dx,dy,dz);if(t>0){ts.push(t);if(t>mx)mx=t;}}if(!ts.length)return 0;let s=0;for(const t of ts)s+=Math.exp((t-mx)/k);return mx+k*Math.log(s)-k*0.55;};
+  function groove(h,L,K,M,Ls,cols,hl,o){o=o||{};const sm=K.sm,dir=K.dir,val=o.valley||0.03,U=Math.round((o.U||76)*(o.dens||1)),Vn=Math.round((o.V||29)*(o.dens||1));/* dens: the game camera needs the valleys in the geometry, not smoothed away by a coarse grid (doc 25, clay capture) */
+   /* fix 3 (hair28 r10/r11, Director 20 Nov): low-pass the side hairline (hlSmooth), columns packed toward the face (frontDense),
+      a rounded front roll face (round), the shell tucked onto the real v3 skull, texture in (phi, theta) */
+   if(hl&&o.hlSmooth){const h0=hl,w=o.hlSmooth;hl=ph=>{let t=0,n=0;for(let k=-3;k<=3;k++){const wt=1-Math.abs(k)/4;t+=h0(ph+k*w/3)*wt;n+=wt;}const k=sm(0.45,0.85,Math.abs(K.wrap(ph)));return h0(ph)*(1-k)+t/n*k;};}
+   const FD=o.frontDense||0,PHU=u=>{const s=2*u-1;return Math.PI*(s-FD*Math.sin(Math.PI*s)/Math.PI);};
+   const FPg=L._v3?v3FaceOf(L):null,_sd=new T.Vector3(),SKR=(th,ph)=>{const p0=K.S(th,ph,0).length();if(!FPg)return p0;const st=Math.sin(th);_sd.set(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));return Math.max(p0,v3HeadPoint(_sd,FPg.cheek,FPg).length());};
+   let TMX=0;for(let i=0;i<=64;i++)TMX=Math.max(TMX,hl?hl(-Math.PI+2*Math.PI*i/64):1.6);TMX+=0.05;
+   /* r13 envelope shaping: o.envMod(d) scales the hair's stand-off from the (ellipsoid) skull per direction: crest down, side waves out */
+   const R0=V2P.head.r,ENV=d=>{const e=envS(M,d.x,d.y,d.z);if(!o.envMod)return e;const s0=Math.hypot(d.x*R0[0],d.y*R0[1],d.z*R0[2]);return s0+(e-s0)*o.envMod(d);};
+   /* each lock: its flow line as 29 unit vectors, flattened to numbers */
+   const LK=Ls.map(lk=>{const n=28,P=[];if(lk.v){const cv=new T.CatmullRomCurve3(lk.v.map(q=>new T.Vector3(q[0],q[1],q[2]).normalize()),!!lk.closed,'centripetal');for(let i=0;i<=n;i++)P.push(cv.getPoint(i/n).normalize());}
+    else{const cv=new T.CatmullRomCurve3(lk.p.map(q=>new T.Vector3(q[0],q[1],0)),false,'centripetal');for(let i=0;i<=n;i++){const q=cv.getPoint(i/n);P.push(dir(q.x,q.y));}}
+    const F=new Float32Array(P.length*3);P.forEach((p,i)=>{F[3*i]=p.x;F[3*i+1]=p.y;F[3*i+2]=p.z;});const wpM=lk.wp?Math.max(...lk.wp):1;return {F,n,w:lk.w*(o.wk||1),hk:lk.hk||1,root:lk.root!=null?lk.root:0.18,soft:lk.soft||0,taper:lk.taper||0,lift:lk.lift||null,wp:lk.wp||null,pw:lk.pw||0,add:!!lk.add,wpM};});
+   /* hair28 r14 lock-built mass (o.heights, Ray sweptR): each lock carries its own height (lk.lift along its length, lk.wp width profile, lk.pw
+      section power); heights merge by a p-norm (HP), so locks fuse into one mass and valleys stay where the profiles fall off. The arc-length
+      parameter and distance are smoothed over nearby segments (no ridges where the nearest segment switches on the inside of a bend). */
+   const HT=!!o.heights,HP=o.hp||6,EW=o.envW||1,EP=o.envP||0.5,VW=o.vw||1.25,DS=new Float64Array(64),US=new Float64Array(64),LIFT=(a,u)=>{const x=(u<0?0:u>1?1:u)*(a.length-1),i=Math.min(a.length-2,Math.floor(x)),f=x-i;return a[i]*(1-f)+a[i+1]*f;};
+   const pw=o.pw||0.42,out=[0,0,0,1,0,0];
+   const field=(dx,dy,dz)=>{let best=0,second=0,bs=0,sb=0,HS=0,FR=1,BS=0,ADD=0;for(const k of LK){let dm=9,um=0;const F=k.F,n=k.n;
+     for(let i=0;i<n;i++){const ax=F[3*i],ay=F[3*i+1],az=F[3*i+2],bx=F[3*i+3]-ax,by=F[3*i+4]-ay,bz=F[3*i+5]-az;const l2=bx*bx+by*by+bz*bz||1e-9;
+      let t=((dx-ax)*bx+(dy-ay)*by+(dz-az)*bz)/l2;t=t<0?0:t>1?1:t;const cx=ax+bx*t-dx,cy=ay+by*t-dy,cz=az+bz*t-dz,dd=Math.sqrt(cx*cx+cy*cy+cz*cz);if(HT){DS[i]=dd;US[i]=(i+t)/n;}if(dd<dm){dm=dd;um=(i+t)/n;}}
+     if(HT){if(dm-0.04>k.w*k.wpM/0.33*Math.max(EW,VW,1))continue;/* exact early-out: this lock can't reach here (the smoothing lowers dm by at most .012 ln 28) */
+      let sw=0,su=0,sd=0;for(let i=0;i<n;i++){const e=DS[i]-dm;if(e>0.33)continue;const wg=Math.exp(-e/0.03);sw+=wg;su+=wg*US[i];sd+=Math.exp(-e/0.012);}um=su/sw;dm=Math.max(0,dm-0.012*Math.log(sd)+0.012*Math.log(2));}
+     const wa=k.w*(k.wp?LIFT(k.wp,um):1)*(0.5+0.5*Math.sin(Math.PI*Math.min(1,0.15+0.85*um)))*(1-k.taper*um)/0.33;/* r13: lk.taper narrows a lock along its length */
+     if(k.lift&&!k.add){const q=dm/(wa*EW),be=1-q*q;if(be>0)HS+=Math.pow(Math.pow(be,EP)*k.hk*(0.35+0.65*sm(0,k.root,um))*LIFT(k.lift,um),HP);}/* r14: the mass is the union of each lock's soft volume (wider than its crest) */
+     if(HT&&k.add){ADD+=sm(1.3,0.15,dm/wa)*LIFT(k.lift,um);continue;}/* r14b: an additive relief lock rides on top of the mass (no valley carve) */
+     if(HT){const q=sm(VW,0.25,dm/wa)*k.hk;if(q>BS)BS=q;}/* r14: soft lock coverage for the valley walls */
+     let b=1-(dm/wa)*(dm/wa);if(b<=0)continue;b=Math.pow(b,k.pw||pw)*k.hk*(0.35+0.65*sm(0,k.root,um));
+     if(b>best){FR=dm/wa;second=best;sb=bs;best=b;bs=k.soft;}else if(b>second){second=b;sb=k.soft;}}
+    const ks=Math.max(bs,sb);if(ks>0){const hq=Math.max(ks-Math.abs(best-second),0)/ks;best+=hq*hq*ks*0.25;}out[0]=best;out[1]=second;out[2]=HS>0?Math.pow(HS,1/HP):0;out[3]=FR;out[4]=BS;out[5]=ADD;return out;};
+   const thOf=(tj,thE)=>0.015+(thE-0.015)*(tj<0.85?tj/0.85*0.97:0.97+0.03*(tj-0.85)/0.15);const LP=o.lip;
+   const pos=[],uv=[],idx=[];
+   /* hair28 r11 scalloped edge (Mia): where no lock reaches the hairline the edge pulls back, so the lock tips form the hairline */
+   const SC=[];if(o.scallop)for(let i=0;i<=U;i++){const ph=PHU(i/U),t0=hl?hl(ph):1.6;let bm=0;for(const dt of [0.03,0.07,0.11]){const q=dir(t0-dt,ph);bm=Math.max(bm,field(q.x,q.y,q.z)[0]);}SC.push(t0-o.scallop*(o.scallopMask?o.scallopMask(ph,t0):1)*(1-sm(0.2,0.85,bm)));}
+   for(let j=0;j<=Vn;j++)for(let i=0;i<=U;i++){const ph=PHU(i/U),thE=o.scallop?SC[i]:(hl?hl(ph):1.6),tj=j/Vn;let th=thOf(tj,thE),eR=-1;const fr=LP?Math.pow(Math.max(0,Math.cos(ph)),LP[1]||2):0;
+    if(o.round){const span=0.03+o.round*Math.pow(Math.max(0,Math.cos(ph)),2),tR=0.72;if(tj<=tR)th=0.015+(thE-span-0.015)*tj/tR;else{eR=(tj-tR)/(1-tR);th=thE-span+span*Math.sin(eR*Math.PI/2);}}/* the last rows wrap a quarter circle down to the hairline: a thick rounded roll face, no overhang */
+    let thL=th;if(LP&&tj>0.8){const e=(tj-0.8)/0.2;thL=th+LP[0]*fr*Math.sin(Math.PI*Math.min(1,e*1.25))*(1-0.6*e);}
+    const d=dir(thL,ph),sk=SKR(thL,ph),tm=Math.min(th,thL),dm=dir(tm,ph);const f=field(dm.x,dm.y,dm.z),b=f[0];let r;
+    if(HT){/* r14: lock heights ride the smooth ellipsoid (the v3 skull's fine shape would print through as striations); skin still can't poke through; sides held in at the temples and upper ears; the scalp edge feathers */
+     const HL3=f[2],FRg=f[3],BSg=f[4],ADg=f[5],CA=o.crestArc?o.crestArc(th,ph):null,HLc=CA?Math.pow(Math.pow(HL3,8)+Math.pow(CA[0],8),1/8):HL3,thE0=hl?hl(ph):1.6,FTH=(o.feather?sm(0,o.feather,thE0-th):1)*(o.sideCut?1-o.sideCut*Math.exp(-(((Math.abs(ph)-1.6)/0.6)**2))*sm(0.78,1.4,th):1)/* r15b: wider, softer top-to-side ramp */,skS=Math.max(sk-0.006,Math.hypot(d.x*R0[0],d.y*R0[1],d.z*R0[2])+(o.skOff||0));
+     r=Math.max(sk+0.004,skS+FTH*(o.base||0.012)*(o.baseMod?o.baseMod(th,ph):1)+FTH*HLc+FTH*ADg-(o.hv||0)*(CA?1-CA[1]:1)*(1-BSg)*sm(0.004,0.03,HLc)-(o.comb||0)*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,FRg)))*sm(0.15,0.45,FRg)*sm(0.01,0.04,HL3));}
+    else{const vv=o.valley2?val+(o.valley2-val)*sm(1.35,1.8,th):val;const PU=(o.push||0)*sm(0.15,0.6,b)*(o.pushMask?o.pushMask(dm):1);/* hair28 r10: crests ride slightly proud of the envelope (Mia) */r=Math.max(sk+0.004,ENV(dm)+PU-vv*(1-b));}
+    if(eR>=0){const fq=Math.pow(Math.max(0,1-eR*eR),o.roundP||0.5),fw=HT?Math.pow(Math.max(0,Math.cos(ph)),4):1;r=sk-0.003+(r-sk+0.003)*(fq*fw+(1-sm(0,1,eR))*(1-fw));}/* r14 heights: sides and back taper smoothly into the skin; only the front keeps the rounded roll face *//* r13: roundP > .5 feathers the rounded front into the skin */else if(tj>0.85){const e=(tj-0.85)/0.15;const k=LP?Math.pow(sm(0,1,e),1+2*fr):sm(0,1,e);r=r+(sk-0.003-r)*k;}if(o.clip)r=Math.max(sk+0.003,o.clip(d,r,sk));/* r15: keep-out volume (Mia's throwing-side dart path) */pos.push(d.x*r,d.y*r,d.z*r);uv.push((ph+Math.PI)/(2*Math.PI),1-tm/TMX);}
+   if(HT)for(const jr of [0,1]){let m=0;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3;m+=Math.hypot(pos[q],pos[q+1],pos[q+2]);}m/=U+1;for(let i=0;i<=U;i++){const q=(jr*(U+1)+i)*3,l=Math.hypot(pos[q],pos[q+1],pos[q+2]),k=(l+(m-l)*(jr?0.5:1))/l;pos[q]*=k;pos[q+1]*=k;pos[q+2]*=k;}}/* r14: the tiny crown ring collapses to its mean height (no pinched triangles at the pole) */
+   for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i;idx.push(a,a+U+1,a+1,a+1,a+U+1,a+U+2);}
+   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();
+   {const Nn=g.attributes.normal;for(let j=0;j<=Vn;j++){const a0=j*(U+1),a1=a0+U;const x=Nn.getX(a0)+Nn.getX(a1),y=Nn.getY(a0)+Nn.getY(a1),z=Nn.getZ(a0)+Nn.getZ(a1),l=Math.hypot(x,y,z)||1;Nn.setXYZ(a0,x/l,y/l,z/l);Nn.setXYZ(a1,x/l,y/l,z/l);}
+    let px=0,py=0,pz=0;for(let i=0;i<=U;i++){px+=Nn.getX(i);py+=Nn.getY(i);pz+=Nn.getZ(i);}const pl=Math.hypot(px,py,pz)||1;for(let i=0;i<=U;i++)Nn.setXYZ(i,px/pl,py/pl,pz/pl);}
+   /* the baked lock colour: valley shadow -> base -> highlight along each crown, mixed in sRGB (the lab's numbers) */
+   const TW=HT&&o.tw?(S3G==='full'?o.tw:Math.round(o.tw*2/3)):(S3G==='full'?512:384),TH=HT&&o.th?Math.round(o.th*TW/o.tw):TW/2;
+   /* round 5 perf: the same hair is built several times per match (match figure, preview, portrait, hero shot): the bake depends only on the locks,
+      colours, bake options and size, so it is baked once and the texture shared (LRU of 8 looks) */
+   const BK=V2BAKE,bkey=JSON.stringify([TW,TH,+TMX.toFixed(4),cols,Ls,o,!!window.GFX_LIN]);let tex=BK.get(bkey);if(tex){BK.delete(bkey);BK.set(bkey,tex);}
+   if(!tex){const cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const cx=cv.getContext('2d'),im=cx.createImageData(TW,TH);
+   const s=c=>{const q=new T.Color(c);if(window.GFX_LIN)q.convertLinearToSRGB();return q;};const cB=s(cols.base),cS=s(cols.shadow),cH=s(cols.hi),C=new T.Color();
+   for(let y=0;y<TH;y++){const th=(y+0.5)/TH*TMX,st=Math.sin(th);for(let x=0;x<TW;x++){const ph=-Math.PI+2*Math.PI*(x+0.5)/TW;const f=field(st*Math.sin(ph),Math.cos(th),st*Math.cos(ph));const b=f[0],b2=f[1];
+     const fl=o.floor!=null?o.floor:0.22,sd=o.seam!=null?o.seam:0.55;let a,hi=sm(o.hiLo||0.8,0.98,b)*(o.hi||0.5);
+     if(HT){const Hq=f[2],FLx=fl+((o.openFloor||0.62)-fl)*(1-sm(0.012,0.04,Hq));a=FLx+(1-FLx)*Math.pow(f[4],0.8);if(f[5])a*=0.95+0.13*sm(0.004,0.014,f[5]);/* r14b: the relief lock reads as a lighter form with a soft shadowed edge */if(o.combT)a*=1-o.combT*(0.5-0.5*Math.cos(2*Math.PI*(o.combN||3)*Math.min(1,f[3])))*sm(0.01,0.04,Hq);hi*=sm(0.015,0.06,Hq);}/* r14: only seams between neighbouring locks go to the dark floor; open scalp stays mid-tone; comb lines along each lock */
+     else a=(fl+(1-fl)*sm(0.04,0.42,b))*(sd+(1-sd)*sm(0.0,0.25,b-b2*0.92));C.copy(cS).lerp(cB,Math.min(1,a));C.lerp(cH,hi);if(o.tone)C.multiplyScalar(o.tone);
+     const o4=(y*TW+x)*4;im.data[o4]=C.r*255;im.data[o4+1]=C.g*255;im.data[o4+2]=C.b*255;im.data[o4+3]=255;}}
+   cx.putImageData(im,0,0);tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;tex.anisotropy=4;tex.userData=Object.assign(tex.userData||{},{keep:true});/* figure disposal leaves it to the cache (r128 textures have no userData by default) */BK.set(bkey,tex);if(BK.size>8){const k0=BK.keys().next().value,t0=BK.get(k0);BK.delete(k0);try{t0.dispose();}catch(e){}}}
+   const m=v2M(0xffffff,'hair');m.color.setRGB(1,1,1);/* v2M's hair rule pulls white to #eaeaea; the bake carries the colour */m.map=tex;m.roughness=Math.max(.4,Math.min(.6,o.rough||0.42));if('clearcoat' in m)m.clearcoat=Math.max(0,Math.min(.16,o.cc!=null?o.cc:0.16));
+   if(HT){/* round 5 (ChatGPT 39): silver separation in the big venues. The Arena's broad cool light lifts the baked valleys (hair-box 5th/25th percentile
+      70/98 vs the Pub's 58/90) while the highlights barely move. Only the darkest part of the bake (luminance under .05 linear, the seams) is scaled
+      by V2HAIRHC.k, easing back to 1 by .25, so the broad white highlights and the base keep their values: no overall brightening, darker valleys.
+      buildVenue sets k from the tier (1 at the Pub and Club, ramping to its Arena value) */
+    m.onBeforeCompile=sh=>{sh.uniforms.uHC=V2HAIRHC;sh.fragmentShader='uniform vec3 uHC;\n'+sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n\tdiffuseColor.rgb*=mix(uHC.x,1.0,smoothstep(uHC.y,uHC.z,dot(diffuseColor.rgb,vec3(.2126,.7152,.0722))));');};m.customProgramCacheKey=()=>'v2hairHC';}
+   m.needsUpdate=true;
+   const mesh=new T.Mesh(g,m);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.hair=true;mesh.userData.tag='hair';h.add(mesh);return mesh;}
+  /* Kai r9 (quiffL): the r8 poster-fitted masses and the 16 groove locks, verbatim */
+  const KAI={M:[[-0.058,0.292,0.076,0.232,0.168,0.232,-0.1,0,0.08],[-0.27,0.218,-0.042,0.138,0.15,0.2,0,0,0.35],[0.188,0.222,0.046,0.13,0.13,0.15,0,0,-0.3],[-0.006,0.204,-0.128,0.238,0.262,0.23,0.2,0,0],[0.01,0.21,0.163,0.2,0.118,0.103,-0.5,0,0],[-0.25,0.252,0.11,0.14,0.13,0.13,0,0,0.3]],
+   GL:[{p:[[1.0,-0.2],[0.75,-0.2],[0.45,-0.08],[0.25,0.3],[0.3,1.6]],w:0.11,taper:0.35},{p:[[0.98,0.35],[0.78,0.45],[0.58,0.72],[0.5,1.45]],w:0.068,hk:0.9},
+    {p:[[0.98,-0.55],[0.82,-0.75],[0.65,-1.2],[0.7,-1.9],[0.95,-2.4]],w:0.075},{p:[[1.05,0.85],[0.95,1.1],[0.9,1.6],[1.05,2.2],[1.3,2.6]],w:0.06,hk:0.92},
+    {p:[[1.12,-1.0],[1.1,-1.35],[1.2,-1.9],[1.45,-2.3]],w:0.052,hk:0.85},{p:[[1.15,1.15],[1.18,1.5],[1.3,1.95],[1.5,2.35]],w:0.048,hk:0.85},
+    {p:[[0.3,-0.5],[0.25,-1.6],[0.45,-2.6],[0.8,-3.0]],w:0.072,hk:0.95},{p:[[0.55,2.2],[0.9,2.4],[1.35,2.65],[1.8,2.9]],w:0.075},{p:[[0.5,2.95],[0.95,3.05],[1.45,3.3],[1.9,3.5]],w:0.08},
+    {p:[[0.6,-2.35],[1.05,-2.55],[1.5,-2.65],[1.75,-2.9]],w:0.07},{p:[[1.05,-0.33],[0.9,-0.4],[0.7,-0.55],[0.55,-0.95]],w:0.048,hk:0.8},
+    {p:[[1.45,2.15],[1.7,2.42],[2.02,2.7]],w:0.058,hk:0.85,n:20},{p:[[1.4,-2.1],[1.75,-2.32],[2.05,-2.5]],w:0.056,hk:0.85},{p:[[1.75,2.95],[2.0,3.08],[2.25,3.15]],w:0.052,hk:0.8},
+    {p:[[0.85,1.25],[0.9,1.7],[1.1,2.1],[1.35,2.4]],w:0.055,hk:0.9},{p:[[0.85,-1.35],[0.95,-1.8],[1.2,-2.15],[1.3,-2.3]],w:0.055,hk:0.9},
+    /* hair28 r14 (ChatGPT 33): 3 supporting waves crossing diagonally into the roll, ends staggered ~12%, so the roll isn't one continuous ridge */
+    {p:[[0.97,0.78],[0.8,0.58],[0.62,0.26],[0.5,-0.18]],w:0.062,hk:0.9,taper:0.25},{p:[[0.72,1.12],[0.56,0.84],[0.43,0.47],[0.37,0.12]],w:0.058,hk:0.87,taper:0.25},{p:[[1.0,-0.86],[0.86,-0.62],[0.72,-0.37],[0.66,-0.16]],w:0.056,hk:0.86,taper:0.25}],
+   HLP:[[0,1.0],[0.32,0.92],[-0.38,0.94],[0.72,0.92],[-0.74,0.93]],cols:{base:0x5F311E,shadow:0x45200F,hi:0x8D533A},/* doc 30 #6: valley shadow #31170F -> #45200F (a richer chocolate brown, not near-black red) *//* doc 25 fix 4: ChatGPT's poster browns (r9 had 0x543424 / 0x2A1810 / 0x7A5C4C) */
+   o:{envMod:d=>{const th=Math.acos(Math.max(-1,Math.min(1,d.y))),ph=Math.atan2(d.x,d.z),sm=V2HK().sm,KC=window.KAI_CREST!=null?window.KAI_CREST:0.11,KS=window.KAI_SIDE!=null?window.KAI_SIDE:0.05;
+     const CC=window.KAI_CC!=null?window.KAI_CC:0.07;return 1-KC*Math.exp(-((ph-0.15)**2)/(2*0.5*0.5))*sm(1.1,0.8,th)-CC*Math.exp(-((th-0.18)**2)/(2*0.22*0.22))*sm(0.62,0.42,th)/* r14: crown-centre stand-off -7%, front crest untouched */+KS*Math.exp(-((Math.abs(ph)-1.4)**2)/(2*0.4*0.4))*sm(0.45,0.7,th)*sm(1.7,1.4,th);},/* r13 (doc 31): crest -11% of its stand-off (peak to his right), side waves +5%; the roll 10% wider at the base, tapering, shorter his-left roll, longer his-left sweep */
+    valley:0.03,wk:0.7,pw:0.6,frontDense:0.5,U:84,round:0.12,hiLo:0.92,hi:0.16,rough:0.5,cc:0.03,floor:0.12,seam:0.4}};/* doc 30 #6: floor .10 -> .12 (the valley shows its brown), crown highlight .20 -> .16 *//* fix 3 (Director, hair28 r11): no lip, rounded roll face, 3 cm valleys, narrower locks, rounder crests, columns packed to the face (4,872 tris, lab density); the bake and material keep Engine's fix 2 numbers *//* fix 4: no tone lift (it greyed the browns); the bake is written as the sRGB hex, the material white *//* doc 25 fix 2 (lock separation): darker valley floor and seams, a narrow highlight on each crown only, clearcoat .03, a 1.6x finer shell *//* tone 1.3: the lab judges the colours under a key ~1.6x the game's creator/venue light; the bake is lifted to match (Director: lighting is Engine's call) */
+  const RAY={M:[[-0.018,0.262,0.08,0.188,0.143,0.162,-0.25,0,0],[-0.018,0.19,-0.102,0.274,0.22,0.228,0,0,0],[-0.232,0.138,0.004,0.086,0.132,0.196,0,0,0.1],[0.22,0.138,-0.008,0.068,0.132,0.19,0,0,-0.1],[-0.172,0.262,0.008,0.08,0.1,0.1,0,0,0.3],[0,0.19,0.18,0.17,0.085,0.1,-0.5,0,0],[-0.19,0.16,0.12,0.08,0.09,0.1,0,0,0.3]],/* fix 3: + front roll mass and his-right temple mass */
+   GL:[{p:[[0.85,0.05],[0.6,0.08],[0.35,0.12],[0.2,1.2],[0.35,2.9]],w:0.085},{p:[[0.66,0.48],[0.47,0.2],[0.36,-0.45],[0.48,-1.45],[0.82,-2.15]],w:0.06,hk:0.95},/* r13: a diagonal sweep front-left -> back-right */
+    {p:[[0.84,-0.32],[0.66,-0.58],[0.52,-1.25],[0.72,-2.2],[1.2,-2.75],[1.55,-2.95]],w:0.085},{p:[[0.8,0.5],[0.68,0.7],[0.6,1.3],[0.8,1.95]],w:0.062},/* r13: his-right sweep longer and wider, his-left shorter and narrower */
+    {p:[[1.0,-0.95],[1.1,-1.35],[1.3,-2.05],[1.7,-2.55]],w:0.066},{p:[[1.08,1.0],[1.18,1.4],[1.35,2.0],[1.7,2.45]],w:0.05,hk:0.85},{p:[[0.5,2.5],[1.0,2.68],[1.5,2.85],[1.95,3.0],[2.15,3.05]],w:0.072,soft:0.22},
+    {p:[[0.6,-2.6],[1.1,-2.72],[1.6,-2.88],[1.9,-2.98],[2.05,-3.02]],w:0.068,soft:0.22},{p:[[1.6,2.25],[1.88,2.5],[2.12,2.78]],w:0.05,hk:0.8,soft:0.2},{p:[[1.5,-2.15],[1.82,-2.4],[2.05,-2.7]],w:0.05,hk:0.8,soft:0.2},
+    {p:[[1.25,-1.3],[1.35,-1.7],[1.55,-2.1]],w:0.045,hk:0.8},{p:[[0.8,-1.0],[0.85,-1.6],[1.05,-2.2],[1.35,-2.6]],w:0.06,hk:0.9},{p:[[0.82,1.05],[0.9,1.65],[1.1,2.2],[1.4,2.55]],w:0.058,hk:0.9},{p:[[0.3,2.4],[0.65,2.9],[1.15,3.18],[1.7,3.22]],w:0.055,hk:0.9,soft:0.2}],
+   HLP:[[0,1.01],[0.3,0.909],[-0.3,0.909],[0.62,0.806],[-0.62,0.806],[0.95,0.95],[-0.95,0.95]],cols:{base:0x9a9590,shadow:0x48443f,hi:0xf4f1ec},/* doc 30 #6: valley shadow a touch darker *//* fix 3 + r12: front hairline 0.21 rad lower (RAY_HLF), filling the side notch */
+   o:{hlSmooth:0.22,valley:0.028,wk:0.9,pw:0.6,frontDense:0.5,U:84,round:0.12,roundP:1.1,hi:0.6,hiLo:0.84,tone:0.88,floor:0.14,seam:0.38,/* doc 30 #6: stronger separation between the silver ridges (valley floor .22 -> .14, seam .55 -> .38) *//* r13: crest -9%, the rounded front feathers into the skin */
+    envMod:d=>{const th=Math.acos(Math.max(-1,Math.min(1,d.y))),ph=Math.atan2(d.x,d.z);return 1-(window.RAY_CREST!=null?window.RAY_CREST:0.09)*Math.exp(-(ph*ph)/(2*0.55*0.55))*V2HK().sm(1.1,0.75,th);}}};
+  return {envR,envS,groove,KAI,RAY};})();
  const V2HAIRS={
+  /* r9 Tama (hair28 curly with the r8/r9 rear clusters: bigger, deeper, 2 lobes) for v3 heads */
+  curlyL(h,L,K){K.seed(5);const cols={base:0x1F1A19,shadow:0x0A0909,hi:0x433934};const parts=[];
+   const hl=K.HL([[0,1.0],[.3,1.04],[-.3,1.04],[.6,.98],[-.6,.98],[.9,1.08],[-.9,1.08],...K.sideHL(1,1.55,1.32,1.7),...K.sideHL(-1,1.58,1.32,1.7),[2.45,2.22],[-2.45,2.22],[2.85,2.3],[-2.9,2.28],[Math.PI-.01,2.32]]);parts.push(K.cap(hl,.02,28,6));
+   const C=[[.92,0,.11,.034],[.94,.36,.1,.032],[.95,-.34,.1,.033],[.98,.7,.085,.026],[.99,-.72,.088,.027],[1.1,1.0,.07,.02],[1.1,-1.0,.072,.02],[.55,.15,.13,.04],[.6,-.5,.12,.038],[.62,.8,.12,.036],[.2,0,.14,.042],[.35,1.9,.13,.036],[.4,-1.55,.13,.037],[.42,2.9,.13,.036],[.65,-2.45,.12,.033],
+    [1.1,1.45,.09,.022],[1.05,-1.4,.095,.024],[1.0,2.1,.11,.026],[.98,-2.0,.11,.026],[1.15,2.75,.11,.024],[1.2,-2.85,.11,.024],[1.55,2.35,.09,.014],[1.6,-2.4,.09,.014],[1.7,3.1,.1,.012],[1.4,1.8,.08,.014],[1.42,-1.75,.08,.014],[.85,2.55,.12,.03],[.85,-2.7,.12,.03],[1.3,3.05,.12,.026],[1.35,2.45,.11,.024],[1.35,-2.35,.11,.024],[1.25,2.0,.1,.022],[1.22,-2.05,.1,.022],[.75,1.45,.11,.03],[.78,-1.2,.11,.03]];
+   const MR=window.TAMA_MR!=null?window.TAMA_MR:[1.05,.4,.45,.72],MRD=window.TAMA_MRD||1.22;if(MR!==0)C.push(...(window.TAMA_MRC||[[.52,.55,.1,.022],[.57,-.9,.1,.016],[.6,1.2,.095,.022],[.58,-1.7,.1,.023],[.55,2.05,.105,.024],[.6,-2.25,.095,.023],[.52,2.6,.11,.024],[.55,-2.85,.1,.023],[.62,1.75,.09,.021]]));/* hair28 r14 (ChatGPT 33): 9 medium mid-crown curls behind the front row, weighted to the rear 3/4 (TAMA_MR=0 switches r14 off) */
+   const RK=[1.1,1.65,.3,1.45,2.3,.82],CK=window.TOPS_TAMA_CROWN||[1.18,.6],RT=[1.0,.95,2.0];/* r13 (doc 31): crown x1.18, no rear-top boost, flatter rear fill */for(let i=0;i<C.length;i++){const c=C[i];const front=i<7,rear=Math.abs(c[1])>1.9,top=c[0]<.5;const deep=i<35&&Math.abs(c[1])>=RK[4]&&c[0]>=RK[2]&&c[0]<=RK[3];
+    const crown=i<35&&!front&&c[0]<CK[1],rtop=i<35&&!front&&!crown&&c[0]<RT[1]&&Math.abs(c[1])>=RT[2];/* non-front crown curls x CK (r13 1.18; TOPS_TAMA_CROWN=[k,.6] overrides), the top-centre curl capped at 1.3; the front row is untouched */
+    const sz=c[2]*1.3*(c[0]>1.15?1.25:1)*(front?1.2:1)*(1+.36*(((i*7919)%97)/97-.5))*(deep?RK[0]:(rear&&c[0]<1.2?.88:1)),ht=c[3]*1.8*(top?RK[5]:1)*(front?1.1:1)*(deep?RK[1]:1)*(crown?(c[0]<.3?Math.min(CK[0],1.3):CK[0]):1)*(rtop?RT[0]:1)*(MR!==0&&!front&&!deep&&!rtop&&c[0]>=MR[2]&&c[0]<=MR[3]?MR[0]*(1+MR[1]*K.sm(1.2,2.3,Math.abs(c[1]))):1)*(MR!==0&&(deep||rtop)&&c[0]>=.6&&c[0]<=.95?MRD:1);/* r14: mid-ring x1.05 rising to x1.47 toward the rear 3/4; rear 3/4 shoulder x1.22 *//* r13 hierarchy: front curls x1.2 size / x1.1 height, every curl's width varies by a fixed +-18% */parts.push(...K.cluster(c[0],c[1]+(K.rnd()-.5)*.06,sz,ht,deep?2:(c[0]>1.15?2:0),deep?[11,4]:null));}
+   const OV=(window.TOPS_V3HAIRO||{}).tama||{};K.done(h,parts,L.hairC!=null&&L.hairC!==0x1a1210?K.colsFrom(L.hairC):cols,Object.assign({top:.07,hiAmt:.55},OV.po),OV.mr||[.72,0]);},/* doc 30 #6: lower specular on the raised curls (painted highlight .85 -> .55, roughness .58 -> .72, no clearcoat) */
+  /* r9 Ray (sweptL): his poster-fitted masses and groove locks, verbatim from hair28.js */
+  sweptL(h,L,K){const G=V2GROOVE,Q=G.RAY;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   const OV=(window.TOPS_V3HAIRO||{}).ray||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},
+  /* hair28 r14 Ray (sweptR, ChatGPT 8.5 PORT): the same silver swept-back pompadour built from 6 real locks over a restrained scalp:
+     1 dominant front lock (rises, rolls back over the crown to his right, runs down the back), 2 medium on his right, 1 on his left,
+     2 small rear locks tapering into the scalp (r14b: + one shallow his-left relief, a broad roll under the crest); sides held in at the temples, rear close to the skull. Lock data verbatim from hair28.js;
+     window.RAY_R takes the lab's knobs. Materials stay at the r13 freeze (shadow #48443F, seam floor .14). */
+  sweptR(h,L,K){const G=V2GROOVE,Q=G.RAY,sm=K.sm,RP=window.RAY_R||{};const hl=K.HL([...Q.HLP,...K.sideHL(1,1.55,1.38,1.72),...K.sideHL(-1,1.55,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   const LS=RP.lift||1,LB=RP.back!=null?RP.back:1,sc=a=>a.map((v,i)=>v*LS*(1+LB*sm(0.2,0.6,i/(a.length-1))));/* front stays, crown/rear follow-through lifted */
+   const GL=RP.locks||[
+    {p:[[1.04,0.12],[0.84,0.08],[0.58,-0.05],[0.36,-0.35],[0.18,-1.2],[0.3,-2.5],[0.68,-2.85],[1.1,-2.97]],w:RP.wD||0.1,wp:RP.wpD||[1.9,1.85,1.65,1.4,1.2,1.35,1.45,1.2],root:0.05,taper:0.2,pw:RP.pwD||0.3,lift:sc(RP.liftD||[0.044,0.07,0.068,0.054,0.046,0.062,0.064,0.032])},/* 1 dominant */
+    {p:[[1.03,-0.42],[0.86,-0.55],[0.68,-1.05],[0.8,-1.85],[1.12,-2.42]],w:RP.wM||0.075,wp:[1.3,1.25,1.1,0.9,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc(RP.liftR1||[0.025,0.038,0.044,0.03,0.01])},/* 2 medium, his right; r14b: front -18% (outer crest peak softened) */
+    {p:[[1.14,-0.86],[1.1,-1.25],[1.22,-1.82],[1.46,-2.25]],w:0.055,root:0.1,taper:0.4,lift:sc(RP.liftR2||[0.036,0.052,0.042,0.014])},
+    {p:RP.pL1||[[0.98,0.66],[0.78,0.82],[0.52,1.3],[0.68,2.12],[1.22,2.64]],w:RP.wM||0.075,wp:[1.3,1.4,1.3,1.0,0.8],root:0.06,taper:0.3,pw:0.42,lift:sc(RP.liftL1||[0.021,0.04,0.045,0.03,0.01])},/* 1 medium, his left; r14b: front -18%, tail 12% longer than his right (staggered) */
+    {p:RP.pLS||[[0.78,0.7],[0.84,1.02],[0.91,1.38],[0.99,1.7],[1.07,1.96]],w:RP.wLS||0.052,root:0.3,taper:0.55,add:true,lift:RP.liftLS||[0.005,0.013,0.015,0.012,0.003]},/* r14b: his-left side relief following the dominant sweep, ends before the ear */
+    {p:[[0.62,2.35],[0.95,2.6],[1.32,2.78],[1.7,2.88],[2.06,2.93]],w:0.068,wp:[1,1.15,1.02,0.9,0.8],root:0.1,taper:0.6,lift:sc([0.03,0.034,0.017,0.004,0.0005])},/* r15b: tips taper ~7% earlier *//* 2 small rear, staggered ends; r14b: +13% / -13% wide, uneven along their length */
+    {p:[[0.66,-2.3],[0.98,-2.5],[1.34,-2.64],[1.64,-2.72],[1.86,-2.76]],w:0.048,wp:[1,0.9,1.08,0.95,0.8],root:0.1,taper:0.6,lift:sc([0.028,0.03,0.0145,0.004,0.0005])}];
+   const C0=Object.assign({},Q.cols),OV=(window.TOPS_V3HAIRO||{}).rayR||{},c0=L.hairC!=null&&L.hairC!==0xc8c4c0&&L.hairC!==0x75706a?K.colsFrom(L.hairC):C0,c=OV.cols&&c0===C0?Object.assign({},c0,OV.cols):c0;
+   const bf=RP.base!=null?RP.base:0.012,br=RP.baseR!=null?RP.baseR:0.028,si=RP.sideIn!=null?RP.sideIn:0.8;
+   G.groove(h,L,K,[],GL,RP.cols||c,hl,Object.assign({heights:true,base:1,baseMod:(th,ph)=>{const a=Math.abs(ph),back=sm(0.3,2.2,a)*sm(0.2,0.7,th)+sm(0.6,0,th);return bf+(br-bf)*Math.min(1,back)*sm(1.6,1.0,th)*(1-si*Math.exp(-(((a-1.45)/0.45)**2))*sm(0.6,1.1,th));},
+    hp:RP.hp||8,hlSmooth:0.22,wk:RP.wk||0.65,pw:RP.pw||0.6,frontDense:0.45,U:RP.U||60,V:RP.V||29,hi:RP.hi||0.36,hiLo:RP.hiLo||0.72,tone:0.88,round:0.14,roundP:1.0,rough:0.5,cc:0.03,
+    hv:RP.hv!=null?RP.hv:0.03,tw:768,th:512,envW:RP.envW||2.4,envP:RP.envP||0.5,feather:RP.feather||0.12,sideCut:RP.sideCut!=null?RP.sideCut:0.6,comb:RP.comb!=null?RP.comb:0,combN:3,combT:RP.combT!=null?RP.combT:0.22,openFloor:RP.of||0.74,
+    crestArc:RP.crest===0?null:(th,ph)=>{const C=RP.crest||[0.07,0.15,0.72,0.8,0.22,0.95],gp=Math.exp(-(((ph-C[1])/C[3])**2));return [C[0]*gp*Math.exp(-(((th-C[2])/C[4])**2)),C[5]*gp*Math.exp(-(((th-(C[6]||0.82))/(C[7]||0.09))**2))];},/* r14b: one broad convex roll under the crest; valleys damped only on its front face */
+    floor:Q.o.floor/* r13 freeze: the seam floor between locks stays at Ray's .14 */},OV.o));},
+  /* hair28 r9-r11 + r15 Mia (bunL; r15: lower crown and bun, 3 crown sweeps, waves in at the shoulders, a keep-out for the throwing dart on her right): long-hair locks on one sculpted shell inside the approved r8 envelope: crown sweeps from the offset part, a
+     coiled bun, three S-waves per side to the shoulders, rear flow; the long sides hide the ears; gold hoops in front of the side hair */
+  bunL(h,L,K){const G=V2GROOVE,sm=K.sm,M=window.MIA_BLOCK||[[-0.036,0.12,-0.068,0.306,0.243,0.31,0,0,0],[-0.05,0.37,-0.14,0.2,0.105,0.095,0,0,0],/* hair28 r15: crown shell top -2.5 cm, bun lowered and 2 cm back into the rear crown, bun height -16% (diameter kept) */[-0.31,-0.085,-0.012,0.082,0.245,0.138,0,0,0.08],[0.285,-0.04,-0.012,0.075,0.18,0.138,0,0,0.12],[-0.05,0.23,0.08,0.21,0.07,0.09,-0.4,0,0],[-0.018,-0.08,-0.226,0.3,0.28,0.12,0,0,0]];
+   const bc=new T.Vector3(M[1][0],M[1][1],M[1][2]),ax=bc.clone().normalize(),t1=new T.Vector3().crossVectors(ax,new T.Vector3(1,0,0)).normalize(),t2=new T.Vector3().crossVectors(ax,t1);
+   const spiral=(r0,r1,a0,turns,n)=>{const v=[];for(let i=0;i<=n;i++){const u=i/n,a=a0+u*turns*2*Math.PI,r=r0+(r1-r0)*u;const q=bc.clone().addScaledVector(t1,Math.cos(a)*r).addScaledVector(t2,Math.sin(a)*r);v.push([q.x,q.y,q.z]);}return v;};
+   const SWP=window.MIA_SWEEPS,CW=SWP===0?1:(window.MIA_CW||0.72);/* r15: crown locks 28% narrower so the new sweeps open real valleys */
+   const GL=[{p:[[0.62,-0.2],[0.85,0.1],[0.95,0.55],[1.05,0.95],[1.25,1.28],[1.5,1.45]],w:0.085*CW},{p:[[0.62,-0.22],[0.8,-0.02],[0.95,0.3],[1.08,0.6],[1.14,0.85]],w:0.044,hk:1.0},{p:[[0.68,-0.14],[0.88,0.12],[1.02,0.42],[1.12,0.75],[1.2,1.0]],w:0.042,hk:0.98},
+    {p:[[0.6,-0.3],[0.76,-0.5],[0.9,-0.76],[1.0,-0.98]],w:0.04,hk:0.97},{p:[[0.62,-0.32],[0.84,-0.52],[1.0,-0.86],[1.18,-1.15],[1.42,-1.38]],w:0.08*CW,hk:0.95},{p:[[0.7,-1.0],[0.88,-1.45],[1.1,-1.85],[1.3,-2.15]],w:0.07,hk:0.92},{p:[[0.72,0.95],[0.9,1.4],[1.1,1.8],[1.3,2.1]],w:0.065,hk:0.8},
+    {v:[[-0.1494,0.8139,0.5615],[-0.0769,0.9359,0.3438],[0,1,-0.04],[-0.0416,0.9759,-0.2142],[-0.0904,0.9492,-0.3013]],w:0.075*CW,hk:0.92},{p:[[0.55,0.25],[0.35,1.1],[0.32,2.2],[0.42,2.85]],w:0.075*CW,hk:0.9},{p:[[0.55,-0.75],[0.4,-1.6],[0.38,-2.4],[0.45,-2.9]],w:0.075*CW,hk:0.9},
+    {v:spiral(0.13,0.05,0,1.15,10),w:0.05,hk:0.88},{v:spiral(0.12,0.04,2.1,1.0,10),w:0.045,hk:0.85},{v:spiral(0.1,0.02,4.2,0.9,9),w:0.04,hk:0.82},{v:spiral(0.035,0.0,1.0,0.6,6),w:0.055,hk:0.85},
+    {p:[[1.2,0.955],[1.5,1.207],[1.8,1.387],[2.1,1.243],[2.38,1.387]],w:0.06},{p:[[1.3,1.413],[1.62,1.665],[1.95,1.485],[2.2,1.665],[2.4,1.593]],w:0.062},{p:[[1.45,1.956],[1.75,1.83],[2.05,2.046],[2.36,1.938]],w:0.057,hk:0.92},
+    {p:[[1.2,-0.988],[1.48,-1.168],[1.8,-1.42],[2.12,-1.276],[2.42,-1.348]],w:0.062},{p:[[1.32,-1.472],[1.65,-1.616],[1.98,-1.508],[2.25,-1.688],[2.44,-1.616]],w:0.06},{p:[[1.48,-1.988],[1.8,-1.88],[2.1,-2.06],[2.38,-1.952]],w:0.055,hk:0.92},
+    {p:[[0.75,2.4],[1.25,2.45],[1.75,2.42],[2.25,2.5],[2.45,2.48]],w:0.088,soft:0.18},{p:[[0.75,-2.45],[1.25,-2.55],[1.8,-2.5],[2.3,-2.58],[2.45,-2.55]],w:0.112,soft:0.18},/* r15b: rear flows -12% / +12%, softer folds */
+    ...(window.MIA_REARSPLIT===0?[{p:[[0.42,3.05],[0.85,3.14],[1.35,3.1],[1.85,3.2],[2.3,3.14]],w:0.095,hk:0.95,soft:0.18}]:[{p:[[0.42,2.98],[0.85,3.02],[1.35,2.92],[1.85,3.0],[2.32,2.94]],w:0.062,hk:0.95,soft:0.15},{p:[[0.5,-3.08],[0.95,-3.06],[1.45,-3.14],[1.9,-3.04],[2.2,-3.08]],w:0.052,hk:0.9,soft:0.15}]),/* r15b: the rear centre panel is two uneven strands, ends staggered */
+    /* hair28 r15 (ChatGPT 36): 3 stronger directional crown sweeps from the forehead over the top, converging into the bun (great-circle paths with a bow) */
+    ...(SWP===0?[]:(SWP||[[-0.5,0.06,0.058],[0.1,-0.04,0.08],[0.62,-0.07,0.07]])/* r15b: widths -12% / +11% / +6% */.map(([p0,bow,w])=>{const a=K.dir(0.84,p0),b2=ax.clone(),n=new T.Vector3().crossVectors(a,b2).normalize(),om=a.angleTo(b2),v=[];
+     for(let i=0;i<=6;i++){const t=i/6*0.88;/* r15b: stops short of the bun */const q=a.clone().multiplyScalar(Math.sin((1-t)*om)).addScaledVector(b2,Math.sin(t*om)).divideScalar(Math.sin(om)).addScaledVector(n,bow*Math.sin(Math.PI*t)).normalize();v.push([q.x,q.y,q.z]);}
+     return {v,w,hk:1.0,taper:0.5,root:0.22};/* r15b: softer root and tip */}))];
+   const hs=K.HL([[-0.12,0.93],[0.15,1.0],[0.35,1.1],[0.6,1.16],[-0.5,0.95],[0.85,1.14],[-0.82,1.04],[1.12,1.24],[-1.12,1.24],[1.4,1.3],[-1.4,1.3],[1.62,1.3],[-1.62,1.3],[1.85,1.5],[-1.85,1.5],[2.3,1.95],[-2.3,1.95],[2.75,2.2],[-2.75,2.2],[Math.PI-0.01,2.25]]);
+   const hl=ph=>{const a=Math.abs(K.wrap(ph));return hs(ph)+(2.44-hs(ph))*sm(1.0,1.3,a);};/* the long-hair edge drops to the tips beside and behind the face */
+   const cols=L.hairC!=null&&L.hairC!==0xf0c040?K.colsFrom(L.hairC):{base:0xCC8A22,shadow:0x7A4512,hi:0xF4C45A};
+   G.groove(h,L,K,M,GL,cols,hl,{hlSmooth:0.3,scallop:0.09,scallopMask:(ph,t)=>1-sm(1.2,1.6,t),valley:0.021,valley2:0.036,clip:window.MIA_CLEAR===0?null:V2MIACLEAR,
+    envMod:d=>{const SW=window.MIA_SW!=null?window.MIA_SW:0.3,Y0=window.MIA_SWY||[-0.15,-0.42],SL=window.MIA_SWL!=null?window.MIA_SWL:0.14;return 1-sm(Y0[0],Y0[1],d.y)*(SW*sm(-0.1,0.35,d.z)+SL*sm(0.3,0.62,Math.abs(d.x)));},/* r15: the long side waves pulled in at shoulder level; the cheek swell above is untouched */push:0.012,pushMask:d=>1-0.85*Math.exp(-(((d.angleTo(ax))/0.3)**2)),wk:1.0,U:96,V:50,/* r15c */hi:0.35,tone:0.95,lip:[0.08,2]});
+   h.children.forEach(c=>{if(c.userData.ear)c.visible=false;});
+   if(L.earring){const em=v2M(L.earring,'trim');em.metalness=0.85;em.roughness=0.25;for(const s of [1,-1]){const e=new T.Mesh(new T.TorusGeometry(0.042,0.0095,8,22),em);e.position.set(s*0.335,-0.205,0.06);e.rotation.set(0,s*1.1,0);e.userData.hair=true;e.castShadow=false;h.add(e);}}},
+  /* hair28 r8/r9/r15 Dazza: his backwards cap (shallower crown, the size-strap opening at the front with a tuft, the brim at the back tipped up),
+     the short hair under the rim, all children of the head; colours through the game's materials (GFX_LIN) */
+  underL(h,L,K){const R=K.R,S=K.S,sm=K.sm,n0=h.children.length;const capHex=L.capC!=null&&L.capC!==0xd21e28?L.capC:0xC7222D;
+   /* round 5 (ChatGPT 39): the cap read salmon-pink under venue light. Authored a step deeper (#A51B24) so it renders near the poster's #C7222D in the
+      Arena (median (209,59,60) vs (234,77,72) before), roughness .5 (in the .45-.55 asked) with the environment reflection cut to .2, so the lit
+      side keeps its red instead of a broad pale sheen. A player's own cap colour is used as chosen. TOPS_V3CAP={hex,rough,env,cc} to try values */
+   const CQ=window.TOPS_V3CAP||{},capM=CQ.hex||(capHex===0xC7222D?0xA51B24:capHex);const cm=v2M(capM,'trim');cm.roughness=CQ.rough!=null?CQ.rough:0.5;cm.metalness=0;cm.envMapIntensity=CQ.env!=null?CQ.env:0.2;if(CQ.cc!=null&&'clearcoat' in cm)cm.clearcoat=CQ.cc;const dark=v2M(new T.Color(capM).multiplyScalar(0.55).getHex(),'trim');dark.roughness=0.6;
+   const CT=window.CAP_TILT!=null?window.CAP_TILT:0.02,CY=0.095+(window.CAP_DY!=null?window.CAP_DY:0.006),OPH=window.CAP_OPH||0.3,CX=1.06;/* hair28 r15 (ChatGPT 36): front edge up ~6% of head height (less backward tilt, crown lifted 6 mm), rear rim/brim stays up, no scaling; opening arch -35% */const CF=window.CAP_FLAT!=null?window.CAP_FLAT:0.04,fy=y=>y*(1-CF*sm(0.5,1,y));/* r15b: upper crown flattened 4% locally; rim, front edge and brim untouched */const g=new T.SphereGeometry(1,32,12,0,Math.PI*2,0,Math.PI*0.5);{const P=g.attributes.position;for(let i=0;i<P.count;i++)P.setY(i,fy(P.getY(i)));g.computeVertexNormals();}g.scale(R[0]*CX,R[1]*0.87,R[2]*1.085);const cr=new T.Mesh(g,cm);cr.position.set(0,CY,-0.015);cr.rotation.x=CT;cr.castShadow=true;h.add(cr);
+   for(let k=0;k<6;k++){const a=k/6*Math.PI*2+Math.PI/6,pts=[];for(let i=0;i<=8;i++){const t=i/8*Math.PI*0.5;pts.push(new T.Vector3(Math.sin(t)*Math.cos(a)*R[0]*(CX+0.008),fy(Math.cos(t))*R[1]*0.88,Math.sin(t)*Math.sin(a)*R[2]*1.093));}
+    const sm_=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),8,0.005,4,false),dark);sm_.position.copy(cr.position);sm_.rotation.copy(cr.rotation);h.add(sm_);}
+   const bt=new T.Mesh(new T.SphereGeometry(0.03,14,10),cm);bt.position.set(0,CY+R[1]*0.87*fy(1),-0.05);h.add(bt);
+   const rimF=CY-Math.sin(CT)*R[2]*1.085,rimB=CY+Math.sin(CT)*R[2]*1.085;
+   {const NU=18,NV=6,pos=[],idx=[];for(let i=0;i<=NU;i++){const u=i/NU,a=-0.6+1.2*u,ht=OPH*Math.pow(Math.sin(Math.PI*u),0.7);for(let j=0;j<=NV;j++){const th=Math.PI*0.5-ht*j/NV;pos.push(Math.sin(th)*Math.sin(a)*R[0]*CX*1.004,Math.cos(th)*R[1]*0.87*1.004,Math.sin(th)*Math.cos(a)*R[2]*1.085*1.004);}}
+    for(let i=0;i<NU;i++)for(let j=0;j<NV;j++){const q=i*(NV+1)+j;idx.push(q,q+NV+1,q+1,q+1,q+NV+1,q+NV+2);}
+    const og=new T.BufferGeometry();og.setAttribute('position',new T.Float32BufferAttribute(pos,3));og.setIndex(idx);og.computeVertexNormals();
+    const o=new T.Mesh(og,new T.MeshBasicMaterial({color:0x0d0705,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2}));o.position.copy(cr.position);o.rotation.copy(cr.rotation);h.add(o);}/* the size-strap opening at the front */
+   {const ap=[];for(let i=0;i<=16;i++){const a=-0.6+1.2*i/16,th=Math.PI*0.5-OPH*Math.sin(Math.PI*i/16);ap.push(new T.Vector3(Math.sin(th)*Math.sin(a)*R[0]*(CX+0.008),Math.cos(th)*R[1]*0.875,Math.sin(th)*Math.cos(a)*R[2]*1.093));}
+    const ab=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(ap),20,0.007,6,false),cm);ab.position.copy(cr.position);ab.rotation.copy(cr.rotation);h.add(ab);}
+   {const tz=R[2]*1.085*Math.cos(0.2);const tuft=new T.Mesh(new T.SphereGeometry(0.06,14,10),v2M(L.hairC||0x4a2a18,'hair'));tuft.scale.set(1.0,0.36,0.4);tuft.position.set(0,rimF+0.02,tz-0.004);h.add(tuft);}
+   {const sp=[];for(let i=0;i<=12;i++){const a=-0.5+i/12,th=Math.PI*0.5-0.045;sp.push(new T.Vector3(Math.sin(th)*Math.sin(a)*R[0]*CX*1.006,Math.cos(th)*R[1]*0.87*1.006,Math.sin(th)*Math.cos(a)*R[2]*1.085*1.006));}
+    const st=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(sp),16,0.0065,6,false),dark);st.scale.set(1,0.8,1);/* r15: the strap is thin, cap-dark and recessed in the opening (no black band across the forehead) */st.position.copy(cr.position);st.rotation.copy(cr.rotation);h.add(st);}
+   {const BL=0.45,BA=0.35;const sh=new T.Shape();sh.absarc(0,0,0.2,0,Math.PI,false);const bg=new T.ExtrudeGeometry(sh,{depth:0.018,bevelEnabled:true,bevelThickness:0.008,bevelSize:0.008,bevelSegments:2,curveSegments:16});
+    const p=bg.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);p.setXYZ(i,x,y*BL,z-x*x*1.2-y*0.2*BL/0.85);}bg.computeVertexNormals();
+    const b=new T.Mesh(bg,cm);b.position.set(0,rimB-0.004,-R[2]*1.085*Math.cos(CT)+0.02);b.rotation.set(-(Math.PI/2-BA)-(CT-0.12),0,0);b.castShadow=true;h.add(b);}/* the brim at the back, tipped up so it breaks the rear silhouette */
+   /* round 5 (ChatGPT 39: watch draw calls): the cap was 13 meshes; parts sharing a material are baked into one mesh each (red shell: crown, button,
+      arch bead, brim; dark: 6 seams + strap), 13 -> 4 draw calls (red, dark, the opening, the tuft) */
+   {const byM=new Map();for(let i=n0;i<h.children.length;i++){const c=h.children[i];if(c.isMesh&&(c.material===cm||c.material===dark)){if(!byM.has(c.material))byM.set(c.material,[]);byM.get(c.material).push(c);}}
+    for(const [mt,ms] of byM){if(ms.length<2)continue;const gs=ms.map(c=>{c.updateMatrix();const g=c.geometry.clone();g.deleteAttribute&&g.deleteAttribute('uv');g.applyMatrix4(c.matrix);return g;});const M=K.merge(gs);/* normals come across transformed by applyMatrix4 */
+     const mm=new T.Mesh(M,mt);mm.castShadow=true;mm.receiveShadow=true;ms.forEach(c=>{h.remove(c);c.geometry.dispose();});gs.forEach(g=>g.dispose());h.add(mm);}}
+   for(let i=n0;i<h.children.length;i++){h.children[i].userData.cap=true;h.children[i].userData.tag='cap';}
+   /* the short hair below the rim, down to the hairline */
+   K.seed(47);const cols=K.colsFrom(L.hairC||0x4a2a18),parts=[];
+   const bot=K.HL([[0,1.6],[1.0,1.6],[-1.0,1.6],...K.sideHL(1,1.62,1.42,1.74),...K.sideHL(-1,1.62,1.42,1.74),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-0.01,2.32]]);
+   const top=ph=>(window.UNDER_T||1.05)+0.12*sm(1.6,3.0,Math.abs(K.wrap(ph)));/* r15: follows the raised rim (no skin gap at the temples) */parts.push(K.band(top,ph=>bot(ph),0.008,[1.15,2*Math.PI-1.15],40,6));
+   for(const s of [1,-1])parts.push(K.loft([[1.45,s*1.2,-0.01],[1.6,s*1.3,0.01],[1.72,s*1.33,0.006]],u=>0.03,u=>0.008,6,8));
+   K.done(h,parts,cols,{top:0.04,hiAmt:0.5},[0.45,0.12]);},
+  /* hair28 r8/r15 Dazza's sculpted full beard on the v3 face (r15: chin -13%, 4 partings, shadow break under the moustache): one cheek-to-chin mass (5-8% R), mouth kept clear, moustache on top */
+  beardL(h,L,K){K.seed(53);const sm=K.sm,dir=K.dir,FPd=v3FaceOf(L);const cols=L.beardC!=null&&L.beardC!==0x5a3420?K.colsFrom(L.beardC):{base:0x4A2A1C,shadow:0x24130b,hi:0x6F442F};const parts=[];
+   const SF=(th,ph,k)=>{const p0=v3HeadPoint(dir(th,ph),FPd.cheek,FPd),p1=v3HeadPoint(dir(th+0.01,ph),FPd.cheek,FPd),p2=v3HeadPoint(dir(th,ph+0.01),FPd.cheek,FPd);
+    const n=new T.Vector3().crossVectors(p1.clone().sub(p0),p2.clone().sub(p0)).normalize();if(n.dot(p0)<0)n.negate();return p0.addScaledVector(n,k);};
+   const BD=window.BEARD_P||{},U=BD.U||54,Vn=22,pos=[],idx=[],GV=[],th1=2.95,ph0=-1.75,ph1=1.75;/* r15: 54 columns so the partings resolve */
+   for(let j=0;j<=Vn;j++){const t=j/Vn;for(let i=0;i<=U;i++){const ph=ph0+(ph1-ph0)*i/U;const top=1.62+0.42*sm(1.3,0.5,Math.abs(ph)),th=top+(th1-top)*t;
+     const inTop=sm(top,top+0.12,th),sideFade=sm(1.75,1.45,Math.abs(ph)),md=Math.hypot(ph/0.62,(th-2.36)/0.3),mouth=sm(1.0,1.25,md);
+     let k=(0.01+0.01*sm(1.8,2.6,th))*inTop*sideFade*mouth;k*=1-(BD.chin!=null?BD.chin:0.13)*sm(2.45,2.8,th)*Math.exp(-((ph/0.65)**2));/* r15: lower chin mass -13% */
+     {let gv=0;for(const g0 of (BD.g||[-1.15,-0.42,0.42,1.15])){const pg=g0*(1-0.28*sm(1.85,2.85,th));gv=Math.max(gv,Math.exp(-(((ph-pg)/(BD.gw||0.145))**2)));}const gq=gv*sm(1.75,1.95,th);GV.push(gq);k*=1-(BD.gd!=null?BD.gd:0.58)*gq;}/* r15b: partings 17% shallower, 12% wider *//* r15: 4 partings curving in toward the chin: 3 broad front masses + the cheek breaks */
+     k*=1-0.35*Math.exp(-(((th-2.13)/0.06)**2))*Math.exp(-((ph/0.6)**2));/* r15: shadow break under the moustache */k*=1+0.12*sm(0.006,0.012,k)*Math.sin(ph*26+th*9)*Math.sin(th*30);
+     const q=SF(th,ph,k-0.005*(1-sm(0.0,0.005,k)));pos.push(q.x,q.y,q.z);}}
+   for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i,b=a+1,c=a+U+1,d=c+1;idx.push(a,c,b,b,c,d);}
+   const mg=new T.BufferGeometry();mg.setAttribute('position',new T.Float32BufferAttribute(pos,3));mg.setIndex(idx);mg.computeVertexNormals();parts.push(mg);
+   for(const s of [1,-1])parts.push(K.ribbon([[2.03,s*0.02,-0.002],[2.03,s*0.18,0.015],[2.08,s*0.36,0.014],[2.18,s*0.5,0.004]].map(c=>SF(c[0],c[1],c[2])),u=>0.034*(1-0.4*u),u=>0.013,10,9));
+   const pg=K.paint(K.merge(parts),cols,{top:0.03,hiAmt:0.6});{const C=pg.attributes.color,DK=BD.dk!=null?BD.dk:0.45;/* r15b: 18% lighter */for(let i=0;i<GV.length;i++){const f=1-DK*GV[i];C.setXYZ(i,C.getX(i)*f,C.getY(i)*f,C.getZ(i)*f);}}/* r15: the partings read as soft shadowed breaks */
+   const m=K.add(pg,K.mat(0.52,0.05),h);if(m){m.userData.tag='beard';m.material.side=T.DoubleSide;}},
+  quiffL(h,L,K){const G=V2GROOVE,Q=G.KAI;const hl=K.HL([...Q.HLP,...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-0.01,2.35]]);
+   const OV=(window.TOPS_V3HAIRO||{}).kai||{},c0=L.hairC!=null&&L.hairC!==0x7a3e22&&L.hairC!==0x5a2e1a?K.colsFrom(L.hairC):Q.cols,c=OV.cols&&c0===Q.cols?Object.assign({},c0,OV.cols):c0;G.groove(h,L,K,Q.M,Q.GL,c,hl,Object.assign({},Q.o,OV.o));},/* r9 Kai lock shell (v3 heads; the player's own hair colour re-tints it) */
   quiff(h,L,K){K.seed(11);const cols={base:0x743823,shadow:0x3A1C12,hi:0xAC6542};const parts=[],W=K.W,loft=K.loft;
    const hl=K.HL([[0,1.0],[.32,.92],[-.38,.94],[.72,.92],[-.74,.93],...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.64,1.4,1.76),[2.45,2.25],[-2.45,2.27],[2.9,2.36],[-2.85,2.33],[Math.PI-.01,2.35]]);
    parts.push(K.cap(hl,.016,28,6));
@@ -1220,7 +1642,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const V2HAIRON=(()=>{try{const q=new URLSearchParams(location.search).get('v2hair');if(q==='1'||q==='0')localStorage.setItem('tops_v2hair',q);return localStorage.getItem('tops_v2hair')==='1';}catch(e){return false;}})();
  window.TOPS_V2HAIR={on:V2HAIRON,styles:V2HAIRS,kit:()=>V2HK()};
  function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';if(L.cap)st=st?'capped':null;
-  {const key=L.cap?(L.hair?'under':null):st;const fn=key&&V2HAIRON&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,V2HK());if(!L.cap)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
+  {const key0=L.cap?(L.hair?'under':null):st,VM=Object.assign({},V3HAIRMAP,window.TOPS_V3HAIRMAP),key=L._v3&&VM[key0]?VM[key0]:key0;const fn=key&&(V2HAIRON||L._v3)&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,V2HK());if(!L.cap||L._v3)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
   const capG=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.27);capG.scale(R[0]*1.06,R[1]*1.08,R[2]*1.07);
   const back=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,Math.PI*.95,Math.PI*1.1,0,Math.PI*.6);back.scale(R[0]*1.05,R[1]*1.06,R[2]*1.06);
   if(st&&st!=='swept'&&st!=='capped'){mesh(capG,m,head,0,.01,-.005);mesh(back,m,head,0,0,-.01);}
@@ -1252,19 +1674,19 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  /* Vinyl v2 hands (Hayden 14:57): 4 separate chunky fingers + a thumb on each hand, riding the skeleton's finger bones (lengthened 1.6x for toy
     proportions), so the game's own finger poses wrap them round the dart in the throw and the clips open them when relaxed. All 30 finger
     segments of a figure are ONE skinned mesh (rigid weights, 1 draw call), 8-sided capsules so phones don't pay for them. */
- function v2Fingers(fig,B,rig,k){const sides=['Right','Left'],F=['Index','Middle','Ring','Pinky'];const fem=rig.fem;fig.updateMatrixWorld(true);
-  sides.forEach(sd=>{F.forEach((f,fi)=>{for(let j=1;j<=4;j++){const b=B[sd+'Hand'+f+j];if(!b)continue;b.position.multiplyScalar(j===1?1.15:1.6);}const b1=B[sd+'Hand'+f+'1'];if(b1)b1.position.x*=1.25;});for(let j=1;j<=4;j++){const b=B[sd+'HandThumb'+j];if(b)b.position.multiplyScalar(j===1?1.2:1.55);}});
+ function v2Fingers(fig,B,rig,k){const sides=['Right','Left'],F=['Index','Middle','Ring','Pinky'];const fem=rig.fem,hk=rig.handK||1;fig.updateMatrixWorld(true);
+  sides.forEach(sd=>{F.forEach((f,fi)=>{for(let j=1;j<=4;j++){const b=B[sd+'Hand'+f+j];if(!b)continue;b.position.multiplyScalar((j===1?1.15:1.6)*hk);}const b1=B[sd+'Hand'+f+'1'];if(b1)b1.position.x*=1.25;});for(let j=1;j<=4;j++){const b=B[sd+'HandThumb'+j];if(b)b.position.multiplyScalar((j===1?1.2:1.55)*hk);}});
   fig.updateMatrixWorld(true);const bones=[],pos=[],nor=[],si=[],sw=[],idx=[];const fi=new T.Matrix4().copy(fig.matrixWorld).invert();const up=new T.Vector3(0,-1,0),tmpQ=new T.Quaternion(),tmpM=new T.Matrix4(),nm=new T.Matrix3();
   const seg=(bone,child,rW)=>{if(!bone||!child)return;let bi=bones.indexOf(bone);if(bi<0){bi=bones.length;bones.push(bone);}const len=child.position.length();if(len<1e-5)return;const bs=bone.getWorldScale(new T.Vector3()).x||1;const r=rW/bs;
    const g=v2cap(r,r*.9,len+r*.6,8);/* along -y from 0 to -len */const dir=child.position.clone().normalize();tmpQ.setFromUnitVectors(up,dir);const m=new T.Matrix4().compose(new T.Vector3(0,0,0),tmpQ,new T.Vector3(1,1,1));
    const toFig=new T.Matrix4().copy(fi).multiply(bone.matrixWorld).multiply(m);nm.getNormalMatrix(toFig);const base=pos.length/3;const p=g.attributes.position,n=g.attributes.normal,v=new T.Vector3(),nv=new T.Vector3();
    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(toFig);nv.fromBufferAttribute(n,i).applyMatrix3(nm).normalize();pos.push(v.x,v.y,v.z);nor.push(nv.x,nv.y,nv.z);si.push(bi,0,0,0);sw.push(1,0,0,0);}
    const ix=g.index.array;for(let i=0;i<ix.length;i++)idx.push(base+ix[i]);g.dispose();};
-  const rr=(fem?.9:1)*.026*k;sides.forEach(sd=>{F.forEach((f,fi2)=>{const rf=rr*(fi2===3?.85:1);for(let j=1;j<=3;j++)seg(B[sd+'Hand'+f+j],B[sd+'Hand'+f+(j+1)]||null,rf*(j===3?.92:1));if(!B[sd+'Hand'+f+'4']){const b3=B[sd+'Hand'+f+'3'];if(b3)seg(b3,{position:B[sd+'Hand'+f+'2'].position.clone().multiplyScalar(.8)},rf*.92);}});
+  const rr=(fem?.9:1)*.026*k*hk;sides.forEach(sd=>{F.forEach((f,fi2)=>{const rf=rr*(fi2===3?.85:1);for(let j=1;j<=3;j++)seg(B[sd+'Hand'+f+j],B[sd+'Hand'+f+(j+1)]||null,rf*(j===3?.92:1));if(!B[sd+'Hand'+f+'4']){const b3=B[sd+'Hand'+f+'3'];if(b3)seg(b3,{position:B[sd+'Hand'+f+'2'].position.clone().multiplyScalar(.8)},rf*.92);}});
    for(let j=1;j<=3;j++)seg(B[sd+'HandThumb'+j],B[sd+'HandThumb'+(j+1)]||(j===3?{position:B[sd+'HandThumb2'].position.clone().multiplyScalar(.8)}:null),rr*1.05);});
   if(!bones.length)return;const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute(si,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(sw,4));g.setIndex(idx);
   const mat=rig.skinM.clone();mat.skinning=true;mat.userData.s3v=true;const sm=new T.SkinnedMesh(g,mat);sm.name='v2fingers';sm.frustumCulled=false;sm.castShadow=false;fig.add(sm);sm.updateMatrixWorld(true);sm.bind(new T.Skeleton(bones),sm.matrixWorld);sm.userData.tag='fingers';sm.userData.s3keep=true;}
- function s3Dress(fig,B,L){const rig=S3_V2?s3BuildV2(L):s3Build(L);rig.root.updateMatrixWorld(true);fig.updateMatrixWorld(true);
+ function s3Dress(fig,B,L){const rig=S3_V2?(v3Want(L)?s3BuildV3(L):s3BuildV2(L)):s3Build(L);rig.root.updateMatrixWorld(true);fig.updateMatrixWorld(true);
   const W=o=>o.getWorldPosition(new T.Vector3());const fi=new T.Matrix4().copy(fig.matrixWorld).invert();const F=o=>W(o).applyMatrix4(fi);/* fig space */
   const facePlus=F(B.LeftUpLeg).x>F(B.RightUpLeg).x;const Rf=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),facePlus?0:Math.PI);
   const k=.93*F(B.Head).y/W(rig.head).y;/* a touch smaller than the old figures: the toy head is 1.4x, and the match cameras frame a lifelike head */const lab=o=>W(o).applyQuaternion(Rf).multiplyScalar(k);/* Lab joint -> fig space */
@@ -1352,7 +1774,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const rc=new T.Raycaster(),p=new T.Vector3(),l=new T.Vector3(),ax=new T.Vector3(),d=new T.Vector3(),inv=new T.Matrix4(),Y=new T.Vector3();
   const depth=(p,frame,covers)=>{inv.copy(frame.matrixWorld).invert();l.copy(p).applyMatrix4(inv);ax.set(0,l.y,0).applyMatrix4(frame.matrixWorld);d.copy(p).sub(ax);const dist=d.length();if(dist<1e-4)return 1;d.normalize();Y.set(0,1,0).transformDirection(frame.matrixWorld);rc.far=dist+.6*kw;rc.set(ax,d);const h=rc.intersectObjects(covers,false);if(!h.length)return -1;return (h[h.length-1].distance-dist)/kw;};
   const verts=(o,step,fn)=>{const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=step){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);fn(p);}};const worst=(k,v)=>{out.worst[k]=Math.min(out.worst[k]??1,v);};const ex=(k,dp)=>{if(out.ex.length<8)out.ex.push(k+' d='+dp.toFixed(4));};
-  const shirt=byTag('shirt').map(prox);const ci=new T.Matrix4().copy(chest.matrixWorld).invert();const yHem=(V2P.torso.y0-V2P.leg.hipY-.3)+.03,yTop=.2;/* chest-local: hem at -0.3, collar at +0.25 */
+  const shirt=byTag('shirt').map(prox);const ci=new T.Matrix4().copy(chest.matrixWorld).invert();const PP=R.P||V2P,yHem=(PP.torso.y0-PP.leg.hipY-.3)+.03,yTop=.2;/* chest-local: hem at -0.3, collar at +0.25 */
   /* seated (the bar extras' sit / sittalk): a thigh bent forward past 50 degrees leaves the shirt by design, its top is the lap; s3SkinFig
      pushes the shirt off the thigh where they meet, so those thigh vertices are not a poke-through */
   const cdn=new T.Vector3(0,-1,0).transformDirection(chest.matrixWorld),lap=o=>{if(o.parent===hips)return false;const td=new T.Vector3(0,-1,0).transformDirection(o.matrixWorld);return td.dot(cdn)<Math.cos(50*Math.PI/180);};
@@ -1370,8 +1792,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     margin Director's check uses). Measured in the skull mesh's own space, so the figure's scale and the head bone's pose are both in it.
     n = vertices inside; mm = the deepest one, in metres x1000 at the figure's scale */
  function s3HeadClear(fig){const R=fig.userData.s3rig,out={n:0,mm:0,checked:0,where:''};if(!R||!R.v2)return out;fig.updateMatrixWorld(true);let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});if(!sk)return out;
-  const r=V2P.head.r,M=1.04,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,p=new T.Vector3(),l=new T.Vector3();
-  const test=(q,where)=>{out.checked++;l.copy(q).applyMatrix4(inv);const e=Math.hypot(l.x/r[0],l.y/r[1],l.z/r[2]);if(e<M){const mm=(M-e)*Math.min(r[0],r[1],r[2])*ws*1000;out.n++;if(mm>out.mm){out.mm=mm;out.where=where;}}};
+  const r=V2P.head.r,M0=1.04,SF=R.skullF,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,p=new T.Vector3(),l=new T.Vector3();
+  const test=(q,where)=>{out.checked++;l.copy(q).applyMatrix4(inv);const e=Math.hypot(l.x/r[0],l.y/r[1],l.z/r[2]),M=SF?M0*SF(l):M0;if(e<M){const mm=(M-e)*Math.min(r[0],r[1],r[2])*ws*1000;out.n++;if(mm>out.mm){out.mm=mm;out.where=where;}}};
   [['L',R.aR],['R',R.aL]].forEach(([sd,A])=>[['sh','arm'],['el','forearm'],['wr','hand']].forEach(([k,nm])=>{const pv=A&&A[k],b=pv&&pv.userData.box;if(!b)return;b.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);test(p,sd+' '+(o.userData.tag||nm));}});}));
   fig.traverse(o=>{if(!o.isSkinnedMesh||o.userData.tag!=='fingers')return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i);o.boneTransform(i,p);p.applyMatrix4(o.matrixWorld);test(p,'fingers');}});
   return out;}
@@ -1384,20 +1806,78 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const seg=(P,A,Bp,r,where)=>{q.subVectors(Bp,A);const t=Math.max(0,Math.min(1,c.subVectors(P,A).dot(q)/Math.max(1e-9,q.lengthSq())));const d=c.copy(A).addScaledVector(q,t).distanceTo(P);if(d<r){out.n++;const mm=(r-d)*1000;if(mm>out.mm){out.mm=mm;out.where=where;}}};
   const sides=[['Left',R3.aR,B.LeftHand.children.filter(o=>o.userData.spare&&o.visible)],['Right',R3.aL,u.dt&&u.dt.visible?[u.dt]:[]]];
   for(const [sd,A,darts] of sides){if(!darts.length||!A)continue;const sb=A.sh&&A.sh.userData.box,eb=A.el&&A.el.userData.box;const ks=eb?new T.Vector3().setFromMatrixScale(eb.matrixWorld).x:1,ku=sb?new T.Vector3().setFromMatrixScale(sb.matrixWorld).x:ks;
-   const S=B[sd+'Arm'].getWorldPosition(new T.Vector3()),E=B[sd+'ForeArm'].getWorldPosition(new T.Vector3()),H=B[sd+'Hand'].getWorldPosition(new T.Vector3());const rF=V2P.arm.r1*ks,rU=V2P.arm.r0*ku;
+   const S=B[sd+'Arm'].getWorldPosition(new T.Vector3()),E=B[sd+'ForeArm'].getWorldPosition(new T.Vector3()),H=B[sd+'Hand'].getWorldPosition(new T.Vector3());const AP=(R3.P||V2P).arm,rF=AP.r1*ks,rU=AP.r0*ku;
    for(const d of darts){if(sd==='Left'){a.set(0,0,1).transformDirection(d.matrixWorld);b.subVectors(H,E).normalize();out.ang=Math.min(out.ang,Math.acos(Math.min(1,Math.abs(a.dot(b))))*180/Math.PI);}
     d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);out.checked++;seg(p,E,H,rF,sd+' forearm');seg(p,S,E,rU,sd+' upper arm');}});}}
   /* and none inside the shirt (the spares at the belt, the dart hand across the stomach): the shirt's lathe in chest space, 1 cm grace */
-  {const cb=R3.chest&&R3.chest.userData.box;if(cb){const ci=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1,BK=V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard;out.tn=0;out.tmm=0;
+  {const cb=R3.chest&&R3.chest.userData.box;if(cb){const ci=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1,BK=(R3.v3?V2BODY.standard:V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard);out.tn=0;out.tmm=0;
    for(const [,,darts] of sides)for(const d of darts)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(ci);const rr=v2TorsoR(p.y,BK);if(!rr)continue;const e=Math.hypot(p.x/rr[0],p.z/rr[1]);if(e<1-.01/cs/Math.min(rr[0],rr[1])){out.tn++;out.tmm=Math.max(out.tmm,(1-e)*Math.min(rr[0],rr[1])*cs*1000);}}});}}
   /* Q&D 20 Nov: and the throwing dart clear of the skull (its flight cut through Kai's cheek beside the mouth at throw k .60-.70).
      Only on request (opt.skull: the throw, where the dart travels past the face; the aim pose holds it 2-3% off the cheek by design, the poster pose, and outside the throw poses the dart is parked). In skull space against the same 1.04 skull as s3HeadClear; a v3 head's shaped surface via the rig's skullF. sn = vertices inside, se = the closest (1 = on the surface) */
   {let sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});const dt=u.dt;out.sn=0;out.se=9;out.smm=0;
    if(opt&&opt.skull&&sk&&dt&&dt.visible){const r=V2P.head.r,inv=new T.Matrix4().copy(sk.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(sk.matrixWorld).x,SF=R3.skullF,M=1.04,rm=Math.min(r[0],r[1],r[2]);
     dt.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i++){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);out.checked++;
-     const e=Math.hypot(p.x/r[0],p.y/r[1],p.z/r[2])/(SF?SF(p):1);if(e<out.se)out.se=e;if(e<M){out.sn++;out.smm=Math.max(out.smm,(M-e)*rm*ws*1000);}}});}}
+     const e=Math.hypot(p.x/r[0],p.y/r[1],p.z/r[2])/(SF?SF(p):1);if(e<out.se)out.se=e;if(e<M){out.sn++;out.smm=Math.max(out.smm,(M-e)*rm*ws*1000);}}});}
+   /* r14 (Ray's new lock crest): and clear of the hair. A ray from the skull centre through each dart vertex: an odd number of hair hits
+      beyond the vertex = inside the hair (hn, hmm deepest); hc = the closest radial clearance (mm) over the vertices whose ray meets hair */
+   out.hn=0;out.hmm=0;out.hc=999;out.hd2=9;const HM=[];if(opt&&opt.skull&&sk&&dt&&dt.visible)fig.traverse(o=>{if(o.isMesh&&o.visible&&o.userData.hair&&o.geometry&&o.geometry.attributes.position)HM.push(o);});
+   if(HM.length){const O=new T.Vector3().setFromMatrixPosition(sk.matrixWorld),rc=new T.Raycaster(),sd0=HM.map(o=>{const s0=o.material.side;o.material.side=T.DoubleSide;return s0;});
+    dt.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=2){p.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);const L0=p.distanceTo(O);if(L0<1e-6)continue;
+     for(const o2 of HM){const P2=o2.geometry.attributes.position;for(let j=0;j<P2.count;j++){c.fromBufferAttribute(P2,j).applyMatrix4(o2.matrixWorld);const dd=c.distanceToSquared(p);if(dd<out.hd2)out.hd2=dd;}}/* the closest hair vertex, for the report */
+     rc.set(O,q.subVectors(p,O).normalize());rc.far=L0*3;const hs=rc.intersectObjects(HM,false);if(!hs.length)continue;out.checked++;const far=hs[hs.length-1].distance;out.hc=Math.min(out.hc,(L0-far)*1000);
+     let k=0;for(const h of hs)if(h.distance>L0)k++;if(k%2){out.hn++;let dd=9;for(const h of hs)if(h.distance>L0)dd=Math.min(dd,h.distance-L0);out.hmm=Math.max(out.hmm,dd*1000);}}});
+    HM.forEach((o,i)=>{o.material.side=sd0[i];});}out.hd=Math.sqrt(out.hd2)*1000;}
   return out;}
- window.TOPS_S3DARTCLEAR=s3DartClear;
+ /* Round 5 (Producer 21 Nov): the throwing dart's MARGIN to the hair, not just "no vertex inside". Signed surface distance, world mm, between the
+   throwing dart and every hair-like mesh on the head (hair, beard, cap, hoops): + = clear, - = inside. Both ways: each dart vertex to the nearest hair
+   triangle (signed by that triangle's outward side) and each nearby hair vertex to the nearest dart triangle (so a hair point can't slip between the
+   dart's sparse flight vertices). Only triangles within 6 cm of the dart are tested. Returns {mm, at:'hair'|'cap'|..., n}; mm=99 when nothing is within 6 cm. */
+function s3DartHair(fig){const u=fig.userData,dt=u.dt,out={mm:99,at:'',n:0};if(!dt||!dt.visible)return out;fig.updateMatrixWorld(true);
+  const HM=[];fig.traverse(o=>{if(o.isMesh&&o.visible&&(o.userData.hair||o.userData.cap)&&o.geometry&&o.geometry.attributes.position&&o.material)HM.push(o);});if(!HM.length)return out;
+  const DV=[],DT=[];dt.traverse(o=>{if(!o.isMesh||!o.visible||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry,P=g.attributes.position,b0=DV.length/3;const v=new T.Vector3();for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);DV.push(v.x,v.y,v.z);}
+    const I=g.index?g.index.array:null,nt=I?I.length/3:P.count/3;for(let t=0;t<nt;t++)DT.push(b0+(I?I[3*t]:3*t),b0+(I?I[3*t+1]:3*t+1),b0+(I?I[3*t+2]:3*t+2));});
+  const R=0.06,cache=u._dhC||(u._dhC=new Map());const A=new T.Vector3(),Bv=new T.Vector3(),Cv=new T.Vector3(),P0=new T.Vector3(),Q0=new T.Vector3(),N0=new T.Vector3(),e0=new T.Vector3(),e1=new T.Vector3();
+  /* closest point on triangle abc to p (Ericson) */
+  let RG=0;/* region of the last closest point: 0 face, 1/2/3 vertex a/b/c, 4 edge ab, 5 edge ac, 6 edge bc */
+  const W3=new T.Vector3(),cpt=(p,a,b,c,res)=>{e0.subVectors(b,a);e1.subVectors(c,a);const ap=Q0.subVectors(p,a);const d1=e0.dot(ap),d2=e1.dot(ap);if(d1<=0&&d2<=0){RG=1;return res.copy(a);}
+   const bp=N0.subVectors(p,b);const d3=e0.dot(bp),d4=e1.dot(bp);if(d3>=0&&d4<=d3){RG=2;return res.copy(b);}const vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0){RG=4;return res.copy(a).addScaledVector(e0,d1/(d1-d3));}
+   const cp=N0.subVectors(p,c);const d5=e0.dot(cp),d6=e1.dot(cp);if(d6>=0&&d5<=d6){RG=3;return res.copy(c);}const vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0){RG=5;return res.copy(a).addScaledVector(e1,d2/(d2-d6));}
+   const va=d3*d6-d5*d4;if(va<=0&&(d4-d3)>=0&&(d5-d6)>=0){const w=(d4-d3)/((d4-d3)+(d5-d6));RG=6;return res.copy(b).addScaledVector(W3.subVectors(c,b),w);}RG=0;const den=1/(va+vb+vc);return res.copy(a).addScaledVector(e0,vb*den).addScaledVector(e1,vc*den);};
+  for(const m of HM){let C=cache.get(m.uuid);const g=m.geometry,PA=g.attributes.position;if(!C||C.n!==PA.count){const I=g.index?g.index.array:null,nt=I?I.length/3:PA.count/3,ix=new Uint32Array(nt*3),bx=new Float32Array(nt*6),nn=new Float32Array(nt*3);
+     const bb=new T.Box3().setFromBufferAttribute(PA),ctr=bb.getCenter(new T.Vector3());let flip=0;
+     for(let t=0;t<nt;t++){for(let k=0;k<3;k++)ix[3*t+k]=I?I[3*t+k]:3*t+k;A.fromBufferAttribute(PA,ix[3*t]);Bv.fromBufferAttribute(PA,ix[3*t+1]);Cv.fromBufferAttribute(PA,ix[3*t+2]);
+      bx[6*t]=Math.min(A.x,Bv.x,Cv.x);bx[6*t+1]=Math.min(A.y,Bv.y,Cv.y);bx[6*t+2]=Math.min(A.z,Bv.z,Cv.z);bx[6*t+3]=Math.max(A.x,Bv.x,Cv.x);bx[6*t+4]=Math.max(A.y,Bv.y,Cv.y);bx[6*t+5]=Math.max(A.z,Bv.z,Cv.z);
+      e0.subVectors(Bv,A);e1.subVectors(Cv,A);N0.crossVectors(e0,e1);const l=N0.length();if(l>1e-12)N0.divideScalar(l);nn[3*t]=N0.x;nn[3*t+1]=N0.y;nn[3*t+2]=N0.z;P0.copy(A).add(Bv).add(Cv).divideScalar(3).sub(ctr);flip+=Math.sign(N0.dot(P0))*l;}
+     /* open-sheet edges (hairline rim, curtain edges): a point whose nearest feature is a rim edge or rim vertex is outside, whatever the face normal says.
+        Vertices are welded by position (the phi seam's duplicate columns are not a rim) */
+     const key=new Int32Array(PA.count),km=new Map();for(let i=0;i<PA.count;i++){const kk=Math.round(PA.getX(i)*2e4)+','+Math.round(PA.getY(i)*2e4)+','+Math.round(PA.getZ(i)*2e4);let id=km.get(kk);if(id==null){id=km.size;km.set(kk,id);}key[i]=id;}
+     const ec=new Map(),en=new Map(),vn=new Float32Array(km.size*3),ek=(a,b)=>a<b?a+'_'+b:b+'_'+a;
+     /* pseudo-normals (Baerentzen-Aanaes): an edge's = the sum of its faces' normals, a vertex's = the angle-weighted sum, so the sign is right
+        when the nearest feature is an edge or a vertex on a crease */
+     for(let t=0;t<nt;t++){const nx=nn[3*t],ny=nn[3*t+1],nz=nn[3*t+2];for(const [x,y] of [[0,1],[0,2],[1,2]]){const kk=ek(key[ix[3*t+x]],key[ix[3*t+y]]);ec.set(kk,(ec.get(kk)||0)+1);const e=en.get(kk)||[0,0,0];e[0]+=nx;e[1]+=ny;e[2]+=nz;en.set(kk,e);}
+      for(let k=0;k<3;k++){A.fromBufferAttribute(PA,ix[3*t+k]);Bv.fromBufferAttribute(PA,ix[3*t+(k+1)%3]).sub(A);Cv.fromBufferAttribute(PA,ix[3*t+(k+2)%3]).sub(A);const ang=Bv.angleTo(Cv)||0,q=3*key[ix[3*t+k]];vn[q]+=nx*ang;vn[q+1]+=ny*ang;vn[q+2]+=nz*ang;}}
+     const rimV=new Uint8Array(km.size);const rimE=new Set();for(const [kk,c] of ec)if(c===1){rimE.add(kk);const [a,b]=kk.split('_');rimV[+a]=1;rimV[+b]=1;}
+     C={n:PA.count,ix,bx,nn,key,rimV,rimE,ek,en,vn,sg:flip<0?-1:1,ds:!!(m.material&&m.material.side===T.DoubleSide&&m.userData.cap)};cache.set(m.uuid,C);}
+   const inv=new T.Matrix4().copy(m.matrixWorld).invert(),ws=new T.Vector3().setFromMatrixScale(m.matrixWorld).x||1,r=R/ws;
+   /* the dart in this mesh's local space */const L=new Float32Array(DV.length);let x0=1e9,y0=1e9,z0=1e9,x1=-1e9,y1=-1e9,z1=-1e9;for(let i=0;i<DV.length;i+=3){P0.set(DV[i],DV[i+1],DV[i+2]).applyMatrix4(inv);L[i]=P0.x;L[i+1]=P0.y;L[i+2]=P0.z;x0=Math.min(x0,P0.x);y0=Math.min(y0,P0.y);z0=Math.min(z0,P0.z);x1=Math.max(x1,P0.x);y1=Math.max(y1,P0.y);z1=Math.max(z1,P0.z);}
+   const cand=[];const nt=C.ix.length/3;for(let t=0;t<nt;t++){const o6=6*t;if(C.bx[o6]>x1+r||C.bx[o6+3]<x0-r||C.bx[o6+1]>y1+r||C.bx[o6+4]<y0-r||C.bx[o6+2]>z1+r||C.bx[o6+5]<z0-r)continue;cand.push(t);}if(!cand.length)continue;
+   const tag=m.userData.cap?'cap':m.userData.tag==='beard'?'beard':(m.geometry.type==='TorusGeometry'?'hoop':'hair');
+   /* dart vertices -> hair triangles (signed) */
+   for(let i=0;i<L.length;i+=6){P0.set(L[i],L[i+1],L[i+2]);let best=1e9,bs=1,bRG=-1,bT=-1,bCP=null;/* every 2nd dart vertex (1-3 mm apart); the reverse pass below covers the gaps */for(const t of cand){const o6=6*t;if(C.bx[o6]>P0.x+r||C.bx[o6+3]<P0.x-r||C.bx[o6+1]>P0.y+r||C.bx[o6+4]<P0.y-r||C.bx[o6+2]>P0.z+r||C.bx[o6+5]<P0.z-r)continue;
+     A.fromBufferAttribute(m.geometry.attributes.position,C.ix[3*t]);Bv.fromBufferAttribute(m.geometry.attributes.position,C.ix[3*t+1]);Cv.fromBufferAttribute(m.geometry.attributes.position,C.ix[3*t+2]);const cp=cpt(P0,A,Bv,Cv,new T.Vector3());const d=cp.distanceTo(P0);
+     if(d<best){best=d;bRG=RG;bT=t;bCP=cp;const vi=[C.ix[3*t],C.ix[3*t+1],C.ix[3*t+2]],K=C.key;const rim=RG>=1&&RG<=3?C.rimV[K[vi[RG-1]]]:RG===4?C.rimE.has(C.ek(K[vi[0]],K[vi[1]])):RG===5?C.rimE.has(C.ek(K[vi[0]],K[vi[2]])):RG===6?C.rimE.has(C.ek(K[vi[1]],K[vi[2]])):0;
+      let nx=C.nn[3*t],ny=C.nn[3*t+1],nz=C.nn[3*t+2];if(RG>=1&&RG<=3){const q=3*K[vi[RG-1]];nx=C.vn[q];ny=C.vn[q+1];nz=C.vn[q+2];}else if(RG>=4){const pr=RG===4?[0,1]:RG===5?[0,2]:[1,2],e=C.en.get(C.ek(K[vi[pr[0]]],K[vi[pr[1]]]));if(e){nx=e[0];ny=e[1];nz=e[2];}}
+      bs=C.ds||rim?1:((P0.x-cp.x)*nx+(P0.y-cp.y)*ny+(P0.z-cp.z)*nz)*C.sg<0?-1:1;}}
+    if(best<1e8){const mm=bs*best*ws*1000;if(mm<out.mm){out.mm=mm;out.at=tag;if(window.__dhDbg)out.dbg={p:[P0.x,P0.y,P0.z].map(v=>+v.toFixed(4)),cp:[bCP.x,bCP.y,bCP.z].map(v=>+v.toFixed(4)),rg:bRG,tri:bT,n:[C.nn[3*bT],C.nn[3*bT+1],C.nn[3*bT+2]].map(v=>+v.toFixed(3)),sg:C.sg,mesh:m.geometry.type,nv:PA.count,ws};}if(mm<0)out.n++;}}
+   /* nearby hair vertices -> dart triangles (unsigned: a hair point on a flight counts as 0) */
+   /* only hair vertices and dart triangles that could still beat the closest distance so far */
+   const DB=new Float32Array(DT.length*2);for(let t=0;t<DT.length;t+=3){const a=3*DT[t],b2=3*DT[t+1],c2=3*DT[t+2];for(let k=0;k<3;k++){DB[2*t+k]=Math.min(L[a+k],L[b2+k],L[c2+k]);DB[2*t+3+k]=Math.max(L[a+k],L[b2+k],L[c2+k]);}}
+   const seen=new Set();for(const t of cand)for(let k=0;k<3;k++)seen.add(C.ix[3*t+k]);const PA2=m.geometry.attributes.position,bd=(x,lo,hi)=>x<lo?lo-x:x>hi?x-hi:0;
+   for(const vi of seen){P0.fromBufferAttribute(PA2,vi);let lim=Math.max(0,out.mm)/(ws*1000);if(Math.hypot(bd(P0.x,x0,x1),bd(P0.y,y0,y1),bd(P0.z,z0,z1))>lim)continue;
+    for(let t=0;t<DT.length;t+=3){if(Math.hypot(bd(P0.x,DB[2*t],DB[2*t+3]),bd(P0.y,DB[2*t+1],DB[2*t+4]),bd(P0.z,DB[2*t+2],DB[2*t+5]))>lim)continue;A.set(L[3*DT[t]],L[3*DT[t]+1],L[3*DT[t]+2]);Bv.set(L[3*DT[t+1]],L[3*DT[t+1]+1],L[3*DT[t+1]+2]);Cv.set(L[3*DT[t+2]],L[3*DT[t+2]+1],L[3*DT[t+2]+2]);
+     const d=cpt(P0,A,Bv,Cv,W3.clone()).distanceTo(P0)*ws*1000;if(d<out.mm){out.mm=d;out.at=tag;lim=d/(ws*1000);}}}}
+  return out;}
+window.TOPS_S3DARTCLEAR=s3DartClear;window.TOPS_S3DARTHAIR=s3DartHair;
 
  window.TOPS_S3CLIP=f=>f&&f.userData&&f.userData.s3rig&&f.userData.s3rig.v2?s3ClipV2(f):s3Clip(f);
  window.TOPS_S3FIG={look:s3Look,build:s3Build,dress:s3Dress,skin:s3SkinFig,skinAll:s3SkinAll};scene.onBeforeRender=()=>{if(S3SKINF.size)s3SkinAll();};
@@ -1643,7 +2123,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v2ArmClear(fig,B,S,dirU,dirF,b,side){const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
   side=side||'Right';const A=B[side+'Arm'],F=B[side+'ForeArm'],Hb=B[side+'Hand'];if(!A||!F||!Hb)return false;sk.updateWorldMatrix(true,false);
   const L1=boneWTo(_v2c[0],A).distanceTo(boneWTo(_v2c[1],F)),L2=_v2c[1].distanceTo(boneWTo(_v2c[2],Hb)),reach=(L1+L2)*.995;
-  const ws=_v2c[3].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,g=V2CLR.m/ws,rx=r[0]*1.04+g,ry=r[1]*1.04+g,rz=r[2]*1.04+g;_v2m.copy(sk.matrixWorld).invert();
+  const HM=(u.s3rig&&u.s3rig.headM)||1.04,ws=_v2c[3].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,g=V2CLR.m/ws,rx=r[0]*HM+g,ry=r[1]*HM+g,rz=r[2]*HM+g;_v2m.copy(sk.matrixWorld).invert();
   const H=_v2c[4].copy(S).addScaledVector(dirU,L1).addScaledVector(dirF,L2),l=_v2c[5],sp=B.Spine2||B.Spine1||B.Spine;
   const out=_v2c[6].copy(S);if(sp)out.sub(boneWTo(_v2c[7],sp));out.y=0;out.addScaledVector(b,-out.dot(b));if(out.lengthSq()<1e-8)out.set(1,0,0);out.normalize();
   for(let it=0;it<8;it++){l.copy(H).applyMatrix4(_v2m);const e=Math.hypot(l.x/rx,l.y/ry,l.z/rz);const d=H.distanceTo(S);if(e>=1&&d<=reach)break;
@@ -1683,30 +2163,30 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v2TorsoR(y,BK){const t=V2P.torso,y0=t.y0-V2P.leg.hipY-.3,h=t.y1-t.y0,v=(y-y0)/h;if(v<0||v>1)return null;let r=.97+.05*Math.sin(v*Math.PI*.9)+(t.belly+BK[2])*Math.sin(v*Math.PI)*2+.06*Math.max(0,1-v/.18);if(v>.78)r*=Math.cos((v-.78)/.22*Math.PI*.42);r=Math.max(.06,r);return [t.rx*BK[0]*r,t.rz*BK[1]*r];}
  const _v2sks=[];{for(let i=0;i<40;i++){const th=Math.PI*(.55+.45*((i%5)/4)),ph=(Math.floor(i/5)/8)*Math.PI*2;_v2sks.push([Math.sin(th)*Math.cos(ph),Math.cos(th),Math.sin(th)*Math.sin(ph)]);}}
  function v2PostClear(fig,only,fresh){/* fresh: the caller has just updated the figure's world matrices */const u=fig.userData,B=u.B,R3=u.s3rig;if(!B||!u.s3v2||!R3)return 0;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}const cb=R3.chest&&R3.chest.userData.box;if(!sk||!cb)return 0;
-  const BK=V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard;
+  const BK=(R3.v3?V2BODY.standard:V2BODY[(u.s3look&&u.s3look.body)||'standard']||V2BODY.standard);
   /* a figure whose pose hasn't moved since it was last cleared (the frozen bar extras, a held hero pose) costs one comparison */
   if(!fresh)fig.updateMatrixWorld(true);  if(!only)v2Grip(fig);/* the off hand closes on the spares after every clip (the clips open it) */
   const sigB=[B.RightHand,B.LeftHand,B.Head,B.LeftHandMiddle2];let sig=0;for(const b of sigB)if(b){const e=b.matrixWorld.elements;sig+=e[12]*1.3+e[13]*2.1+e[14]*3.7+e[0]+e[5]*.7;}if(!only&&u._v2sig===sig)return 0;
-  _v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1];const cm=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1;
+  _v2m.copy(sk.matrixWorld).invert();const ws=_v2p[0].setFromMatrixScale(sk.matrixWorld).x||1,r=V2P.head.r,l=_v2p[1],SF=R3.skullF,HMk=SF?1.05:1.04,TR=R3.torsoR||v2TorsoR,AM=R3.armM||1;let HM=HMk;const cm=new T.Matrix4().copy(cb.matrixWorld).invert(),cs=new T.Vector3().setFromMatrixScale(cb.matrixWorld).x||1;
   /* e < 1: the point (with margin m, metres) is inside the skull x1.04 (vol 0) or the shirt (vol 1) */
-  const evS=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;return Math.hypot(l.x/(r[0]*1.04+g),l.y/(r[1]*1.04+g),l.z/(r[2]*1.04+g));};
+  const evS=(P,m)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws;if(SF)HM=HMk*SF(l);return Math.hypot(l.x/(r[0]*HM+g),l.y/(r[1]*HM+g),l.z/(r[2]*HM+g));};
   /* the shirt's lower part follows the hips (s3SkinFig): a chest-space point is taken back to the shirt's rest space first (one step of the
      inverse of that blend), so a fist at the belt is tested against the shirt where it is drawn */
   const hb3=R3.hips&&R3.hips.userData.box,Mr=hb3&&R3.bind?new T.Matrix4().copy(cm).multiply(hb3.matrixWorld).multiply(R3.bind):null,SY=R3.skinY||[-.1,-.3],sw=y=>{const q=(SY[0]-y)/(SY[0]-SY[1]);return y>SY[0]?0:y<SY[1]?1:q*q*(3-2*q);},_d=new T.Vector3();
   const toRest=v=>{const w=Mr?sw(v.y):0;if(w>0){_d.copy(v).applyMatrix4(Mr).sub(v);v.addScaledVector(_d,-w);}return v;},fromRest=v=>{const w=Mr?sw(v.y):0;if(w>0){_d.copy(v).applyMatrix4(Mr).sub(v);v.addScaledVector(_d,w);}return v;};
   /* tested both as drawn in chest space and taken back to the shirt's rest space; the tighter of the two wins (the blend's inverse is one step) */
-  const eT=(P,m,rest)=>{l.copy(P).applyMatrix4(cm);if(rest)toRest(l);const rr=v2TorsoR(l.y,BK);if(!rr)return 9;const g=(m+(l.y<SY[0]?V2CLR.belt:0))/cs;return Math.hypot(l.x/(rr[0]+g),l.z/(rr[1]+g));};
+  const eT=(P,m,rest)=>{l.copy(P).applyMatrix4(cm);if(rest)toRest(l);const rr=TR(l.y,BK);if(!rr)return 9;const g=(m+(l.y<SY[0]?V2CLR.belt:0))/cs;return Math.hypot(l.x/(rr[0]+g),l.z/(rr[1]+g));};
   const evT=(P,m)=>Math.min(eT(P,m,false),eT(P,m,true));
-  const pushT=(P,m,out)=>{const rest=eT(P,m,true)<eT(P,m,false);l.copy(P).applyMatrix4(cm);if(rest)toRest(l);const rr=v2TorsoR(l.y,BK),g=(m+(l.y<SY[0]?V2CLR.belt:0))/cs;const e=Math.hypot(l.x/(rr[0]+g),l.z/(rr[1]+g));
+  const pushT=(P,m,out)=>{const rest=eT(P,m,true)<eT(P,m,false);l.copy(P).applyMatrix4(cm);if(rest)toRest(l);const rr=TR(l.y,BK),g=(m+(l.y<SY[0]?V2CLR.belt:0))/cs;const e=Math.hypot(l.x/(rr[0]+g),l.z/(rr[1]+g));
    if(e<1e-3){l.z+=rr[1]+g;}else{l.x*=1.01/e;l.z*=1.01/e;}if(rest)fromRest(l);return out.copy(l).applyMatrix4(cb.matrixWorld);};
   /* where a point with margin m must go: out sideways and forward at its own height (the skull: radially only near the crown) */
   /* above the mouth (arms up: the hero cheer, a hand to the head) the arm goes out to its own side, past the ear, rather than across the face (Director: forearms outside the ears) */
-  const pushS=(P,m,out,sg)=>{l.copy(P).applyMatrix4(_v2m);const g=m/ws,rx=r[0]*1.04+g,ry=r[1]*1.04+g,rz=r[2]*1.04+g;const yy=(l.y/ry)**2,hh=(l.x/rx)**2+(l.z/rz)**2;
+  const pushS=(P,m,out,sg)=>{l.copy(P).applyMatrix4(_v2m);if(SF)HM=HMk*SF(l);const g=m/ws,rx=r[0]*HM+g,ry=r[1]*HM+g,rz=r[2]*HM+g;const yy=(l.y/ry)**2,hh=(l.x/rx)**2+(l.z/rz)**2;
    if(sg&&l.y>-.2*ry&&yy+(l.z/rz)**2<.97){l.x=sg*rx*Math.sqrt(1-yy-(l.z/rz)**2)*1.004;}
    else if(yy<.9&&hh>1e-6){const k=Math.sqrt((1-yy)/hh)*1.004;l.x*=k;l.z*=k;}else l.multiplyScalar(1.004/Math.max(1e-3,Math.sqrt(yy+hh)));return out.copy(l).applyMatrix4(sk.matrixWorld);};
   const fwd=_v2p[2].set(0,0,-1).applyQuaternion(fig.getWorldQuaternion(_v2q)).setY(0).normalize(),hc=_v2p[3].set(0,0,0).applyMatrix4(sk.matrixWorld);let n=0;
   /* the head: a clip that drops the chin to the chest (the hero cheer's first beat) sinks the 2x skull into the collar; the neck and head go back toward their rest until clear */
-  if(!only){const Nk=B.Neck,Hd=B.Head;for(let it=0;it<4&&Hd;it++){let hit=false;for(const q of _v2sks){l.set(q[0]*r[0],q[1]*r[1],q[2]*r[2]).applyMatrix4(sk.matrixWorld);if(evT(l,0)<1.005){hit=true;break;}}if(!hit)break;if(!it)n++;
+  if(!only){const Nk=B.Neck,Hd=B.Head;for(let it=0;it<4&&Hd;it++){let hit=false;for(const q of _v2sks){l.set(q[0]*r[0],q[1]*r[1],q[2]*r[2]);if(SF)l.multiplyScalar(SF(l));l.applyMatrix4(sk.matrixWorld);if(evT(l,.004)<1.005){hit=true;break;}}/* v3: the sampled jaw is the shaped skull's (fuller lower cheeks) */if(!hit)break;if(!it)n++;
     [Nk,Hd].forEach(b=>{const rs=b&&RIG.rest[b.name];if(rs)b.quaternion.slerp(rs.lq,.5);});(Nk||Hd).updateWorldMatrix(false,true);_v2m.copy(sk.matrixWorld).invert();}}
   for(const sd of only||['Right','Left']){const A=B[sd+'Arm'],F=B[sd+'ForeArm'],Hb=B[sd+'Hand'];if(!A||!F||!Hb)continue;const tips=V2TIPS.map(k=>B[sd+'Hand'+k]).filter(Boolean),kn=B[sd+'HandMiddle1'];
    const wa=R3[sd==='Right'?'aL':'aR']/* the Lab's aL hangs on the Right bones */,wb=wa&&wa.wr&&wa.wr.userData.box;const fl=[];if(wb)wb.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.attributes.position)fl.push(o);});
@@ -1716,11 +2196,11 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     let we=1,wp=null,wm=0,wv=0;const hp=(Q,ms,mt)=>{let e=evS(Q,ms);if(e<we){we=e;wp=Q.clone();wm=ms;wv=0;}e=evT(Q,mt);if(e<we){we=e;wp=Q.clone();wm=mt;wv=1;}};
     const dl=sd==='Left'?B.LeftHand.children.filter(c=>c.userData.spare&&c.visible):(u._dtFist&&u.dt?[u.dt]:[]);/* the darts held in this hand move with it */
     hp(H,.07,.04);const near=evS(H,dl.length?.34:.24)<1||evT(H,dl.length?.3:.17)<1;/* the fingers and the fist's vertices are only looked at when the hand is near the head or the body */
-    if(near){if(kn)hp(boneWTo(P,kn),.06,.045);tips.forEach(t=>hp(boneWTo(P,t),.032,.022));}
+    if(near){const hk=R3.handK||1;if(kn)hp(boneWTo(P,kn),.06*hk,.045);tips.forEach(t=>hp(boneWTo(P,t),.032*hk+(SF?.004:0),.022));}/* v3: the fingers are 1.2x thicker, so their reach round the bone is too */
     /* the fist itself, vertex by vertex (what the clip check measures): none inside the skull or the shirt */
     if(near)for(const d of dl)d.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=4){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,.004,.006);}});
-    if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,0,.008);}}
-    let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m)<1)armIn=true;});
+    if(near)for(const o of fl){const g=o.geometry.attributes.position;for(let i=0;i<g.count;i+=3){P.fromBufferAttribute(g,i).applyMatrix4(o.matrixWorld);hp(P,SF?.006:0,.008);}}/* v3: every third palm vertex is sampled, so a 6 mm skull margin covers the ones between (Tama's round cheeks caught one at 3 mm) */
+    let armIn=false;[[S,E,.1,.12],[S,E,.25,.11],[S,E,.6,.085],[E,H,0,.085],[E,H,.5,.085]].forEach(([a,b2,t,m])=>{if(evS(P.lerpVectors(a,b2,t),m*AM)<1)armIn=true;});
     if(!wp&&!armIn)break;if(!pass)n++;
     const sg=Math.sign(l.copy(S).applyMatrix4(_v2m).x)||1;
     const out=_v2p[8].subVectors(S,hc);out.y=0;if(out.lengthSq()<1e-8)out.set(sd==='Right'?1:-1,0,0);out.normalize();
@@ -1760,10 +2240,10 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  function v2WristAdd(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),W=V2WRIST;if(ph==='pull')return W.back*p;if(ph==='throw')return W.back+(W.rel-W.back)*Math.pow(k,1.4);if(ph==='fly'||ph==='follow')return W.rel+(W.end-W.rel)*k;if(ph==='reset')return W.end*(1-k);return 0;}
  function v2Open(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0);if(ph==='throw'){const x=Math.max(0,(k-V2OPEN.from)/(1-V2OPEN.from));return V2OPEN.pre*x*x*(3-2*x);}if(ph==='fly'||ph==='follow'){const x=Math.min(1,k/.3);return V2OPEN.pre+(1-V2OPEN.pre)*x*(2-x);}if(ph==='reset')return Math.max(0,1-k*1.5);return 0;}
  const _v2t=[];for(let i=0;i<8;i++)_v2t.push(new T.Vector3());
- function v2ThrowKey(oa){const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),K=V2THROW,e=x=>x*x*(3-2*x);
+ function v2ThrowKey(oa,K){K=K||V2THROW;const ph=oa.phase||'idle',k=Math.min(1,oa.k||0),p=Math.min(1,oa.pull||0),e=x=>x*x*(3-2*x);
   if(ph==='pull')return [K.aim,K.back,1-Math.pow(1-p,1.7)];if(ph==='throw')return [K.back,K.rel,Math.pow(k,1.8)];if(ph==='fly'||ph==='follow')return [K.rel,K.end,1-Math.pow(1-k,2)];
   if(ph==='reset')return [K.end,K.aim,e(k)];if(ph==='idle'||ph==='aim'||!ph)return [K.aim,K.aim,0];return null;}
- function v2ThrowArm(fig,B,S,dirU,dirF,b,oa){const kf=v2ThrowKey(oa||{});if(!kf)return false;const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
+ function v2ThrowArm(fig,B,S,dirU,dirF,b,oa){const kf=v2ThrowKey(oa||{},fig.userData.s3rig&&fig.userData.s3rig.v3?V3THROW:V2THROW);if(!kf)return false;const u=fig.userData;let sk=u._v2sk;if(!sk||!sk.parent){sk=null;fig.traverse(o=>{if(!sk&&o.isMesh&&o.userData.tag==='skull')sk=o;});u._v2sk=sk;}if(!sk)return false;
   sk.updateWorldMatrix(true,false);const C=sk.getWorldPosition(_v2t[0]),hw=2*V2P.head.r[0]*_v2t[1].setFromMatrixScale(sk.matrixWorld).x;
   const up=_v2t[2].set(0,1,0),out=_v2t[3].subVectors(S,C);out.y=0;out.addScaledVector(b,-out.dot(b));if(out.lengthSq()<1e-8)out.crossVectors(b,up);out.normalize();
   const [A,Bk,t]=kf,mix=(a,c)=>a+(c-a)*t;const hx=mix(A.h[0],Bk.h[0]),hy=mix(A.h[1],Bk.h[1]),hz=mix(A.h[2],Bk.h[2]);
@@ -1778,6 +2258,8 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
  const V2DARTP={aim:28,back:34,rel:0};
  function v2DartPitch(oa){const ph=oa&&oa.phase||'idle',k=Math.min(1,oa&&oa.k||0),p=Math.min(1,oa&&oa.pull||0),D=V2DARTP;if(ph==='pull')return D.aim+(D.back-D.aim)*p;if(ph==='throw')return D.back+(D.rel-D.back)*Math.pow(k,1.2);if(ph==='idle'||ph==='aim')return D.aim;if(ph==='reset')return D.aim*k;return 0;}
  window.TOPS_V2THROW=V2THROW;
+ /* v3 heads (?v3=1): the fuller v3 cheeks sit in the release path, so the release goes further out and forward again (same aim, draw-back, follow-through): closest throwing dart to the 1.04 skull, Kai 1.10, Ray 1.10, Tama 1.08 (was .95) */
+ const V3THROW=Object.assign({},V2THROW,{rel:{h:[.70,-.24,.86],pole:[.8,-.5,0]}});window.TOPS_V3THROW=V3THROW;
  function poseDarts(fig,oa,boardTarget,fpv){const B=fig.userData.B,R=RIG.rest,rad=Math.PI/180;fig.userData._pdT=performance.now();fig.updateWorldMatrix(true,true);
   let rs=fig.userData._pdRest;if(!rs||fig.userData._pdB!==B){rs=[];Object.keys(B).forEach(n=>{const b=B[n];if(b&&b.isBone&&!PD_SKIP.test(n))rs.push(b);});fig.userData._pdRest=rs;fig.userData._pdB=B;}
   for(let i=0;i<rs.length;i++){const b=rs[i],r=R[b.name];if(r)b.quaternion.copy(r.lq);}fig.updateWorldMatrix(true,true);
@@ -1999,7 +2481,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    const cb=plane(.5,.7,new T.MeshStandardMaterial({map:patternTexture((x,w,h)=>{x.fillStyle='#223127';x.fillRect(0,0,w,h);x.strokeStyle='#5a3d24';x.lineWidth=28;x.strokeRect(14,14,w-28,h-28);grain(x,w,h,16);x.fillStyle='rgba(240,236,220,.85)';x.font='600 54px Barlow,Arial';x.fillText('HOME',70,150);x.fillText('AWAY',300,150);x.font='500 46px Barlow,Arial';['501','461','421','381'].forEach((v,i)=>x.fillText(v,80,230+i*70));['501','441','401','356'].forEach((v,i)=>x.fillText(v,310,230+i*70));},512,720),roughness:.9}),1.45,1.35,OCHE_Z-.55,-Math.PI/2);box(.04,1.3,.04,new T.MeshStandardMaterial({color:0x3a2412}),1.45,.65,OCHE_Z-.55);}
   else{/* v1.74: static '501 501' monitor removed (it never updated). A water glass on the high table instead. */const gl=new T.Mesh(new T.CylinderGeometry(.034,.029,.13,16,1,true),new T.MeshStandardMaterial({color:0xcfe6f2,transparent:true,opacity:.35,roughness:.05,side:T.DoubleSide}));gl.position.set(1.1,1.1,OCHE_Z+.32);venue.add(gl);const wt=new T.Mesh(new T.CylinderGeometry(.031,.028,.09,16),new T.MeshStandardMaterial({color:0x9fc4d8,transparent:true,opacity:.28,roughness:0}));wt.position.set(1.1,1.08,OCHE_Z+.32);venue.add(wt);}
   const rim=addLight(new T.PointLight(warm?0xffc98a:0xcfe0ff,warm?.55:.4,4));rim.position.set(1.0,2.2,OCHE_Z+.5);}
- let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}if(window.TOPS_S3FLAG)try{s3Plates(t);}catch(e){console.warn('s3 plates',e);}}
+ let venueTier=0,pyroLight=null;function buildVenue(t){venueTier=t;{const K=window.TOPS_HAIRHC_K!=null?window.TOPS_HAIRHC_K:0.6;if(window.TOPS_V2HAIRHC)TOPS_V2HAIRHC.value.x=1-(1-K)*Math.max(0,Math.min(1,(t-2)/3));}/* Ray's silver: valleys scaled to K in the Arena (tier 5), easing in from tier 2 */motes.length=0;sparks.forEach(s=>{if(s!==pyroLight)scene.remove(s);});sparks.length=0;if(pyroLight){scene.remove(pyroLight);pyroLight=null;}if(t>=3){pyroLight=new T.PointLight(0xffb040,0,6);scene.add(pyroLight);}buildVenueInner(t);ocheKit(t);lkRelight(t);if(window.TOPS_BOARD)try{TOPS_BOARD(t,{boardTex,surround,boardTexture,surroundTex,R,ORDER});}catch(e){console.warn('TOPS_BOARD',e);}try{sideDress(t);}catch(e){console.warn('sideDress',e);}if(window.TOPS_S3FLAG)try{s3Plates(t);}catch(e){console.warn('s3 plates',e);}}
  /* ===== S3 venue plates (Hayden 19 Nov): a painted plate per level drawn INSIDE the 3D scene as the back wall (a backdrop fixed to the
     camera, drawn first, nothing else changes), so the game canvas stays opaque (one layer for the phone to composite). The 3D room is
     hidden while a plate is up; the board, its surround, the figures, darts and lights stay. Walk-on plate for every view except the
@@ -2369,7 +2851,8 @@ function lkSafe(){if(!lkProbe){lkProbe=document.createElement('div');lkProbe.sty
   if(cine){const k=(now-cine.t0)/cine.dur;if(k>=1.0){cine=null;}else{const tgt=mmToWorld(cine.x,cine.y);let cp,cl;if(flights.length){const f=flights[0];const dp=f.d.position.lengthSq()<1e-6?f.from:f.d.position;const e=Math.min(1,k*1.15);const side=new T.Vector3(.26,.03,.3).multiplyScalar(1-e*.45);cp=dp.clone().add(side);cl=dp.clone().lerp(tgt,.55+e*.45);cine.lastPos=cp;cine.lastLook=cl;}else{cp=cine.lastPos||pos.clone();cl=tgt.clone();}
    const back=Math.max(0,(k-.82)/.18);if(back>0){const e=back*back;pos.lerpVectors(cp,pos,e);look.lerpVectors(cl,look,e);fov=34+(fov-34)*e;}else{pos.copy(cp);look.copy(cl);fov=34;}punch=null;}}
   if(punch){const k=(now-punch.t0)/punch.dur;if(k>=1)punch=null;else{const e=k<.25?k/.25:1-Math.pow((k-.25)/.75,2);const w=mmToWorld(punch.x,punch.y);const spec=camK>=.5;look.lerp(_fW.set(w.x,w.y,0),(spec?.6:.85)*e);fov=fov+(Math.max(spec?20:14,fov*(spec?.55:.42))-fov)*e;}}
-  if(previewOn){if(portrait){pos.set(Math.sin(t*.4)*.2,1.75,OCHE_Z-1.7);look.set(0,.7,OCHE_Z+1.5);fov=50;}else{pos.copy(camPrev.pos);pos.x+=Math.sin(t*.4)*.2;look.copy(camPrev.look);fov=40;}}
+  if(previewOn){if(portrait){pos.set(Math.sin(t*.4)*.2,1.75,OCHE_Z-1.7);look.set(0,.7,OCHE_Z+1.5);fov=50;}else{pos.copy(camPrev.pos);pos.x+=Math.sin(t*.4)*.2;look.copy(camPrev.look);fov=40;}
+   if(me&&me.userData.s3rig&&me.userData.s3rig.v3){pos.y+=.07;look.y+=.05;fov+=5;}/* Vinyl v3: a taller head and hair at the same head height: the preview frames up a little and widens so the quiff isn't cut */}
   else if(idleOn&&titleOn){const k=(Math.sin(t*.07)+1)/2;pos.set(-.75+.2*k,1.6,OCHE_Z+1.75-.25*k);look.set(portrait?-.3:-.72,1.56,0);fov=portrait?60:46;}else if(idleOn){const k=(Math.sin(t*.12)+1)/2;pos.set(1.6-2.4*k,1.75-.15*k,OCHE_Z+4.2-1.6*k);look.set(.1,1.45,0);fov=portrait?70:56;}
   if(Math.abs(camera.fov-fov)>.01){camera.fov=fov;camera.updateProjectionMatrix();}
   const nv=state.nerves;const sw=(1-camK)*(.0015+nv*.0025);pos.x+=Math.sin(t*1.3)*sw+camOff.x;pos.y+=Math.cos(t*1.7)*sw*.6+camOff.y;if(window.TOPS_WALKFX){try{const wv=_fWv;wv.me=me;wv.pos=pos;wv.look=look;wv.playClip=playClip;wv.fpFig=fpFig;const r=TOPS_WALKFX(now,wv);if(r&&r.fov!=null)fov=r.fov;}catch(e){}}camera.position.copy(pos);camera.lookAt(look);camOff.multiplyScalar(.8);
