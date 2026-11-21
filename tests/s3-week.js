@@ -27,7 +27,20 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     // rest, short gap
     const s1 = await state(p, { level: 2, find: 'rest', bank: 900 }); await clear(p); const r1 = await read(p); out['rest' + w] = { s1, wk: r1.wk, line: r1.line, btns: r1.btns };
     const gap = s1.nx - s1.week, ev = await p.evaluate(nx => { const c = career().circuit, C = TOPS_CIRCUIT; const e = C.calendar(Object.assign({}, c, { week: nx })).sort((a, b) => a.cost - b.cost)[0]; return { n: e.n, cost: e.cost, win: C.prizeFor(e, 'W') }; }, s1.nx);
-    if (!r1.wk || !new RegExp('^week ' + s1.week + ' · rest week next up: ' + ev.n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(r1.wk)) fail.push(w + ' rest head ' + r1.wk);
+    if (!r1.wk || !new RegExp('^next up ' + ev.n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' week ' + s1.nx + '\\.', 'i').test(r1.wk)) fail.push(w + ' rest head ' + r1.wk);
+    const f1 = await p.evaluate(() => { const g = s => { const e = document.querySelector('#rbApp ' + s); if (!e) return null; const cs = getComputedStyle(e); return { st: cs.fontStyle, wt: cs.fontWeight, fam: cs.fontFamily.split(',')[0].replace(/"/g, '') }; }; return { up: g('.s3-wkup'), ev: g('.s3-wkevn') }; });   // 4b (B)
+    if (!f1.up || f1.up.st !== 'italic' || +f1.up.wt < 800 || !/barlow/i.test(f1.up.fam) || !f1.ev || f1.ev.st !== 'normal' || +f1.ev.wt < 700 || !/inter/i.test(f1.ev.fam)) fail.push(w + ' headline faces ' + JSON.stringify(f1));
+    // 4b (A): the context line: hidden at the top, shown once the level card scrolls away, clear of the card, names the level and week
+    const cx = async () => p.evaluate(() => { const x = document.querySelector('#rbApp .s3-ctx'), sp = x && x.firstElementChild, scr = document.querySelector('#rbApp .rb-scr'), wk = document.querySelector('#rbApp .s3-wk'); if (!sp) return null; const a = sp.getBoundingClientRect(), sc = scr.getBoundingClientRect(), k = wk.getBoundingClientRect();
+      const xr = x.getBoundingClientRect(); return { on: x.classList.contains('on'), txt: sp.textContent, cut: sp.scrollWidth > sp.clientWidth + 1, top: Math.round(xr.top - sc.top), bottom: Math.round(xr.bottom - sc.top), gapToCard: Math.round(k.top - xr.bottom), cardTop: Math.round(k.top - sc.top) }; });
+    // scroll so the card sits under the header (as when the page opens there), then to the very bottom: the header pins at the top and never covers the card
+    const cx0 = await cx(); await p.evaluate(() => document.querySelector('#rbApp .s3-wk').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500); const cx1 = await cx();
+    await p.evaluate(() => { const s = document.querySelector('#rbApp .rb-scr'); s.scrollTop = s.scrollHeight; }); await p.waitForTimeout(400); const cx2 = await cx(); out['ctx' + w] = { cx0, cx1, cx2 };
+    const lvN = await p.evaluate(() => TOPS_CIRCUIT.LEVELS[career().circuit.level].n);
+    if (!cx0 || cx0.on || cx0.cut || cx0.gapToCard < 0 || !new RegExp('^' + lvN + ' · week ' + s1.week + ' · rest week$', 'i').test(cx0.txt)) fail.push(w + ' context header at the top ' + JSON.stringify(cx0));
+    if (!cx1 || cx1.gapToCard < 0 || cx1.top < -1 || !cx2 || cx2.top < -1 || cx2.top > 1 && cx2.cardTop < cx2.bottom || (cx2.cardTop < 0 && !cx2.on)) fail.push(w + ' context header when scrolled ' + JSON.stringify({ cx1, cx2 }));
+    if (process.env.SHOTS) await p.screenshot({ path: path.join(__dirname, 's3_wk_ctx_' + w + '.png') });
+    await p.evaluate(() => { document.querySelector('#rbApp .rb-scr').scrollTop = 0; }); await p.waitForTimeout(300);
     if (!new RegExp('winner takes \\$' + ev.win.toLocaleString('en-US') + ' to enter.*\\$' + ev.cost + ' tour budget \\$900', 'i').test(r1.wk || '')) fail.push(w + ' rest facts ' + r1.wk);
     if (r1.line.length !== gap + 1 || !/^wk \d+ rest$/i.test(r1.line[0]) || !new RegExp('^wk ' + s1.nx + ' ', 'i').test(r1.line[r1.line.length - 1])) fail.push(w + ' weeks line ' + JSON.stringify(r1.line) + ' gap ' + gap);
     const go = r1.btns.find(x => /^(on|skip) to week/i.test(x.t)); if (!go || !new RegExp('^' + (gap > 1 ? 'skip' : 'on') + ' to week ' + s1.nx, 'i').test(go.t)) fail.push(w + ' rest button ' + JSON.stringify(r1.btns));
@@ -45,7 +58,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     // broke, in debt
     const s3 = await state(p, { level: 2, find: 'event', bank: 0, debt: 40 }); await clear(p); const r3 = await read(p); out['broke' + w] = { s3, wk: r3.wk, btns: r3.btns.map(x => x.t) };
     const ro = await p.evaluate(() => TOPS_CIRCUIT.recoveryOffer(career().circuit)), mm = await p.evaluate(() => MM_PAY[2]);
-    if (!/^week \d+ · can't afford a trip short for every event this week/i.test(r3.wk || '') || !new RegExp('cheapest trip.*\\$' + ro.cost + ' tour budget \\$0 you owe \\$40', 'i').test(r3.wk || '')) fail.push(w + ' broke head/facts ' + r3.wk);
+    const bh = await p.evaluate(() => { const sp = document.querySelector('#rbApp .s3-ctx>span'); return sp ? { t: sp.textContent, cut: sp.scrollWidth > sp.clientWidth + 1 } : null; });
+    if (!bh || bh.cut || !/^regional opens · week \d+$/i.test(bh.t)) fail.push(w + ' broke context header ' + JSON.stringify(bh));
+    const off3 = await p.evaluate(() => document.querySelectorAll('#rbApp .s3-post .s3-off').length); if (off3) fail.push(w + ' greyed Need buttons still showing under the recovery card: ' + off3);   // 4b (C)
+    if (!/^get back on tour can't afford a trip this week cheapest trip/i.test(r3.wk || '') || !new RegExp('cheapest trip.*\\$' + ro.cost + ' tour budget \\$0 you owe \\$40', 'i').test(r3.wk || '')) fail.push(w + ' broke head/facts ' + r3.wk);
     const rec = r3.btns.find(x => /^recovery entry/i.test(x.t)), mmb = r3.btns.find(x => /^money match/i.test(x.t)), adv = r3.btns.find(x => /^hardship advance/i.test(x.t));
     if (!rec || !new RegExp(ro.n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ', \\$' + ro.cost + " covered\\. you'll owe \\$" + (40 + ro.cost), 'i').test(rec.t)) fail.push(w + ' recovery option ' + JSON.stringify(rec));
     if (!mmb || !new RegExp('win it for \\$' + mm + '\\. nothing to lose', 'i').test(mmb.t)) fail.push(w + ' money match option ' + JSON.stringify(mmb)); if (adv) fail.push(w + ': hardship advance offered while in debt');
@@ -59,5 +75,5 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   // broke, no debt (advance offered) + s3x off
   { const { ctx, p } = await boot(1, 390, 844); await state(p, { level: 2, find: 'event', bank: 0, debt: 0 }); await clear(p); const r = await read(p); if (!r.btns.some(x => /^hardship advance two entries/i.test(x.t))) fail.push('no debt: hardship advance missing ' + JSON.stringify(r.btns)); await ctx.close(); }
   { const { ctx, p } = await boot(0, 390, 844); await state(p, { level: 2, find: 'rest', bank: 900 }); await p.waitForTimeout(700); const r = await read(p); await state(p, { level: 2, find: 'event', bank: 0, debt: 40 }); await clear(p); const r2 = await read(p);
-    out.off = { rest: r.rest, wk: !!r.wk, broke: r2.broke, wk2: !!r2.wk }; if (!r.rest || r.wk || !r2.broke || r2.wk) fail.push('s3x off changed the 4.18 screens ' + JSON.stringify(out.off)); await ctx.close(); }
+    out.off = { rest: r.rest, wk: !!r.wk, broke: r2.broke, wk2: !!r2.wk, need: await p.evaluate(() => document.querySelectorAll('#rbApp .s3-post .s3-off').length), ctx: await p.evaluate(() => !!document.querySelector('#rbApp .s3-ctx')) }; if (!r.rest || r.wk || !r2.broke || r2.wk || !out.off.need || out.off.ctx) fail.push('s3x off changed the 4.18 screens ' + JSON.stringify(out.off)); await ctx.close(); }
   console.log(JSON.stringify(out).slice(0, 2500)); console.log(fail.length ? 's3-week FAIL: ' + fail.join('; ') : 's3-week PASS'); await b.close(); process.exit(fail.length ? 1 : 0); })();
