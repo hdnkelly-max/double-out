@@ -1351,7 +1351,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     let a=sm(P.in,P.out,md)*(1-sm(1.25,1.5,md))*(th>2.2||Math.abs(ph)>0.3?1:0.5);if(a<=0)continue;a*=P.a*(0.75+0.25*rn());const q=4*(yy*w+xx);for(let c=0;c<3;c++)d[q+c]=d[q+c]+(P.col[c]-d[q+c])*a;}}
   x.putImageData(im,x0,y0);}
  /* the skin-map paint passes over the face sheet (doc 67 stubble, doc 68 Dazza junction), shared by the build and v3Mood */
- const V3SKSHOT={value:1};/* r8c (ChatGPT: the flat front portrait read too uniformly orange): the light on v3 SKIN during the portrait only (headshot), as a multiplier on its env diffuse + specular. TOPS_PORTSK (default .87); 1 = r8b */
+ const V3SKSHOT={value:1};window.TOPS_V3SKSHOT=V3SKSHOT;/* also the card renderer's per-card skin light (tests/v3-cards-render.js 'skinLift') *//* r8c (ChatGPT: the flat front portrait read too uniformly orange): the light on v3 SKIN during the portrait only (headshot), as a multiplier on its env diffuse + specular. TOPS_PORTSK (default .87); 1 = r8b */
  function v3SkinPaint(x,W,H,L){if(V3H67()&&(L._cast||L._p70)&&L.face==='stubble')v3Stubble67(x,W,H,L);if(V3D68('D')&&L.base==='dazza')v3BeardRing68(x,W,H);}
  const v3NeedsSkinPaint=L=>!!L&&((V3H67()&&(L._cast||L._p70)&&L.face==='stubble')||(V3D68('D')&&L.base==='dazza'));
  function v3HeadMaps(L,sk,rough){const big=S3G==='full'?2048:1536,FW=big,FH=big/2,F0=V3P.face,face=v3FaceSheet(L,sk);

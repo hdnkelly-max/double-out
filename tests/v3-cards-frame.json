@@ -1,0 +1,50 @@
+{
+ "_note": "r8c framing targets in render px (1400x2100): head top 379 for all; head centre x clamped into 665-735 (5% of the width); character height (head top to feet, projected) clamped into a 5% band, 1577-1656 (top = Smith -9%). Measured at the doc 71 cameras; zoom by fov + pan by setViewOffset, no perspective change",
+ "targets": {
+  "power": {
+   "top": 379,
+   "height": 1577.4,
+   "cx": 665
+  },
+  "nuke": {
+   "top": 379,
+   "height": 1577.4,
+   "cx": 700.5
+  },
+  "green": {
+   "top": 379,
+   "height": 1656.3,
+   "cx": 665
+  },
+  "price": {
+   "top": 379,
+   "height": 1577.4,
+   "cx": 702.1
+  },
+  "wright": {
+   "top": 379,
+   "height": 1577.4,
+   "cx": 665
+  },
+  "smith": {
+   "top": 379,
+   "height": 1656.3,
+   "cx": 735
+  },
+  "barneveld": {
+   "top": 379,
+   "height": 1577.4,
+   "cx": 695.7
+  },
+  "humphries": {
+   "top": 379,
+   "height": 1628.3,
+   "cx": 735
+  },
+  "anderson": {
+   "top": 379,
+   "height": 1656.3,
+   "cx": 665
+  }
+ }
+}
