@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, sparse-checkout: tools/release-report.js, sparse-checkout-cone-mode: false }   # trusted code only: main's parser
+        with: { ref: qa-release-watch, sparse-checkout: tools/release-report.js, sparse-checkout-cone-mode: false }   # trusted code only: main's parser
       - name: Read the release run(s)
         env:
           GH_TOKEN: '${{ github.token }}'
@@ -76,4 +76,14 @@ jobs:
           DESC="real token, push event on this branch is allowed only for the proof, entry not from main"; chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d '{"run_id":1,"result":"live","branch":"feature"}'
           DESC="real token, unknown result";   chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d '{"run_id":1,"result":"hacked","branch":"main"}'
           DESC="real token, not JSON";         chk 400 -X POST "$FN" -H "Authorization: Bearer $T" -d 'x'
+          DESC="real token, body over 64 KB";  chk 413 -X POST "$FN" -H "Authorization: Bearer $T" --data-binary @<(head -c 70000 /dev/zero | tr '\0' 'a')
+          # replay: one token writes once
+          R=$(tok tops-release-report); echo "::add-mask::$R"; L=$(jq -c '.[0]' body.json)
+          DESC="fresh token, a real entry again (allowed)"; chk 200 -X POST "$FN" -H "Authorization: Bearer $R" -H 'Content-Type: application/json' -d "$L"
+          DESC="the same token replayed";      chk 409 -X POST "$FN" -H "Authorization: Bearer $R" -H 'Content-Type: application/json' -d "$L"
+          # out of order: a late 'running' report for a finished run must not replace its result
+          O=$(tok tops-release-report); echo "::add-mask::$O"
+          RUNNING=$(jq -c '.[0] | .result = "running" | .done = "2026-01-01T00:00:00Z"' body.json)
+          r=$(curl -sS -X POST "$FN" -H "Authorization: Bearer $O" -H 'Content-Type: application/json' -d "$RUNNING"); echo "late running report: $r" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$(echo "$r" | jq .kept_newer)" = 1 ] || ok=0
           [ $ok = 1 ]
