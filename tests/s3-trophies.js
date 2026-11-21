@@ -4,6 +4,7 @@
 //  career().best.leg (the number the Best Leg board ranks) with the event and week, and Seasons 1 & 2 from Career's live tops_history view.
 //  The Circuit level card shows '1 title' and tapping it opens Locker > Trophies. A direct render with more history checks a promoted level,
 //  a runner-up (silver) and repeat wins. With s3x off the Locker keeps the old trophy list and the Circuit has no chip.
+// (the real lost final and the 320 checks are in tests/s3-trophies-final.js: CI gives each test file 600 s)
 // usage: node tests/s3-trophies.js [dir]   (SHOTS=1 writes tests/s3_tr_<w>.png and tests/s3_tr_390_more.png)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] }); const fail = [], out = {};
@@ -39,7 +40,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
         cups: [...app.querySelectorAll('.s3-tr')].map(l => l.className.replace('s3-tr ', '') + ':' + l.innerText.replace(/\s+/g, ' ')), lv: [...app.querySelectorAll('.s3-trlv .s3-row')].map(r => r.innerText.replace(/\s+/g, ' ')),
         old: q('#s3TrHi') ? q('#s3TrHi').innerText.replace(/\s+/g, ' ') : null, oldList: !q('.s3-trh') && !!q('#rbCab'), cab: !!q('.s3-trh') && !!q('#rbCab'), wide: document.documentElement.scrollWidth > innerWidth + 1, leg: (career().best || {}).leg, legAt: (career().best || {}).legAt, titles: career().circuit.titles || [] }; });
     await fn(p, { match, toTrophies, read, tap, vis, settle }); if (pe.length) fail.push(qs + ' ' + vw + ' page errors ' + pe.join('; ').slice(0, 160)); await ctx.close(); };
-  for (const [w, h] of [[390, 844], [360, 640], [320, 640]]) await session('?s3=1&s3x=1', w, h, async (p, T) => {
+  for (const [w, h] of [[390, 844], [360, 640]]) await session('?s3=1&s3x=1', w, h, async (p, T) => {
     // 1 empty
     const chip0 = await T.vis('#rbApp .s3-trchip'); await T.toTrophies(); const e = await T.read(); out['empty' + w] = { hero: e.hero, bl: e.bl, empty: e.empty, n: e.cups.length };
     if (chip0) fail.push(w + ': titles chip shows with no titles'); if (!e.shelf || !e.empty || !/titles 0 finals 0/i.test(e.hero || '') || !/win a 501 leg/i.test(e.bl || '')) fail.push(w + ' empty shelf: ' + JSON.stringify(out['empty' + w]));
@@ -80,26 +81,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     if (!navB.tab || navB.tab.t !== 'circuit' || !navB.chip || Math.abs(navB.y - nav0.y) > 2 || navB.hl !== nav0.hl) fail.push(w + ' back to Circuit ' + JSON.stringify({ navB, y0: nav0.y }));
     if (!navC.shelf || navC.back) fail.push(w + ' Trophies opened from the Locker still shows the back button ' + JSON.stringify(navC));
     if (w !== 390) return;
-    // a real runner-up: a second Pub night, won through to the final and lost there; then a reload: nothing counted twice
-    await p.evaluate(() => { const t = document.querySelector('#rbTabs [data-t="circuit"]'); if (t) t.click(); }); await p.waitForTimeout(600);
-    for (let i = 0; i < 3; i++) await T.match(true); await T.settle();
-    const ru = await p.evaluate(() => { const k = career().circuit; return { titles: (k.titles || []).map(t => t.ev + ':' + t.finish), hist: k.history.map(h => h.id + ':' + h.fin + ':' + h.week) }; }); out.runnerUp = ru;
-    if (ru.titles.join() !== 'pub_night:W,pub_night:F' || ru.hist.join() !== 'pub_night:W:1,pub_night:F:2') fail.push('real runner-up saved as ' + JSON.stringify(ru));
-    const chk = async tag => { await T.toTrophies(); await T.settle(); const r = await T.read(); out[tag] = { hero: r.hero, cups: r.cups };
-      const sum = await p.evaluate(() => career().circuit.history.reduce((a, h) => a + (h.prize || 0), 0));
-      if (!new RegExp('titles 1 finals 2 prize money \\$' + sum.toLocaleString('en-US') + '$', 'i').test(r.hero || '') || !/^s3-trW:KAURI ARMS LEAGUE NIGHT Winner · \$35 Week 1 \+ runner-up$/i.test(r.cups[0] || '') || r.titles.length !== 2) fail.push(tag + ' ' + JSON.stringify({ hero: r.hero, cups: r.cups, n: r.titles.length })); };
-    await chk('runnerUpShelf');
-    await p.reload(); await p.waitForFunction(() => window.TC_API && window.C3 && window.TOPS_S3, null, { timeout: 180000 }); await p.waitForTimeout(2500);
-    await p.evaluate(() => { $('login').hidden = true; showHub('play'); document.querySelectorAll('.tc-sheet,.tc-poster,.tcpk,.tc-back,.tc-scrim').forEach(e => e.remove()); }); await p.waitForTimeout(1200);
-    await chk('afterReload');
     // 3 more history (direct): promoted to Club, a runner-up, two Kauri wins
     await p.evaluate(() => { const k = career().circuit; k.titles.push({ ev: 'kauri_cup', n: 'The Kauri Cup', level: 0, season: 3, finish: 'F', prize: 85, date: new Date().toISOString() }, { ev: 'pub_night', n: 'Kauri Arms league night', level: 0, season: 3, finish: 'W', prize: 35, date: new Date().toISOString() });
-      k.history.push({ week: 3, id: 'kauri_cup', n: 'The Kauri Cup', level: 0, fin: 'F', prize: 85, pts: 100 }, { week: 4, id: 'pub_night', n: 'Kauri Arms league night', level: 0, fin: 'W', prize: 35, pts: 50 }); k.level = 1; k.week = 5;
-      const e = TOPS_CIRCUIT.LEVELS[1].events[0]; k.titles.push({ ev: e.id, n: e.n, level: 1, season: 3, finish: 'W', prize: 210, date: new Date().toISOString() }); k.history.push({ week: 5, id: e.id, n: e.n, level: 1, fin: 'W', prize: 210, pts: 50 }); k.week = 6; TOPS_S3UI.refreshRecords(); });
+      k.history.push({ week: 2, id: 'kauri_cup', n: 'The Kauri Cup', level: 0, fin: 'F', prize: 85, pts: 100 }, { week: 3, id: 'pub_night', n: 'Kauri Arms league night', level: 0, fin: 'W', prize: 35, pts: 50 }); k.level = 1; k.week = 4;
+      const e = TOPS_CIRCUIT.LEVELS[1].events[0]; k.titles.push({ ev: e.id, n: e.n, level: 1, season: 3, finish: 'W', prize: 210, date: new Date().toISOString() }); k.history.push({ week: 4, id: e.id, n: e.n, level: 1, fin: 'W', prize: 210, pts: 50 }); k.week = 5; TOPS_S3UI.refreshRecords(); });
     await T.settle(); await p.waitForTimeout(400); const m = await T.read(); out.more = { hero: m.hero, cups: m.cups, lv: m.lv };
-    if (!/titles 3 finals 5/i.test(m.hero || '')) fail.push('more hero ' + m.hero);
-    if (!/^club this level$/i.test(m.lv[0] || '') || !/^pub promoted · week 4$/i.test(m.lv[1] || '') || !/^palace|^opens|next level/i.test(m.lv[2] || '')) fail.push('more levels ' + JSON.stringify(m.lv));
-    if (!m.cups.some(c => /^s3-trW:KAURI ARMS LEAGUE NIGHT Winner ×2 · \$70 Weeks 1, 4 \+ runner-up$/i.test(c)) || !m.cups.some(c => /^s3-trF:THE KAURI CUP Runner-up · \$85 Week 3$/i.test(c)) || !m.cups.some(c => /^s3-tre:INTERCLUB Not won yet$/i.test(c))) fail.push('more cups ' + JSON.stringify(m.cups));
+    if (!/titles 3 finals 4/i.test(m.hero || '')) fail.push('more hero ' + m.hero);
+    if (!/^club this level$/i.test(m.lv[0] || '') || !/^pub promoted · week 3$/i.test(m.lv[1] || '') || !/^palace|^opens|next level/i.test(m.lv[2] || '')) fail.push('more levels ' + JSON.stringify(m.lv));
+    if (!m.cups.some(c => /^s3-trW:KAURI ARMS LEAGUE NIGHT Winner ×2 · \$70 Weeks 1, 3$/i.test(c)) || !m.cups.some(c => /^s3-trF:THE KAURI CUP Runner-up · \$85 Week 2$/i.test(c)) || !m.cups.some(c => /^s3-tre:INTERCLUB Not won yet$/i.test(c))) fail.push('more cups ' + JSON.stringify(m.cups));
     if (process.env.SHOTS) { await p.evaluate(() => { const m = document.querySelector('#rbApp .rb-scr') || document.getElementById('rbMain'); if (m) m.scrollTop = 0; }); await p.waitForTimeout(300); await p.screenshot({ path: path.join(__dirname, 's3_tr_390_more.png'), fullPage: false }); } });
   // 4 s3x off: the old Trophies list, no chip
   await session('?s3=1&s3x=0', 390, 844, async (p, T) => { await p.evaluate(() => { const k = career().circuit; (k.titles = k.titles || []).push({ ev: 'pub_night', n: 'Kauri Arms league night', level: 0, season: 3, finish: 'W', prize: 35 }); TOPS_S3UI.refreshRecords(); }); await p.waitForTimeout(600);
