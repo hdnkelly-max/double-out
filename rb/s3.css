@@ -236,3 +236,13 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wkline .s3-rpoff{opacity:.8;color:var(--ink3)}
 /* 320 px: five Season 3 tabs fit their labels (PRACTICE was clipped) */
 @media (max-width:350px){html.s3-on #rbApp .rb-tabs button{font-size:12px;letter-spacing:0}}
+/* ---------- 4b ---------- */
+#rbApp .s3-ctx{position:sticky;top:-12px;z-index:6;margin:0 -16px -4px;padding:10px 16px 8px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .15s}
+#rbApp .s3-ctx>span{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rbApp .s3-ctx>span b{color:var(--ink)}
+#rbApp .s3-ctx.on{border-bottom-color:var(--line);box-shadow:0 8px 10px -8px rgba(0,0,0,.6)}
+#rbApp .s3-wkh{gap:3px}
+#rbApp .s3-wkh .s3-wkup{font:800 italic 30px/.95 var(--d);text-transform:uppercase;letter-spacing:.3px;color:var(--ink)}
+#rbApp .s3-wkh .s3-wkevn{font:700 20px/1.15 var(--b);text-transform:none;color:var(--ink);letter-spacing:0}
+#rbApp .s3-wkh .s3-wksub{font-size:15px;font-weight:600;color:var(--ink2)}
+#rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */

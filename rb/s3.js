@@ -164,22 +164,26 @@
       h += `<div class="rb-sh"><h3>Can't afford a trip this week</h3></div><div class="rb-card s3-broke"><span class="rb-sub">${ro ? `A recovery entry covers the cheapest event, paid back from half of each prize. ` : ''}A money match in the back room pays too.${c.debt ? '' : ' Or take the hardship advance: two entries, paid back from half of each prize.'}</span>
       ${ro ? `<button class="rb-primary s3-grow" type="button" data-s3="rec"><b>Recovery entry</b><small>${esc(ro.n)} · ${money(ro.cost)} covered${c.debt ? ' · then you owe ' + money(c.debt + ro.cost) : ', paid back from prizes'}</small></button>` : ''}
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button>${c.debt ? '' : `<button class="rb-ghost" type="button" data-s3="adv">Hardship advance</button>`}</div></div>`; }
-    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e)).join('');
+    const noNeed = X && C.broke(c) && C.recoveryOffer && !!C.recoveryOffer(c);   /* 4b (C): while the recovery card offers a way in, the posters drop their greyed 'Need $X' button */
+    h += `<div class="rb-sh"><h3>${C.broke(c) ? 'On this week' : 'On this week · pick one'}</h3></div>` + cal.map(e => poster(c, e, noNeed)).join('');
     return h;
   }
   /* ---------- EXP-IDLE 4 · rest week and broke week (behind s3x=1), on Career's CAR-DEADWK data (nextEventWeek, restWeek, recoveryOffer, broke).
      Same pattern as the result screen: a kicker, one plain headline, the facts as rows, one red action that says exactly what it does. ---------- */
+  /* 4b (A): the section header above the rest or broke card names the level and week and pins to the top of the scroller, so the level
+     isn't lost when the page opens scrolled to the card. wire() adds its divider once the level card has scrolled away. */
+  const ctxLine = (c, tag) => `<div class="s3-ctx"><span><b>${esc(CI().LEVELS[c.level].n)}</b> · Week ${c.week}${tag ? ' · ' + tag : ''}</span></div>`;
   function restX(c) {
     const C = CI(), L = C.LEVELS[c.level], nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
-    if (nx == null) return `<div class="s3-rp s3-wk"><span class="s3-wkk">Week ${c.week} · rest week</span><div class="s3-rph"><b>Nothing on at ${esc(L.n)}</b><span>No event found in the next ${C.REST_SCAN || 156} weeks. Play a money match or practise.</span></div>
+    if (nx == null) return ctxLine(c, 'rest week') + `<div class="s3-rp s3-wk"><div class="s3-rph s3-wkh"><b class="s3-wkup">Nothing on</b><span>No event at ${esc(L.n)} in the next ${C.REST_SCAN || 156} weeks. Play a money match or practise.</span></div>
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="toprac">Practice</button></div></div>`;
     const gap = nx - c.week, evs = C.calendar(Object.assign({}, c, { week: nx })), e = evs.slice().sort((a, b) => a.cost - b.cost)[0], win = C.prizeFor(e, 'W'), can = c.bank >= e.cost;
     /* the weeks between: now (resting), the skipped ones, the event week. More than 5 skipped fold into one '… N weeks' cell */
     const mid = gap - 1, cells = [`<li class="s3-rpnow s3-wkrest"><b>Wk ${c.week}</b><small>Rest</small></li>`]
       .concat(mid > 5 ? [`<li class="s3-rpoff"><b>…</b><small>${mid} weeks</small></li>`] : Array.from({ length: mid }, (_, i) => `<li class="s3-rpoff"><b>Wk ${c.week + 1 + i}</b><small>Rest</small></li>`))
       .concat([`<li class="s3-rpnext s3-wkev"><b>Wk ${nx}</b><small>${esc(TOWN(e.n).split(' · ')[0])}</small></li>`]).join('');
-    return `<div class="s3-rp s3-wk"><span class="s3-wkk">Week ${c.week} · rest week</span>
-      <div class="s3-rph"><b>Next up: ${esc(e.n)}</b><span>${gap > 1 ? `Week ${nx}. Nothing on at ${esc(L.n)} for ${gap} weeks.` : `Week ${nx}. Nothing on at ${esc(L.n)} this week.`}</span></div>
+    return ctxLine(c, 'rest week') + `<div class="s3-rp s3-wk">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">Next up</b><b class="s3-wkevn">${esc(e.n)}</b><span>${gap > 1 ? `Week ${nx}. Nothing on at ${esc(L.n)} for ${gap} weeks.` : `Week ${nx}. Nothing on at ${esc(L.n)} this week.`}</span></div>
       <ol class="s3-rpdraw s3-wkline" aria-label="Weeks to the next event">${cells}</ol>
       <div class="s3-wkev2" style="background:url(${lvArt(e.level)}) 30% 62%/cover no-repeat,${GRAD[e.level]}"><span>${esc(e.where || L.n)}</span></div>
       <div class="s3-rpbar"><div class="s3-rprow"><span>Winner takes</span><b>${money(win)}</b></div><div class="s3-rprow"><span>To enter${e.travel ? ' (entry + travel)' : ''}</span><b>${money(e.cost)}</b></div>
@@ -191,15 +195,15 @@
     const C = CI(), ro = C.recoveryOffer ? C.recoveryOffer(c) : null, cal = C.calendar(c), cheap = cal.slice().sort((a, b) => a.cost - b.cost)[0];
     const mm = (typeof MM_PAY !== 'undefined' && MM_PAY[c.level]) || null;
     const opt = (k, cls, t, d) => `<button class="${cls} s3-grow s3-bkopt" type="button" data-s3="${k}"><b>${t}</b><small>${d}</small></button>`;
-    return `<div class="s3-rp s3-wk s3-bk"><span class="s3-wkk">Week ${c.week} · can't afford a trip</span>
-      <div class="s3-rph"><b>Short for every event this week</b><span>Pick a way back in. Your career keeps going either way.</span></div>
+    return ctxLine(c) + `<div class="s3-rp s3-wk s3-bk">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">Get back on tour</b><span class="s3-wksub">Can't afford a trip this week</span></div>
       <div class="s3-rpbar"><div class="s3-rprow"><span>Cheapest trip${cheap ? ' · ' + esc(TOWN(cheap.n).split(' · ')[0]) : ''}</span><b>${cheap ? money(cheap.cost) : '–'}</b></div><div class="s3-rprow"><span>Tour budget</span><b class="s3-neg">${money(c.bank)}</b></div>
         ${c.debt ? `<div class="s3-rprow"><span>You owe</span><b class="s3-neg">${money(c.debt)}</b></div>` : ''}</div>
       ${ro ? opt('rec', 'rb-primary', 'Recovery entry', `${esc(ro.n)}, ${money(ro.cost)} covered. You'll owe ${money((c.debt || 0) + ro.cost)}, paid back from half of each prize.`) : ''}
       ${opt('mm', 'rb-ghost', 'Money match', `Best of 3 in the back room${mm ? `. Win it for ${money(mm)}` : ''}. Nothing to lose.`)}
       ${c.debt ? '' : opt('adv', 'rb-ghost', 'Hardship advance', 'Two entries paid now, paid back from half of each prize.')}</div>`;
   }
-  function poster(c, e) {
+  function poster(c, e, noNeed) {
     const C = CI(), L = C.LEVELS[e.level];
     const fmt = e.kind === 'groupko' ? `Group of 4, then ${e.size / 2}-player knockout` : `${e.size}-player knockout`;
     const win = C.prizeFor(e, 'W'), pts = C.pointsFor(e, 'W');
@@ -209,7 +213,7 @@
       <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
         <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
         ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
-          : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
+          : noNeed ? '' : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
       </div></article>`;
   }
   function live(c) {
@@ -440,6 +444,8 @@
   function fitNames(app) { app.querySelectorAll('.s3-tr b').forEach(b => { b.style.fontSize = ''; for (let px = 14; px >= 11 && (wordSplit(b) || b.scrollWidth > b.clientWidth + 1); px--) b.style.fontSize = px + 'px'; }); }
   function wire() {
     const app = $id('rbApp'); if (!app) return;
+    const cx = app.querySelector('.s3-ctx'), lvc = app.querySelector('.s3-lv'), scr = app.querySelector('.rb-scr');
+    if (cx && lvc && scr && 'IntersectionObserver' in window) { if (wire.cxIO) wire.cxIO.disconnect(); wire.cxIO = new IntersectionObserver(es => es.forEach(en => cx.classList.toggle('on', !en.isIntersecting)), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); }
     if (app.querySelector('.s3-tr b')) { fitNames(app); if (!wire.fitRs) { wire.fitRs = 1; let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const a = $id('rbApp'); if (a) fitNames(a); }, 120); }); } }
     app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
     app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }
