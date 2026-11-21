@@ -208,7 +208,7 @@ async function v3saves(b) {
       await p.goto(url(1), { timeout: 180000 }); await T.ready(); await p.waitForTimeout(2500); await title(); R.card1 = await card(); await T.shot('v3_' + fx.id + '_card');
       // Let's go: retried (a fade-in can take the first tap); a card that won't go after 5 taps is a finding, and the tries are reported
       R.goTries = 0; if (R.card1) for (let k = 0; k < 5 && (await p.evaluate(() => !!document.getElementById('s3V3New'))); k++) { R.goTries++; await p.waitForTimeout(500); await T.tap('#s3V3NewGo'); await p.waitForTimeout(800); }
-      R.cardStuck = await p.evaluate(() => !!document.getElementById('s3V3New')); R.flag1 = await p.evaluate(() => !!save.v3NewLook);
+      R.cardStuck = await p.evaluate(() => !!document.getElementById('s3V3New')); R.hasCard = await p.evaluate(() => [...document.scripts].some(x => /s3V3New/.test(x.textContent))); R.flag1 = await p.evaluate(() => !!save.v3NewLook);
       await hub(); await T.tab('locker'); await p.waitForTimeout(1500); R.fig = await fig(); R.lookOn = await T.look(true); await T.shot('v3_' + fx.id + '_locker');
       R.on = await rd();
       // 2. the way back: the same save opened with the models off (what the default-off release gives a player), then on again
@@ -222,7 +222,7 @@ async function v3saves(b) {
       await p.evaluate(() => { try { const l = document.getElementById('login'); if (l) l.hidden = true; save.authSeen = true; showTitle(); } catch (e) {} }); await p.waitForTimeout(1600);
       await p.waitForSelector('#s3V3New', { timeout: 7000 }).catch(() => {}); card3 = await p.evaluate(() => !!document.getElementById('s3V3New')); }) : [];
     const J = s => { try { return JSON.parse(s || 'null'); } catch (e) { return null; } }; const on = J(R.on), off = J(R.off), on2 = J(R.on2);
-    row(L, 'New look card once per account', R.card1 && !R.cardStuck && R.flag1 && !R.cardOff && !R.card2 && card3 === false, `first open with the models on: ${R.card1 ? 'shown' : 'NOT shown'}, Let's go ${R.cardStuck ? 'did NOT close it in ' + R.goTries + ' taps' : 'closed it (' + R.goTries + ' tap' + (R.goTries === 1 ? '' : 's') + ')'}, flag ${R.flag1 ? 'saved' : 'NOT saved'}; models off: ${R.cardOff ? 'SHOWN' : 'none'}; on again: ${R.card2 ? 'SHOWN AGAIN' : 'none'}; same save on a second phone: ${card3 ? 'SHOWN AGAIN' : card3 === false ? 'none' : 'not run'}`);
+    row(L, 'New look card once per account', R.card1 && !R.cardStuck && R.flag1 && !R.cardOff && !R.card2 && card3 === false, `first open with the models on: ${R.card1 ? 'shown, Let\'s go ' + (R.cardStuck ? 'did NOT close it in ' + R.goTries + ' taps' : 'closed it (' + R.goTries + ' tap' + (R.goTries === 1 ? '' : 's') + ')') : 'NOT shown' + (R.hasCard ? '' : ' (this build has no New look card: s3V3New is not in its code)')}, flag ${R.flag1 ? 'saved' : 'NOT saved'}; models off: ${R.cardOff ? 'SHOWN' : 'none'}; on again: ${R.card2 ? 'SHOWN AGAIN' : 'none'}; same save on a second phone: ${card3 ? 'SHOWN AGAIN' : card3 === false ? 'none' : 'not run'}`);
     // creator choices: what each choice changes on the figure (vs the same player without it), plus where beard and hair sit
     const F = R.fig, probs = [], notes = []; const t = (F && F.full && F.full.tags) || {};
     if (!F || F.err || !F.full) probs.push('no player figure' + (F && F.err ? ': ' + F.err : '')); else if (!F.v3) probs.push('the models flag did not switch on'); else if (F.full.err) probs.push('rebuild failed: ' + F.full.err);
