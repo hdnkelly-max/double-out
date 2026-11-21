@@ -1,3 +1,4 @@
+// SHIP-3 protected-path probe (Delivery QA); never released
 // Checkout routes (Hayden 22:59): every score 2-170 against the agreed standard table, by darts in hand,
 // plus set-up advice and the route picker's alternatives. node tests/checkouts.js  (no browser; runs in a second)
 const fs = require('fs'), path = require('path'), vm = require('vm');
