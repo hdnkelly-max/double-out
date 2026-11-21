@@ -5,7 +5,10 @@
 //   (the page harness plays every match to the deciding leg), levels by lvNeed, 1 stat point a level spent on the lowest of 5 stats with
 //   gainAt() inside the tier cap (v09 CAPS), match average = the throw-sim curve at the mean of sc/fi/ct/rh, win chance = 1/(1+10^((opp-me)/12)).
 // Variants patch the engine's constants (text-level, so the real rule code runs): see VARIANTS below.
+// curves: tests/profiles/pace-curves.json (match average by stat for weak = Hayden's timing, mid, strong = Lee's timing, zero = loses every match)
 // usage: node tests/pace-lever-sim.js <curves.json> [careers=300] [variant,variant...] > out.json
+// a sim, not a gate test: CI runs every tests/*.js with no arguments, so with no curves file it prints its usage and passes
+if (!process.argv[2]) { console.log('SKIP (sim, not a test): usage: node ' + require('path').basename(__filename) + ' <curves.json> [careers] ...'); process.exit(0); }
 const fs = require('fs'), path = require('path');
 const CURVES = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')); const N = +(process.argv[3] || 300);
 const SHIFT = process.env.NOSHIFT ? 0 : 1;
@@ -37,6 +40,7 @@ const VARIANTS = {
   pubBest6: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 6,"]] }, pubBest8: { text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 8,"]] },
   winToScore: { text: [["const prize = prizeFor(e, fin), pts = pointsFor(e, fin);", "const prize = prizeFor(e, fin), pts = lv.results.some(x => x.won) ? pointsFor(e, fin) : 0;"]] },
   W_pubBest6cap6half: { raw: true, text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 6,"], DEBT_CAP(6), REC_PTS(.5)] },
+  W_carry25: { raw: true, text: [['const DPNZ_CARRY = .4,', 'const DPNZ_CARRY = .25,']] }, W_carry50: { raw: true, text: [['const DPNZ_CARRY = .4,', 'const DPNZ_CARRY = .5,']] }, W_carry40nocap: { raw: true, text: [['DPNZ_CARRY_CAP = 300;', 'DPNZ_CARRY_CAP = 1e9;']] },
   W_base: { raw: true }, W_recHalf: { raw: true, text: [REC_PTS(.5)] }, W_recZero: { raw: true, text: [REC_PTS(0)] }, W_cap6half: { raw: true, text: [DEBT_CAP(6), REC_PTS(.5)] }, W_cap10half: { raw: true, text: [DEBT_CAP(10), REC_PTS(.5)] },
 
   // the engine exactly as it is on this branch (car-worlds: the lost-Worlds rule in tc/circuit.js), no patches
@@ -89,6 +93,7 @@ function career(E, curve, cap) {
     out.matches++; xp += (60 + (won ? 100 : 0)) * XPMUL[L0] + (won ? 60 : 0); while (xp >= lvNeed(plv)) { xp -= lvNeed(plv); plv++; }
     const wasRec = !!(c.live && c.live.recovery); const res = E.result(c, won); out.debtMax = Math.max(out.debtMax, c.debt || 0); if (res && res.done && wasRec) out.recPts += res.pts || 0; if (c.level !== L0) { out.left = out.left || {}; out.left[L0] = 1; }
     if (res && res.up && res.up.champion) { out.champion = true; break; }
+    if (c.level === 6 && L0 !== 6) { out.quals = (out.quals || 0) + 1; if (out.lastQ != null) (out.gaps = out.gaps || []).push(out.matches - out.lastQ); out.lastQ = out.matches; }
     if (c.level === 6 && out.palaceAt == null) out.palaceAt = out.matches;
   }
   out.end = out.champion ? 'champion' : 'cap'; out.bank = c.bank; out.debtEnd = c.debt || 0; out.maxLevel = Math.max(...Object.keys(out.lv).map(Number)); out.plv = plv; return out;
@@ -104,5 +109,5 @@ for (const v of want) { const E = engine(VARIANTS[v]); res[v] = {};
       lvl[L] = { reached: xs.length, mMed: q(xs.map(x => x.m), .5), m1Med: q(xs.map(x => x.m1 || 0), .5), evMed: q(xs.map(x => x.ev), .5), win: +(xs.reduce((s, x) => s + x.w, 0) / xs.reduce((s, x) => s + x.m, 0)).toFixed(2),
         entry: f.length ? +(f.reduce((s, x) => s + x, 0) / f.length).toFixed(2) : null, exit: l.length ? +(l.reduce((s, x) => s + x, 0) / l.length).toFixed(2) : null }; }
     res[v][who] = { palace: pa.length + '/' + N, toPalaceP50: q(pa, .5), toPalaceP25: q(pa, .25), toPalaceP75: q(pa, .75), champ: runs.filter(r => r.champion).length + '/' + N,
-      matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), stalls: runs.filter(r => /stall/.test(r.end || '')).length, recP50: q(runs.map(r => r.rec), .5), recPubP50: q(runs.map(r => r.recPub), .5), cappedP50: q(runs.map(r => r.capped), .5), debtMaxP50: q(runs.map(r => r.debtMax), .5), debtMaxP90: q(runs.map(r => r.debtMax), .9), debtMaxMax: Math.max(...runs.map(r => r.debtMax)), debtEndP50: q(runs.map(r => r.debtEnd), .5), recPtsP50: q(runs.map(r => r.recPts), .5), reachClub: runs.filter(r => r.maxLevel >= 1).length, reachDpnz: runs.filter(r => r.maxLevel >= 3).length, clubAtP50: q(runs.map(r => r.lv[0] ? r.lv[0].m : null).filter(x => x != null), .5), lvl }; } }
+      matchesP50: q(runs.map(r => r.matches), .5), bankP50: q(runs.map(r => r.bank), .5), worldsP50: q(runs.map(r => r.worlds), .5), qualsP50: q(runs.map(r => r.quals || 0), .5), gapP50: q([].concat(...runs.map(r => r.gaps || [])), .5), stalls: runs.filter(r => /stall/.test(r.end || '')).length, recP50: q(runs.map(r => r.rec), .5), recPubP50: q(runs.map(r => r.recPub), .5), cappedP50: q(runs.map(r => r.capped), .5), debtMaxP50: q(runs.map(r => r.debtMax), .5), debtMaxP90: q(runs.map(r => r.debtMax), .9), debtMaxMax: Math.max(...runs.map(r => r.debtMax)), debtEndP50: q(runs.map(r => r.debtEnd), .5), recPtsP50: q(runs.map(r => r.recPts), .5), reachClub: runs.filter(r => r.maxLevel >= 1).length, reachDpnz: runs.filter(r => r.maxLevel >= 3).length, clubAtP50: q(runs.map(r => r.lv[0] ? r.lv[0].m : null).filter(x => x != null), .5), lvl }; } }
 console.log(JSON.stringify(res));

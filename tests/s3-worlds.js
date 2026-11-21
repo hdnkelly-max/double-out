@@ -4,7 +4,7 @@
 //   3 win the Worlds: champion, still at the Palace (unchanged)
 //   4 back again via OOM #1 or the Trans-Tasman final: no second Palace grant
 //   5 Trans-Tasman and DPNZ rules unchanged (TT semi -> DPNZ + Q-School offer; OOM 2..10 -> TT)
-//   6 page: a lost Worlds through TOPS_S3 moves the career to the DPNZ Tour, logs s3_result up 3, and the result, then a "Back on tour · DPNZ Tour" sheet with "400 points carried (40%)"
+//   6 page: a lost Worlds through TOPS_S3 moves the career to the DPNZ Tour, logs s3_result up 3, and the result, then a "Back on tour · DPNZ Tour" sheet with "N points carried (40%, up to 300)"
 // usage: node tests/s3-worlds.js [dir]
 const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 const E = require(path.join(dir, 'tc/circuit.js')); const f = [];
@@ -14,7 +14,7 @@ function playWorlds(c, winRounds) { const r0 = E.book(c, 'worlds'); if (!r0.ok) 
 { const c = atPalace(); const b0 = c.bank; const r = playWorlds(c, 0);
   const prize = E.prizeFor(E.eventOf('worlds'), 'L128');
   if (!r || !r.up || r.up.to !== 3 || c.level !== 3) f.push('1 L128 loss did not go back to the DPNZ Tour ' + JSON.stringify(r && r.up));
-  if (c.dpnzEv !== 0 || c.dpnzYear !== 1 || c.pts.dpnz !== Math.round(1500 * .4) || JSON.stringify(c.res.dpnz) !== JSON.stringify([600])) f.push('1 new DPNZ season with 40% carried ' + JSON.stringify({ ev: c.dpnzEv, yr: c.dpnzYear, pts: c.pts.dpnz, res: c.res.dpnz }));
+  if (c.dpnzEv !== 0 || c.dpnzYear !== 1 || c.pts.dpnz !== 300 || JSON.stringify(c.res.dpnz) !== JSON.stringify([300])) f.push('1 new DPNZ season with 40% carried ' + JSON.stringify({ ev: c.dpnzEv, yr: c.dpnzYear, pts: c.pts.dpnz, res: c.res.dpnz }));
   if (r.up.grant || c.bank !== b0 - 3000 + prize) f.push('1 money: no grant, bank = before - travel + prize ' + JSON.stringify({ b0, bank: c.bank, prize, grant: r.up.grant }));
   if (!/Out of the Worlds in the last 128/.test(r.up.msg) || r.up.fromWorlds !== 'L128') f.push('1 message ' + r.up.msg);
   if (E.restNeeded(c) || !E.calendar(c).length || c.week !== 53) f.push('2 week 53 should have DPNZ events ' + JSON.stringify({ week: c.week, cal: E.calendar(c).map(e => e.id) }));
@@ -39,7 +39,7 @@ function playWorlds(c, winRounds) { const r0 = E.book(c, 'worlds'); if (!r0.ok) 
   const pg = await p.evaluate(async () => { const o = {};  try { save.authSeen = true; save.lessonDone = true; save.tcWelSeen = 1; $('login').hidden = true; try { localStorage.setItem('tops_s3_welcome', '1'); const w = document.getElementById('s3Wel'); if (w) w.remove(); } catch (e) {} window.showMsg = (m, cb) => { try { cb && cb('ok'); } catch (e) {} };
     newCareer(); const c = career(), k = c.circuit; try { showHub('play'); } catch (e) {} await new Promise(r => setTimeout(r, 1500));
     try { delete TC_API.st().welPend; } catch (e) {} document.querySelectorAll('.tc-sheet,.tc-poster,.tcpk,.tc-back,.tc-scrim').forEach(e => e.remove());
-    k.level = 6; c.tier = 6; k.week = 52; c.bank = 5000; k.grants = { 6: 1 }; k.pts = { dpnz: 1000 }; k.res = { dpnz: [400, 400, 200] }; k.dpnzEv = 8; persist(); localStorage.setItem('tops_s3_seen', JSON.stringify({ h: k.history.length, lv: 6, r: -1, id: '', g: 0 }));
+    k.level = 6; c.tier = 6; k.week = 52; c.bank = 5000; k.grants = { 6: 1 }; k.pts = { dpnz: 500 }; k.res = { dpnz: [300, 200] }; k.dpnzEv = 8; persist(); localStorage.setItem('tops_s3_seen', JSON.stringify({ h: k.history.length, lv: 6, r: -1, id: '', g: 0 }));
     try { showHub('play'); } catch (e) {} await new Promise(r => setTimeout(r, 1200));
     const bk = TOPS_S3.book('worlds'); o.book = bk && bk.ok; const logs = []; const _L = window.TOPS_LOG;
     TOPS_S3._playNow(); S.won = false; S.p[0].legs = 4; S.p[1].legs = 5; S.p[0].darts = 120; S.p[0].pts = 3000; careerAfterMatch(); S.done = true;
@@ -57,9 +57,9 @@ function playWorlds(c, winRounds) { const r0 = E.book(c, 'worlds'); if (!r0.ok) 
   await p.screenshot({ path: path.join(__dirname, '../wip/s3-worlds-back.jpg') }).catch(() => {});
   await b.close();
   if (pg.err) f.push('6 page error ' + pg.err);
-  if (!pg.book || pg.level !== 3 || pg.tier !== 3 || pg.week !== 53 || pg.ev !== 0 || pg.pts !== 400) f.push('6 page: lost Worlds did not go back to the DPNZ Tour ' + JSON.stringify(pg));
-  if (!pg.sheetVisible || !/^Back on tour/i.test(pg.second || '') || !/DPNZ Tour/i.test(pg.second || '') || !/with 400 points carried/.test(pg.second || '') || /Promoted|grant/i.test(pg.second || '')) f.push('6 page: no "Back on tour" level sheet ' + JSON.stringify(pg));
+  if (!pg.book || pg.level !== 3 || pg.tier !== 3 || pg.week !== 53 || pg.ev !== 0 || pg.pts !== 200) f.push('6 page: lost Worlds did not go back to the DPNZ Tour ' + JSON.stringify(pg));
+  if (!pg.sheetVisible || !/^Back on tour/i.test(pg.second || '') || !/DPNZ Tour/i.test(pg.second || '') || !/with 200 points carried/.test(pg.second || '') || /Promoted|grant/i.test(pg.second || '')) f.push('6 page: no "Back on tour" level sheet ' + JSON.stringify(pg));
   if (errs.length) f.push('page errors: ' + errs.slice(0, 3).join(' | '));
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ')); process.exit(1); }
-  console.log('PASS: a lost Worlds (last 128 or the final) goes back to the DPNZ Tour: new season, 40% of 1500 = 600 points carried, no grant, bank = before - $3,000 travel + prize, week 53 has DPNZ events (no rest); a Worlds win is still champion; back to the Palace via OOM #1 or the Trans-Tasman final with no second grant; Trans-Tasman semi rule unchanged; on the page the career moves to the DPNZ Tour and the result, then a "Back on tour · DPNZ Tour" sheet with "400 points carried (40%)"');
+  console.log('PASS: a lost Worlds (last 128 or the final) goes back to the DPNZ Tour: new season, 40% of 1500 capped at 300 points carried, no grant, bank = before - $3,000 travel + prize, week 53 has DPNZ events (no rest); a Worlds win is still champion; back to the Palace via OOM #1 or the Trans-Tasman final with no second grant; Trans-Tasman semi rule unchanged; on the page the career moves to the DPNZ Tour and the result, then a "Back on tour · DPNZ Tour" sheet with "N points carried (40%, up to 300)"');
 })();
