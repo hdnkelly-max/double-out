@@ -67,8 +67,12 @@ jobs:
             *)    C=$(git rev-parse --verify "$BUILD^{commit}") || { echo "::error::unknown commit $BUILD"; exit 1; } ;;
           esac
           git checkout -q --detach "$C"
-          # the checks always come from src's head, or test_ref (they can be newer than the build: a missing gate test is then a real FAIL)
-          git fetch -q origin "$TREF" && git checkout -q FETCH_HEAD -- tests && git reset -q -- tests
+          # live: every test comes from src's head (or test_ref), newer than the build, so a gate test not shipped yet is a real FAIL.
+          # A candidate (src or a sha): its OWN tests win (a branch's newer tests must not be replaced by older ones); only the switch-on
+          # runner and its fixtures come from test_ref.
+          git fetch -q origin "$TREF"
+          if [ "$BUILD" = live ]; then git checkout -q FETCH_HEAD -- tests; else git checkout -q FETCH_HEAD -- tests/switch-on.js tests/fixtures/switch-on; fi
+          git reset -q -- tests
           V=$(sed -n "s/.*TOPS_VER='\([^']*\)'.*/\1/p" v051.js | head -1)
           echo "c=$C" >> $GITHUB_OUTPUT; echo "v=$V" >> $GITHUB_OUTPUT; echo "live=$LIVE" >> $GITHUB_OUTPUT; echo "lc=$LC" >> $GITHUB_OUTPUT
           echo "build $BUILD = ${C:0:7} (v$V; live is v$LIVE); tests from $TREF"
