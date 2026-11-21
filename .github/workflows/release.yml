@@ -243,9 +243,12 @@ jobs:
       # first one WAS listed by then). So before every deploy-pages: wait (up to 3 min) until the artifact is in that same list.
       # (the steps that run it get GH_TOKEN; the rest of the job, e.g. the live check's npm install, does not)
       WAIT_ART: |
-        t0=$(date +%s)
+        t0=$(date +%s); err=0
         for i in $(seq 1 36); do
-          c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$N\" and (.expired | not))] | length" 2>/dev/null || echo 0)
+          # ChatGPT P2-4: an API error is not "not listed yet"; 3 in a row (e.g. a 403) end the wait early instead of burning 3 min
+          if ! c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$N\" and (.expired | not))] | length" 2>&1); then
+            err=$((err+1)); echo "::warning::ARTIFACT: listing failed ($err): ${c:0:160}"; [ $err -lt 3 ] || { echo "::warning::ARTIFACT: listing failed 3 times; trying the deploy anyway"; exit 0; }; sleep 5; continue
+          fi; err=0
           if [ "${c:-0}" -ge 1 ]; then echo "ARTIFACT: $N listed after $(( $(date +%s) - t0 )) s"; echo "ARTIFACT: \`$N\` listed after $(( $(date +%s) - t0 )) s" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
           sleep 5
         done
