@@ -1225,7 +1225,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   /* the skull carries the face: canvas painted in the skin colour the material system chose (V2SKIN or the HSL rule), the material keeps
      only the linear gain above 1 and the pane lift (v2fk), so the painted skin and the body skin match */
   const lc=skin.color.clone(),gn=Math.max(1,lc.r,lc.g,lc.b),cc=lc.clone().multiplyScalar(1/gn),skHex='#'+cc.getHexString();
-  const [map,rmap]=v3HeadMaps(L,skHex,V2MAT.skin[0]);const hm=skin.clone();hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;v3Warm(hm,skin);
+  const SKV=window.TOPS_V3SKIN;const [map,rmap]=v3HeadMaps(L,skHex,SKV&&SKV.r!=null?SKV.r:V2MAT.skin[0]);const hm=skin.clone();if(skin.onBeforeCompile&&skin.customProgramCacheKey&&skin.userData.v3spec){hm.onBeforeCompile=skin.onBeforeCompile;hm.customProgramCacheKey=skin.customProgramCacheKey;}/* skin test knob reaches the face too (clone drops onBeforeCompile; the roughness map bakes the skin roughness) */hm.map=map;hm.color.setRGB(gn,gn,gn);hm.roughness=1;hm.roughnessMap=rmap;v3Warm(hm,skin);
   const sg=new T.SphereGeometry(1,Math.round(64*S3_SEGF),Math.round(48*S3_SEGF));{const p=sg.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).normalize();const q=v3HeadPoint(v,FP.cheek,FP);p.setXYZ(i,q.x,q.y,q.z);}sg.computeVertexNormals();}
   const sk=mesh(sg,hm,head);sk.userData.tag='skull';sk.castShadow=false;
   {const np=v3HeadPoint(new T.Vector3(0,Math.cos(Math.PI/2+0.36),Math.sin(Math.PI/2+0.36)).normalize(),FP.cheek,FP);mesh(ell(0.058*(L.nose||1),0.047,0.05,16,12),skin,head,0,np.y,np.z-0.022).castShadow=false;}
