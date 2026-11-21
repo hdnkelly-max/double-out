@@ -252,7 +252,7 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 @media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
 /* CAR-PRESTIGE: the title edition under each level on the trophy shelf */
 #rbApp .s3-ed{display:flex;align-items:center;gap:12px;background:var(--card2,var(--card));border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:64px}
-#rbApp .s3-ed img,#rbApp .s3-ed i{width:44px;height:44px;border-radius:8px;flex:none;object-fit:cover;transform:rotate(45deg) scale(.82);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#rbApp .s3-ed img,#rbApp .s3-ed i{width:52px;height:52px;flex:none;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
 #rbApp .s3-ed i{background:repeating-linear-gradient(45deg,var(--line) 0 6px,transparent 6px 12px);transform:none;box-shadow:none}
 #rbApp .s3-ed>div{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 #rbApp .s3-ed span{font:700 11px/1 var(--b,Manrope,sans-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}

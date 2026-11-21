@@ -158,7 +158,7 @@
     for (let i = 0; i < 11; i++) { const t = i / 11, y = 85 * s - t * 180 * s, L = (1 - t * .85) * 52 * s;
       for (const d of [-1, 1]) { x.beginPath(); x.moveTo(0, y); x.quadraticCurveTo(d * L * .6, y - 6 * s, d * L, y - 20 * s); x.quadraticCurveTo(d * L * .55, y - 2 * s, 0, y + 9 * s); x.fill(); } }
     x.restore(); }
-  function paint(id, name) {
+  function paint0(id, name) {
     const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
     if (id === 'pub') {   // warm rimu wood with the pub's name, the Kauri Arms colours
       x.fillStyle = '#7a4a22'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 26; i++) { x.strokeStyle = `rgba(${i % 2 ? '40,20,8' : '160,100,50'},.28)`; x.lineWidth = 3 + (i % 3); x.beginPath(); x.moveTo(-20, i * 11); x.bezierCurveTo(80, i * 11 + 14, 170, i * 11 - 12, 280, i * 11 + 6); x.stroke(); }
@@ -179,6 +179,78 @@
       x.fillStyle = '#111'; x.font = `800 34px ${FONT}`; x.textAlign = 'center'; x.save(); x.translate(110, 110); x.rotate(-Math.PI / 4); x.fillText('WORLD', 0, -4); x.fillText('CHAMPION', 0, 28); x.restore(); }
     else return null;
     return c; }
+  /* doc 75 (art): the flights redrawn as bold two-colour designs for the 180 / match-winner / 9-darter close-up and the walk-on (TOPS_FLT75, on
+     by default; TOPS_FLT75=0 = the first-pass art above). Where the art lands on the flight: game4 maps the 256 px canvas at 1/.032 per metre,
+     so the front of each wing shows only the canvas's lower right (the standard wing: a point at (0,230), its top edge up to (144,114) and
+     (252,166), the root along y 230-256) and the back of each wing shows the mirror of that (the lower left). Everything is drawn for the front
+     and mirrored for the back; text is flipped back so it reads on both faces. Every other flight shape (slim, kite, pear, vapor, shot, ar,
+     tenx) covers the same core, x 150-250 / y 170-250, so the key mark sits there. One dominant colour per edition (what reads end-on, when the
+     wings are slivers) + one bold contrast mark (what reads three-quarter): wood + cream, black + white fern, green | black split, white + black
+     signature, gold + black crown. The default darts keep their set or custom flights (black + red Harrows on a new career). */
+  const F75 = () => window.TOPS_FLT75 !== false && window.TOPS_FLT75 !== 0;
+  const SIG = '"Snell Roundhand","Brush Script MT","Segoe Script","Bradley Hand",cursive';
+  function word(x, m, t, cx, cy, rot) { x.save(); x.translate(cx, cy); if (m) x.scale(-1, 1); x.rotate(m ? -rot : rot); x.fillText(t, 0, 0); x.restore(); }
+  function frond(x, s, col) {   // a bold silver fern: a curved stem from the wing root to the tall back tip, 13 long leaflet pairs leaning to the tip, a solid silhouette
+    x.fillStyle = col; x.strokeStyle = col; x.lineCap = 'round'; x.lineJoin = 'round';
+    const P = t => { const u = 1 - t; return [u * u * 62 + 2 * u * t * 150 + t * t * 246, u * u * 240 + 2 * u * t * 206 + t * t * 122]; };
+    x.lineWidth = 8.5 * s; x.beginPath(); for (let i = 0; i <= 24; i++) { const [a, b] = P(i / 24); i ? x.lineTo(a, b) : x.moveTo(a, b); } x.stroke();
+    for (let i = 0; i < 13; i++) { const t = .1 + i * .068, [a, b] = P(t), [a2, b2] = P(Math.min(1, t + .03)), ang = Math.atan2(b2 - b, a2 - a), L = (1 - t * .72) * 62 * s, W = 9.6 * s;
+      for (const d of [-1, 1]) { const n = ang + d * .78, ex = a + Math.cos(n) * L, ey = b + Math.sin(n) * L, mx = a + Math.cos(n) * L * .5, my = b + Math.sin(n) * L * .5, px = -Math.sin(n) * W * d, py = Math.cos(n) * W * d;
+        x.beginPath(); x.moveTo(a, b); x.quadraticCurveTo(mx + px, my + py, ex, ey); x.quadraticCurveTo(mx - px * .6 + (a2 - a) * .6, my - py * .6 + (b2 - b) * .6, a2, b2); x.closePath(); x.fill(); } } }
+  function crown(x, cx, cy, w, col) {   // a five-point crown, heavy: wide spikes, big ball tips, a deep band (75b: +25% weight on the outer panel)
+    const h = w * .66; x.fillStyle = col; x.beginPath(); x.moveTo(cx - w / 2, cy + h / 2);
+    const pts = [[-.52, -.22], [-.36, .14], [-.27, -.5], [-.13, .08], [0, -.62], [.13, .08], [.27, -.5], [.36, .14], [.52, -.22]];
+    pts.forEach(([u, v]) => x.lineTo(cx + u * w, cy + v * h)); x.lineTo(cx + w / 2, cy + h / 2); x.closePath(); x.fill();
+    [[-.52, -.22], [-.27, -.5], [0, -.62], [.27, -.5], [.52, -.22]].forEach(([u, v]) => { x.beginPath(); x.arc(cx + u * w, cy + v * h - w * .035, w * .085, 0, 7); x.fill(); });
+    x.fillRect(cx - w / 2, cy + h / 2 + w * .05, w, w * .17); }
+  function star(x, cx, cy, r, n, col) { x.fillStyle = col; x.beginPath(); for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, rr = i % 2 ? r * .45 : r; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } x.closePath(); x.fill(); }
+  function pint(x, cx, cy, h, glass, beer) {   // a pint glass: cream glass, amber beer, a cream head
+    const wT = h * .66, wB = h * .5, top = cy - h / 2, bot = cy + h / 2;
+    const side = (y) => wB / 2 + (wT / 2 - wB / 2) * (bot - y) / h;
+    x.fillStyle = glass; x.beginPath(); x.moveTo(cx - wT / 2 - 3, top); x.lineTo(cx + wT / 2 + 3, top); x.lineTo(cx + wB / 2 + 3, bot + 3); x.lineTo(cx - wB / 2 - 3, bot + 3); x.closePath(); x.fill();
+    const yb = top + h * .24; x.fillStyle = beer; x.beginPath(); x.moveTo(cx - side(yb) + 3, yb); x.lineTo(cx + side(yb) - 3, yb); x.lineTo(cx + wB / 2 - 3, bot - 3); x.lineTo(cx - wB / 2 + 3, bot - 3); x.closePath(); x.fill();
+    x.fillStyle = glass; x.beginPath(); x.ellipse(cx, top + 2, wT / 2 + 4, h * .1, 0, 0, 7); x.fill(); }
+  // one edition = a base (the dominant colour, laid over the whole canvas) + a mark (drawn for the front face; mirrored onto the back canvas)
+  const D75 = {
+    pub: {   // Kauri Arms (75b): amber rimu wood, a cream root band and pinstripe, and the pub's mark on the outer panel: a big cream pint with amber beer (wood + cream)
+      base(x) { x.fillStyle = '#86461c'; x.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 30; i++) { x.strokeStyle = i % 2 ? 'rgba(30,12,4,.35)' : 'rgba(170,96,44,.35)'; x.lineWidth = 2 + (i % 3); x.beginPath(); const y = i * 9; x.moveTo(-10, y); x.bezierCurveTo(70, y + 7, 170, y - 6, 266, y + 4); x.stroke(); }
+        x.fillStyle = '#f0dfb2'; x.fillRect(0, 222, 256, 34); x.fillRect(0, 206, 256, 7); },
+      mark(x) { pint(x, 202, 166, 84, '#f0dfb2', '#b8641e'); } },
+    dpnz: {  // DPNZ: black with one big white fern across the wing, 20% larger in 75b so it reads when flights overlap (black + white)
+      base(x) { x.fillStyle = '#0c0d0f'; x.fillRect(0, 0, 256, 256); }, mark(x) { frond(x, 1, '#eef1f3'); } },
+    tt: {    // Trans-Tasman (75c): the split reads AU v NZ on the outer panel itself, so both survive overlapping darts. Split along the wing:
+             // the outer edge Aussie green with the gold Southern Cross, the root side NZ black with a silver fern lying along it, a gold seam
+      base(x) { x.fillStyle = '#0c0d0f'; x.fillRect(0, 0, 256, 256); },
+      mark(x) { const L = [[-10, 240], [262, 168]];   // the split, root-front to outer-back
+        x.fillStyle = '#12844a'; x.beginPath(); x.moveTo(L[0][0], L[0][1]); x.lineTo(L[1][0], L[1][1]); x.lineTo(262, 60); x.lineTo(-10, 60); x.closePath(); x.fill();
+        const G = '#f6c52c'; star(x, 202, 134, 14, 5, G); star(x, 174, 156, 12, 5, G); star(x, 232, 144, 12, 5, G); star(x, 210, 162, 14, 5, G); star(x, 228, 160, 5, 5, G);
+        x.save(); x.beginPath(); x.moveTo(L[0][0], L[0][1] + 7); x.lineTo(L[1][0], L[1][1] + 7); x.lineTo(262, 262); x.lineTo(-10, 262); x.closePath(); x.clip();
+        x.translate(168, 224); x.rotate(.3); x.scale(.82, .82); x.translate(-154, -181); frond(x, 1, '#e9edf0'); x.restore();
+        x.strokeStyle = '#f4c62e'; x.lineWidth = 7; x.beginPath(); x.moveTo(L[0][0], L[0][1]); x.lineTo(L[1][0], L[1][1]); x.stroke(); } },
+    card: {  // Tour Card (75b): tour blue with your signature as a big metallic silver mark on the outer panel and a silver swoosh (blue + silver)
+      base(x) { x.fillStyle = '#1d3b78'; x.fillRect(0, 0, 256, 256); },
+      mark(x, m, nm) { const g = x.createLinearGradient(0, 120, 0, 230); g.addColorStop(0, '#ffffff'); g.addColorStop(.45, '#c9d0d6'); g.addColorStop(.6, '#f4f6f8'); g.addColorStop(1, '#8e979f');
+        x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#0d1a36'; x.lineWidth = 15; x.beginPath(); x.moveTo(104, 246); x.bezierCurveTo(166, 240, 222, 214, 254, 168); x.stroke();
+        x.strokeStyle = g; x.lineWidth = 10; x.stroke();
+        const MW = 106; let sig = nm, fs = 62; const fit = t => { x.font = `italic 700 62px ${SIG}`; const tw = x.measureText(t).width; return tw > MW ? 62 * MW / tw : 62; };
+        fs = fit(sig); if (fs < 38 && sig.indexOf(' ') > 0) { sig = sig.split(' ')[0]; fs = fit(sig); }   // a long full name signs with the first name, so it stays big
+        fs = Math.max(30, fs); x.font = `italic 700 ${fs}px ${SIG}`; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.save(); x.translate(180, 188); if (m) x.scale(-1, 1); x.rotate(m ? .3 : -.3); x.lineWidth = 5; x.strokeStyle = '#0d1a36'; x.strokeText(sig, 0, 0); x.fillStyle = g; x.fillText(sig, 0, 0); x.restore(); } },
+    worlds: { // Worlds (75b): gold leaf with a heavier, bigger black crown on the outer panel and a black root band (gold + black)
+      base(x) { const g = x.createLinearGradient(0, 100, 0, 256); g.addColorStop(0, '#f6da84'); g.addColorStop(.55, '#dcae45'); g.addColorStop(1, '#a87d26'); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+        x.fillStyle = '#111111'; x.fillRect(0, 238, 256, 18); },
+      mark(x) { crown(x, 200, 176, 92, '#111111'); } }
+  };
+  // back = the canvas for the back of each wing (game4 reads it mirrored), so the mark is laid out mirrored and its text flipped back
+  function paint75(id, name, back) { const E = D75[id]; if (!E) return null; const nm = (name || 'You').slice(0, 12);
+    const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); E.base(x);
+    if (E.mark) { x.save(); if (back) { x.translate(256, 0); x.scale(-1, 1); } E.mark(x, !!back, nm); x.restore(); } return c; }
+  function paint(id, name, back) { return F75() ? paint75(id, name, back) : back ? null : paint0(id, name); }
+  // a flight-shaped preview for the shop (the front of one standard wing, as the close-up shows it): transparent outside the wing
+  function swatch(id, name, px) { const src = paint(id, name); if (!src) return null; px = px || 128; const c = document.createElement('canvas'); c.width = c.height = px; const x = c.getContext('2d');
+    const k = px / 256; x.scale(k, k); x.beginPath(); x.moveTo(0, 230); x.lineTo(144, 114); x.quadraticCurveTo(244, 106, 252, 166); x.lineTo(248, 254); x.lineTo(160, 256); x.closePath();
+    x.save(); x.clip(); x.drawImage(src, 0, 0); x.restore(); x.lineWidth = 3; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke(); return c; }
   const PARTS = {   // shaft colour and barrel finish per edition (the flight is painted above)
     pub:    {},
     dpnz:   { shaft: 0x0d0e10, barrel: { col: 0x2a2d31, met: .9, rough: .28, band: 0xd8dde2 } },
@@ -190,7 +262,8 @@
   // which edition your darts wear: TOPS_GEAR_PREVIEW (captures) or the equipped one on the career
   function equipped() { try { if (window.TOPS_GEAR_PREVIEW) return window.TOPS_GEAR_PREVIEW; const c = career(), g = c && c.prestige; return g && g.eq && g.eq.darts || null; } catch (e) { return null; } }
   window.TOPS_GEAR = function () { const id = equipped(); if (!id || !PARTS[id]) return null; const nm = (typeof save !== 'undefined' && save.name) || 'You';
-    const key = id + '|' + nm; if (!CACHE[key]) CACHE[key] = paint(id, nm); return Object.assign({ id, flight: CACHE[key] }, PARTS[id]); };
+    const key = id + '|' + nm + (F75() ? '|75' : ''); if (!CACHE[key]) CACHE[key] = [paint(id, nm), paint(id, nm, true)]; const fb = CACHE[key][1];
+    return Object.assign({ id, flight: CACHE[key][0] }, fb ? { flightB: fb } : {}, PARTS[id]); };
   /* gear cam (Producer 07:03): on your 180s, the match-winning double and any nine-darter, a ~1.2 s still close-up of your three darts in the
      board over the board pane. Tap skips. Never on ordinary visits; the match carries on underneath (turn timing and throw numbers unchanged).
      Behind TOPS_GEARCAM (?gearcam=1 sticks, ?gearcam=0 off) until it ships. */
@@ -217,7 +290,7 @@
      is the free proof. Buying is cosmetic and one-off and never takes the bank below the next entry fee. Owned editions never expire; one
      dart edition is worn at a time. Shirt editions (Club, Opens) and the Trans-Tasman shirt only show outside matches and need their kit art,
      so they're listed but not sold until that lands (READY). ---------- */
-  const READY = { pub: 1, dpnz: 1, tt: 1, card: 1, worlds: 1 };
+  const READY = { pub: 1, dpnz: 1, tt: 1, card: 1, worlds: 1 };   // Club/Opens shirts aren't listed until their kit art exists. Owning 'tt' is the entitlement to the TT shirt: when it ships, every owner gets it (no second purchase)
   const CIRC = () => window.TOPS_CIRCUIT;
   const carOf = () => { try { const c = career(); return c && c.circuit ? c : null; } catch (e) { return null; } };
   const wonAt = (k, ed) => (k.history || []).some(h => h.fin === 'W' && (ed.id === 'worlds' ? h.id === 'worlds' : h.level === ed.lv));
@@ -240,15 +313,15 @@
   /* the edition row under each level on the trophy shelf (Locker > Trophies). Self-contained: rb/s3.js only asks for the row's HTML; taps are
      handled here (delegated), and the row redraws itself. Buying takes two taps (the first arms it for 3 s), never a dialog. */
   const $m = n => '$' + Math.round(n).toLocaleString('en-NZ'); const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
-  const THUMB = {}; const thumb = id => { if (!PARTS[id]) return ''; const nm = (typeof save !== 'undefined' && save.name) || 'You', k = id + '|' + nm; try { if (!THUMB[k]) THUMB[k] = paint(id, nm).toDataURL('image/jpeg', .82); } catch (e) { return ''; } return THUMB[k]; };
-  function row(lv) { const ed = ED.find(x => x.lv === lv); if (!ed) return ''; const st = state(ed.id); if (!st) return ''; const E = CIRC(), L = E && E.LEVELS[lv];
+  const THUMB = {}; const thumb = id => { if (!PARTS[id]) return ''; const nm = (typeof save !== 'undefined' && save.name) || 'You', k = id + '|' + nm; try { if (!THUMB[k]) THUMB[k] = swatch(id, nm, 112).toDataURL('image/png'); } catch (e) { return ''; } return THUMB[k]; };   // 75c: the flight-shaped swatch
+  function row(lv) { const ed = ED.find(x => x.lv === lv); if (!ed || !READY[ed.id]) return ''; const st = state(ed.id); if (!st) return '';   // never list what can't render yet (Producer 10:40): Club/Opens shirts wait for their kit art const E = CIRC(), L = E && E.LEVELS[lv];
     let line, btn = '';
     if (!st.ready) line = 'Joins the shop with the new kits';
     else if (!st.won) line = (ed.id === 'worlds' ? 'Win the World Championship' : 'Win a ' + esc(L ? L.n : '') + ' title') + ' to unlock · ' + $m(ed.price);
-    else if (!st.owned) { line = 'Your title unlocked it · cosmetic only'; const armed = ARM.id === ed.id && Date.now() - ARM.at < 3000; btn = st.canAfford ? `<button type="button" class="s3-edb" data-ed-buy="${ed.id}">${armed ? `<b>Tap again to buy</b><small>${$m(ed.price)}</small>` : `<b>Buy · ${$m(ed.price)}</b>`}</button>` : `<button type="button" class="s3-edb" disabled><b>${$m(ed.price)}</b><small>Keep ${$m(st.fee)} for your next entry</small></button>`; }
-    else if (PARTS[ed.id]) { line = st.worn ? 'On your darts' : 'Yours'; btn = `<button type="button" class="s3-edb s3-edw" data-ed-wear="${st.worn ? '' : ed.id}"><b>${st.worn ? 'Take off' : 'Wear'}</b></button>`; }
+    else if (!st.owned) { line = ed.id === 'tt' ? 'Flights and shafts now · shirt joins your locker when it\u2019s made' : 'Your title unlocked it · cosmetic only'; const armed = ARM.id === ed.id && Date.now() - ARM.at < 3000; btn = st.canAfford ? `<button type="button" class="s3-edb" data-ed-buy="${ed.id}">${armed ? `<b>Tap again to buy</b><small>${$m(ed.price)}</small>` : `<b>Buy · ${$m(ed.price)}</b>`}</button>` : `<button type="button" class="s3-edb" disabled><b>${$m(ed.price)}</b><small>Keep ${$m(st.fee)} for your next entry</small></button>`; }
+    else if (PARTS[ed.id]) { line = (st.worn ? 'On your darts' : 'Yours') + (ed.id === 'tt' ? ' · shirt joins your locker when it\u2019s made' : ''); btn = `<button type="button" class="s3-edb s3-edw" data-ed-wear="${st.worn ? '' : ed.id}"><b>${st.worn ? 'Take off' : 'Wear'}</b></button>`; }
     else line = 'Yours';
-    const img = thumb(ed.id); return `<div class="s3-ed${st.owned ? ' s3-edown' : st.won && st.ready ? ' s3-edopen' : ''}" data-edrow="${lv}">${img ? `<img src="${img}" alt="">` : '<i></i>'}<div><span>Title edition</span><b>${esc(ed.n)}</b><small>${line}</small></div>${btn}</div>`; }
+    const img = thumb(ed.id); return `<div class="s3-ed${st.owned ? ' s3-edown' : st.won && st.ready ? ' s3-edopen' : ''}" data-edrow="${lv}">${img ? `<img src="${img}" alt="" class="s3-edsw">` : '<i></i>'}<div><span>Title edition</span><b>${esc(ed.n)}</b><small>${line}</small></div>${btn}</div>`; }
   const ARM = { id: null, at: 0 };   // the first tap arms a buy for 3 s (kept here, so a shelf redraw in between doesn't lose it)
   const redraw = lv => { const r = document.querySelector(`[data-edrow="${lv}"]`); if (r) r.outerHTML = row(lv); };
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-ed-buy],[data-ed-wear]'); if (!b) return; e.preventDefault(); e.stopPropagation();
@@ -257,5 +330,5 @@
       ARM.id = null; const res = buy(id); if (!res.ok) { b.innerHTML = '<b>' + esc(res.why || 'Not bought') + '</b>'; setTimeout(() => redraw(lv), 1800); return; } redraw(lv);
       try { const bk = document.getElementById('rbBank'); if (bk) bk.textContent = $m(career().bank); } catch (x) {} }
     else { wear(b.dataset.edWear || null); redraw(lv); } }, true);
-  window.TOPS_PRESTIGE = { ED, paint, PARTS, READY, state, buy, wear, floorFee, row };
+  window.TOPS_PRESTIGE = { ED, paint, PARTS, READY, state, buy, wear, floorFee, row, swatch };
 })();
