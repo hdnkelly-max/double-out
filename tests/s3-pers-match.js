@@ -16,7 +16,7 @@ for(const base of ['kai','ray','tama','mia','dazza']){const ctx=await b.newConte
  const on=await p.evaluate(()=>!!(window.TOPS_PERS_ON&&TOPS_PERS_ON()));if(!on){fails.push(base+': PERS23 not on by default under v3');await ctx.close();continue;}
  const steps=[['miss',()=>{S.cur=S.p.findIndex(q=>!q.ai);visitCall(10);}],['celebrate',()=>{S.cur=S.p.findIndex(q=>!q.ai);visitCall(140);}],['sig',()=>{S.cur=S.p.findIndex(q=>!q.ai);visitCall(180);}],
   ['miss',()=>{/* bust: the same hook as a busted visit */const h=S.p.findIndex(q=>!q.ai);S.persMe=null;persHold(S.p[h],'miss',1600);}],['defeated',()=>{const h=S.p.findIndex(q=>!q.ai);S.p[h].legs=0;S.p[1-h].legs=1;endMatch();}]];
- for(const [si,[m,fn]] of steps.entries()){await p.evaluate(`(${fn.toString()})()`);await p.waitForTimeout(600);
+ for(const [si,[m,fn]] of steps.entries()){await p.evaluate(`(${fn.toString()})()`);/* the hook picked the moment; hold it longer for measuring only (software GL screenshots and clip checks outlast the 1.5 s in-game hold) */await p.evaluate(()=>{if(S&&S.persMe)S.persMe.until=performance.now()+60000;});await p.waitForTimeout(600);
   if(m==='defeated'){/* match end: the 3D is behind the result screen, so 'defeated' shows on the player's result portrait */const d=await p.evaluate(()=>{const im=document.querySelector('#rsPt0 img');const neutral=V.portrait(save.look,save.name,0,0,0);return {has:!!im,diff:!!im&&im.src!==neutral};});
    if(!d.has||!d.diff)fails.push(`${base}/defeated: result portrait ${d.has?'unchanged':'missing'}`);else held++;if(out)await p.screenshot({path:`${out}/${base}_${si}_defeated_result.png`,clip:{x:0,y:180,width:390,height:150}});continue;}
   if(out)await p.screenshot({path:`${out}/${base}_${si}_${m}${si===3?'_bust':''}.png`});
