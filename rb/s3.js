@@ -180,6 +180,16 @@
   const ctxLine = (c, tag) => `<div class="s3-ctx"><span><b>${esc(CI().LEVELS[c.level].n)}</b> · Week ${c.week}${tag ? ' · ' + tag : ''}</span></div>`;
   function restX(c) {
     const C = CI(), L = C.LEVELS[c.level], nx = C.nextEventWeek ? C.nextEventWeek(c) : null;
+    /* CAR-CARD (4.22): when the tap sends you back to the DPNZ Tour (no Tour Card and Q-School far off, or nothing left at this level), say
+       exactly that, in Career's words, never 'On to week N' */
+    const pl = C.restPlan ? C.restPlan(c) : null;
+    if (pl && pl.back === 'dpnz') { const qs = pl.why === 'qschool', from = C.LEVELS[pl.fromLevel], pts = pl.carry + ' point' + (pl.carry === 1 ? '' : 's') + ' carry over';
+      return ctxLine(c) + `<div class="s3-rp s3-wk s3-wkback">
+      <div class="s3-rph s3-wkh"><b class="s3-wkup">${qs ? 'Waiting for <span class="s3-nw">Q-School</span>' : 'Nothing left on'}</b><span class="s3-wksub">${qs ? `Q-School is in week ${pl.qsWeek}. Wait on the DPNZ Tour until then` : `Nothing left on at the ${esc(from.n)} for you. Back to the DPNZ Tour for a new season`}</span><span>${qs ? 'The DPNZ Tour runs every week, so you keep playing while you wait.' : 'The DPNZ Tour runs every week.'}</span></div>
+      <div class="s3-wkev2" style="background:url(${lvArt(3)}) 30% 62%/cover no-repeat,${GRAD[3]}"><span>${esc(C.LEVELS[3].n)} · every week</span></div>
+      <div class="s3-rpbar">${qs ? `<div class="s3-rprow"><span>Q-School</span><b>Week ${pl.qsWeek}</b></div><div class="s3-rprow"><span>Your Q-School place</span><b>Kept</b></div>` : ''}
+        <div class="s3-rprow"><span>DPNZ points into the new season</span><b>${pl.carry}</b></div><div class="s3-rprow"><span>Tour budget</span><b>${money(c.bank)}</b></div></div>
+      <button class="rb-primary s3-grow" type="button" data-s3="rest"><b>Back to the DPNZ Tour</b><small>${qs ? 'Q-School place kept · ' : ''}${pts}</small></button></div>`; }
     if (nx == null) return ctxLine(c, 'rest week') + `<div class="s3-rp s3-wk"><div class="s3-rph s3-wkh"><b class="s3-wkup">Nothing on</b><span>No event at ${esc(L.n)} in the next ${C.REST_SCAN || 156} weeks. Play a money match or practise.</span></div>
       <div class="s3-two"><button class="rb-ghost" type="button" data-s3="mm">Money match</button><button class="rb-ghost" type="button" data-s3="toprac">Practice</button></div></div>`;
     const gap = nx - c.week, evs = C.calendar(Object.assign({}, c, { week: nx })), e = evs.slice().sort((a, b) => a.cost - b.cost)[0], win = C.prizeFor(e, 'W'), can = c.bank >= e.cost;
@@ -450,7 +460,9 @@
   function wire() {
     const app = $id('rbApp'); if (!app) return;
     const cx = app.querySelector('.s3-ctx'), lvc = app.querySelector('.s3-lv'), scr = app.querySelector('.rb-scr');
-    if (cx && lvc && scr && 'IntersectionObserver' in window) { if (wire.cxIO) wire.cxIO.disconnect(); wire.cxIO = new IntersectionObserver(es => es.forEach(en => cx.classList.toggle('on', !en.isIntersecting)), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); }
+    if (wire.cxIO) { wire.cxIO.disconnect(); wire.cxIO = null; }
+    if (cx && lvc && scr) { const r = lvc.getBoundingClientRect(), sr = scr.getBoundingClientRect(); cx.classList.toggle('on', r.bottom <= sr.top || r.top >= sr.bottom);   /* right away, then on scroll */
+      if ('IntersectionObserver' in window) { wire.cxIO = new IntersectionObserver(es => es.forEach(en => { const x = document.querySelector('#rbApp .s3-ctx'); if (x) x.classList.toggle('on', !en.isIntersecting); }), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); } }
     if (app.querySelector('.s3-tr b')) { fitNames(app); if (!wire.fitRs) { wire.fitRs = 1; let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const a = $id('rbApp'); if (a) fitNames(a); }, 120); }); } }
     app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
     app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }

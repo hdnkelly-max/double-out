@@ -248,3 +248,5 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wkh .s3-wkevn{font:700 20px/1.15 var(--b);text-transform:none;color:var(--ink);letter-spacing:0}
 #rbApp .s3-wkh .s3-wksub{font-size:15px;font-weight:600;color:var(--ink2)}
 #rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */
+#rbApp .s3-wkh .s3-wkup .s3-nw{white-space:nowrap;font:inherit;color:inherit;letter-spacing:inherit}
+@media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
