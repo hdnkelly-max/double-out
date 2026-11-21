@@ -41,6 +41,7 @@ const VARIANTS = {
   winToScore: { text: [["const prize = prizeFor(e, fin), pts = pointsFor(e, fin);", "const prize = prizeFor(e, fin), pts = lv.results.some(x => x.won) ? pointsFor(e, fin) : 0;"]] },
   W_pubBest6cap6half: { raw: true, text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 6,"], DEBT_CAP(6), REC_PTS(.5)] },
   W_carry25: { raw: true, text: [['const DPNZ_CARRY = .4,', 'const DPNZ_CARRY = .25,']] }, W_carry50: { raw: true, text: [['const DPNZ_CARRY = .4,', 'const DPNZ_CARRY = .5,']] }, W_carry40nocap: { raw: true, text: [['DPNZ_CARRY_CAP = 300;', 'DPNZ_CARRY_CAP = 1e9;']] },
+  cap6z: { text: [DEBT_CAP(6), REC_PTS(1)] }, W_cap6z: { raw: true, text: [DEBT_CAP(6), REC_PTS(1)] }, W_recHalf_only: { raw: true, text: [REC_PTS(.5)] }, W_pubBest12: { raw: true, text: [["const BEST_N = { pub: 99,", "const BEST_N = { pub: 12,"]] },
   W_base: { raw: true }, W_recHalf: { raw: true, text: [REC_PTS(.5)] }, W_recZero: { raw: true, text: [REC_PTS(0)] }, W_cap6half: { raw: true, text: [DEBT_CAP(6), REC_PTS(.5)] }, W_cap10half: { raw: true, text: [DEBT_CAP(10), REC_PTS(.5)] },
 
   // the engine exactly as it is on this branch (car-worlds: the lost-Worlds rule in tc/circuit.js), no patches
