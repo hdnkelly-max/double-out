@@ -21,7 +21,10 @@ const gate = job('gate_build'), pub = job('publish');
 // error annotations: the REFUSED / NOT RELEASED / RECHECK / LIVE / ROLLBACK lines release.yml writes (not the generic exit-code ones)
 const ann = [];
 for (const j of jobs) { if (!j.id) continue; try { for (const a of api(`repos/${REPO}/check-runs/${j.id}/annotations?per_page=50`)) if (a.annotation_level === 'failure') ann.push(a.message.split('\n')[0].trim()); } catch (e) {} }
-const why = [...new Set(ann.filter(m => !/^Process completed with exit code/.test(m)))];
+// the reason: first sentence of each, generic lines dropped, the specific line first (RECHECK before NOT RELEASED)
+const first = m => m.replace(/^(.{20,}?[.!?])\s.*$/, '$1');
+const rank = m => /^(REFUSED|RECHECK|LIVE|ROLLBACK|SYNC|DEPLOY|TEST)\b/.test(m) ? 0 : /^Error:/.test(m) ? 1 : /^NOT RELEASED/.test(m) ? 2 : 3;
+const why = [...new Set(ann.filter(m => !/^Process completed with exit code|^Fetching artifact metadata failed/.test(m)).map(first))].sort((x, y) => rank(x) - rank(y));
 // the run's log: version, rollback target, artifact waits (lines release.yml prints itself; command echoes are skipped)
 let log = ''; try { log = gh('run', 'view', String(id), '--repo', REPO, '--attempt', String(run.run_attempt), '--log'); } catch (e) {}
 const out = log.split('\n').map(l => l.replace(/^[^\t]*\t[^\t]*\t\S+ /, '')).filter(l => !/\[36;1m|^##\[group\]Run /.test(l));
@@ -51,7 +54,7 @@ const entry = {
   run_id: +id, attempt: run.run_attempt, url: run.html_url, branch: run.head_branch, event: run.event,
   at: run.run_started_at || run.created_at, done: run.updated_at, result, version,
   risk: parts[0] || null, item: (parts[1] || '').slice(0, 160) || null, commit: (kv.commit || '').slice(0, 12) || null, mode: kv.mode || null,
-  reason: why.slice(0, 3).join(' / ').slice(0, 400) || null,
+  reason: why.slice(0, 3).join(' / ').slice(0, 300) || null,
   deploy_tries: tries || null,
   rollback: rbStart >= 0 && step(pub, /^Prepare rollback/).conclusion === 'success' ? { to: rb ? rb[1] : null, verified: verify.conclusion === 'success', main_restored: restore.conclusion === 'success' } : null,
   artifact_wait: waits.length ? waits : null, artifact_not_listed: notListed || null,

@@ -9,13 +9,14 @@ name: release-report
 on:
   workflow_run:
     workflows: [release]
-    types: [completed]
+    types: [requested, completed]   # requested: the row shows it running; completed replaces that line
   push: { branches: [qa-release-watch] }   # PROOF ONLY
   workflow_dispatch:
     inputs:
       runs: { description: 'release.yml run ids (space-separated), or "last N" for the newest N runs on main', required: true, default: 'last 5' }
 permissions: { actions: read, checks: read, contents: read, id-token: write }
-concurrency: { group: release-report, cancel-in-progress: false }
+# No concurrency group: GitHub would cancel a queued report. Instead every report also re-reads the last 3 runs on main, so a report
+# that was missed or raced is repaired by the next one (the function upserts each run and re-renders the row from all of them).
 env:
   FN: https://thyirfwoqkshsaqowdpe.supabase.co/functions/v1/release-report
 jobs:
@@ -34,7 +35,7 @@ jobs:
           ATT: '${{ github.event.workflow_run.run_attempt }}'
           RUNS: "${{ inputs.runs || 'last 5' }}"
         run: |
-          if [ -n "$RUN" ]; then L="$RUN:$ATT"
+          if [ -n "$RUN" ]; then L="$RUN:$ATT $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?branch=main&status=completed&per_page=4" --jq ".workflow_runs[] | select(.id != $RUN) | .id" | head -3)"
           else case "$RUNS" in
             last\ *) n=${RUNS#last }; [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -le 20 ] || { echo "::error::last N: N must be 1-20"; exit 1; }
                      L=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?branch=main&status=completed&per_page=$n" --jq '.workflow_runs[].id') ;;
