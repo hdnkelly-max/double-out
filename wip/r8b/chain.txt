@@ -1,0 +1,20 @@
+--- 40403bd (build 5aeed91) 07:48
+parity exit 0 :: V3-PARITY PASS: 13 figures identical in geometry, materials and pixels, and 2470 clip frames through V2POST identical at 0.01 mm, without ?v3=1
+herocolour exit 0 :: V3-HEROCOLOUR PASS (11 looks: hero + portrait match the screen pipeline; red/green/blue/black/charcoal/purple shirts keep hue, saturation and darkness; a skin swatch per base)
+moodpaint exit 0 :: V3-MOODPAINT PASS (Dazza junction + painted stubble kept through celebrate / signature / miss moods and the reset)
+cardart exit 0 :: V3-CARDART PASS (9 pro cards: v3 art under ?v3=1 and loads 700x1050; no nested swap; v2 keeps today's art)
+creator-v2 exit 0 :: S3-CREATOR PASS
+creator-v3 exit 0 :: S3-CREATOR PASS
+match-v2 exit 0 :: s3-match PASS
+match-v3 exit 0 :: s3-match PASS
+pers exit 0 :: S3-PERS-CLEAR PASS (5 figures, 75 poses, 1633743 checks)
+pers-match exit 0 :: S3-PERS-MATCH PASS (5 bases, 25 moments held through the game's hooks, 429421 clip checks, release on pull OK)
+pros-v2 exit 0 :: S3-PROS PASS
+asset-refs exit 0 :: asset-refs PASS
+JOBA
+cardart2 exit 0 :: V3-CARDART PASS (9 pro cards: v3 art under ?v3=1 and loads 700x1050; no nested swap; v2 keeps today's art)
+clip-cast exit 0 :: S3-CLIP-GAME PASS (12 figures, 19 clips, 34612818 checks)
+clip-v3 exit 0 :: S3-CLIP-GAME PASS (8 figures, 19 clips, 23299729 checks)
+dart-hair-v3 exit 0 :: S3-DART-HAIR PASS (17312 samples, k step 0.01, margin >= 8 mm; closest: ray 99 mm, kai 99 mm, tama 85.7 mm, dazza 22 mm, mia 17.9 mm, opp:Big Mal 18.1 mm, opp:Shazza 99 mm, opp:Deano 99 mm; 117 s)
+dart-cast-v3 exit 0 :: S3-DART-HAIR PASS (25968 samples, k step 0.01, margin >= 8 mm; closest: Big Mal 18.1 mm, Shazza 99 mm, Dave Hurring 99 mm, Pete the Plumber 20.2 mm, Deano Marsh 99 mm, Jonno 99 mm, Kev Marsh 95 mm, Lisa Tane 99 mm, Luke Littler 99 mm, Michael van Gerwen 99 mm,
+JOBB
