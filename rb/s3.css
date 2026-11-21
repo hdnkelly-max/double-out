@@ -282,3 +282,10 @@ html.s3-on.s3x #rbApp .rb-tabs{padding:0 4px}html.s3-on.s3x #rbApp .rb-tabs butt
 .s3-on .s3-v3nlbox .s3-v3nlkeep{color:var(--ink);font-weight:600}
 .s3-on .s3-v3nlgo{margin-top:8px;width:100%;min-height:52px;border:0;border-radius:12px;background:var(--red);color:#fff;font:800 22px/1 var(--d);text-transform:uppercase;letter-spacing:.6px;cursor:pointer}
 .s3-on .s3-v3nltw{width:100%;min-height:46px;border:1px solid #6b7276;border-radius:12px;background:none;color:var(--ink);font-weight:600;font-size:15px;cursor:pointer}
+
+/* Director doc 74 (Producer 22 Nov 08:35): the player's figure at the Kauri Arms locker. Whole head inside the card with headroom; a soft
+   shadow cast left onto the locker and a warm top-left edge from the locker lamp so the figure sits in the room; the hips fade into the card
+   edge; a touch darker than the hub hero to match the room's light. Sits under the name's shade, so the name always reads. */
+#rbApp .rb-hero .rb-lkfig{position:absolute;right:9%;top:12px;height:calc(100% + 40px);width:auto;max-width:none;pointer-events:none;
+  filter:brightness(.93) drop-shadow(-1px -1px 1.5px rgba(255,196,122,.55)) drop-shadow(-12px 8px 12px rgba(8,5,3,.6));
+  -webkit-mask-image:linear-gradient(180deg,#000 58%,rgba(0,0,0,.6) 69%,rgba(0,0,0,.18) 77%,transparent 84%);mask-image:linear-gradient(180deg,#000 58%,rgba(0,0,0,.6) 69%,rgba(0,0,0,.18) 77%,transparent 84%)}
