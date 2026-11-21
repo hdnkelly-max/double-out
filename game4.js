@@ -1016,7 +1016,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    for(let i=0;i<p.count;i++){const y=p.getY(i)/10;const RG=V2LIGHT.rig;const a=new T.Color(RG.sky[0]).lerp(new T.Color(RG.sky[1]),Math.max(0,y));if(y<-.05)a.set(RG.floor);c.push(a.r,a.g,a.b);}g.setAttribute('color',new T.Float32BufferAttribute(c,3));
    sc.add(new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide})));
    /* figure frame: the figure faces -z (the board); panels: [dir x,y,z (toward the light), w, h, colour, strength] */
-   V2LIGHT.rig.panels.forEach(([x,y,z,w,h,col,k])=>{
+   V2LIGHT.rig.panels.concat(window.TOPS_V3HOT||[]).forEach(([x,y,z,w,h,col,k])=>{/* TOPS_V3HOT: extra small panels (test knob, doc 44 skin highlights) */
     const m=new T.MeshBasicMaterial({color:(window.GFX_LIN?new T.Color(col):new T.Color(col).convertSRGBToLinear()).multiplyScalar(k),side:T.DoubleSide});const q=new T.Mesh(new T.PlaneGeometry(w,h),m);q.position.set(x,y,z).normalize().multiplyScalar(8);q.lookAt(0,0,0);sc.add(q);});
    const pm=new T.PMREMGenerator(renderer);v2RigT=pm.fromScene(sc,.04).texture;pm.dispose();g.dispose();}catch(e){v2RigT=undefined;}return v2RigT;}
  /* which environment and how strong, for a figure material of this part, in the current mode */
