@@ -30,7 +30,15 @@ function clean(e: any) {
     at: str(e.at, 30), done: str(e.done, 30), result: e.result, version: /^\d+\.\d+$/.test(e.version || "") ? e.version : null,
     risk: str(e.risk, 4), item: str(e.item, 160), commit: str(e.commit, 12), mode: str(e.mode, 20), reason: str(e.reason, 400),
     deploy_tries: int(e.deploy_tries), rollback: rb, artifact_wait: waits, artifact_not_listed: int(e.artifact_not_listed),
-    secs_total: int(e.secs_total), secs_to_live: int(e.secs_to_live) };
+    secs_total: int(e.secs_total), secs_to_live: int(e.secs_to_live), partial: e.partial === true };
+}
+// ChatGPT P1-1: order-independent. A report never moves a run backwards: 'running' can't replace a finished result, and an older
+// read (smaller 'done') can't replace a newer one. Reports arriving in any order end in the same row.
+function newer(old: any, e: any) {
+  if (!old) return true;
+  if (old.result !== "running" && e.result === "running") return false;
+  if (old.result !== "running" && e.result !== "running" && old.done && e.done && Date.parse(e.done) < Date.parse(old.done)) return false;
+  return true;
 }
 const nz = (iso: string | null) => iso ? new Intl.DateTimeFormat("en-NZ", { timeZone: "Pacific/Auckland", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)).replace(",", "") : "?";
 const dur = (s: number | null) => s == null ? "?" : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s`;
@@ -48,6 +56,7 @@ function line(e: any) {
   if (e.artifact_wait) bits.push("artifact listed after " + e.artifact_wait.map((w: any) => `${w.secs}s`).join("/"));
   if (e.artifact_not_listed) bits.push(`artifact never listed x${e.artifact_not_listed}`);
   if (e.reason) bits.push(`why: ${e.reason}`);
+  if (e.partial) bits.push("(partial read: a GitHub API call failed, details may be missing)");
   bits.push(`run ${e.run_id}${e.attempt > 1 ? " try " + e.attempt : ""}`);
   return "- " + bits.join(" · ");
 }
@@ -75,18 +84,29 @@ Deno.serve(async (req) => {
   const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!tok) return j(401, { error: "no token" });
   let c: any;
-  try { ({ payload: c } = await jwtVerify(tok, JWKS, { issuer: ISS, audience: AUD })); }
+  try { ({ payload: c } = await jwtVerify(tok, JWKS, { issuer: ISS, audience: AUD, algorithms: ["RS256"], requiredClaims: ["exp", "iat", "jti"], clockTolerance: 60, maxTokenAge: "15m" })); }
   catch (_e) { return j(401, { error: "token not valid" }); }
   if (c.repository !== REPO || String(c.repository_id) !== REPO_ID || String(c.repository_owner_id) !== OWNER_ID) return j(403, { error: "wrong repository" });
   if (!String(c.workflow_ref || "").startsWith(WF) || !REFS.includes(String(c.workflow_ref).slice(WF.length))) return j(403, { error: "wrong workflow or branch" });
+  // ChatGPT P1-1: the token's own ref too (a branch, the one the workflow file came from)
+  if (c.ref_type !== "branch" || !REFS.includes(String(c.ref))) return j(403, { error: "wrong ref" });
   if (!["workflow_run", "workflow_dispatch"].includes(c.event_name)) return j(403, { error: "wrong event" });
-  let body: any; try { body = await req.json(); } catch (_e) { return j(400, { error: "bad json" }); }
+  const raw = await req.text(); if (raw.length > 65536) return j(413, { error: "too big" });
+  let body: any; try { body = JSON.parse(raw); } catch (_e) { return j(400, { error: "bad json" }); }
   const list = (Array.isArray(body) ? body : [body]).slice(0, 20).map(clean);
   if (!list.length || list.some((x) => !x)) return j(400, { error: "bad entry (needs run_id, a known result, branch main)" });
+  // ChatGPT P2: each token writes once (a replayed token is refused); old jtis pruned
+  const { error: je } = await db.from("tops_release_jti").insert({ jti: String(c.jti) });
+  if (je) return j(409, { error: "token already used" });
+  await db.from("tops_release_jti").delete().lt("at", new Date(Date.now() - 86400000).toISOString());
+  let stored = 0, kept = 0;
   for (const e of list) {
+    const { data: old } = await db.from("tops_release_log").select("entry").eq("run_id", e!.run_id).eq("attempt", e!.attempt).maybeSingle();
+    if (!newer(old?.entry, e)) { kept++; continue; }
     const { error } = await db.from("tops_release_log").upsert({ run_id: e!.run_id, attempt: e!.attempt, at: e!.at, result: e!.result, version: e!.version, entry: e, updated_at: new Date().toISOString() });
     if (error) return j(500, { error: "store failed" });
+    stored++;
   }
-  try { const n = await render(); return j(200, { ok: true, stored: list.length, shown: n }); }
+  try { const n = await render(); return j(200, { ok: true, stored, kept_newer: kept, shown: n }); }
   catch (_e) { return j(500, { error: "render failed" }); }
 });

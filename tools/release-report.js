@@ -20,13 +20,14 @@ const step = (j, re) => (j.steps || []).find(s => re.test(s.name)) || {};
 const gate = job('gate_build'), pub = job('publish');
 // error annotations: the REFUSED / NOT RELEASED / RECHECK / LIVE / ROLLBACK lines release.yml writes (not the generic exit-code ones)
 const ann = [];
-for (const j of jobs) { if (!j.id) continue; try { for (const a of api(`repos/${REPO}/check-runs/${j.id}/annotations?per_page=50`)) if (a.annotation_level === 'failure') ann.push(a.message.split('\n')[0].trim()); } catch (e) {} }
+let partial = false;   // a failed read is said, never mistaken for a release failure (ChatGPT P3)
+for (const j of jobs) { if (!j.id) continue; try { for (const a of api(`repos/${REPO}/check-runs/${j.id}/annotations?per_page=50`)) if (a.annotation_level === 'failure') ann.push(a.message.split('\n')[0].trim()); } catch (e) { partial = true; } }
 // the reason: first sentence of each, generic lines dropped, the specific line first (RECHECK before NOT RELEASED)
 const first = m => m.replace(/^(.{20,}?[.!?])\s.*$/, '$1');
 const rank = m => /^(REFUSED|RECHECK|LIVE|ROLLBACK|SYNC|DEPLOY|TEST)\b/.test(m) ? 0 : /^Error:/.test(m) ? 1 : /^NOT RELEASED/.test(m) ? 2 : 3;
 const why = [...new Set(ann.filter(m => !/^Process completed with exit code|^Fetching artifact metadata failed/.test(m)).map(first))].sort((x, y) => rank(x) - rank(y));
 // the run's log: version, rollback target, artifact waits (lines release.yml prints itself; command echoes are skipped)
-let log = ''; try { log = gh('run', 'view', String(id), '--repo', REPO, '--attempt', String(run.run_attempt), '--log'); } catch (e) {}
+let log = ''; try { log = gh('run', 'view', String(id), '--repo', REPO, '--attempt', String(run.run_attempt), '--log'); } catch (e) { if (run.status === 'completed') partial = true; }
 const out = log.split('\n').map(l => l.replace(/^[^\t]*\t[^\t]*\t\S+ /, '')).filter(l => !/\[36;1m|^##\[group\]Run /.test(l));
 const m1 = re => { for (const l of out) { const m = l.match(re); if (m) return m; } return null; };
 // the publish job's env dump prints V (this release) and the rollback steps' PV (the version rolled back to)
@@ -59,5 +60,5 @@ const entry = {
   rollback: rbStart >= 0 && step(pub, /^Prepare rollback/).conclusion === 'success' ? { to: rb ? rb[1] : null, verified: verify.conclusion === 'success', main_restored: restore.conclusion === 'success' } : null,
   artifact_wait: waits.length ? waits : null, artifact_not_listed: notListed || null,
   secs_total: secs(run.run_started_at || run.created_at, run.updated_at),
-  secs_to_live: live.conclusion === 'success' ? secs(run.run_started_at || run.created_at, live.completed_at) : null };
+  secs_to_live: live.conclusion === 'success' ? secs(run.run_started_at || run.created_at, live.completed_at) : null, partial };
 process.stdout.write(JSON.stringify(entry) + '\n');

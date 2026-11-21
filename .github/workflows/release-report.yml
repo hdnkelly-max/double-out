@@ -22,12 +22,18 @@ env:
 jobs:
   report:
     # release.yml runs from other branches are workflow tests (dry runs of a workflow change), not releases
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    # ChatGPT P1-2: only this repo's own release runs, hand-dispatched from main (release.yml has no PR or push trigger)
+    if: >-
+      github.event_name != 'workflow_run' || (github.event.workflow_run.head_branch == 'main'
+      && github.event.workflow_run.repository.id == github.repository_id
+      && github.event.workflow_run.head_repository.id == github.repository_id
+      && github.event.workflow_run.event == 'workflow_dispatch'
+      && github.event.workflow_run.path == '.github/workflows/release.yml')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with: { sparse-checkout: tools/release-report.js, sparse-checkout-cone-mode: false }
+        with: { ref: main, sparse-checkout: tools/release-report.js, sparse-checkout-cone-mode: false }   # trusted code only: main's parser
       - name: Read the release run(s)
         env:
           GH_TOKEN: '${{ github.token }}'
