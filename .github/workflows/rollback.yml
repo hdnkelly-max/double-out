@@ -1,0 +1,155 @@
+# ROLLBACK (Producer Sun 05:09, option B; the PRIMARY rollback stays a one-line release through release.yml): put an earlier LIVE release
+# back on the site in about 2 minutes. Every release leaves a tag on main whose tree IS its built site, so this redeploys that tree with
+# release.yml's own steps: wait until the artifact is listed, up to 3 deploy attempts, verify version.json + a headless load, then restore
+# main's site files to that release (main must match live: a hand push deploys main as-is). Shares release.yml's lock, so it never runs
+# alongside a release. The release watcher records it.
+#   mode check            pick and validate the target only; nothing deployed, nothing pushed
+#   mode rollback         put the target live (to = rel-X.YY of an earlier LIVE release; empty = the live release before the current one)
+#   mode redeploy_current redeploy what is live now: the proof run (players see no change; main must already match it exactly)
+# After a real rollback src still holds the rolled-back code: the next release would ship it again, so fix src first (e.g. rel-v3-off).
+name: rollback
+run-name: "ROLLBACK | mode=${{ inputs.mode }} | to=${{ inputs.to || 'previous live' }} | by=${{ github.actor }} | ${{ inputs.reason }}"
+on:
+  workflow_dispatch:
+    inputs:
+      mode: { description: 'check (validate only) | rollback | redeploy_current (proof, no change for players)', type: choice, options: [check, rollback, redeploy_current], default: check }
+      to: { description: 'rel-X.YY tag of an earlier LIVE release; empty = the live release before the current one', required: false, default: '' }
+      reason: { description: 'Why (goes in RELEASES.log)', required: true }
+concurrency:
+  group: tops-production-release
+  queue: max
+  cancel-in-progress: false
+permissions: { contents: read }
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: { contents: write, pages: write, id-token: write, actions: read }   # actions: read = list this run's artifacts
+    environment: { name: github-pages, url: '${{ steps.d1.outputs.page_url || steps.d2.outputs.page_url || steps.d3.outputs.page_url }}' }
+    env:
+      MODE: '${{ inputs.mode }}'
+      TO: '${{ inputs.to }}'
+      REASON: '${{ inputs.reason }}'
+      # the same artifact wait as release.yml (4.16 / 4.19): deploy-pages reads this run's artifact list, which lags the upload
+      WAIT_ART: |
+        t0=$(date +%s); err=0
+        for i in $(seq 1 36); do
+          # ChatGPT P2-4: an API error is not "not listed yet"; 3 in a row (e.g. a 403) end the wait early instead of burning 3 min
+          if ! c=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"$N\" and (.expired | not))] | length" 2>&1); then
+            err=$((err+1)); echo "::warning::ARTIFACT: listing failed ($err): ${c:0:160}"; [ $err -lt 3 ] || { echo "::warning::ARTIFACT: listing failed 3 times; trying the deploy anyway"; exit 0; }; sleep 5; continue
+          fi; err=0
+          if [ "${c:-0}" -ge 1 ]; then echo "ARTIFACT: $N listed after $(( $(date +%s) - t0 )) s"; echo "ARTIFACT: \`$N\` listed after $(( $(date +%s) - t0 )) s" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          sleep 5
+        done
+        echo "::warning::ARTIFACT: $N still not listed after $(( $(date +%s) - t0 )) s; trying the deploy anyway"
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: site, fetch-depth: 0 }
+      - uses: actions/configure-pages@v5
+        id: pages
+      - name: Pick and check the target (main's release record, what is live now, the tag's own site)
+        id: pick
+        env: { BASE: '${{ steps.pages.outputs.base_url }}' }
+        run: |
+          set -euo pipefail
+          case "$REASON" in ''|*'|'*) echo "::error::ROLLBACK REFUSED: give a reason without '|'"; exit 1;; esac
+          case "$TO" in ''|rel-[0-9]*.[0-9][0-9]) ;; *) echo "::error::ROLLBACK REFUSED: to must be empty or rel-X.YY"; exit 1;; esac
+          cd site; U="${BASE%/}/"
+          CUR=$(grep " live version=" RELEASES.log | tail -1 || true)
+          CV=$(echo "$CUR" | grep -o "version=[^ ]*" | cut -d= -f2); CT=$(echo "$CUR" | grep -o "tag=[^ ]*" | cut -d= -f2)
+          [ -n "$CV" ] && [ -n "$CT" ] || { echo "::error::ROLLBACK REFUSED: no live release in RELEASES.log"; exit 1; }
+          # main's record must match what players have now; anything else is a state a human has to look at first
+          LV=$(curl -fsS "${U}version.json?cb=$RANDOM" | python3 -c "import json,sys;print(json.load(sys.stdin).get('v',''))" || true)
+          [ "$LV" = "$CV" ] || { echo "::error::ROLLBACK REFUSED: live shows v$LV but main's last live release is v$CV ($CT); check by hand first"; exit 1; }
+          if [ "$MODE" = redeploy_current ]; then T=$CT; TV=$CV
+          else
+            if [ -n "$TO" ]; then L=$(grep " live version=[^ ]* tag=$TO " RELEASES.log | tail -1 || true); [ -n "$L" ] || { echo "::error::ROLLBACK REFUSED: $TO is not a live release in RELEASES.log"; exit 1; }
+            else L=$(grep " live version=" RELEASES.log | grep -v " version=$CV " | tail -1 || true); [ -n "$L" ] || { echo "::error::ROLLBACK REFUSED: no earlier live release"; exit 1; }; fi
+            T=$(echo "$L" | grep -o "tag=[^ ]*" | cut -d= -f2); TV=$(echo "$L" | grep -o "version=[^ ]*" | cut -d= -f2)
+            [ "$TV" != "$CV" ] || { echo "::error::ROLLBACK REFUSED: $T is the version live now (v$CV); use mode redeploy_current for that"; exit 1; }
+          fi
+          git rev-parse -q --verify "$T^{commit}" >/dev/null || { echo "::error::ROLLBACK REFUSED: tag $T not found"; exit 1; }
+          git worktree add -q ../rb "$T"
+          GV=$(python3 -c "import json;print(json.load(open('../rb/version.json')).get('v',''))")
+          [ "$GV" = "$TV" ] || { echo "::error::ROLLBACK REFUSED: $T's version.json says v$GV, RELEASES.log says v$TV"; exit 1; }
+          { echo "t=$T"; echo "tv=$TV"; echo "cv=$CV"; echo "ct=$CT"; echo "url=$U"; } >> "$GITHUB_OUTPUT"
+          echo "ROLLBACK-TARGET mode=$MODE version=$TV tag=$T from=$CV ($CT)"
+          { echo "### ROLLBACK $MODE: v$CV ($CT) -> v$TV ($T)"; echo "reason: $REASON"; } >> "$GITHUB_STEP_SUMMARY"
+          [ "$MODE" != check ] || echo "check only: nothing deployed, nothing pushed" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-pages-artifact@v3
+        if: inputs.mode != 'check'
+        with: { path: rb, name: 'rollback-site-${{ github.run_attempt }}' }
+      - name: Wait until the artifact is listed
+        if: inputs.mode != 'check'
+        env: { N: 'rollback-site-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
+      - id: d1
+        if: inputs.mode != 'check'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        with: { artifact_name: 'rollback-site-${{ github.run_attempt }}' }
+      - name: Attempt 1 failed; wait 30 s, then retry the same artifact once it is listed
+        if: steps.d1.outcome == 'failure'
+        env: { N: 'rollback-site-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: |
+          echo "::warning::ROLLBACK: deploy attempt 1 failed; attempt 2 in 30 s on the same artifact"; sleep 30
+          eval "$WAIT_ART"
+      - id: d2
+        if: steps.d1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        with: { artifact_name: 'rollback-site-${{ github.run_attempt }}' }
+      - name: Attempt 2 failed; wait 90 s, then upload again
+        if: steps.d2.outcome == 'failure'
+        run: |
+          echo "::warning::ROLLBACK: deploy attempt 2 failed; attempt 3 in 90 s with a fresh artifact"; sleep 90
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.d2.outcome == 'failure'
+        with: { path: rb, name: 'rollback-site-retry-${{ github.run_attempt }}' }
+      - name: Wait until the fresh artifact is listed
+        if: steps.d2.outcome == 'failure'
+        env: { N: 'rollback-site-retry-${{ github.run_attempt }}', GH_TOKEN: '${{ github.token }}' }
+        run: eval "$WAIT_ART"
+      - id: d3
+        if: steps.d2.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        with: { artifact_name: 'rollback-site-retry-${{ github.run_attempt }}' }
+      - name: Verify it is live (version.json = the target, its rig if it names one, a headless load with no page errors)
+        id: verify
+        if: inputs.mode != 'check' && (steps.d1.outcome == 'success' || steps.d2.outcome == 'success' || steps.d3.outcome == 'success')
+        env: { TV: '${{ steps.pick.outputs.tv }}', U: '${{ steps.pick.outputs.url }}' }
+        run: |
+          set -euo pipefail
+          ok=; g=; for i in $(seq 1 36); do g=$(curl -fsS "${U}version.json?cb=$RANDOM$i" | python3 -c "import json,sys;print(json.load(sys.stdin).get('v',''))" || true); [ "$g" = "$TV" ] && { ok=1; break; }; sleep 5; done
+          [ -n "$ok" ] || { echo "::error::ROLLBACK: version.json never showed $TV (last: $g)"; exit 1; }
+          curl -fsS -o live_version.json "${U}version.json?cb=b$RANDOM"
+          python3 -c "import json,sys;w=json.load(open('rb/version.json'));l=json.load(open('live_version.json'));sys.exit(0 if all(l.get(k)==w[k] for k in w) else print('::error::ROLLBACK: live version.json is',l,'expected',w) or 1)"
+          RIG=$( { grep -o 'rig/remy-[0-9a-f]\{8\}\.glb' rb/index.html || true; } | sort -u)
+          if [ -n "$RIG" ]; then curl -fsS -o live_rig.glb "${U}${RIG}"; [ "$(sha256sum < live_rig.glb)" = "$(sha256sum < "rb/$RIG")" ] || { echo "::error::ROLLBACK: ${U}${RIG} is not the target's rig"; exit 1; }; fi
+          npm i --no-save playwright@1.48.2 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          node -e "const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});const e=[];p.on('pageerror',x=>e.push(x.message));await p.goto(process.env.U+'?cb='+Date.now());await p.waitForTimeout(8000);const v=await p.evaluate(()=>window.TOPS_VER||'');await b.close();if(e.length||v!==process.env.TV){console.error('page errors',e,'TOPS_VER',v);process.exit(1);}})()" || { echo "::error::ROLLBACK: the live page did not load cleanly as v$TV"; exit 1; }
+          echo "ROLLBACK LIVE: $U shows v$TV, no page errors" >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore main to the target's site files (exact match, fatal) and record it
+        if: steps.verify.outcome == 'success'
+        env: { T: '${{ steps.pick.outputs.t }}', TV: '${{ steps.pick.outputs.tv }}', CV: '${{ steps.pick.outputs.cv }}' }
+        run: |
+          set -euo pipefail
+          cd site; git config user.name "tops-release"; git config user.email "tops-release@users.noreply.github.com"
+          P="index.html version.json next assets img"
+          git rm -rq --ignore-unmatch -- $P; git checkout "$T" -- $P
+          git diff --cached --quiet "$T" -- $P || { echo "::error::ROLLBACK: main site files still differ from $T; restore main by hand before any hand push"; exit 1; }
+          if [ "$MODE" = redeploy_current ]; then
+            git diff --cached --quiet HEAD || { echo "::error::REDEPLOY: main's site files did not match the live release $T (fixed now in the working copy, NOT pushed); check by hand"; exit 1; }
+            echo "main already matches $T: nothing to push" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          # a new 'live' line for the target, so release.yml's own rollback (last live release) and the next version both read it right
+          echo "$(date -u +%FT%TZ) live version=$TV tag=$T rollback-of=$CV run=${{ github.run_id }} by=${{ github.actor }} reason=$REASON" >> RELEASES.log
+          git add RELEASES.log; git commit -qm "rollback: v$CV -> v$TV ($T) by ${{ github.actor }}: $REASON (rollback run ${{ github.run_id }})"
+          git push -q origin HEAD:main || { echo "::error::ROLLBACK: push of the restored main failed; live is v$TV but main still holds v$CV: restore main by hand before any hand push"; exit 1; }
+          { echo "main restored to $T site files ($(git rev-parse --short HEAD))"; echo "**src still holds v$CV's code: the next release ships it again unless src is fixed first (rel-v3-off for the v3 flag).**"; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Rollback not confirmed (state for a human)
+        if: failure() && steps.pick.outcome == 'success' && inputs.mode != 'check' && steps.verify.outcome != 'success'
+        env: { TV: '${{ steps.pick.outputs.tv }}', CV: '${{ steps.pick.outputs.cv }}', T: '${{ steps.pick.outputs.t }}' }
+        run: |
+          echo "::error::ROLLBACK NOT CONFIRMED: deploying $T (v$TV) could not be verified. main is unchanged and still says v$CV; live may be v$CV or v$TV. Check the live version.json first."
+          { echo "### ROLLBACK NOT CONFIRMED"; echo "main unchanged (v$CV); live uncertain (v$CV or v$TV)."; } >> "$GITHUB_STEP_SUMMARY"; exit 1
