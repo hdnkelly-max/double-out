@@ -1,0 +1,682 @@
+[
+{
+"id": "save1",
+"base": "kai",
+"acc": []
+},
+{
+"id": "save2",
+"base": "ray",
+"body": "heavy",
+"face": "clean",
+"faceC": "#8f6326",
+"hairC": "#c9c4bc",
+"shirt": "#2a2b33",
+"acc": [
+"glasses",
+"band",
+"cap"
+],
+"accSet": true
+},
+{
+"id": "save3",
+"base": "tama",
+"body": "heavy",
+"hair": "quiff",
+"skin": "#c98e64",
+"faceC": "#b8863b",
+"hairC": "#b8863b",
+"shirt": "#5b2a86",
+"acc": [
+"band",
+"glasses"
+],
+"accSet": true
+},
+{
+"id": "kai_hair_short",
+"base": "kai",
+"hair": "short"
+},
+{
+"id": "kai_hair_buzz",
+"base": "kai",
+"hair": "buzz"
+},
+{
+"id": "kai_hair_quiff",
+"base": "kai",
+"hair": "quiff"
+},
+{
+"id": "kai_hair_curly",
+"base": "kai",
+"hair": "curly"
+},
+{
+"id": "kai_hair_mullet",
+"base": "kai",
+"hair": "mullet"
+},
+{
+"id": "kai_hair_horseshoe",
+"base": "kai",
+"hair": "horseshoe"
+},
+{
+"id": "kai_hair_ponytail",
+"base": "kai",
+"hair": "ponytail"
+},
+{
+"id": "kai_hair_bald",
+"base": "kai",
+"hair": "bald"
+},
+{
+"id": "kai_face_clean",
+"base": "kai",
+"face": "clean"
+},
+{
+"id": "kai_face_stubble",
+"base": "kai",
+"face": "stubble"
+},
+{
+"id": "kai_face_full",
+"base": "kai",
+"face": "full"
+},
+{
+"id": "kai_face_goatee",
+"base": "kai",
+"face": "goatee"
+},
+{
+"id": "kai_face_walrus",
+"base": "kai",
+"face": "walrus"
+},
+{
+"id": "kai_skin_f1c9a5",
+"base": "kai",
+"skin": "#f1c9a5"
+},
+{
+"id": "kai_skin_e8b08a",
+"base": "kai",
+"skin": "#e8b08a"
+},
+{
+"id": "kai_skin_e2a17e",
+"base": "kai",
+"skin": "#e2a17e"
+},
+{
+"id": "kai_skin_c98e64",
+"base": "kai",
+"skin": "#c98e64"
+},
+{
+"id": "kai_skin_a8693f",
+"base": "kai",
+"skin": "#a8693f"
+},
+{
+"id": "kai_skin_7f4d30",
+"base": "kai",
+"skin": "#7f4d30"
+},
+{
+"id": "kai_skin_6a4330",
+"base": "kai",
+"skin": "#6a4330"
+},
+{
+"id": "kai_body_skinny",
+"base": "kai",
+"body": "skinny"
+},
+{
+"id": "kai_body_standard",
+"base": "kai",
+"body": "standard"
+},
+{
+"id": "kai_body_heavy",
+"base": "kai",
+"body": "heavy"
+},
+{
+"id": "kai_body_muscle",
+"base": "kai",
+"body": "muscle"
+},
+{
+"id": "kai_acc_cap",
+"base": "kai",
+"acc": [
+"cap"
+],
+"accSet": true,
+"shirt": "#0e7c86"
+},
+{
+"id": "ray_hair_short",
+"base": "ray",
+"hair": "short"
+},
+{
+"id": "ray_hair_buzz",
+"base": "ray",
+"hair": "buzz"
+},
+{
+"id": "ray_hair_quiff",
+"base": "ray",
+"hair": "quiff"
+},
+{
+"id": "ray_hair_curly",
+"base": "ray",
+"hair": "curly"
+},
+{
+"id": "ray_hair_mullet",
+"base": "ray",
+"hair": "mullet"
+},
+{
+"id": "ray_hair_horseshoe",
+"base": "ray",
+"hair": "horseshoe"
+},
+{
+"id": "ray_hair_ponytail",
+"base": "ray",
+"hair": "ponytail"
+},
+{
+"id": "ray_hair_bald",
+"base": "ray",
+"hair": "bald"
+},
+{
+"id": "ray_face_clean",
+"base": "ray",
+"face": "clean"
+},
+{
+"id": "ray_face_stubble",
+"base": "ray",
+"face": "stubble"
+},
+{
+"id": "ray_face_full",
+"base": "ray",
+"face": "full"
+},
+{
+"id": "ray_face_goatee",
+"base": "ray",
+"face": "goatee"
+},
+{
+"id": "ray_face_walrus",
+"base": "ray",
+"face": "walrus"
+},
+{
+"id": "ray_skin_f1c9a5",
+"base": "ray",
+"skin": "#f1c9a5"
+},
+{
+"id": "ray_skin_e8b08a",
+"base": "ray",
+"skin": "#e8b08a"
+},
+{
+"id": "ray_skin_e2a17e",
+"base": "ray",
+"skin": "#e2a17e"
+},
+{
+"id": "ray_skin_c98e64",
+"base": "ray",
+"skin": "#c98e64"
+},
+{
+"id": "ray_skin_a8693f",
+"base": "ray",
+"skin": "#a8693f"
+},
+{
+"id": "ray_skin_7f4d30",
+"base": "ray",
+"skin": "#7f4d30"
+},
+{
+"id": "ray_skin_6a4330",
+"base": "ray",
+"skin": "#6a4330"
+},
+{
+"id": "ray_body_skinny",
+"base": "ray",
+"body": "skinny"
+},
+{
+"id": "ray_body_standard",
+"base": "ray",
+"body": "standard"
+},
+{
+"id": "ray_body_heavy",
+"base": "ray",
+"body": "heavy"
+},
+{
+"id": "ray_body_muscle",
+"base": "ray",
+"body": "muscle"
+},
+{
+"id": "ray_acc_cap",
+"base": "ray",
+"acc": [
+"cap"
+],
+"accSet": true,
+"shirt": "#0e7c86"
+},
+{
+"id": "tama_hair_short",
+"base": "tama",
+"hair": "short"
+},
+{
+"id": "tama_hair_buzz",
+"base": "tama",
+"hair": "buzz"
+},
+{
+"id": "tama_hair_quiff",
+"base": "tama",
+"hair": "quiff"
+},
+{
+"id": "tama_hair_curly",
+"base": "tama",
+"hair": "curly"
+},
+{
+"id": "tama_hair_mullet",
+"base": "tama",
+"hair": "mullet"
+},
+{
+"id": "tama_hair_horseshoe",
+"base": "tama",
+"hair": "horseshoe"
+},
+{
+"id": "tama_hair_ponytail",
+"base": "tama",
+"hair": "ponytail"
+},
+{
+"id": "tama_hair_bald",
+"base": "tama",
+"hair": "bald"
+},
+{
+"id": "tama_face_clean",
+"base": "tama",
+"face": "clean"
+},
+{
+"id": "tama_face_stubble",
+"base": "tama",
+"face": "stubble"
+},
+{
+"id": "tama_face_full",
+"base": "tama",
+"face": "full"
+},
+{
+"id": "tama_face_goatee",
+"base": "tama",
+"face": "goatee"
+},
+{
+"id": "tama_face_walrus",
+"base": "tama",
+"face": "walrus"
+},
+{
+"id": "tama_skin_f1c9a5",
+"base": "tama",
+"skin": "#f1c9a5"
+},
+{
+"id": "tama_skin_e8b08a",
+"base": "tama",
+"skin": "#e8b08a"
+},
+{
+"id": "tama_skin_e2a17e",
+"base": "tama",
+"skin": "#e2a17e"
+},
+{
+"id": "tama_skin_c98e64",
+"base": "tama",
+"skin": "#c98e64"
+},
+{
+"id": "tama_skin_a8693f",
+"base": "tama",
+"skin": "#a8693f"
+},
+{
+"id": "tama_skin_7f4d30",
+"base": "tama",
+"skin": "#7f4d30"
+},
+{
+"id": "tama_skin_6a4330",
+"base": "tama",
+"skin": "#6a4330"
+},
+{
+"id": "tama_body_skinny",
+"base": "tama",
+"body": "skinny"
+},
+{
+"id": "tama_body_standard",
+"base": "tama",
+"body": "standard"
+},
+{
+"id": "tama_body_heavy",
+"base": "tama",
+"body": "heavy"
+},
+{
+"id": "tama_body_muscle",
+"base": "tama",
+"body": "muscle"
+},
+{
+"id": "tama_acc_cap",
+"base": "tama",
+"acc": [
+"cap"
+],
+"accSet": true,
+"shirt": "#0e7c86"
+},
+{
+"id": "mia_hair_short",
+"base": "mia",
+"hair": "short"
+},
+{
+"id": "mia_hair_buzz",
+"base": "mia",
+"hair": "buzz"
+},
+{
+"id": "mia_hair_quiff",
+"base": "mia",
+"hair": "quiff"
+},
+{
+"id": "mia_hair_curly",
+"base": "mia",
+"hair": "curly"
+},
+{
+"id": "mia_hair_mullet",
+"base": "mia",
+"hair": "mullet"
+},
+{
+"id": "mia_hair_horseshoe",
+"base": "mia",
+"hair": "horseshoe"
+},
+{
+"id": "mia_hair_ponytail",
+"base": "mia",
+"hair": "ponytail"
+},
+{
+"id": "mia_hair_bald",
+"base": "mia",
+"hair": "bald"
+},
+{
+"id": "mia_face_clean",
+"base": "mia",
+"face": "clean"
+},
+{
+"id": "mia_face_stubble",
+"base": "mia",
+"face": "stubble"
+},
+{
+"id": "mia_face_full",
+"base": "mia",
+"face": "full"
+},
+{
+"id": "mia_face_goatee",
+"base": "mia",
+"face": "goatee"
+},
+{
+"id": "mia_face_walrus",
+"base": "mia",
+"face": "walrus"
+},
+{
+"id": "mia_skin_f1c9a5",
+"base": "mia",
+"skin": "#f1c9a5"
+},
+{
+"id": "mia_skin_e8b08a",
+"base": "mia",
+"skin": "#e8b08a"
+},
+{
+"id": "mia_skin_e2a17e",
+"base": "mia",
+"skin": "#e2a17e"
+},
+{
+"id": "mia_skin_c98e64",
+"base": "mia",
+"skin": "#c98e64"
+},
+{
+"id": "mia_skin_a8693f",
+"base": "mia",
+"skin": "#a8693f"
+},
+{
+"id": "mia_skin_7f4d30",
+"base": "mia",
+"skin": "#7f4d30"
+},
+{
+"id": "mia_skin_6a4330",
+"base": "mia",
+"skin": "#6a4330"
+},
+{
+"id": "mia_body_skinny",
+"base": "mia",
+"body": "skinny"
+},
+{
+"id": "mia_body_standard",
+"base": "mia",
+"body": "standard"
+},
+{
+"id": "mia_body_heavy",
+"base": "mia",
+"body": "heavy"
+},
+{
+"id": "mia_body_muscle",
+"base": "mia",
+"body": "muscle"
+},
+{
+"id": "mia_acc_cap",
+"base": "mia",
+"acc": [
+"cap"
+],
+"accSet": true,
+"shirt": "#0e7c86"
+},
+{
+"id": "dazza_hair_short",
+"base": "dazza",
+"hair": "short"
+},
+{
+"id": "dazza_hair_buzz",
+"base": "dazza",
+"hair": "buzz"
+},
+{
+"id": "dazza_hair_quiff",
+"base": "dazza",
+"hair": "quiff"
+},
+{
+"id": "dazza_hair_curly",
+"base": "dazza",
+"hair": "curly"
+},
+{
+"id": "dazza_hair_mullet",
+"base": "dazza",
+"hair": "mullet"
+},
+{
+"id": "dazza_hair_horseshoe",
+"base": "dazza",
+"hair": "horseshoe"
+},
+{
+"id": "dazza_hair_ponytail",
+"base": "dazza",
+"hair": "ponytail"
+},
+{
+"id": "dazza_hair_bald",
+"base": "dazza",
+"hair": "bald"
+},
+{
+"id": "dazza_face_clean",
+"base": "dazza",
+"face": "clean"
+},
+{
+"id": "dazza_face_stubble",
+"base": "dazza",
+"face": "stubble"
+},
+{
+"id": "dazza_face_full",
+"base": "dazza",
+"face": "full"
+},
+{
+"id": "dazza_face_goatee",
+"base": "dazza",
+"face": "goatee"
+},
+{
+"id": "dazza_face_walrus",
+"base": "dazza",
+"face": "walrus"
+},
+{
+"id": "dazza_skin_f1c9a5",
+"base": "dazza",
+"skin": "#f1c9a5"
+},
+{
+"id": "dazza_skin_e8b08a",
+"base": "dazza",
+"skin": "#e8b08a"
+},
+{
+"id": "dazza_skin_e2a17e",
+"base": "dazza",
+"skin": "#e2a17e"
+},
+{
+"id": "dazza_skin_c98e64",
+"base": "dazza",
+"skin": "#c98e64"
+},
+{
+"id": "dazza_skin_a8693f",
+"base": "dazza",
+"skin": "#a8693f"
+},
+{
+"id": "dazza_skin_7f4d30",
+"base": "dazza",
+"skin": "#7f4d30"
+},
+{
+"id": "dazza_skin_6a4330",
+"base": "dazza",
+"skin": "#6a4330"
+},
+{
+"id": "dazza_body_skinny",
+"base": "dazza",
+"body": "skinny"
+},
+{
+"id": "dazza_body_standard",
+"base": "dazza",
+"body": "standard"
+},
+{
+"id": "dazza_body_heavy",
+"base": "dazza",
+"body": "heavy"
+},
+{
+"id": "dazza_body_muscle",
+"base": "dazza",
+"body": "muscle"
+},
+{
+"id": "dazza_acc_cap",
+"base": "dazza",
+"acc": [
+"cap"
+],
+"accSet": true,
+"shirt": "#0e7c86"
+}
+]
