@@ -866,7 +866,7 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
    L={body:fem?'female':pk(['standard','skinny','heavy','muscle','standard','heavy'],3),skin:(look.skin==='#5b3b2a'?'#6a4330':look.skin)||pk(S3_OPTS_SKIN,7),shirt:look.shirt||pk(['#7a1f2b','#0e7c86','#2a2b33','#e0a21c','#274a7a','#3f7f3f','#c9352d','#5b2a86'],9),trim:pk([0xf2f2f2,0x1c1c22,0xd9252e],11),
     hair:fem?pk(['ponytail','short'],13):(look.hairStyle==='bald'?'bald':pk(V2ON?['short','buzz','quiff','mullet','horseshoe','curly','buzz']:['short','buzz','quiff','mullet','horseshoe','short','buzz'],13)),hairC:hc,face:fem?'clean':(look.beard?pk(['full','goatee','walrus','stubble'],16):pk(['clean','clean','stubble'],16)),beardC:hc,brow:hc,glasses:((h>>>19)%7)===0,band:!fem&&((h>>>21)%6)===0,cap:(h>>>29)===0,
     nose:.85+((h>>>23)%40)/100,jaw:.86+((h>>>25)%32)/100,shW:.93+((h>>>27)%18)/100,soft:fem,handK:fem?.9:1,legK:.97+((h>>>2)%8)/100};}
-  ['body','skin','hair','hairC','face','beardC','glasses','band','cap','capC','shirt'].forEach(k=>{if(o[k]!=null)L[k]=o[k];});if(L.hair==='bald')L.hair=null;if(o.hairC&&o.beardC==null)L.beardC=o.hairC;if(o.hairC)L.brow=o.hairC;return L;}
+  ['body','skin','hair','hairC','face','beardC','glasses','band','cap','capC','shirt'].forEach(k=>{if(o[k]!=null)L[k]=o[k];});if(L.hair==='bald')L.hair=null;if(o.hairC&&o.beardC==null)L.beardC=o.hairC;if(o.hairC)L.brow=o.hairC;if(!mine)L._nm=name;return L;}
  const S3_OPTS_SKIN=['#f1c9a5','#e8b08a','#e2a17e','#c98e64','#a8693f','#7f4d30','#6a4330'];
  /* Lab helpers (vinyl style only) */
  const S3_SEGF=1.5,S3_GK={hand:1.15,foot:1.12,fore:.92},S3_GLOSS={shirt:[.76,.13],skin:[.66,.12],hair:[.4,.38],shoe:[.3,.7],pants:[.66,.17],trim:[.66,.2]};
@@ -1143,7 +1143,49 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
     kit (V2HAIRS, from hair28) until Director's hair r8 file lands. Phones get a 1536 px head sheet (desktop 2048) and S3_SEGF segments. */
  const V3BASES=['kai','ray','tama','mia','dazza'];/* doc 25: Ray and Tama on v3; doc 33: Mia (hair28 bunL) and Dazza (hair28 backwards cap, hair under it, sculpted beard) too */
  const V3HAIRMAP={quiff:'quiffL',swept:'sweptR',curly:'curlyL',bun:'bunL',under:'underL'};/* Director's r9 lock builds on v3 heads (doc 24); r14: Ray = the lock-built sweptR (Producer 20 Nov 14:02), sweptL kept for rollback (TOPS_V3HAIRMAP) */
- function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&!!L.base&&V3BASES.includes(L.base)&&!L.pro;}
+ function v3Want(L){return !!window.TOPS_V3FLAG&&!!L&&((!!L.base&&V3BASES.includes(L.base)&&!L.pro)||(V3CAST&&!(L.base&&V3BASES.includes(L.base))));}/* doc 59: TOPS_V3CAST puts the seeded opponents and pros on v3 too */
+ window.TOPS_S3LOOK=(look,name)=>s3Look(look||{},name,false);/* doc 59 test hook: the recipe a non-player figure is built from */
+ /* doc 59 (Director): the v3 cast. TOPS_V3CAST (?v3cast=1, with ?v3=1) builds every seeded opponent and pro on the v3 kit from the recipe the v2 build
+    already uses (s3Look: body, skin, hair, face, colours, nose, jaw, shoulders), so a match never mixes the two styles. Recipe mapping, not bespoke
+    looks: skin through the doc 51 solve, hair through the hair23-set styles above (never a base's sculpt), the build as a damped v2 build, the v2
+    face numbers onto the v3 face rig, plus one signature per named figure (V3SIG). The five bases are untouched. */
+ const V3CAST=(()=>{try{const q=new URLSearchParams(location.search).get('v3cast');if(q==='1'||q==='0')localStorage.setItem('tops_v3cast',q);return window.TOPS_V3CAST===true||window.TOPS_V3CAST===1||localStorage.getItem('tops_v3cast')==='1';}catch(e){return window.TOPS_V3CAST===true||window.TOPS_V3CAST===1;}})();
+ const V3CASTHAIR={spiky:'spikyC',short:'shortC',buzz:'buzzC',quiff:'quiff',curly:'curly',mullet:'mulletC',horseshoe:'horseshoeC',mohawk:'mohawkC',ponytail:'ponyC',swept:'shortC',bun:'ponyC',under:'underL'};
+ /* skin: the cast sits in the five bases' family. Take the nearest base (lab colour), keep the recipe's offset from it per channel in linear light,
+    and apply it to that base's in-game colour (V2SKIN, Engine's calibration). When the doc 51 solve lands in V2SKIN for the bases, the cast follows it
+    with no table of its own. */
+ const V3SKINREF=[[0xeea472],[0xf3b486],[0xb06a3e],[0xeeb08a],[0xeca676]];
+ const v3lin=h=>new T.Color(h).convertSRGBToLinear();
+ function v3CastSkin(hex){const sk=(window.TOPS_V2SKIN||V2SKIN);if(sk[hex])return hex;let best=V3SKINREF[0],bd=1e9;const b=v3lin(hex);for(const r of V3SKINREF){const a=v3lin(r[0]);const d=(a.r-b.r)**2+(a.g-b.g)**2+(a.b-b.b)**2;if(d<bd){bd=d;best=r;}}
+  const E=sk[best[0]];if(!E)return hex;const e=new T.Color(E[0]),a=v3lin(best[0]);const out=new T.Color(Math.min(1,e.r*b.r/a.r),Math.min(1,e.g*b.g/a.g),Math.min(1,e.b*b.b/a.b)).getHex();sk[out]=[out,E[1]];return out;}
+ /* doc 59b (Producer 22 Nov: the opponent CARD ART is canonical): under v3 an opponent who has a card is built from the card, not from the v2 seed.
+    Hair, beard, build, skin, shirt and stripe as the card shows them; props are left off except Pete's stag tiara (his card). Tama Rewiri's card
+    clashes with the player character Tama, so he keeps his seeded look until Hayden decides. Kev Marsh is not the card's Kev Mercer, so he stays seeded. */
+ const V3CARD={'Big Mal':{body:'heavy',skin:0xa8693f,hair:'buzz',hairC:0x141010,face:'full',beardC:0x17110e,shirt:0x1c1c1c,stripe:0xd81e2a,glasses:false,band:false,cap:false},
+  'Shazza':{body:'female',skin:0xe2a17e,hair:'spiky',hairC:0xe9d39a,face:'clean',shirt:0x7a1f2b,stripe:0xf2f2f2,earring:0xf2b632,glasses:false,band:false,cap:false},
+  'Pete the Plumber':{body:'heavy',skin:0xe8b08a,hair:'short',hairC:0xb4521c,face:'full',beardC:0xa24a1a,shirt:0x1c1c1c,stripe:0xd81e2a,tiara:true,glasses:false,band:false,cap:false},
+  'Deano Marsh':{body:'standard',skin:0xe8b08a,hair:'mullet',hairC:0xd9a441,face:'walrus',beardC:0xc28c38,shirt:0x7a1f2b,stripe:0x141416,glasses:false,band:false,cap:false},
+  'Jonno':{body:'standard',skin:0xe2a17e,hair:'quiff',hairC:0x5a3a22,face:'stubble',beardC:0x4a2f1d,shirt:0x1c1c1c,stripe:0xd81e2a,glasses:false,band:false,cap:false}};
+ /* one signature per named figure (doc 59), on top of the recipe; keys are the full names the game uses */
+ const V3SIG={'Big Mal':{v3face:{brow:[1.35,-.05,1.12],browUp:2,smile:1.12,jaw:1.3,cheekW:1.25,squint:.08}},/* doc 59b: the card's big, square, bearded grin */
+  'Shazza':{earring:0xf2b632,lash:true,v3face:{brow:[.8,-.12,1.15],browUp:2,smile:1.06,asym:.14,squint:.1,cheek:1.1}},/* doc 59b: the card's knowing smirk */
+  'Dave Hurring':{v3face:{jaw:.9,cheekW:.9,squint:.1,brow:[1.05,-.04,1.0]}},
+  'Pete the Plumber':{v3face:{smile:1.14,cheek:1.18,browUp:6}},
+  'Deano Marsh':{v3face:{asym:.1,squint:.1,browUp:0,brow:[1.2,-.04,1.15],smile:1.05}},/* doc 59b: card grin under the moustache *//* the rival's smirk: one-sided grin, narrowed eyes */
+  'Jonno':{v3face:{smile:1.18,browUp:6,cheek:1.12,brow:[1.15,-.03,1.1]}},/* the mate: the biggest open grin in the cast */
+  'Kev Marsh':{v3face:{brow:[1.15,-.03,1.1],cheekW:1.08}},
+  'Lisa Tane':{body:'female',face:'clean',lash:true,earring:0xd9d9d9,v3face:{brow:[.78,-.08,1.25],browUp:6,smile:1.1,cheek:1.12}}/* doc 59: v2 builds her as a bearded man (charKey picks a male model, so s3Look never sees her as a woman) */,
+  /* the pros get no signature beyond their v2 recipe (likeness rule, doc 59): hair, beard, build, colours and the v2 jaw/nose numbers only */};
+ function v3Cast(L,name){L._cast=1;if(name&&V3CARD[name]&&window.TOPS_V3CARD!==0){Object.assign(L,V3CARD[name]);if(L.hair===null)L.hair=null;L.brow=L.hairC;L._card=1;}/* doc 59b */const sig=(name&&V3SIG[name])||{};Object.keys(sig).forEach(k=>{if(k!=='v3face'&&k!=='bald')L[k]=sig[k];});if(sig.bald)L.hair=null;
+  const fem=L.body==='female'||L.soft;if(fem){L.soft=true;L.handK=.9;if(L.lash==null)L.lash=true;}
+  const b=V2BODY[L.body]||V2BODY.standard;L._castBK=[1+(b[0]-1)*.6,1+(b[1]-1)*.6,b[2]*.7];/* damped: the v3 torso is already wider than v2's standard */
+  L.skin=v3CastSkin(L.skin);
+  if(L.cap&&L.capC==null)L.capC=L.shirt==null?0xd21e28:L.shirt;if(L.cap&&!L.hair)L.hair='short';
+  const bc=new T.Color(L.brow||L.hairC||0x3a2010);const bh={};bc.getHSL(bh);const browC='#'+new T.Color().setHSL(bh.h,Math.min(1,bh.s*.9),Math.min(bh.l,.22)).getHexString();
+  L.v3face=Object.assign({browC,brow:fem?[.8,-.08,1.25]:[1.1,-.03,1.08],browUp:fem?6:3,smile:1.06,mouth:fem?1.0:1.1,jaw:(L.jaw||1)*(fem?.85:1),cheekW:1+((L.shW||1)-1)*.8,cheek:fem?1.1:1.05,squint:.05},sig.v3face||{});
+  L.nose=L.nose||1;return L;}
+ window.TOPS_V3CAST_ON=()=>V3CAST;
+
  const V3P={H:1.6,head:{c:[0,1.31,0.03],r:[0.295,0.27,0.27]},face:{phi:[-0.95,1.9],theta:[0.95,1.65]},torso:{y0:0.535,y1:1.015,rx:0.3,rz:0.215,belly:0.05,sh:0.365},
   shoulder:{x:0.274,y:0.885},arm:{upper:0.15,fore:0.135,r0:0.094,r1:0.084,r2:0.071},leg:{hipX:0.152,hipY:0.535,len:0.335,r:0.15,rs:0.138},shoe:{len:0.42,w:0.22,h:0.19,toe:0.08}};
  const V3EYE={dx:178,get v(){return 0.455+(window.TOPS_EYE17!==0?(window.TOPS_EYE_DV!=null?window.TOPS_EYE_DV:0.025):0);},rx:83,ry:92};/* r17 (doc 49): eyes 2.5% of head height lower; glasses, the eye gloss map and the brows follow (they all read V3EYE.v) */
@@ -1291,16 +1333,16 @@ function progRescue(bad,sc){PG.fails+=bad.length;const props=renderer.properties
   const tuck=(FP.earTuck||0)*(R[0]*1.07+0.032-v3HeadPoint(new T.Vector3(1,-0.074,-0.055).normalize(),FP.cheek,FP).x);/* r10: per-character ear tuck (Kai 0.135) */
   [-1,1].forEach(s=>{const ex=s*(R[0]*1.07-tuck);const EK=FP.earK||1;const e=mesh(ell(0.032*EK,0.082*EK,0.058*EK,16,12),skin,head,ex,-0.02,-0.015);e.rotation.y=s*0.32;const ie=mesh(ell(0.012*EK,0.055*EK,0.036*EK,12,9),earIn,head,ex+s*0.022*EK,-0.02,-0.005);/* r21: ears per character (earK) */ie.rotation.y=s*0.32;e.userData.ear=ie.userData.ear=true;/* long-hair styles hide the ears they cover */
    if(L.earring){const er=mesh(new T.TorusGeometry(.032,.008,6,16),v2M(L.earring,'trim'),head,s*R[0],-.11,0);er.rotation.y=Math.PI/2;er.userData.ear=true;}});
-  const bc=L.beardC||L.hairC||0x3a2010;if(L.face==='full')V2HAIRS.beardL(head,L,V2HK());/* hair28 sculpted beard on the v3 face (Dazza) */else if(L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
-  v2Hair(head,Object.assign({},L,{_v3:true}),hairM);
+  const bc=L.beardC||L.hairC||0x3a2010;if(L._cast&&L.face&&L.face!=='clean')V2HAIRS.beardC(head,L,v3CastK(V2HK()));else if(L.face==='full')V2HAIRS.beardL(head,L,V2HK());/* hair28 sculpted beard on the v3 face (Dazza) */else if(L.face==='stubble'||L.face==='goatee'||L.face==='walrus')v2Beard(head,L.face,L.face==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.45).getHex():bc);
+  v2Hair(head,Object.assign({},L,{_v3:true}),hairM);if(L._cast&&L.tiara)try{V2HAIRS.tiaraC(head,L,v3CastK(V2HK()));}catch(e){console.warn('tiara',e);}/* doc 59b */
   sk.userData.eyeAt=s=>v3EyeOnHead(s,FP);
   if(L.glasses){/* lenses centred on the painted v3 eyes (on the shaped skull), sized from the v3 eye; no temple arms */const SR=window.TOPS_SIG21!==0&&window.TOPS_SIG_RAY!==0;/* r21 (doc 56) Ray signature: lighter frames (rim -25%, lens -8%, warm dark brown) so the eyes lead */const gm=v2M(SR?0x2a2420:0x111111,'shoe'),F=V3P.face;const lr=V3EYE.rx/1024*F.phi[1]*R[0]*1.35*(SR?0.92:1),lh=V3EYE.ry/640*F.theta[1]*R[1]*1.12*(SR?0.92:1);
    [-1,1].forEach(s=>{const e=v3EyeOnHead(s,FP);const n=new T.Vector3(e.x/R[0]/R[0],e.y/R[1]/R[1],e.z/R[2]/R[2]).normalize();const o=mesh(new T.TorusGeometry(.962,SR?.09:.12,8,24),gm,head,e.x+n.x*.022,e.y+n.y*.022,e.z+n.z*.022);o.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),n);o.scale.set(lr,lh,lr*.9);o.userData.tag='lens';o.castShadow=false;});/* doc 27 #5 / Director r12: outer diameter -6.7%, rim 25% thinner; the opening stays the same size */
    const l=v3EyeOnHead(-1,FP),r=v3EyeOnHead(1,FP);mesh(new T.BoxGeometry(Math.abs(r.x-l.x)-lr*1.9,.01,.01),gm,head,0,l.y+lh*.25,Math.max(l.z,r.z)+.03).castShadow=false;}
   return FP;}
  const V3SKIN51={kai:0xf9743b,mia:0xff743e,tama:0x7f3719,ray:0xff8a53,dazza:0xee6c3b};/* Director doc 51 step-2 bases (poster-measured warmth + saturation) */
-function s3BuildV3(L0){const L=Object.assign({},L0);{const S5=window.TOPS_SKIN51!==undefined?window.TOPS_SKIN51:(window.TOPS_V3FLAG===true&&window.TOPS_SKIN8A!==0?{tama:V3SKIN51.tama}:null)/* round 8A default: under the hue-preserving tone map the round-6 bases land closest to the poster (Kai h17.8 s.67 vs h22.2 s.63); Tama keeps the doc 51 base (h15.6 s.69 vs h15.6 s.73) */;if(S5&&L.base){const t=typeof S5==='object'?(S5[L.base]!=null?S5[L.base]:null):V3SKIN51[L.base];if(t!=null)L.skin=t;}}/* TOPS_SKIN51: 1 = doc 51 base colours, or {base:hex} for the solve; off by default */const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
-  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=V2BODY.standard;/* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
+function s3BuildV3(L0){const L=Object.assign({},L0);if(!(L.base&&V3BASES.includes(L.base)&&!L.pro))v3Cast(L,L._nm);/* doc 59/59b: the cast (opponents, pros) on the v3 kit */{const S5=window.TOPS_SKIN51!==undefined?window.TOPS_SKIN51:(window.TOPS_V3FLAG===true&&window.TOPS_SKIN8A!==0?{tama:V3SKIN51.tama}:null)/* round 8A default: under the hue-preserving tone map the round-6 bases land closest to the poster (Kai h17.8 s.67 vs h22.2 s.63); Tama keeps the doc 51 base (h15.6 s.69 vs h15.6 s.73) */;if(S5&&L.base){const t=typeof S5==='object'?(S5[L.base]!=null?S5[L.base]:null):V3SKIN51[L.base];if(t!=null)L.skin=t;}}/* TOPS_SKIN51: 1 = doc 51 base colours, or {base:hex} for the solve; off by default */const P=V3P,mesh=v2mesh,ell=v2ell,cap=v2cap,pivot=v2pivot,tag=(o,t)=>{o.userData.tag=t;return o;};
+  const fem=L.body==='female'||L.soft;if(fem&&L.lash==null)L.lash=true;const BK=L._castBK||V2BODY.standard;/* doc 59: the cast keeps a damped v2 build *//* v3: Director's one sculpted body (the lab gates every base on it); the v2 build multipliers would widen the already-wide v3 torso */
   L._logo=Object.assign({u:.59,v:.80,px:35},window.TOPS_V3LOGO||{});/* doc 44 #3: up and out on the wearer's left chest, +17% (30 -> 35 px), clear of the r16 collar point; never under the throwing arm (checked through the throw); v .82+ foreshortens on the chest ledge in the face cam *//* TOPS_V3LOGO {u,v,px,track}: test knob for the logo move (doc 44 #3) *//* the wider v3 chest carries the mark nearer the middle, clear of the sleeve */const shirtM=v2M(0xffffff,'shirt');shirtM.map=v2ShirtTex(L);const skin=v2M(L.skin,'skin'),hairM=v2M(L.hairC||0x222222,'hair'),pantM=v2M(0x101012,'pants'),shoeM=v2M(0x0c0c0e,'shoe');v3Warm(skin);v3SkinFix(skin,false,L);const trim2=v2M(L._stripe,'trim'),shirtPlain=v2M(v2Tops(L.shirt==null?0x141416:L.shirt),'shirt');
   const root=new T.Group();const hips=pivot(root,0,P.leg.hipY,0);const CH=.3;const chest=pivot(hips,0,CH,0);const t=P.torso;
   const tor=tag(mesh(v3TorsoGeo(BK,-CH),shirtM,chest),'shirt');
@@ -1709,8 +1751,76 @@ const V2GROOVE=(()=>{
  };
  const V2HAIRON=(()=>{try{const q=new URLSearchParams(location.search).get('v2hair');if(q==='1'||q==='0')localStorage.setItem('tops_v2hair',q);return localStorage.getItem('tops_v2hair')==='1';}catch(e){return false;}})();
  window.TOPS_V2HAIR={on:V2HAIRON,styles:V2HAIRS,kit:()=>V2HK()};
- function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';if(L.cap)st=st?'capped':null;
-  {const key0=L.cap?(L.hair?'under':null):st,VM=Object.assign({},V3HAIRMAP,window.TOPS_V3HAIRMAP),key=L._v3&&VM[key0]?VM[key0]:key0;const fn=key&&(V2HAIRON||L._v3)&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,V2HK());if(!L.cap||L._v3)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
+ /* doc 59 (Director): the hair23-set styles for the v3 cast (seeded opponents and pros), hair28's generic builds as K entries. They take the
+    wearer's own hair colour, never a base character's sculpt (quiffL / sweptR / bunL / curlyL stay the five bases' own). */
+ /* the cast's hair colours: dark hair keeps dark highlights under the v3 environment (colsFrom's 32%-to-white lift turns black curls grey) */
+ function v3CastK(K){return Object.assign({},K,{colsFrom:hex=>{const b=new T.Color(hex),l=.2126*b.r+.7152*b.g+.0722*b.b,k=.1+.22*Math.min(1,l/.35);return {base:b.getHex(),shadow:b.clone().multiplyScalar(.5).getHex(),hi:b.clone().lerp(new T.Color(0xffffff),k).getHex()};}});}
+ Object.assign(V2HAIRS,{
+  spikyC(h,L,K){K.seed(61);const cols=K.colsFrom(L.hairC||0xeee3c2);const parts=[],W=(a,b,c)=>u=>a*(1-u)*(1-u)+2*b*u*(1-u)+c*u*u;/* doc 59b: Shazza's card crop, short sides and a crown of soft upswept spikes */
+   const hl=K.HL([[0,.98],[.35,.93],[-.35,.93],[.72,.95],[-.72,.95],...K.sideHL(1,1.6,1.4,1.74),...K.sideHL(-1,1.6,1.4,1.74),[2.45,2.24],[-2.45,2.24],[2.9,2.34],[-2.9,2.34],[Math.PI-.01,2.36]]);
+   parts.push(K.cap(hl,.014,32,6));
+   for(const [th,ph,len,wd] of [[.85,0,.11,.05],[.78,.42,.1,.046],[.78,-.42,.1,.046],[.55,.2,.12,.05],[.55,-.22,.12,.05],[.35,0,.12,.05],[.6,.75,.09,.042],[.6,-.75,.09,.042],[.4,1.2,.08,.04],[.4,-1.2,.08,.04],[.3,1.9,.07,.04],[.3,-1.9,.07,.04],[.25,2.7,.06,.04],[.7,2.4,.05,.04],[.7,-2.4,.05,.04]]){const b=K.S(th,ph,.008),n=K.nrm(th,ph),fw=K.dir(Math.max(.05,th-.5),ph).sub(K.dir(th,ph)).normalize();
+    const tip=b.clone().addScaledVector(n,len*.75).addScaledVector(fw,len*.55);parts.push(K.ribbon([b,b.clone().addScaledVector(n,len*.4).addScaledVector(fw,len*.2),tip],u=>wd*(1-.85*u),u=>wd*.6*(1-.8*u),10,7));}
+   K.done(h,parts,cols,{top:.08,hiAmt:.7},[.45,.12]);},
+  shortC(h,L,K){K.seed(31);const cols=K.colsFrom(L.hairC||0x3a2416);const parts=[],loft=K.loft,W=(a,b,c)=>u=>a*(1-u)*(1-u)+2*b*u*(1-u)+c*u*u;
+   const hl=K.HL([[0,.98],[.35,.92],[-.35,.93],[.72,.94],[-.72,.94],...K.sideHL(1,1.62,1.4,1.74),...K.sideHL(-1,1.62,1.4,1.74),[2.45,2.24],[-2.45,2.24],[2.9,2.34],[-2.9,2.34],[Math.PI-.01,2.36]]);
+   parts.push(K.cap(hl,.018,28,6));
+   for(const [p,w,k] of [[-.48,.075,.026],[-.15,.085,.03],[.2,.085,.03],[.52,.075,.026]])parts.push(loft([[.25,p*.4,-.012],[.5,p*.8,k*.9],[.78,p,k],[1.0,p*1.05,k*.6]],u=>w*(1-.35*u),W(.016,.02,.01),10,9));
+   for(const s of [1,-1]){parts.push(loft([[1.05,s*.9,-.01],[1.1,s*1.2,.016],[1.18,s*1.65,.016],[1.35,s*2.1,.008]],u=>.055*(1-.4*u),W(.012,.016,.006),10,8));
+    parts.push(loft([[1.3,s*1.3,-.01],[1.36,s*1.55,.01],[1.5,s*1.95,.01],[1.75,s*2.3,.002]],u=>.045*(1-.4*u),W(.008,.012,.004),9,8));}
+   for(const [p0,w0,h0] of [[1.5,.1,.02],[2.1,.11,.022],[2.8,.12,.024],[-2.55,.115,.022],[-1.9,.1,.02]]){const pe=Math.PI*Math.sign(p0)-(Math.PI*Math.sign(p0)-p0)*.22;
+    parts.push(loft([[.2,p0*.7,-.01],[.6,p0,h0],[1.2,p0+(pe-p0)*.5,h0],[1.75,pe,h0*.5],[2.1,pe,0]],u=>w0*(1-.4*u),W(h0*.7,h0*.75,.006),11,9));}
+   if(L._mullet)for(const p of [2.45,Math.PI,-2.45])parts.push(loft([[1.6,p,-.01],[1.95,p,.026],[2.3,p,.03],[2.62,p,.016]],u=>.12*(1-.25*u),W(.02,.026,.01),10,9));/* mullet: the back carried down past the nape */
+   K.done(h,parts,cols,{top:.07,hiAmt:.65},[.42,.14]);},
+  mulletC(h,L,K){V2HAIRS.shortC(h,Object.assign({},L,{_mullet:1}),K);},
+  tiaraC(h,L,K){/* doc 59b: Pete's stag-do tiara (his card): a silver band over the front of the crown with five points and a pink heart */const parts=[],gem=[];
+   const P=[];for(let i=0;i<=16;i++){const ph=-1.05+2.1*i/16;P.push(K.S(.62,ph,.035));}parts.push(K.ribbon(P,u=>.012,u=>.009,24,6));
+   for(const [ph,hh] of [[-.8,.05],[-.4,.07],[0,.1],[.4,.07],[.8,.05]]){const b=K.S(.62,ph,.035),n=K.nrm(.62,ph);parts.push(K.ribbon([b,b.clone().addScaledVector(n,hh*.5).addScaledVector(new T.Vector3(0,1,0),hh*.35),b.clone().addScaledVector(n,hh).addScaledVector(new T.Vector3(0,1,0),hh*.55)],u=>.016*(1-.8*u),u=>.008*(1-.6*u),8,5));}
+   const sm=v2M(0xdcdce6,'trim');sm.metalness=.8;sm.roughness=.25;const m=new T.Mesh(K.merge(parts),sm);m.userData.hair=true;m.userData.tag='hair';m.castShadow=false;h.add(m);
+   const hb=K.S(.62,0,.035).addScaledVector(K.nrm(.62,0),.06);const gm=v2M(0xff4fa0,'trim');gm.roughness=.2;const g=new T.Mesh(new T.SphereGeometry(.032,12,10),gm);g.position.copy(hb);g.scale.set(1,.85,.6);g.userData.hair=true;h.add(g);},
+  buzzC(h,L,K){const c=new T.Color(L.hairC||0x3a2416).lerp(new T.Color(L.skin),.15);const cols=K.colsFrom(c.getHex());
+   const hl=K.HL([[0,.98],[.35,.93],[-.35,.93],[.72,.95],[-.72,.95],...K.sideHL(1,1.6,1.4,1.74),...K.sideHL(-1,1.6,1.4,1.74),[2.45,2.24],[-2.45,2.24],[2.9,2.34],[-2.9,2.34],[Math.PI-.01,2.36]]);
+   K.add(K.paint(K.cap(hl,.008,40,8),cols,{top:.01,hiAmt:.2}),K.mat(.6,.05),h);},
+  horseshoeC(h,L,K){K.seed(41);const cols=K.colsFrom(L.hairC||0x75706a);const parts=[],sm=K.sm,wrap=K.wrap;
+   const bot=K.HL([[0,1.6],[1.0,1.6],[-1.0,1.6],...K.sideHL(1,1.62,1.42,1.74),...K.sideHL(-1,1.62,1.42,1.74),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   const top=ph=>1.2-.18*sm(1.6,3.0,Math.abs(wrap(ph)));parts.push(K.band(top,bot,.016,[1.0,2*Math.PI-1.0],40,6));
+   for(const s of [1,-1]){parts.push(K.loft([[1.18,s*1.05,-.012],[1.22,s*1.4,.026],[1.15,s*2.0,.028],[1.08,s*2.6,.024],[1.1,s*3.08,.01]],u=>.07*(1-.2*u),u=>.022,14,9));
+    parts.push(K.loft([[1.42,s*1.3,-.012],[1.55,s*1.75,.02],[1.6,s*2.3,.022],[1.62,s*2.85,.018],[1.64,s*3.1,.008]],u=>.07*(1-.2*u),u=>.018,13,9));}
+   K.done(h,parts,cols,{top:.06,hiAmt:.55},[.45,.12]);},
+  mohawkC(h,L,K){K.seed(43);const cols=K.colsFrom(L.hairC||0x3a2416);const sk=new T.Color(L.hairC||0x3a2416).lerp(new T.Color(L.skin),.55);
+   const hl=K.HL([[0,.98],[.72,.95],[-.72,.95],...K.sideHL(1,1.6,1.4,1.74),...K.sideHL(-1,1.6,1.4,1.74),[2.45,2.24],[-2.45,2.24],[Math.PI-.01,2.36]]);
+   const fin=K.loft([[1.0,0,-.012],[.6,0,.02],[.2,0,.03],[.25,Math.PI,.03],[.75,Math.PI,.026],[1.35,Math.PI,.018],[1.95,Math.PI,.006]],u=>.06*(1-.35*u),u=>(.09*(1-.45*u))*(.55+.45*Math.pow(Math.abs(Math.sin(u*Math.PI*6)),.6)),36,10);
+   const crest=K.paint(fin,cols,{top:.1,hiAmt:.6}),sides=K.paint(K.cap(hl,.006,36,7),K.colsFrom(sk.getHex()),{top:.01,hiAmt:.1});K.add(K.merge([crest,sides]),K.mat(.5,.1),h);},
+  ponyC(h,L,K){K.seed(47);const cols=K.colsFrom(L.hairC||0x3a2416);const parts=[],loft=K.loft,W=(a,b,c)=>u=>a*(1-u)*(1-u)+2*b*u*(1-u)+c*u*u;
+   const hl=K.HL([[0,.9],[.4,.88],[-.4,.88],[.8,.98],[-.8,.98],...K.sideHL(1,1.58,1.38,1.72),...K.sideHL(-1,1.58,1.38,1.72),[2.45,2.2],[-2.45,2.2],[2.9,2.3],[-2.9,2.3],[Math.PI-.01,2.32]]);
+   parts.push(K.cap(hl,.02,28,6));
+   /* pulled back: broad sections from the hairline over the crown to the tie at the back of the head */
+   for(const [p,w] of [[-.55,.09],[-.2,.1],[.2,.1],[.55,.09]]){const pe=Math.PI*Math.sign(p)-Math.sign(p)*.35;parts.push(loft([[.82,p,-.012],[.5,p*1.1,.03],[.6,pe*.7,.034],[1.25,pe,.026],[1.55,Math.PI*Math.sign(p)-Math.sign(p)*.12,.012]],u=>w*(1-.3*u),W(.018,.022,.01),14,9));}
+   for(const s of [1,-1])parts.push(loft([[1.0,s*.95,-.01],[1.15,s*1.3,.022],[1.3,s*1.9,.022],[1.5,s*2.6,.014],[1.55,s*3.0,.006]],u=>.06*(1-.3*u),W(.012,.018,.006),12,8));
+   /* the tie and the tail, hanging from the back of the crown (kept behind the head: clear of the dart side and the collar) */
+   const S=K.S,tie=S(1.55,Math.PI,.02);parts.push(...K.cluster(1.55,Math.PI,.07,.03,0));
+   const tp=[tie,S(1.75,Math.PI,.07),S(2.05,Math.PI,.08),S(2.35,Math.PI,.06),S(2.55,Math.PI,.04)];parts.push(K.ribbon(tp,u=>.05*(1-.55*u),u=>.04*(1-.5*u),18,8));
+   K.done(h,parts,cols,{top:.07,hiAmt:.7},[.42,.14]);}
+ });
+ /* doc 59: the cast's facial hair, laid on the shaped v3 face the way beardL is (v2Beard sits on the plain v2 ellipsoid and hangs under the v3 jaw).
+    full: beardL, trimmed a touch shorter; stubble: a thin skin-toned shadow over the beard area; goatee: chin patch + moustache; walrus: a heavy droop */
+ V2HAIRS.beardC=function(h,L,K){const kind=L.face;if(kind==='full'){const o=window.BEARD_P;window.BEARD_P=Object.assign({chin:.3},o||{});try{V2HAIRS.beardL(h,L,K);}finally{window.BEARD_P=o;}return;}
+  K.seed(59);const sm=K.sm,dir=K.dir,FPd=v3FaceOf(L);const bc=L.beardC||L.hairC||0x3a2010;
+  const col=kind==='stubble'?new T.Color(L.skin).lerp(new T.Color(bc),.4).getHex():bc;const cols=K.colsFrom(col);
+  const SF=(th,ph,k)=>{const p0=v3HeadPoint(dir(th,ph),FPd.cheek,FPd),p1=v3HeadPoint(dir(th+0.01,ph),FPd.cheek,FPd),p2=v3HeadPoint(dir(th,ph+0.01),FPd.cheek,FPd);
+   const n=new T.Vector3().crossVectors(p1.clone().sub(p0),p2.clone().sub(p0)).normalize();if(n.dot(p0)<0)n.negate();return p0.addScaledVector(n,k);};
+  const parts=[];
+  if(kind==='stubble'||kind==='goatee'){const U=40,Vn=16,pos=[],idx=[],th1=2.95,ph0=kind==='goatee'?-.6:-1.75,ph1=-ph0;
+   for(let j=0;j<=Vn;j++){const t=j/Vn;for(let i=0;i<=U;i++){const ph=ph0+(ph1-ph0)*i/U;const top=kind==='goatee'?2.3:1.62+.42*sm(1.3,.5,Math.abs(ph)),th=top+(th1-top)*t;
+     const inTop=sm(top,top+.08,th),side=kind==='goatee'?sm(.6,.4,Math.abs(ph)):sm(1.75,1.45,Math.abs(ph)),md=Math.hypot(ph/.62,(th-2.36)/.3),mouth=sm(1.0,1.2,md);
+     const k=(kind==='goatee'?.009:.0022)*inTop*side*mouth;const q=SF(th,ph,k-.004*(1-sm(0,.002,k)));pos.push(q.x,q.y,q.z);}}
+   for(let j=0;j<Vn;j++)for(let i=0;i<U;i++){const a=j*(U+1)+i,b=a+1,c=a+U+1,d=c+1;idx.push(a,c,b,b,c,d);}
+   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();parts.push(g);}
+  if(kind==='goatee'||kind==='walrus'){const w=kind==='walrus'?.05:.03,dr=kind==='walrus'?.16:0;
+   for(const s of [1,-1])parts.push(K.ribbon([[2.03,s*.02,-.002],[2.03,s*.2,.016],[2.1+dr*.5,s*.38,.014],[2.2+dr,s*.48,.006]].map(c=>SF(c[0],c[1],c[2])),u=>w*(1-.4*u),u=>kind==='walrus'?.02:.013,10,9));}
+  const m=K.add(K.paint(K.merge(parts),cols,{top:.03,hiAmt:kind==='stubble'?.15:.5}),K.mat(kind==='stubble'?.6:.52,.05),h);if(m){m.userData.tag='beard';m.material.side=T.DoubleSide;}};
+ function v2Hair(head,L,m){const R=V2P.head.r,mesh=v2mesh,ell=v2ell;let st=L.hair;if(!L._cast){if(st==='horseshoe')st='swept';if(st==='ponytail')st='bun';}if(L.cap)st=st?'capped':null;
+  {const key0=L.cap?(L.hair?'under':null):st,VM=L._cast?V3CASTHAIR:Object.assign({},V3HAIRMAP,window.TOPS_V3HAIRMAP),key=L._v3&&VM[key0]?VM[key0]:key0;const fn=key&&(V2HAIRON||L._v3)&&((window.TOPS_V2HAIRS||{})[key]||V2HAIRS[key]);if(fn){try{fn(head,L,L._cast?v3CastK(V2HK()):V2HK());if(!L.cap||L._v3)return;st=null;}catch(e){console.warn('v2 hair '+key,e);}}}
   const capG=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,0,Math.PI*2,0,Math.PI*.27);capG.scale(R[0]*1.06,R[1]*1.08,R[2]*1.07);
   const back=new T.SphereGeometry(1,Math.round(24*S3_SEGF),12,Math.PI*.95,Math.PI*1.1,0,Math.PI*.6);back.scale(R[0]*1.05,R[1]*1.06,R[2]*1.06);
   if(st&&st!=='swept'&&st!=='capped'){mesh(capG,m,head,0,.01,-.005);mesh(back,m,head,0,0,-.01);}
