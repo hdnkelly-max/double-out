@@ -75,6 +75,27 @@ let url = ''; const f = []; const out = {};
     await A.waitForTimeout(30000); const w1 = await A.evaluate(() => window.__w); out.hubWrites = w1 - w0;
     if (out.hubWrites > 1) f.push('5 the idle hub saved ' + out.hubWrites + ' times in 30 s');
     await ctx.close(); }
+  // 7 mid-match: a second tab opened while the owner is mid-match shows the card itself and doesn't take over; "Play here anyway" does
+  { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(1500); const sv0 = (await stored(A)).sv;
+    const B = await open(ctx); await B.waitForTimeout(1500);
+    out.mid = { bCard: await card(B), aCard: await card(A), aLive: await A.evaluate(() => typeof S !== 'undefined' && !!S && !S.done && !TOPS_TABS.away()), sv: (await stored(A)).sv, sv0 };
+    if (!out.mid.bCard || !/match is in progress/i.test(out.mid.bCard) || !/Play here anyway/i.test(out.mid.bCard)) f.push('7 the new tab shows "a match is in progress" with Play here anyway ' + JSON.stringify(out.mid));
+    if (out.mid.aCard || !out.mid.aLive) f.push('7 the owner keeps playing its match ' + JSON.stringify(out.mid));
+    out.mid.aSv = await A.evaluate(() => save.sv); if (out.mid.sv !== out.mid.aSv) f.push('7 the waiting tab must not write the save (only the owner\'s flush) ' + JSON.stringify(out.mid));
+    await B.screenshot({ path: path.join(dir, 'wip/car-tabs/tabs-busy-390.png') }).catch(() => {});
+    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); }); await B.waitForTimeout(1500);
+    out.anyway = { aCard: await card(A), bOwner: await B.evaluate(() => !TOPS_TABS.away() && !TOPS_TABS.pending() && !document.getElementById('tabsCard')) };
+    if (!out.anyway.aCard || !out.anyway.bOwner) f.push('7 Play here anyway takes over and the other tab steps aside ' + JSON.stringify(out.anyway));
+    await ctx.close(); }
+  // 8 the owner flushes on hello: a change it hadn't written yet is in the save the new tab loads
+  { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); }); await A.waitForTimeout(1500);
+    await A.evaluate(() => { career().bank = 4242; });   // in memory only
+    const B = await open(ctx); await B.waitForTimeout(1000); out.flush = await B.evaluate(() => ({ bank: career() && career().bank, own: !TOPS_TABS.away() && !TOPS_TABS.pending() }));
+    if (out.flush.bank !== 4242 || !out.flush.own) f.push('8 the new tab loads what the owner flushed and takes over ' + JSON.stringify(out.flush));
+    await ctx.close(); }
   // 6 cloud, two devices
   { let cloud = null; const rpcs = []; const mk = async () => { const ctx = await b.newContext();
       await ctx.exposeBinding('__cloudGet', () => cloud ? JSON.parse(JSON.stringify(cloud)) : null);
@@ -93,5 +114,5 @@ let url = ''; const f = []; const out = {};
     if (out.cloud2.x.bank !== 203) f.push('6 device X should load Y\'s newer save instead ' + JSON.stringify(out.cloud2)); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s; two devices on a mocked cloud: stale device X (12 saves after Y's 3, so its counter is higher) loads Y's newer save ($${out.cloud2.bank}) instead of overwriting it`);
+  console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s; mid-match, the new tab shows "a match is in progress" and leaves the owner playing until Play here anyway; the owner flushes on hello (the new tab loads $${out.flush.bank}); two devices on a mocked cloud: stale device X (12 saves after Y's 3, so its counter is higher) loads Y's newer save ($${out.cloud2.bank}) instead of overwriting it`);
 })();
