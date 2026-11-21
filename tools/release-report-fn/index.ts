@@ -11,7 +11,7 @@ const JWKS = createRemoteJWKSet(new URL(ISS + "/.well-known/jwks"));
 const AUD = "tops-release-report";
 const REPO = "hdnkelly-max/double-out", REPO_ID = "1449999381", OWNER_ID = "306334683";
 const WF = REPO + "/.github/workflows/release-report.yml@";
-const REFS = ["refs/heads/main"];   // PROOF: + "refs/heads/qa-release-watch" while proving it; main only after
+const REFS = ["refs/heads/main"];   // main only (the proof briefly allowed its branch and push events)
 const RESULTS = ["live", "live (follow-up failed)", "refused", "not released", "failed, rolled back", "failed", "dry run ok", "dry run refused", "cancelled", "running"];
 const KEEP = 12;
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
