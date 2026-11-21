@@ -1,0 +1,95 @@
+{
+ "_note": "r8c: measured at render time by tests/v3-cards-render.js (card px, 700x1050): head top (hair/cap included), character height (head top to feet, projected), head centre x; sha256 ties each entry to the shipped webp",
+ "cards": {
+  "power": {
+   "headTop": 201.8,
+   "height": 777.4,
+   "headCx": 332.5,
+   "clip": {
+    "n": 4827,
+    "bad": []
+   },
+   "sha256": "5fe972e3abe3b27fc67e6e3d7d5272e2a6a6ddb22f6e5468927cc7ddfab72e4e"
+  },
+  "nuke": {
+   "headTop": 201.8,
+   "height": 777.4,
+   "headCx": 350.2,
+   "clip": {
+    "n": 4788,
+    "bad": []
+   },
+   "sha256": "8ef6d1b94c11fd394152ceb4328aa5c4ab18f2d8fd0d847709ed1d81d547bf1d"
+  },
+  "green": {
+   "headTop": 201.8,
+   "height": 816.3,
+   "headCx": 332.5,
+   "clip": {
+    "n": 4834,
+    "bad": []
+   },
+   "sha256": "86adbd2eea17ab75da7783d7394adb33dd7f56dd994642b157ec51b496296877"
+  },
+  "price": {
+   "headTop": 201.8,
+   "height": 777.4,
+   "headCx": 351.1,
+   "clip": {
+    "n": 4923,
+    "bad": []
+   },
+   "sha256": "842171f14f165e24ddc4dabc1960bd7d18064f928651fc58ccddae3c18463281"
+  },
+  "wright": {
+   "headTop": 201.8,
+   "height": 777.4,
+   "headCx": 332.5,
+   "clip": {
+    "n": 4866,
+    "bad": []
+   },
+   "sha256": "d7d99122fa8c4b3f7f7b6fd3f2e3dca8fb72892d3d449ed867b8f8845fc1c31d"
+  },
+  "smith": {
+   "headTop": 201.8,
+   "height": 816.3,
+   "headCx": 367.5,
+   "clip": {
+    "n": 4927,
+    "bad": []
+   },
+   "sha256": "bbcf6a482e4e365bfd007f976428b2479cccb13ca949bfd03632ada81c9ecf4a"
+  },
+  "barneveld": {
+   "headTop": 201.8,
+   "height": 777.4,
+   "headCx": 347.9,
+   "clip": {
+    "n": 4932,
+    "bad": []
+   },
+   "sha256": "59b1091c2cb09a36954644e743b8cb087566e5e97ca02e63f1fbf85c872f7334"
+  },
+  "humphries": {
+   "headTop": 201.8,
+   "height": 802.5,
+   "headCx": 367.5,
+   "clip": {
+    "n": 5042,
+    "bad": []
+   },
+   "sha256": "92710928ef2dd6391b8d33343725deb6d00df691d8f874c42ee4b1a977900730"
+  },
+  "anderson": {
+   "headTop": 201.8,
+   "height": 816.3,
+   "headCx": 332.5,
+   "clip": {
+    "n": 5213,
+    "bad": []
+   },
+   "sha256": "d2cc9914a55b43226c9d3b7a63cf3935fc6848e2ef96ab73d5eb8e7e69f957b1"
+  }
+ }
+}
