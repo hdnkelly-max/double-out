@@ -1,0 +1,34 @@
+name: v3heads-diag
+'on':
+  push:
+    branches:
+    - qa-diag-v3heads
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.2-jammy
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: 8f2bac2551f1bbd8be2b46213a023ccad95111dd
+        path: code
+        fetch-depth: 1
+    - uses: actions/checkout@v4
+      with:
+        path: diag
+        sparse-checkout: diag
+        fetch-depth: 1
+    - name: Build
+      working-directory: code
+      run: git config --global --add safe.directory "*"; npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+    - name: Diagnose
+      working-directory: code
+      run: cp ../diag/diag/v3heads-diag.js tests/_diag.js && node tests/_diag.js "$PWD"; node tests/s3-v3heads.js "$PWD" 2>&1 | tail -4
