@@ -1,6 +1,6 @@
 // CAR-PRESTIGE shop (Producer 22 Nov 07:03, decided with ChatGPT): a title at a level unlocks that level's premium edition, the trophy on the
 // shelf is the free proof, buying is cosmetic and one-off and never takes the bank below the next entry fee.
-//   1 locked until a title at that level (the Worlds edition needs the World Championship itself); kit-art editions (Club, Opens) aren't sold yet
+//   1 locked until a title at that level (the Worlds edition needs the World Championship itself); kit-art editions (Club, Opens) aren't sold or listed yet; the TT darts sell now and say the shirt follows
 //   2 a title + the money: bought, the bank drops by exactly the price, the edition is owned and worn (your darts wear it: TOPS_GEAR)
 //   3 the floor: a purchase that would leave less than the next entry fee is refused, the bank unchanged
 //   4 cosmetic only: setupBaseMult / setupTolMult / setupSwayMult (the throw maths) are identical with and without the edition
@@ -44,6 +44,7 @@ const f = []; const out = {}; fs.mkdirSync(path.join(dir, 'wip/car-prestige'), {
     await p.evaluate(() => { const ch = document.querySelector('[data-s3="troph"]'); if (ch) ch.click(); }); await p.waitForTimeout(1500);
     return p.evaluate(() => ({ rows: [...document.querySelectorAll('[data-edrow]')].map(r => r.innerText.replace(/\s+/g, ' ')) })); };
   out.shelf = await shelf();
+  out.tt = await p.evaluate(() => { const k = career().circuit; k.history.push({ week: 30, id: 'tt_1', n: 'Trans-Tasman', level: 4, fin: 'W', prize: 0, pts: 0 }); const d = document.createElement('div'); d.innerHTML = TOPS_PRESTIGE.row(4); return d.innerText.replace(/\s+/g, ' '); });
   // the Club edition isn't on sale (kit art), so test the buy flow on DPNZ: give a DPNZ title and redraw the shelf
   out.buyFlow = await p.evaluate(async () => { const k = career().circuit; k.level = 3; career().tier = 3; k.history.push({ week: 20, id: 'dpnz_1', n: 'DPNZ', level: 3, fin: 'W', prize: 0, pts: 0 }); persist();
     const ch = document.querySelector('[data-s3="trback"]'); try { showHub('play'); } catch (e) {} await new Promise(r => setTimeout(r, 1500)); const t = document.querySelector('[data-s3="troph"]'); if (t) t.click(); await new Promise(r => setTimeout(r, 1500));
@@ -54,9 +55,9 @@ const f = []; const out = {}; fs.mkdirSync(path.join(dir, 'wip/car-prestige'), {
   for (const [w, h] of [[390, 844], [360, 640]]) { await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(400); await p.evaluate(() => { const r = document.querySelector('[data-edrow="3"]'); if (r) r.scrollIntoView({ block: 'center' }); }); await p.waitForTimeout(300); await p.screenshot({ path: path.join(dir, `wip/car-prestige/shop-${w}.png`) }); }
   const bf = out.buyFlow;
   if (!/Buy · \$5,000/i.test(bf.r0 || '') || !/Tap again to buy/i.test(bf.r1 || '') || !/Take off/i.test(bf.r2 || '') || bf.paid !== 5000 || bf.gear !== 'dpnz') f.push('6 shelf buy flow ' + JSON.stringify(bf));
-  if (!out.shelf.rows.some(r => /Kauri Arms flights/i.test(r) && /Take off/i.test(r)) || !out.shelf.rows.some(r => /Club shirt/i.test(r) && /new kits/i.test(r))) f.push('6 shelf rows ' + JSON.stringify(out.shelf));
+  if (!out.shelf.rows.some(r => /Kauri Arms flights/i.test(r) && /Take off/i.test(r)) || out.shelf.rows.some(r => /Club shirt/i.test(r)) || !/shirt joins your locker when it’s made/i.test(out.tt || '')) f.push('6 shelf rows ' + JSON.stringify(out.shelf));
   if (pe.length) f.push('page errors ' + pe.slice(0, 2).join(' | '));
   await b.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out).slice(0, 1500)); process.exit(1); }
-  console.log(`PASS: locked until a title at the level (Worlds needs the World Championship); not enough money and the entry-fee floor ($${e.fee}) refuse with the bank untouched; a buy takes exactly the price, the edition is owned and on your darts; the throw maths are identical with it on; no double buy, Club shirt not on sale yet; wear/take off; owned and worn survive a reload; the trophy shelf row goes "${bf.r0}" → "${bf.r1}" → "${bf.r2}" ($${bf.paid}); captures shop-390/360`);
+  console.log(`PASS: locked until a title at the level (Worlds needs the World Championship); not enough money and the entry-fee floor ($${e.fee}) refuse with the bank untouched; a buy takes exactly the price, the edition is owned and on your darts; the throw maths are identical with it on; no double buy, Club shirt not listed; TT row: "${(out.tt||'').slice(0,90)}"; wear/take off; owned and worn survive a reload; the trophy shelf row goes "${bf.r0}" → "${bf.r1}" → "${bf.r2}" ($${bf.paid}); captures shop-390/360`);
 })();

@@ -20,7 +20,10 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
     await p.evaluate(ed => { save.authSeen = true; $('login').hidden = true; save.name = 'Hayden'; newCareer(); persist(); window.TOPS_GEAR_PREVIEW = ed === 'default' ? null : ed;
       window.TOPS_GEARCAM_QA = { still: 1, hold: 9000 }; const _f = TOPS_GEARCAM_FIRE; window.__fired = null; TOPS_GEARCAM_FIRE = k => { window.__fired = k; return _f(k); };
       const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); }, ed);
-    // past the bull-up and onto your first visit (dart 1, your turn, nothing flying)
+    // the bull-up: your dart goes in the bull through the same throw path, so you throw first
+    for (let i = 0; i < 60; i++) { const bu = await p.evaluate(() => typeof S !== 'undefined' && S && S.bull && S.bull.me == null && !S.busy).catch(() => false); if (bu) break; await p.waitForTimeout(500); }
+    await p.evaluate(() => { S.busy = true; V.fly(V.handWorld(), 0, 0, 0, 380, .05, () => { S.anim = null; land(0, 0, false); }); });
+    // then onto your first visit (dart 1, your turn, nothing flying)
     for (let i = 0; i < 160; i++) { const ok = await p.evaluate(() => typeof S !== 'undefined' && S && !S.bull && S.cur === 0 && S.dart === 1 && !S.busy && !S.done && !S.aiFlying).catch(() => false); if (ok) break; await p.waitForTimeout(500); }
     await p.waitForTimeout(800);
     const r = await p.evaluate(() => new Promise(res => { const T = [[-1.5, -103], [1, -102.4], [2.5, -103.6]]; let i = 0;

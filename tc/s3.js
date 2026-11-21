@@ -314,7 +314,7 @@
      handled here (delegated), and the row redraws itself. Buying takes two taps (the first arms it for 3 s), never a dialog. */
   const $m = n => '$' + Math.round(n).toLocaleString('en-NZ'); const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
   const THUMB = {}; const thumb = id => { if (!PARTS[id]) return ''; const nm = (typeof save !== 'undefined' && save.name) || 'You', k = id + '|' + nm; try { if (!THUMB[k]) THUMB[k] = swatch(id, nm, 112).toDataURL('image/png'); } catch (e) { return ''; } return THUMB[k]; };   // 75c: the flight-shaped swatch
-  function row(lv) { const ed = ED.find(x => x.lv === lv); if (!ed || !READY[ed.id]) return ''; const st = state(ed.id); if (!st) return '';   // never list what can't render yet (Producer 10:40): Club/Opens shirts wait for their kit art const E = CIRC(), L = E && E.LEVELS[lv];
+  function row(lv) { const ed = ED.find(x => x.lv === lv); if (!ed || !READY[ed.id]) return ''; const st = state(ed.id); if (!st) return '';   /* never list what can't render yet (Producer 10:40): Club/Opens shirts wait for their kit art */ const E = CIRC(), L = E && E.LEVELS[lv];
     let line, btn = '';
     if (!st.ready) line = 'Joins the shop with the new kits';
     else if (!st.won) line = (ed.id === 'worlds' ? 'Win the World Championship' : 'Win a ' + esc(L ? L.n : '') + ' title') + ' to unlock · ' + $m(ed.price);
