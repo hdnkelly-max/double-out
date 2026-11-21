@@ -45,8 +45,8 @@
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
   /* the build's content hash per s3/ file (TOPS_S3V), so a repainted picture under the same name is a new URL for the HTTP cache and Cache Storage (Q&D 12:02) */
   const s3u = u => { const h = (window.TOPS_S3V || {})[u]; return h ? u + '?v=' + h : u; };
-  const one = p => HAVE[p] ? s3u('s3/' + p) : PEOPLE.test(p) ? PH : null;
-  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => (off >= 3 && str.slice(off - 3, off) === 's3/') ? m : (one(p) || m));   /* an s3/ path is left alone */
+  const one = p => (window.TOPS_V3FLAG === true && HAVE['v3/' + p]) ? s3u('s3/v3/' + p) : HAVE[p] ? s3u('s3/' + p) : PEOPLE.test(p) ? PH : null;   /* rel-v3-r8: a v3-only layer (s3/v3/<path>, e.g. the pro cards rendered from the v3 figures, doc 67) wins under ?v3=1; without v3 nothing changes */
+  const swap = s => (typeof s !== 'string') ? s :   /* no length cap: the Locker's recoloured hero is a long data: URL with the venue image after it */ s.replace(PATH, (m, p, off, str) => ((off >= 3 && str.slice(off - 3, off) === 's3/') || (off >= 6 && str.slice(off - 6, off) === 's3/v3/')) ? m : (one(p) || m));   /* an s3/ (or s3/v3/) path is left alone */
   window.TOPS_S3_IMG = swap;
   {
     const wrapSet = (proto, prop, fn) => { const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
@@ -424,8 +424,13 @@
      wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
   /* Engine's PLAYER row draws each base as a live 3D portrait, which shows plain white busts on phones (Q&D). Fill each slot first with the
      painted Vinyl head (s3/assets/creator/head_<id>.png): Engine's portrait pass skips a slot that already has a picture. */
-  const heads = () => { try { document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { if (i.querySelector('img.s3-head')) return; const u = swap('assets/creator/head_' + i.dataset.pt + '.png');
-      if (!/^s3\//.test(u)) return; i.innerHTML = `<img class="s3-head" src="${u}" alt="">`; }); } catch (e) {} };
+  /* v3 switch-on: with ?v3=1 the preview is the v3 figure, so the row uses the v3 cards (s3/assets/creator/head_v3_<id>.png, listed in
+     have.json) as soon as they are in the build. Until then the painted cards stay (the live 3D fallback is the white-bust bug above).
+     A card already showing the other set is replaced when the switch differs from the one it was drawn for. */
+  const heads = () => { try { const v3 = !!window.TOPS_V3FLAG; document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { const id = i.dataset.pt;
+      const p3 = 'assets/creator/head_v3_' + id + '.png', want = v3 && HAVE[p3] ? p3 : 'assets/creator/head_' + id + '.png', have = i.querySelector('img.s3-head');
+      if (have && have.dataset.src === want) return; const u = swap(want); if (!/^s3\//.test(u)) return;
+      i.innerHTML = `<img class="s3-head${want === p3 ? ' s3-head3' : ''}" src="${u}" alt="" data-src="${want}">`; }); } catch (e) {} };
   if (typeof s3Creator === 'function') { const _s3c = s3Creator; s3Creator = function () { const r = _s3c.apply(this, arguments); heads(); return r; }; }
   const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {

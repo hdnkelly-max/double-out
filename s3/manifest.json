@@ -123,6 +123,11 @@
   "s3/assets/creator/head_mia.png",
   "s3/assets/creator/head_ray.png",
   "s3/assets/creator/head_tama.png",
+  "s3/assets/creator/head_v3_dazza.png",
+  "s3/assets/creator/head_v3_kai.png",
+  "s3/assets/creator/head_v3_mia.png",
+  "s3/assets/creator/head_v3_ray.png",
+  "s3/assets/creator/head_v3_tama.png",
   "s3/assets/crowd.webp",
   "s3/assets/rb/backroom.jpg",
   "s3/assets/rb/lk_f.jpg",
@@ -218,7 +223,16 @@
   "s3/plates/tc_oche.webp",
   "s3/plates/tc_walk.webp",
   "s3/plates/tt_oche.webp",
-  "s3/plates/tt_walk.webp"
+  "s3/plates/tt_walk.webp",
+  "s3/v3/assets/cards/art/anderson.webp",
+  "s3/v3/assets/cards/art/barneveld.webp",
+  "s3/v3/assets/cards/art/green.webp",
+  "s3/v3/assets/cards/art/humphries.webp",
+  "s3/v3/assets/cards/art/nuke.webp",
+  "s3/v3/assets/cards/art/power.webp",
+  "s3/v3/assets/cards/art/price.webp",
+  "s3/v3/assets/cards/art/smith.webp",
+  "s3/v3/assets/cards/art/wright.webp"
  ],
  "optional": [
   "s3/pros/pros.json"
