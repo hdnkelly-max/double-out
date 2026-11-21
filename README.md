@@ -4,3 +4,5 @@ Updated by Shipping on every release (`ship.sh` pushes the released commit here 
 - Regression gate: `node tests/regress.js 2`
 - Collectibles work goes on the `collectibles` branch under `collectibles/`; the build chat merges it.
 Version: TOPS_VER='1.76'
+
+<!-- SHIP-3 author-path dry-run probe (Delivery QA, 21 Nov); never released -->
