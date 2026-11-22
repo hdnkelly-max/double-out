@@ -224,15 +224,18 @@
   // 1 ownership
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
   const LK=!window.TOPS_NOLOCKS&&!!(navigator.locks&&navigator.locks.request),LOCK='tops-save-'+KEY;   /* TOPS_NOLOCKS: QA, runs the fallback */
-  let held=false,acquiring=false,releaseLock=null,lastClaim=null;
+  let held=false,acquiring=false,releaseLock=null,lastClaim=null,reqN=0;
   function lockAcquire(steal){if(!LK)return Promise.resolve(true);acquiring=true;
     return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};
       /* R8 (ChatGPT): a request that hasn't been granted is never ownership. A steal from a frozen holder can wait until it thaws; this tab
          stays waiting behind a card and writes nothing until the lock is really granted */
       if(steal)setTimeout(()=>{if(acquiring&&!done){ev('lock_steal_slow');card('wait');}},2500);
-      try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{acquiring=false;if(!lock){fin(false);return;}held=true;ev('lock_held',{steal:!!steal});fin(true);
+      /* R8b: each request has a number; only the newest one is this tab's lock. A request this tab replaced itself (a second steal) neither
+         sets nor clears held, never answers its caller, and its loss is not a lost lock (DQ A1 crossed: a doubled ack made two steals, the second stole the first) */
+      const my=++reqN;
+      try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{if(my!==reqN)return;acquiring=false;if(!lock){fin(false);return;}held=true;ev('lock_held',{steal:!!steal});fin(true);
         return new Promise(r=>{releaseLock=()=>{held=false;releaseLock=null;r();};});})
-      .catch(e=>{acquiring=false;const was=held;held=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();fin(false);});}catch(e){acquiring=false;fin(false);}});}
+      .catch(e=>{if(my!==reqN)return;acquiring=false;const was=held;held=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();fin(false);});}catch(e){acquiring=false;fin(false);}});}
   /* the lock was stolen: give the stealer's claim (owner key or message) a moment to arrive, then the one rule. Writes are blocked meanwhile. */
   function lockLost(){if(away||!owner)return;if(!midMatch()){const o=readOwn();stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');return;}   /* nothing to protect: go now */
     setTimeout(()=>{if(away)return;const o=readOwn();
@@ -293,7 +296,8 @@
      save to the other tab, which is how two claimants both ended behind the card); the next real change writes it */
   let quiet=0;function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){quiet++;try{TOPS_SAVEV.adopt(s,'tab');}finally{quiet--;}}}catch(e){}}
   function takeOver(why,from){if(away&&why!=='anyway')return;
-    if(LK&&!held){pending=true;away=false;const st=why!=='alone';if(why==='anyway')anyUntil=Date.now()+10000;if(st){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   /* the claim (and whether it is Play here anyway) goes out before the steal, so the old holder can read it */
+    if(LK&&!held){if(acquiring&&why!=='anyway'){ev('tabs_take_dup',{why});return;}   /* R8b: a request is already out (the ack arrives twice: channel and storage); that one decides */
+      pending=true;away=false;const st=why!=='alone';if(why==='anyway')anyUntil=Date.now()+10000;if(st){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   /* the claim (and whether it is Play here anyway) goes out before the steal, so the old holder can read it */
       lockAcquire(st).then(ok=>{if(ok){pending=false;takeOver2(why,from,st);}else{pending=true;handshake(readOwn());}});return;}
     takeOver2(why,from);}
   function takeOver2(why,from,claimed){pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};
