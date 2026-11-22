@@ -219,15 +219,16 @@
       mark(x) { pint(x, 202, 166, 84, '#f0dfb2', '#b8641e'); } },
     dpnz: {  // DPNZ: black with one big white fern across the wing, 20% larger in 75b so it reads when flights overlap (black + white)
       base(x) { x.fillStyle = '#0c0d0f'; x.fillRect(0, 0, 256, 256); }, mark(x) { frond(x, 1, '#eef1f3'); } },
-    tt: {    // Trans-Tasman (75c): the split reads AU v NZ on the outer panel itself, so both survive overlapping darts. Split along the wing:
-             // the outer edge Aussie green with the gold Southern Cross, the root side NZ black with a silver fern lying along it, a gold seam
+    tt: {    // Trans-Tasman (75d, ChatGPT P2): the rivalry is split by FACE, not inside one face. The back of every wing is NZ (black, a big white fern,
+             // as DPNZ, with a thin gold root band so it isn't mistaken for DPNZ): in the 180 close-up's 3/4 view the backs are the faces on top, so NZ leads.
+             // The front is Australia (green, the gold Southern Cross, a gold root band).
+             // Each flight's opposite wings are turned 180 deg, so wherever you stand you see one NZ wing and one Aussie wing in each plane, side by side.
       base(x) { x.fillStyle = '#0c0d0f'; x.fillRect(0, 0, 256, 256); },
-      mark(x) { const L = [[-10, 240], [262, 168]];   // the split, root-front to outer-back
-        x.fillStyle = '#12844a'; x.beginPath(); x.moveTo(L[0][0], L[0][1]); x.lineTo(L[1][0], L[1][1]); x.lineTo(262, 60); x.lineTo(-10, 60); x.closePath(); x.fill();
-        const G = '#f6c52c'; star(x, 202, 134, 14, 5, G); star(x, 174, 156, 12, 5, G); star(x, 232, 144, 12, 5, G); star(x, 210, 162, 14, 5, G); star(x, 228, 160, 5, 5, G);
-        x.save(); x.beginPath(); x.moveTo(L[0][0], L[0][1] + 7); x.lineTo(L[1][0], L[1][1] + 7); x.lineTo(262, 262); x.lineTo(-10, 262); x.closePath(); x.clip();
-        x.translate(168, 224); x.rotate(.3); x.scale(.82, .82); x.translate(-154, -181); frond(x, 1, '#e9edf0'); x.restore();
-        x.strokeStyle = '#f4c62e'; x.lineWidth = 7; x.beginPath(); x.moveTo(L[0][0], L[0][1]); x.lineTo(L[1][0], L[1][1]); x.stroke(); } },
+      mark(x, back) { const G = '#f6c52c';
+        if (back) { frond(x, 1, '#eef1f3'); x.fillStyle = G; x.fillRect(0, 240, 256, 16); return; }   // the back canvas is mirrored, so the fern still runs root to tip
+        x.fillStyle = '#0f7a44'; x.fillRect(0, 0, 256, 256);
+        star(x, 196, 128, 20, 5, G); star(x, 160, 160, 16, 5, G); star(x, 232, 150, 16, 5, G); star(x, 204, 184, 20, 5, G); star(x, 226, 176, 7, 5, G);
+        x.fillStyle = G; x.fillRect(0, 232, 256, 24); } },
     card: {  // Tour Card (75b): tour blue with your signature as a big metallic silver mark on the outer panel and a silver swoosh (blue + silver)
       base(x) { x.fillStyle = '#1d3b78'; x.fillRect(0, 0, 256, 256); },
       mark(x, m, nm) { const g = x.createLinearGradient(0, 120, 0, 230); g.addColorStop(0, '#ffffff'); g.addColorStop(.45, '#c9d0d6'); g.addColorStop(.6, '#f4f6f8'); g.addColorStop(1, '#8e979f');
@@ -250,7 +251,10 @@
   // a flight-shaped preview for the shop (the front of one standard wing, as the close-up shows it): transparent outside the wing
   function swatch(id, name, px) { const src = paint(id, name); if (!src) return null; px = px || 128; const c = document.createElement('canvas'); c.width = c.height = px; const x = c.getContext('2d');
     const k = px / 256; x.scale(k, k); x.beginPath(); x.moveTo(0, 230); x.lineTo(144, 114); x.quadraticCurveTo(244, 106, 252, 166); x.lineTo(248, 254); x.lineTo(160, 256); x.closePath();
-    x.save(); x.clip(); x.drawImage(src, 0, 0); x.restore(); x.lineWidth = 3; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke(); return c; }
+    x.save(); x.clip(); x.drawImage(src, 0, 0);
+    if (id === 'tt' && F75()) { const bk = paint(id, name, true); if (bk) { x.beginPath(); x.moveTo(0, 0); x.lineTo(132, 0); x.lineTo(150, 256); x.lineTo(0, 256); x.closePath(); x.clip();   // 75d: the shop shows both faces: NZ on the root half, Australia on the outer half
+      x.save(); x.translate(256, 0); x.scale(-1, 1); x.drawImage(bk, 0, 0); x.restore(); x.strokeStyle = '#f6c52c'; x.lineWidth = 6; x.beginPath(); x.moveTo(132, 0); x.lineTo(150, 256); x.stroke(); } }
+    x.restore(); x.beginPath(); x.moveTo(0, 230); x.lineTo(144, 114); x.quadraticCurveTo(244, 106, 252, 166); x.lineTo(248, 254); x.lineTo(160, 256); x.closePath();   /* the wing outline again (the seam replaced the path) */ x.lineWidth = 3; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke(); return c; }
   const PARTS = {   // shaft colour and barrel finish per edition (the flight is painted above)
     pub:    {},
     dpnz:   { shaft: 0x0d0e10, barrel: { col: 0x2a2d31, met: .9, rough: .28, band: 0xd8dde2 } },
