@@ -39,7 +39,7 @@
   // TOPS_S3_HAVE (from build.js): the repo paths that have a redo at 's3/' + path. PEOPLE: the paths that show a person or a venue
   // (Director's art audit, 10-season3-build.md); one of those without a redo yet shows a plain dark placeholder (Hayden 07:55).
   // Objects (darts, trophies, badges, icons) keep their own images.
-  const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>');
+  const PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><radialGradient id="g" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#2a1416"/><stop offset="1" stop-color="#0d0f10"/></radialGradient></defs><rect width="64" height="64" fill="url(#g)"/></svg>').replace(/\(/g, '%28').replace(/\)/g, '%29')   /* ( ) escaped too: an unquoted url(...) with them in it is invalid CSS, so the placeholder showed nothing (EXP-S3-BINDER) */;
   const HAVE = {}; (window.TOPS_S3_HAVE || []).forEach(p => { HAVE[p] = 1; });
   const PEOPLE = /^(assets\/rb\/(tn_t\d+f?|venue_t\d|w_win_t\d|w_loss_t\d|w_rw_[\w-]+|result_\w+|opp_\w+|lk_[mf][\w-]*|locker|t_hero|backroom|pack)\.\w+|assets\/ui\/(bg_\w+|th_\w+|card_(gang|pass|steady|stare|tap|turns|wing|heckle|invasion|crowd))\.\w+|assets\/bets\/(hot|steady|tight)\.\w+|img\/(splash|menu\w*|v\d)\.\w+|assets\/venue\/(club_team|club_throw|club_raffle|pub_\d)\.\w+|assets\/cards\/art\/((tl|tn|rd|pr)_[\w-]+|anika|bigmal|deano|jonno|kev|mo|pete|phil|shazza|sherlock|tama|comeback|green|madhouse|regional|robbed|robin|water|whitewash|wigan|chalker|tunnel|transtasman|nuke|anderson|barneveld|humphries|power|price|smith|wright|bar|club|kauri|lastorders|oche|palace|papakura|practiceboard|rsa|dpnz)\.\w+)$/;
   const PATH = /(?:\.\/)?((?:assets|img)\/[\w\/.-]+?\.(?:jpe?g|png|webp))/g;
@@ -69,6 +69,8 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const money = n => '$' + Math.round(+n || 0).toLocaleString('en-NZ');
   const CI = () => window.TOPS_CIRCUIT;
+  // CAR-OPP note (a): show the average you actually play (the Circuit band shift), not the raw engine number
+  const PLAYS = (a, lv) => { try { return window.TOPS_OPP_SHIFT ? TOPS_OPP_SHIFT(a, lv, true) : a; } catch (e) { return a; } };
   /* a round's name (the engine's FIN_NAME names a FINISH: losing the final = Runner-up; the round itself is the Final) */
   const RN = { G: 'Group match', F: 'Final', SF: 'Semi-final', QF: 'Quarter-final', L16: 'Last 16', L32: 'Last 32', L64: 'Last 64', L128: 'Last 128' };
   const roundName = r => RN[r] || r || ''; window.TOPS_S3_ROUND = roundName;
@@ -225,9 +227,9 @@
     const left = c.bank - e.cost;
     return `<article class="s3-post">
       <div class="s3-part" style="background:url(${lvArt(e.level)}) 50% 35%/cover no-repeat,${GRAD[e.level]}">${e.jump ? '<span class="s3-tag">Win it to move up</span>' : ''}<h3>${esc(e.n)}</h3></div>
-      <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${L.avg + (e.field || 0)}</span>
-        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${money(e.cost)}</b><span>${e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
-        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
+      <div class="s3-pbody"><span class="rb-sub">${esc(e.where)} · ${fmt} · best of ${L.legs} · field avg ${PLAYS(L.avg + (e.field || 0), e.level)}</span>
+        <div class="s3-kv"><div><b>${money(win)}</b><span>to the winner</span></div><div><b>${pts || 'OOM'}</b><span>${pts ? 'points to the winner' : 'prize money counts'}</span></div><div><b>${e.funded && !e.cost ? 'Paid' : money(e.cost)}</b><span>${e.funded ? 'qualifier’s trip' : e.travel ? `entry ${money(e.entry)} + travel ${money(e.travel)}` : 'entry'}</span></div></div>
+        ${e.canAfford ? `<button class="rb-primary" type="button" data-s3book="${esc(e.id)}"><b>Book it · ${e.funded && !e.cost ? 'trip paid' : money(e.cost)}</b><small>Leaves ${money(left)} in the tour budget</small></button>`
           : noNeed ? '' : `<button class="rb-primary s3-off" type="button" disabled><b>Need ${money(e.cost)}</b><small>You have ${money(c.bank)}</small></button>`}
       </div></article>`;
   }
@@ -238,7 +240,7 @@
     const winNow = C.prizeFor(e, 'W'), safe = C.prizeFor(e, lv.rounds[lv.round]);   /* losing this round finishes the event at this round */
     let h = `<div class="rb-card s3-live"><span class="rb-kick">Playing now · ${esc(e.where)}</span><span class="rb-t1">${esc(e.n)}</span>
       <ol class="s3-draw" aria-label="The draw">${cells}</ol>
-      <div class="s3-row"><div><span class="s3-lab">Next opponent${D.oppName() ? ' · ' + esc(D.oppName()) : ''}</span><b class="s3-big">${o.avg}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
+      <div class="s3-row"><div><span class="s3-lab">Next opponent${D.oppName() ? ' · ' + esc(D.oppName()) : ''}</span><b class="s3-big">${PLAYS(o.avg, e.level)}</b><span class="rb-sub">average · best of ${o.legs}</span></div>
         <div style="text-align:right"><span class="s3-lab">${esc(rn)}</span><b class="s3-mid">${money(winNow)}</b><span class="rb-sub">to the winner</span></div></div>
       ${safe ? `<span class="rb-sub">Lose now and you still take ${money(safe)}</span>` : ''}
       <button class="rb-primary" type="button" id="s3Go"><b>Walk on</b><small>${esc(rn)}${L.legs ? ' · best of ' + L.legs : ''}</small></button>`;
@@ -332,7 +334,7 @@
     if (p.kind === 'round') {
       seenSet(p.now); const o = C.nextOpp(c); if (!o) return;
       const nm = o.round === 'G' ? 'next group match' : roundName(o.round);
-      toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${o.avg}</span>`); return;
+      toast(`<b>Through</b><span>${esc(nm)} next · opponent avg ${PLAYS(o.avg, c.level)}</span>`); return;
     }
     if (p.kind === 'done') {
       const r = p.rec, won = r.fin === 'W', L = C.LEVELS[r.level];
@@ -422,8 +424,13 @@
      wrapper adds no row and leaves the Character field to Engine (Overseer 14:52: one row, not two) */
   /* Engine's PLAYER row draws each base as a live 3D portrait, which shows plain white busts on phones (Q&D). Fill each slot first with the
      painted Vinyl head (s3/assets/creator/head_<id>.png): Engine's portrait pass skips a slot that already has a picture. */
-  const heads = () => { try { document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { if (i.querySelector('img.s3-head')) return; const u = swap('assets/creator/head_' + i.dataset.pt + '.png');
-      if (!/^s3\//.test(u)) return; i.innerHTML = `<img class="s3-head" src="${u}" alt="">`; }); } catch (e) {} };
+  /* v3 switch-on: with ?v3=1 the preview is the v3 figure, so the row uses the v3 cards (s3/assets/creator/head_v3_<id>.png, listed in
+     have.json) as soon as they are in the build. Until then the painted cards stay (the live 3D fallback is the white-bust bug above).
+     A card already showing the other set is replaced when the switch differs from the one it was drawn for. */
+  const heads = () => { try { const v3 = !!window.TOPS_V3FLAG; document.querySelectorAll('#s3Cre [data-pt]').forEach(i => { const id = i.dataset.pt;
+      const p3 = 'assets/creator/head_v3_' + id + '.png', want = v3 && HAVE[p3] ? p3 : 'assets/creator/head_' + id + '.png', have = i.querySelector('img.s3-head');
+      if (have && have.dataset.src === want) return; const u = swap(want); if (!/^s3\//.test(u)) return;
+      i.innerHTML = `<img class="s3-head${want === p3 ? ' s3-head3' : ''}" src="${u}" alt="" data-src="${want}">`; }); } catch (e) {} };
   if (typeof s3Creator === 'function') { const _s3c = s3Creator; s3Creator = function () { const r = _s3c.apply(this, arguments); heads(); return r; }; }
   const engineCre = () => typeof s3Creator === 'function' || !!$id('s3Cre');
   if (typeof showCreator === 'function') {
@@ -497,16 +504,16 @@
     if (!k.live) { const v = A.view(), e = v && v.calendar.find(x => x.canAfford); if (!e) return go(); const r = A.book(e.id); if (!r || r.ok === false) return go(); }
     const v = A.view(), lv = v && v.live; if (!lv) return go();
     const e = C.eventOf(lv.id), L = C.LEVELS[e.level], n = lv.rounds.length, opp = lv.opp || {};
-    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${C.oppAvg(e.level, i, n, e.field)}</span></li>`).join('');
+    const draw = lv.rounds.map((r, i) => `<li class="${i === 0 ? 's3-fnon' : ''}${i === n - 1 ? ' s3-fnwin' : ''}"><b>${esc(({ G: 'Group', QF: 'QF', SF: 'Semi', F: 'Final' })[r] || r)}</b><span>${i === 0 && opp.name ? esc(opp.name.split(' ')[0]) + ' · ' : ''}avg ${PLAYS(C.oppAvg(e.level, i, n, e.field), e.level)}</span></li>`).join('');
     const lad = C.LEVELS.map((x, i) => `<li class="${i === e.level ? 's3-fnnow' : ''}${i === C.LEVELS.length - 1 ? ' s3-fnend' : ''}"><i></i>${SHORT[i]}</li>`).join('');
     const have = (k.pts && k.pts[L.id]) || 0, art = oppArt(opp.name);
     const fmt = e.kind === 'groupko' ? `group of 4, then knockout` : `${e.size} players, knockout`;
     const d = document.createElement('div'); d.id = 's3Fn'; d.className = 's3-fn'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3FnH');
     d.innerHTML = `<div class="s3-fnart" style="background-image:url(${lvArt(e.level)})"><div class="s3-fntop"><span class="s3-fnk">Your first night</span><h2 class="s3-fnt" id="s3FnH">${esc(e.n)}</h2><span class="s3-fnsub">${esc(e.where)} · ${fmt}</span></div></div>
       <div class="s3-fnb">
-        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${C.oppAvg(e.level, 0, n, e.field)} · best of ${L.legs} legs</span></div></div>` : ''}
+        <div class="s3-fnc">${opp.name ? `<div class="s3-fnopp">${art ? `<img src="${art}" alt="">` : ''}<div><span class="s3-fnl">First up · ${esc(roundName(lv.rounds[0]).toLowerCase())}</span><b>${esc(opp.name)}</b><span>Averages about ${PLAYS(C.oppAvg(e.level, 0, n, e.field), e.level)} · best of ${L.legs} legs</span></div></div>` : ''}
           <span class="s3-fnl">Win ${n} matches to take it</span><ol class="s3-fndraw">${draw}</ol>
-          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(C.cost(e))}</b><span>entry, paid</span></div></div></div>
+          <div class="s3-fnkv"><div><b>${money(C.prizeFor(e, 'W'))}</b><span>to the winner</span></div><div><b>${C.pointsFor(e, 'W')} pts</b><span>to the winner</span></div><div><b>${money(lv.paid != null ? lv.paid : C.cost(e))}</b><span>entry, paid</span></div></div></div>
         ${L.need ? `<div class="s3-fnc"><span class="s3-fnl">How you move up</span><ol class="s3-fnlad">${lad}</ol>
           <div class="s3-fnrow"><span class="s3-fnsm">${esc(L.id === 'pub' ? 'Kauri points' : L.n + ' points')}</span><b>${have} / ${L.need}</b></div><div class="s3-fnbar"><i style="width:${Math.min(100, 100 * have / L.need)}%"></i></div>
           <span class="s3-fnsm">${esc(L.up.replace(/\.$/, ''))}${C.LEVELS[e.level + 1] ? ', and you\'re up to the ' + esc(C.LEVELS[e.level + 1].n) : ''}.<span class="s3-fnmore"> Each week you pick an event, pay to enter and climb toward the Palace.</span></span></div>` : ''}
@@ -536,7 +543,7 @@
         cashVal = '+' + money(r.prize || 0); }
       else if (k.live) { const o = C.nextOpp(k), lv = k.live, gp = o.round === 'G'; let nm = ''; try { const v = API().view(); nm = v && v.live && v.live.opp ? v.live.opp.name : ''; } catch (x) {}
         head = gp ? `Group: ${lv.g ? lv.g.w + ' won, ' + (lv.g.p - lv.g.w) + ' lost' : ''} · next group match` : `${esc(roundName(o.round))} next`;
-        sub = `Next: ${nm ? esc(nm) + ' · ' : ''}avg ${o.avg}`; const bank = C.prizeFor(e, o.round); cashLab = 'Banked so far'; cashVal = money(bank); sub += ` · ${money(C.prizeFor(e, 'W'))} if you win it`; }
+        sub = `Next: ${nm ? esc(nm) + ' · ' : ''}avg ${PLAYS(o.avg, k.level)}`; const bank = C.prizeFor(e, o.round); cashLab = 'Banked so far'; cashVal = money(bank); sub += ` · ${money(C.prizeFor(e, 'W'))} if you win it`; }
       let bar = '';
       if (L.need) { const now = Math.max(0, (k.pts && k.pts[L.id]) || 0), before = done ? Math.max(0, now - (r.pts || 0)) : now, pot = done ? now : Math.min(L.need, now + C.pointsFor(e, 'W'));
         const pc = v => Math.min(100, 100 * v / L.need), up = r.up && r.up.to > e.level;

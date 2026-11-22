@@ -101,6 +101,7 @@
 
 /* creator PLAYER row: the painted Vinyl head, framed on the face (the PNGs are head and shoulders) */
 .s3-on #s3Cre .s3c-base img.s3-head{object-fit:cover;transform:scale(1.75);transform-origin:50% 6%}
+.s3-on #s3Cre .s3c-base img.s3-head.s3-head3{transform:scale(1.08);transform-origin:50% 2%}   /* v3 cards: the head fills the card, so it needs little zoom (v2 is 1.75x on a small head) */
 
 /* EXP-IDLE 1 · first night (behind s3x=1) */
 /* the shell's tokens live inside #rbApp (CSS nesting); this screen sits on <body>, so it carries its own */

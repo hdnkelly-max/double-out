@@ -13,7 +13,8 @@
   if (!ON) return;
   try { document.documentElement.classList.add('rb-on'); } catch (e) {}
   const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
-  const IMG = 'assets/rb/';   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
+  const IMG = 'assets/rb/';
+  const s3img = v => { try { return typeof window.TOPS_S3_IMG === 'function' ? TOPS_S3_IMG(v) : v; } catch (e) { return v; } };   // the Season 3 picture switch for styles set from script (Chromium skips the prototype setter patch)   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
   const IC = {
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
@@ -132,7 +133,7 @@
   const meFem = () => isFemModel(save.look || {}, save.name || '');
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
-    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = s3img(`url(${url}) 80% 30%/cover no-repeat,${scene}`); });   /* EXP-S3-BINDER: Chromium skips the style setter patch, so the switch runs here */
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
@@ -306,7 +307,13 @@
     return '';
   }
   // a shirt reward in its real colour (EXP-WIN): pending = '' (the card stays dark), failure = the neutral trophy image
-  const shirtImg = (hex, done) => recolour('w_rw_shirt', hex, `${IMG}w_rw_trophy.jpg`, done);
+  /* Season 3 (Director's audit): there is no Vinyl redo of w_rw_shirt / w_rw_trophy, so the image switch turned them into its dark placeholder
+     and a shirt reward showed an almost black square ('Racing green shirt'). With Season 3 on and no redo, the shirt photo is the player's
+     Vinyl Locker photo in that colour, and the fallback is the venue, never the placeholder. */
+  const s3NoShirt = () => !!window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/w_rw_shirt.jpg');
+  const shirtBase = () => s3NoShirt() ? (meFem() ? 'lk_f' : 'lk_m') : 'w_rw_shirt';
+  const shirtFb = () => { if (!s3NoShirt()) return `${IMG}w_rw_trophy.jpg`; try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } };
+  const shirtImg = (hex, done) => recolour(shirtBase(), hex, shirtFb(), done);
   // the rewards this match unlocked (levels from+1..to, the game's own rewardAt), and the one to show big: the newest shirt (the game's own
   // button under it offers to wear the newest shirt), else the newest big reward (title), else the last
   function pickUnlock(from, to) { const rs = []; if (window.C3 && C3.rewardAt) for (let L = from + 1; L <= to; L++) { try { const r = C3.rewardAt(L); if (r) rs.push([L, r]); } catch (e) {} }
@@ -463,7 +470,7 @@
   const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
     const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
     const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
-    const u = recolour('w_rw_shirt', r.v, `${IMG}w_rw_trophy.jpg`, put); if (u) put(u); return true; };
+    const u = recolour(shirtBase(), r.v, shirtFb(), put); if (u) put(u); return true; };
   let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);

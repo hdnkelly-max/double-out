@@ -176,9 +176,13 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  const CX=[3,3,3,3,1,1,3];
  const LVO={rookie:-6,club:0,comp:5}; // option A (Overseer 20:02): Club, the default, sits in the band; Competitive up to 5 above; Rookie 6 below
  const tierOf=t=>{const n=t==null?(career()?career().tier:0):t;return Math.max(0,Math.min(6,n|0));};
- const shift=(v,t)=>{const k=tierOf(t),[lo,hi]=BAND[k],adj=CEN[k]-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
+ // CAR-OPP (Producer 22:21; C2 02:05): Circuit matches only (shift's 3rd argument, set by TOPS_S3's playNow) use the Circuit's own
+ // field centres (TOPS_CIRCUIT.FIELD_CEN, fixed by level and round, never the player). Money matches, local nights, Season 2 and the Run
+ // keep CEN exactly as on 4.22. Same band width and spread, only the centre moves.
+ const cenFor=(k,circ)=>{if(circ)try{const C3=window.TOPS_CIRCUIT,c=window.TOPS_S3FLAG&&C3&&C3.FIELD_CEN&&career();if(c&&c.circuit&&!c.run&&isFinite(C3.FIELD_CEN[k]))return C3.FIELD_CEN[k];}catch(e){}return CEN[k];};
+ const shift=(v,t,circ)=>{const k=tierOf(t),[lo,hi]=BAND[k],cen=cenFor(k,circ),adj=cen-(lo+hi)/2,lv='club'; /* one setting for everyone (Hayden 21:52): Club, the default under option A */
   const rel=Math.max(-10,Math.min(10,v-TIERS[k].avg))*.5;                         // keep the field's spread (deciders, Deano, table) at half strength
-  const tgt=CEN[k]+rel+LVO[lv];
+  const tgt=cen+rel+LVO[lv];
   const top=hi+adj+(lv==='comp'?CX[k]:0),bot=lo+adj-(lv==='rookie'?12:0);   // inside the band (lv is always 'club' since v1.80; the Competitive/Rookie branches are inert)
   return Math.round(Math.max(Math.max(20,bot),Math.min(top,tgt)));};
  window.TOPS_OPP_SHIFT=shift;
@@ -202,7 +206,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
  // shifted exactly once: the raw rating is kept on the opponent and every shift starts from it (ChatGPT 19:47: rematch, save/load, reused objects)
  const _no=nextOpponent;nextOpponent=function(){const n=_no.apply(this,arguments);try{if(n&&!n.intro&&n.oppAvg>0&&!n._d){n.oppRaw=n.oppAvg;n.oppAvg=shift(n.oppAvg);n._d=2;}}catch(e){}return n;};
  const SHIFTED=new WeakSet();
- const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier),_diffOff:o});SHIFTED.add(opts);}
+ const _bm=beginMatch;beginMatch=function(opts){try{const c=career();const viaNext=c&&c.next&&c.next._d&&opts&&!opts.circuit&&opts.oppName===c.next.oppName&&opts.oppAvg===c.next.oppAvg;const done=opts&&(opts._diffOff!=null||SHIFTED.has(opts));if(opts&&opts.mode==='career'&&!opts.practice&&!opts.intro&&!opts.tcExh&&opts.oppAvg>0&&!viaNext&&!done){const o=totalOff();const raw=opts.oppRaw!=null?opts.oppRaw:opts.oppAvg;opts=Object.assign({},opts,{oppRaw:raw,oppAvg:shift(raw,opts.tier,!!opts.circuit),_diffOff:o});SHIFTED.add(opts);}
   else if(opts&&viaNext&&c.next.oppRaw!=null){const a=shift(c.next.oppRaw,opts.tier)+(c.next.routeAdj||0);opts=Object.assign({},opts,{oppRaw:c.next.oppRaw,oppAvg:a});c.next.oppAvg=a;}}catch(e){}
   const r=_bm.call(this,opts);try{if(S&&opts)S.oppRaw=opts.oppRaw!=null?opts.oppRaw:null;}catch(e){}return r;}; // S.oppRaw: revenge replays store the raw rating, so they're shifted once
  // count career darts for placement
