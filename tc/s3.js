@@ -201,7 +201,7 @@
   // 2: every write of the save key passes the guard (passing = this tab's own guarded save, or a cloud adopt)
   Storage.prototype.setItem=function(k,v){if(k===KEY&&this===localStorage&&quiet)return;
     if(k===KEY&&this===localStorage&&!passing&&!adopting){
-      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(owner&&!ownsKey()){stepAside('claim');throw new Error('TOPS: another tab has claimed the save');}if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
+      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(owner&&!ownsKey()&&lost(readOwn()))throw new Error('TOPS: another tab has claimed the save');if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
     if(k===KEY&&this===localStorage&&window.TOPS_TABS_QA&&TOPS_TABS_QA.failWrite){const e=new Error('QA: storage full');e.name='QuotaExceededError';throw e;}   /* QA (s3-tabs 18): a browser that refuses the write */
     const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&passing&&!adopting){lastWrote=String(v);try{raw(WR,JSON.stringify({tab:TAB,sv:mine()}));}catch(e){}}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
   // 1 ownership
@@ -214,6 +214,11 @@
   /* this tab still owns the save: nobody's claim in the owner key beats its own (an empty key, after a page hide, counts as still its) */
   const ownsKey=()=>{const o=readOwn();return !o||o.tab==='reload'?!o:(o.tab===TAB&&+(o.gen||0)===myGen)||!beats(o,me());};
   const owns=()=>owner&&!away&&!pending&&ownsKey()&&!stale();
+  /* a better claim than this tab's, however it is found (a message, the owner key on a save or a heartbeat, a page restore): the one rule for
+     what happens next. Mid-match, a fresh ordinary claim from a tab that hasn't saved since is refused (this tab re-claims one gen higher,
+     marked busy); anything else wins and this tab steps aside. Returns true when this tab stepped aside. */
+  function lost(c){if(c&&c.tab!=='reload'&&midMatch()&&!c.anyway&&Date.now()-(+c.at||0)<FRESH&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});return false;}
+    stepAside('claim',c&&c.busy?'busy':'');return true;}
   const done=new Set();   // claims already handled (they arrive twice: the channel and the owner key)
   let bc=null;try{bc=new BroadcastChannel('tops-tabs-'+KEY);bc.onmessage=m=>recv(m&&m.data);}catch(e){}
   const send=d=>{d.tab=TAB;d.at=Date.now();try{bc&&bc.postMessage(d);}catch(e){}try{raw(MSG,JSON.stringify(d));}catch(e){}};
@@ -231,9 +236,7 @@
     if(pending){clearTimeout(waitT);pending=false;stepAside('claim',c.busy?'busy':'');return;}
     if(!owner)return;
     if(!beats(c,me())){ev('tabs_reassert',{them:c.gen,me:myGen});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});return;}   // a losing claim (crossed or late): this tab stays, and says so
-    const fresh=Date.now()-(+c.at||0)<FRESH;
-    if(midMatch()&&!c.anyway&&fresh&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});return;}   // mid-match: only Play here anyway ends it
-    stepAside('claim',c.busy?'busy':'');}
+    lost(c);}   // mid-match: only Play here anyway ends it
   /* a tab that took over on a timeout: the tab it claimed from may still finish a write it had started (or answer late) in the next ~2 s;
      that save is adopted here instead of making this tab step aside (DQ: both tabs ended behind the card) */
   const inGrace=()=>{if(!grace||Date.now()>grace.until)return false;try{const w=JSON.parse(localStorage.getItem(WR)||'null');return !!w&&w.tab===grace.from;}catch(e){return false;}};
@@ -248,18 +251,19 @@
     if(e.key===MSG&&e.newValue){if(!bc)recv(JSON.parse(e.newValue));}
     else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
       if(o.tab==='reload'){if(owner&&!away)stepAside('claim');return;}   // Play here in another tab: it reloads and takes over
-      if(!o.hb){if(owner&&!away&&!pending&&!beats(o,me())){writeOwn({busy:midMatch()?1:0});return;}claimed(o);}else if(owner&&!away&&beats(o,me()))stepAside('claim');
+      if(!o.hb){if(owner&&!away&&!pending&&!beats(o,me())){writeOwn({busy:midMatch()?1:0});return;}claimed(o);}else if(owner&&!away&&beats(o,me()))lost(o);
       else if(!o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}}   /* the match there ended: offer Play here (loads the save it just made) */
     else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale()){if(inGrace())graceAdopt();else stepAside('newer');}}catch(x){}});
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
      tab knows without waiting on an answer: a tab busy rendering a match can take seconds to hear a hello (DQ's race) */
-  let hbBusy=null;const beat=()=>{if(!owner||away||pending)return;const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){stepAside('claim',o.busy?'busy':'');return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
+  let hbBusy=null;const beat=()=>{if(!owner||away||pending)return;const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){lost(o);return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
   setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);   /* the poll is only a refresh: */
   /* busy is written synchronously where a match starts and ends (DQ 12:41: a tab busy rendering a match missed the 400 ms ticks, so a new
      tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
      (showHub), or a reload (pagehide clears the owner key). */
   const edge=()=>{try{if(owner&&!away&&midMatch()!==hbBusy)beat();}catch(e){}};
-  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){try{return _bm.apply(this,arguments);}finally{edge();}};}
+  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(away||pending){ev('tabs_match_blocked',{away,pending});card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
+    try{return _bm.apply(this,arguments);}finally{edge();}};}
   if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
   window.addEventListener('pagehide',()=>{try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
@@ -280,7 +284,7 @@
   persist=function(){
     if(adopting){passing++;try{return _p.apply(this,arguments);}finally{passing--;lastBody=body();}}   // the migration inside an adopt saves the adopted save
     if(away||pending)return;
-    if(owner&&!ownsKey()){const o=readOwn();stepAside('claim',o&&o.busy?'busy':'');return;}   // a better claim is in the owner key: never write over it
+    if(owner&&!ownsKey()&&lost(readOwn()))return;   // a better claim is in the owner key: never write over it (unless this tab, mid-match, refuses it)
     const j=body();if(j!==null&&j===lastBody){try{hubBankUpdate();}catch(e){}return;}   // nothing changed: no write, no counter bump
     if(stale()){if(inGrace()){graceAdopt();return;}stepAside('newer');return;}
     if(foreign()&&svIn()>0)rescueStored('overwrite');   /* storage holds a save this tab didn't write (an older build's tab): keep it before overwriting */

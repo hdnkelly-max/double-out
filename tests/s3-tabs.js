@@ -211,20 +211,39 @@ let url = ''; const f = []; const out = {};
     if (!out.r14c.owner || out.r14c.away || !out.r14c.key || out.r14c.key.tab === 'zzzz-late') f.push('14c a late claim from an older gen leaves the owner in place (and it re-asserts in the key) ' + JSON.stringify(out.r14c));
     await ctx.close(); }
   // 15 P1-2: (a) B reads the owner key (busy 0), then A starts a match and is blocked past B's 4 s wait: B re-reads before taking over and
-  //    shows the busy card; A keeps its match. (b) an ordinary claim reaching an owner mid-match is refused (B: busy card); Play here anyway wins
+  //    shows the busy card (or, if B's re-read came first, A refuses B's claim and B shows it then); A keeps its match. (b) an ordinary claim reaching an owner mid-match is refused (B: busy card); Play here anyway wins
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
     await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
       window.TOPS_TABS_QA = { delay: 9000 };   // A hears nothing in time
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'hello') { clearInterval(iv); TOPS_S3._playNow(); setTimeout(() => { const t = Date.now(); while (Date.now() - t < 6000); }, 0); } }, 30); });
     await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
     out.r15a = { a: await own(A), b: await own(B), via: await B.evaluate(() => (TOPS_TABS.log().find(l => l[1] === 'tabs_busy') || [])[2] || null) };
-    if (!/timeout/.test(out.r15a.via || '') || out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
+    if (out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
     await A.evaluate(() => { window.TOPS_TABS_QA = null; }); await B.evaluate(() => TOPS_TABS._claim()); await B.waitForTimeout(3000);
     out.r15b = { a: await own(A), b: await own(B) };
     if (!out.r15b.a.owner || !out.r15b.a.live || out.r15b.b.owner || out.r15b.b.card !== 'busy') f.push('15b an ordinary claim mid-match is refused: A plays on, B shows the busy card ' + JSON.stringify(out.r15b));
     await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); }); await B.waitForTimeout(3000);
     out.r15c = { a: await own(A), b: await own(B) };
     if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c));
+    await ctx.close(); }
+  // 15d B's claim lands just before A's Play tap: A steps aside (the claim came first) and the match must not start behind the card
+  if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
+      window.TOPS_TABS_QA = { delay: 9000 };
+      const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'claim' && m.tab !== TOPS_TABS.tab) { clearInterval(iv); setTimeout(() => TOPS_S3._playNow(), 200); } }, 30); });
+    await A.waitForTimeout(600); const B = await open(ctx); await B.waitForTimeout(7000);
+    out.r15d = { a: await own(A), b: await own(B), blocked: await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_match_blocked')) };
+    if (!out.r15d.b.owner || out.r15d.a.owner || !out.r15d.a.card || out.r15d.a.live || !out.r15d.blocked) f.push('15d a Play tap just after a claim: no match starts behind the card ' + JSON.stringify(out.r15d));
+    await ctx.close(); }
+  // 15e CI's order: A is mid-match when a fresh, better claim reaches it by the owner key (the channel copy still on its way): A refuses it
+  //    there too (one rule wherever a claim is found), so the claimant ends on the busy card and A keeps its match
+  if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(800);
+    // written by A's own page, so no storage event or message reaches A: it finds the claim on its next heartbeat (the non-message path)
+    await A.evaluate(g => { localStorage.setItem('tops_owner_' + TOPS_SAVE_NS.key, JSON.stringify({ tab: 'zzzz-b', gen: g + 1, at: Date.now() })); }, (await own(A)).gen);
+    await A.waitForTimeout(5000); out.r15e = { a: await own(A), refused: await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_refuse')) };
+    if (!out.r15e.refused || !out.r15e.a.owner || !out.r15e.a.live || !out.r15e.a.key || out.r15e.a.key.tab === 'zzzz-b') f.push('15e a fresh claim found in the key mid-match is refused ' + JSON.stringify(out.r15e));
     await ctx.close(); }
   // 16 P1-3: A's push is suspended in its preflight cloud read while B takes over and writes; when the read returns, A sends nothing.
   //    Then B's own push: the save changes while its RPC is in flight; synced is the counter it sent, and a second push follows
