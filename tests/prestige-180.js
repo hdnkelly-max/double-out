@@ -14,8 +14,8 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
   fs.readFile(fp, (e, d) => { if (e) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': TYPES[path.extname(fp)] || 'application/octet-stream' }); r.end(d); }); });
 (async () => { await new Promise(r => srv.listen(0, '127.0.0.1', r)); const base = 'http://127.0.0.1:' + srv.address().port + '/index.html?s3=1&gearcam=1';
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist'] }); const log = [];
-  for (const model of MODELS) for (const ed of EDS) {
-    const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }); const pe = []; p.on('pageerror', e => pe.push(e.message));
+  for (const [W, H] of (process.env.WIDTHS || '390').split(',').map(w => w === '360' ? [360, 800] : [390, 844])) for (const model of MODELS) for (const ed of EDS) {
+    const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 }); const pe = []; p.on('pageerror', e => pe.push(e.message));
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} });
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto(base + (model === 'v3' ? '&v3=1' : '&v3=0'));
     await p.waitForFunction(() => window.TOPS_S3 && window.C3 && window.TOPS_GEARCAM_FIRE && typeof V !== 'undefined' && V.gearShot, null, { timeout: 180000 }); await p.waitForTimeout(2500);
@@ -32,6 +32,6 @@ const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.spl
       const one = () => { if (i >= 3) return; const [x, y] = T[i++]; S.busy = true; S.flyingOwn = true; V.fly(V.handWorld(), x, y, 0, 380, .05, () => { if (!S || S.done) return; S.flyingOwn = false; S.anim = null; land(x, y, false); if (i < 3) setTimeout(one, 500); else setTimeout(() => res({ fired: window.__fired, score: S.p[0].score, last: S.p[0].lastVisit }), 900); }); };
       one(); }));
     await p.waitForTimeout(400); const pane = await p.evaluate(() => { const d = document.getElementById('gearCam'); if (!d) return null; const q = d.getBoundingClientRect(); return { y: q.y, h: q.height }; });
-    const f = path.join(out, `c180-${model}-${ed}.png`); if (pane) await p.screenshot({ path: f, clip: { x: 0, y: pane.y, width: 390, height: pane.h } });
-    log.push({ model, ed, r, pane: !!pane, errs: pe.slice(0, 1) }); await p.close(); }
+    const f = path.join(out, `c180-${model}-${ed}${W === 390 ? '' : '-' + W}.png`); if (pane) await p.screenshot({ path: f, clip: { x: 0, y: pane.y, width: W, height: pane.h } });
+    log.push({ W, model, ed, r, pane: !!pane, errs: pe.slice(0, 1) }); await p.close(); }
   await b.close(); srv.close(); console.log(JSON.stringify(log)); })();
