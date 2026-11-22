@@ -323,7 +323,7 @@
   function graceAdopt(){if(body()!==lastBody)rescue('grace');ev('tabs_grace',{sv:svIn()});reread();}
   /* loading this browser's own stored save: the adopt's migration save is not written back (it would bump the counter and look like a newer
      save to the other tab, which is how two claimants both ended behind the card); the next real change writes it */
-  let quiet=0;function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){quiet++;try{TOPS_SAVEV.adopt(s,'tab');}finally{quiet--;}}}catch(e){}}
+  let quiet=0;function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){if(body()!==lastBody)rescue('waiting');   /* R9: a change made while this tab waited for the lock is kept; the owner's newer save is what loads */quiet++;try{TOPS_SAVEV.adopt(s,'tab');}finally{quiet--;}}}catch(e){}}
   function takeOver(why,from){if(away&&why!=='anyway')return;
     if(LK&&!held){if(acquiring&&why!=='anyway'){ev('tabs_take_dup',{why});return;}   /* R8b: a request is already out (the ack arrives twice: channel and storage); that one decides */
       pending=true;away=false;const st=why!=='alone';if(why==='anyway')anyUntil=Date.now()+10000;if(st){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   /* the claim (and whether it is Play here anyway) goes out before the steal, so the old holder can read it */
@@ -459,6 +459,10 @@
     return _na.apply(this,arguments);};}
   lastBody=HOLD&&HOLD.dirty?null:body();if(HOLD&&HOLD.dirty)ev('tabs_boot_held');try{lastWrote=localStorage.getItem(KEY);}catch(e){}start();
   window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,owner:()=>owns(),gen:()=>myGen,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,
-    idle:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});},   /* QA: saves are written in the write lock (R9); resolves once the queue is empty */
+    idle:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});},
+    /* R9: true once every queued save is written and the stored save is this tab's (v16 waits on it before reloading between matches) */
+    flushed:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});return !LK||(held&&!away&&!pending&&svIn()===mine()&&body()===lastBody);},
+    /* R9: a cloud put of the save that other code sends itself goes through the push lock, after the ownership check */
+    put:args=>LK?navigator.locks.request(PLOCK,async()=>{if(!held||away||pending||!(await ownerOK()))return {data:null,error:{message:'TOPS: this tab does not hold the save'}};return await NET.sb.rpc(TOPS_SAVE_NS.rpc,args);}):NET.sb.rpc(TOPS_SAVE_NS.rpc,args),   /* QA: saves are written in the write lock (R9); resolves once the queue is empty */
     _claim:(any)=>{away=false;takeOver(any?'anyway':'qa');},   /* QA: a claim from this tab now */rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
 })();

@@ -43,6 +43,7 @@ let url = ''; const f = []; const out = {};
   if (RUN(1)) { const ctx = await b.newContext(); const A = await open(ctx);
     await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} }); await A.waitForTimeout(1500);   // let the write reach the other tab's process (localStorage syncs between tabs asynchronously)
     const B = await open(ctx); await B.waitForFunction(() => typeof career === 'function' && career() && career().circuit, null, { timeout: 60000 }); await B.waitForTimeout(800);
+    await B.waitForFunction(() => TOPS_TABS.owner(), null, { timeout: 20000 }).catch(() => {});   /* R9: B plays once it owns the save (a change made while it waits is kept as a recovery copy, not the save) */
     out.b0 = await B.evaluate(() => ({ week: career().circuit.week, bank: career().bank }));
     await B.evaluate(async () => { const c = career(); c.circuit.week = 2; c.bank = 90; c.circuit.history.push({ week: 1, id: 'pub_night', n: 'Kauri Arms League Night', level: 0, fin: 'W', prize: 35, pts: 50 }); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
     await A.waitForTimeout(3000); out.aCard = await card(A);
