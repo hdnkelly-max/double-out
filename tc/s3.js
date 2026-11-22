@@ -268,8 +268,8 @@
     const o=readOwn();if(stale()||(o&&o.tab!==TAB&&(o.tab==='reload'||beats(o,me())))){stepAside(stale()?'newer':'claim',o&&o.busy?'busy':'');return;}
     myGen=nextGen();writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});});
   const start=()=>{const live=readOwn();if(live)seenGen=Math.max(seenGen,+(live.gen||0));
-    if(!live||live.tab==='reload'||!(Date.now()-(live.at||0)<9000))takeOver('alone');
-    else if(live.hb&&live.busy){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
+    if(!live||live.tab==='reload')takeOver('alone');   /* an owner key of any age gets a hello: a tab starved of timers (CPU, background) can miss heartbeats and still be mid-match */
+    else if(live.busy&&Date.now()-(live.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
     else{const WAITN=live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
       try{const m=JSON.parse(localStorage.getItem(MSG)||'null');if(m&&m.t==='ack'&&m.to===TAB){on(m);return;}}catch(e){}
       setTimeout(()=>{if(!pending)return;const o=readOwn();   /* re-read right before taking over: the owner may have started a match since */

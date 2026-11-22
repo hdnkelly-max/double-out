@@ -17,7 +17,7 @@
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
 //   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
 //   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
-// usage: node tests/s3-tabs.js [dir]   (CASES=7,10 runs just those; pass an absolute dir)
+// usage: node tests/s3-tabs.js [dir]   (cases 1-6; CASES=all for every case, CASES=7,10 for just those; pass an absolute dir)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 require('fs').mkdirSync(path.join(dir, 'wip/car-tabs'), { recursive: true });
 // served over http, like the real site: file:// pages in separate processes don't reliably share one localStorage (a second tab sometimes
@@ -25,7 +25,10 @@ require('fs').mkdirSync(path.join(dir, 'wip/car-tabs'), { recursive: true });
 const http = require('http'), fs = require('fs'); const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.svg': 'image/svg+xml' };
 const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]); const fp = path.join(dir, u === '/' ? 'index.html' : u); if (!fp.startsWith(dir)) { r.writeHead(403); return r.end(); }
   fs.readFile(fp, (e, d) => { if (e) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': TYPES[path.extname(fp)] || 'application/octet-stream' }); r.end(d); }); });
-const RUN = n => !process.env.CASES || process.env.CASES.split(',').includes(String(n));
+/* 18 cases take longer than one CI test may (600 s), so CI runs them in three files: this one (1-6), s3-tabs-2.js (7-12) and s3-tabs-3.js
+   (13-18), which set CASES and load this file. CASES=all runs every case; CASES=7,10 runs just those. */
+const CASES = process.env.CASES || '1,2,3,4,5,6';
+const RUN = n => CASES === 'all' || CASES.split(',').includes(String(n));
 let url = ''; const f = []; const out = {};
 (async () => { await new Promise(r => srv.listen(0, '127.0.0.1', r)); url = 'http://127.0.0.1:' + srv.address().port + '/index.html?s3=1';
   const b = await chromium.launch({ args: ['--use-gl=swiftshader'] });
@@ -264,6 +267,6 @@ let url = ''; const f = []; const out = {};
     await ctx.close(); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  if (process.env.CASES) { console.log('PASS cases ' + process.env.CASES + ' ' + JSON.stringify(out).slice(0, +(process.env.OUTLEN || 900))); return; }
+  if (CASES !== 'all') { console.log('PASS cases ' + CASES + ' ' + JSON.stringify(out).slice(0, +(process.env.OUTLEN || 900))); return; }
   console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s; mid-match, the new tab shows "a match is in progress" and leaves the owner playing until Play here anyway; the owner flushes on hello (the new tab loads $${out.flush.bank}); two devices on a mocked cloud: stale device X (12 saves after Y's 3, so its counter is higher) loads Y's newer save ($${out.cloud2.bank}) instead of overwriting it, without the other-tab card, and keeps a recovery copy of what it replaced; p_base goes to the server only once it takes it (today: one probe, then plain pushes)`);
 })();
