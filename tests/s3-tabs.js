@@ -143,7 +143,7 @@ let url = ''; const f = []; const out = {};
   if (RUN(10)) for (const mid of [false, true]) { const ctx = await b.newContext(); const A = await open(ctx);
     await A.evaluate(m => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); if (m) { const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); } else try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: m ? 1700 : 4500 }; }, mid);
     if (mid) await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(1500); const sv0 = (await stored(A)).sv;
-    const B = await open(ctx); await B.waitForTimeout(3500);
+    const B = await open(ctx); await B.waitForTimeout(mid ? 3500 : 8000);
     const st = async P => P.evaluate(() => ({ card: (document.getElementById('tabsCard') || {}).dataset ? document.getElementById('tabsCard').dataset.mode || 'other' : null, away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), live: typeof S !== 'undefined' && !!S && !S.done && !S.paused }));
     const r = { mid, a: await st(A), b: await st(B), sv0, sv: (await stored(B)).sv }; if (process.env.TABSLOG) r.log = { a: await A.evaluate(() => TOPS_TABS.log()), b: await B.evaluate(() => TOPS_TABS.log()) };
     const plays = [r.a, r.b].filter(x => !x.card && !x.away && !x.pending).length;
@@ -162,14 +162,15 @@ let url = ''; const f = []; const out = {};
     const B = await open(ctx); await B.waitForTimeout(3000);
     const st = async P => P.evaluate(() => ({ card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, away: TOPS_TABS.away(), live: typeof S !== 'undefined' && !!S && !S.done && !S.paused }));
     out.r13 = { own, a: await st(A), b: await st(B) };
+    if (!out.r13.own || out.r13.own.busy !== 1) f.push('13 busy is in the owner key the moment the match starts (read before the owner runs any timer) ' + JSON.stringify(out.r13.own));
     if (out.r13.b.card !== 'busy' || out.r13.a.card || !out.r13.a.live) f.push('13 a blocked owner that just started a match keeps it; the new tab shows the busy card ' + JSON.stringify(out.r13));
     await ctx.close(); }
   // 11 the 2 s adopt: an owner that still flushes a late hello (as the old build did, or a write already under way when the claim lands)
   //    writes a newer save just after the new tab took over; the new tab loads it instead of stepping aside, and the change is kept
   if (RUN(11)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 1700, late: 1 }; }); await A.waitForTimeout(1500);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 4500, late: 1 }; }); await A.waitForTimeout(1500);
     await A.evaluate(() => { career().bank = 4343; });   // a change the owner hasn't written yet: its late flush writes it
-    const B = await open(ctx); await B.waitForTimeout(4000);
+    const B = await open(ctx); await B.waitForTimeout(8000);
     out.grace = await B.evaluate(() => ({ card: !!document.getElementById('tabsCard'), away: TOPS_TABS.away(), bank: career().bank, stored: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank }));
     out.grace.aCard = !!(await card(A));
     if (out.grace.card || out.grace.away || out.grace.bank !== 4343 || out.grace.stored !== 4343 || !out.grace.aCard) f.push('11 the new tab adopts the late flush instead of stepping aside ' + JSON.stringify(out.grace));
