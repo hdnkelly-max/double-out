@@ -226,6 +226,10 @@
     const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&(passing||inW)&&!adopting){lastWrote=String(v);}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
   // 1 ownership
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
+  /* R9 (tabs-r8 A2, 8 s deaf): a match that ended after this tab's lock was taken (it heard late) has its result only in memory: it is kept like
+     a match in progress, so an ordinary claim is refused and the result written once the lock is back. Play here anyway still wins */
+  let endAt=0,okAt=0;const unsavedResult=()=>endAt>okAt&&body()!==lastBody;
+  const keepMatch=()=>midMatch()||unsavedResult();
   const LK=!window.TOPS_NOLOCKS&&!!(navigator.locks&&navigator.locks.request),LOCK='tops-save-'+KEY;   /* TOPS_NOLOCKS: QA, runs the fallback */
   let held=false,acquiring=false,releaseLock=null,lastClaim=null,reqN=0;
   /* R9 (DQ R8 trace, ChatGPT's gate): the cached held flag can lag a steal on a starved tab, so it can't decide a write. Every local write and
@@ -262,10 +266,10 @@
         return new Promise(r=>{releaseLock=()=>{held=false;releaseLock=null;r();};});})
       .catch(e=>{if(my!==reqN){fin(SUPER);return;}acquiring=false;const was=held;held=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();fin(false);});}catch(e){acquiring=false;fin(false);}});}
   /* the lock was stolen: give the stealer's claim (owner key or message) a moment to arrive, then the one rule. Writes are blocked meanwhile. */
-  function lockLost(){if(away||!owner)return;if(!midMatch()){const o=readOwn();stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');return;}   /* nothing to protect: go now */
+  function lockLost(){if(away||!owner)return;if(!keepMatch()){const o=readOwn();stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');return;}   /* nothing to protect: go now */
     setTimeout(()=>{if(away)return;const o=readOwn();
       const any=(o&&o.tab!==TAB&&o.anyway)||(lastClaim&&lastClaim.anyway&&Date.now()-lastClaim.rx<4000);
-      if(midMatch()&&!any&&!stale()){lockAcquire(true,1).then(ok=>{if(!ok||away){stepAside('claim');return;}myGen=nextGen();ev('tabs_refuse',{via:'lock'});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});});return;}
+      if(keepMatch()&&!any&&!stale()){lockAcquire(true,1).then(ok=>{if(!ok||away){stepAside('claim');return;}myGen=nextGen();ev('tabs_refuse',{via:'lock',result:!midMatch()});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0,refuse:1});if(body()!==lastBody)try{persist();}catch(e){}});return;}
       stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');},300);}
   const releaseIt=()=>{try{releaseLock&&releaseLock();}catch(e){}};
   const keyOK=()=>{const o=readOwn();return !o||o.tab===TAB||(o.tab!=='reload'&&!beats(o,me()));};
@@ -285,7 +289,7 @@
   /* a better claim than this tab's, however it is found (a message, the owner key on a save or a heartbeat, a page restore): the one rule for
      what happens next. Mid-match, a fresh ordinary claim from a tab that hasn't saved since is refused (this tab re-claims one gen higher,
      marked busy); anything else wins and this tab steps aside. Returns true when this tab stepped aside. */
-  function lost(c){if(c&&c.tab!=='reload'&&midMatch()&&!c.anyway&&Date.now()-(+c.at||0)<FRESH&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});if(LK&&!held)lockAcquire(true,1);return false;}
+  function lost(c){if(c&&c.tab!=='reload'&&keepMatch()&&!c.anyway&&Date.now()-(+c.at||0)<FRESH&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});if(LK&&!held)lockAcquire(true,1);return false;}
     stepAside('claim',c&&c.busy?'busy':'');return true;}
   const done=new Set();   // claims already handled (they arrive twice: the channel and the owner key)
   let bc=null;try{bc=new BroadcastChannel('tops-tabs-'+KEY);bc.onmessage=m=>recv(m&&m.data);}catch(e){}
@@ -349,7 +353,7 @@
   if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(LK&&held&&!away&&!pending&&!keyOK()){keyClash();ev('tabs_match_blocked',{why:'key'});return;}   /* the lock flag is cached: a newer claim already in the key means the steal may be on its way, so no match starts on it */
     if(away||pending||(LK&&!lockOK())||(!LK&&owner&&!ownsKey())){ev('tabs_match_blocked',{away,pending,held});if(!away&&!pending)stepAside('claim');card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
     try{return _bm.apply(this,arguments);}finally{edge();}};}
-  if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
+  if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){endAt=Date.now();try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
   /* a frozen page (a phone backgrounding the tab, the browser's cache) must not sit on the lock: a steal from a frozen holder can wait until it
      thaws (Chrome), leaving the new tab with no card and nothing saved (DQ A4 at x4). So on freeze the owner says so in the key (with busy if
@@ -400,7 +404,7 @@
     if(svIn()>mine())try{save.sv=svIn();}catch(e){}   /* storage is ahead only by this tab's own write: carry on from its counter, never backwards */   /* storage holds a save this tab didn't write (an older build's tab): keep it before overwriting */
     passing++;let r;try{r=_p.apply(this,arguments);}finally{passing--;}
     if(svIn()!==mine()){failed();return r;}   // the browser refused the write (storage full or blocked): lastBody stays, so the next save tries again
-    lastBody=j;okWrite();return r;};
+    lastBody=j;okAt=Date.now();okWrite();return r;};
   let failN=0;function failed(){failN++;ev('save_write_failed',{n:failN});try{let b=document.getElementById('tabsSaveFail');if(!b){b=document.createElement('div');b.id='tabsSaveFail';b.setAttribute('role','status');
       b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483500;padding:12px 14px;border-radius:12px;background:#3a1416;color:#fde8e8;font:600 14px/1.35 Manrope,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45)';
       b.textContent='This device couldn\u2019t save your progress (storage full or blocked). TOPS keeps trying; free some space or leave private browsing.';(document.body||document.documentElement).appendChild(b);}}catch(e){}}
