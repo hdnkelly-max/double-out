@@ -234,6 +234,7 @@
      old holder's last write always lands before the new holder's grant, and after it the old holder's query says no and nothing is written.
      This tab knows its own client id from a lock it holds for its whole life ('tops-tab-<id>'). */
   const WLOCK='tops-write-'+KEY,PLOCK='tops-push-'+KEY;let inW=0,wq=null;const wfns=[];   /* PLOCK: cloud puts, so a slow put never holds up a local save */
+  if(LK)try{navigator.locks.query().catch(()=>{});}catch(e){}   /* the first query can be slow on a busy device: warm it up now, before the first save */
   const meP=LK?new Promise(res=>{try{navigator.locks.request('tops-tab-'+TAB,()=>{res(true);return new Promise(()=>{});}).catch(()=>res(false));}catch(e){res(false);}}):null;
   async function ownerOK(){try{await meP;const q=await navigator.locks.query();const H=(q&&q.held)||[];const me=H.find(l=>l.name==='tops-tab-'+TAB),o=H.find(l=>l.name===LOCK);
       return !!(me&&o&&me.clientId&&me.clientId===o.clientId);}catch(e){ev('lock_query_failed',{err:String(e&&e.name||e)});return false;}}   /* no answer: no write (lastBody stays, so it is kept) */
@@ -359,7 +360,8 @@
       if(ok&&!stale()){ev('tabs_thaw',{why});writeOwn({busy:midMatch()?1:0});return;}stepAside(stale()?'newer':'claim',o&&o.tab!==TAB&&o.busy?'busy':'');});};
   if(LK){document.addEventListener('freeze',()=>{if(fz){fz();fz=null;}if(owner&&!away&&held){ev('tabs_freeze',{busy:midMatch()});writeOwn({busy:midMatch()?1:0,frozen:1});frozeHeld=true;releaseIt();}});
     document.addEventListener('resume',()=>thaw('resume'));}
-  window.addEventListener('pagehide',()=>{gone=true;try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
+  window.addEventListener('pagehide',()=>{gone=true;try{if(LK&&owner&&!away&&wfns.length&&body()!==lastBody)rescue('unload');}catch(e){}   /* R9: a save still queued for the write lock when the page goes is kept as a recovery copy (not the save: only the lock holder writes that) */
+    try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
   /* back-forward cache: a restored page was frozen, so before it writes it checks it still owns the save */
   window.addEventListener('pageshow',e=>{gone=false;if(!e.persisted)return;ev('tabs_pageshow',{owner,away,held});if(!owner||away||pending)return;
     if(LK){if(frozeHeld){thaw('pageshow');return;}if(!lockOK()||stale()){const o=readOwn();stepAside(stale()?'newer':'claim',o&&o.tab!==TAB&&o.busy?'busy':'');}return;}

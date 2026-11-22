@@ -47,6 +47,14 @@ html.tops-pre #loading.gone{opacity:1!important;visibility:visible!important}
 #loading.gone .ld-bar b::after{animation:none}
 @media (prefers-reduced-motion:reduce){#loading .ld-bar b::after{animation:none}#loading .ld-bar b{transition:none}}
 </style>
+<script>/* CAR-TABS R9 boot hold (Career; DQ R8 trace): saves the page makes before the two-tab guard (tc/s3.js, near the end) installs are
+   kept in memory, not written: the sign-in pull's save (netSignedIn) could land before the guard and write without the save lock, even
+   over another tab that holds it. The guard writes the held save once this tab owns the save. If the guard never installs, the page's
+   DOMContentLoaded releases the hold and saves. Only the save key is held. */
+(function(){try{var SI=Storage.prototype.setItem;var H=window.TOPS_TABS_HOLD={dirty:0};
+  Storage.prototype.setItem=function(k,v){if(window.TOPS_TABS_HOLD&&this===localStorage&&typeof TOPS_SAVE_NS!=='undefined'&&TOPS_SAVE_NS&&k===TOPS_SAVE_NS.key){window.TOPS_TABS_HOLD.dirty=1;return;}return SI.apply(this,arguments);};
+  document.addEventListener('DOMContentLoaded',function(){var h=window.TOPS_TABS_HOLD;if(!h)return;window.TOPS_TABS_HOLD=null;if(h.dirty&&typeof persist==='function')try{persist();}catch(e){}});}catch(e){}})();
+</script>
 <script>/* pre-paint hold (EXP-OLDOUT): on until the new look has installed. rb.js (the last script on the page) calls TOPS_PRE.ready() when it has
  finished installing; it is parsed before DOMContentLoaded, so at DOMContentLoaded we know: ready → release; rebrand off (kill switch,
  ?rebrand=0) → release to the old look as intended; rebrand on but rb.js never finished (it threw) → release anyway so the game stays usable,

@@ -222,10 +222,7 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 // ===== v1.56 versioned cloud saves: an older device can never overwrite newer progress =====
 (function(){if(typeof cloudPush!=='function'||typeof NET==='undefined')return;
  let DEV='';try{DEV=localStorage.getItem('tops-dev')||'';if(!DEV){DEV='d'+Math.random().toString(36).slice(2,10);localStorage.setItem('tops-dev',DEV);}}catch(e){DEV='d'+Math.random().toString(36).slice(2,10);}
- /* CAR-TABS R9 (DQ R8 trace): the sign-in pull can save before the two-tab guard (tc/s3.js, the last script) is installed, which wrote without
-    the save lock. Until that guard takes over, a save is held in memory and marked; the guard writes it once this tab owns the save.
-    If the guard never installs, the page's load event releases the hold and saves. */
- window.TOPS_TABS_HOLD={dirty:0};window.addEventListener('DOMContentLoaded',()=>{const h=window.TOPS_TABS_HOLD;if(!h)return;window.TOPS_TABS_HOLD=null;if(h.dirty)try{persist();}catch(e){}});
+ /* CAR-TABS R9: while the boot hold is on (head3.html, until tc/s3.js installs) a save only marks the hold: no counter bump, no cloud push */
  const _ps=persist;persist=function(){if(window.TOPS_TABS_HOLD){TOPS_TABS_HOLD.dirty=1;return;}try{save.sv=(save.sv||0)+1;save.dev=DEV;}catch(e){}return _ps.apply(this,arguments);};
  const busy=()=>typeof S!=='undefined'&&S&&!S.done;
  const adopt=(cloud,why)=>{if(!cloud)return;if(busy()){NET.pendCloud=cloud;return;}NET.pendCloud=null;const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);save.dev=DEV;try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}/* #12: newer save from another device may be a v1.75 one */try{localStorage.setItem(TOPS_SAVE_NS.key,JSON.stringify(save));}catch(e){}
