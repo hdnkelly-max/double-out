@@ -267,3 +267,4 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-edb[disabled] b,#rbApp .s3-edb[disabled] small{color:var(--ink2)}
 #rbApp .s3-edw{background:transparent;border:1px solid var(--line)}
 #rbApp .s3-edw b{color:var(--ink)}
+#rbApp .s3-edsec{display:flex;flex-direction:column;gap:8px}#rbApp .s3-edsec>.s3-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px}#rbApp .s3-edsec>.s3-row .s3-trn{white-space:nowrap}

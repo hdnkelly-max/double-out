@@ -296,19 +296,27 @@
   const wonAt = (k, ed) => (k.history || []).some(h => h.fin === 'W' && (ed.id === 'worlds' ? h.id === 'worlds' : h.level === ed.lv));
   function floorFee(c) {   // the next entry fee at the player's level: the cheapest event there (with the trip funded if it is)
     const E = CIRC(), k = c.circuit; try { const L = E.LEVELS[k.level]; return Math.min(...L.events.map(e => E.costFor ? E.costFor(k, e) : E.cost(e))); } catch (e) { return 0; } }
-  const pres = c => { c.prestige = c.prestige && typeof c.prestige === 'object' ? c.prestige : {}; const g = c.prestige; g.own = Array.isArray(g.own) ? g.own : []; g.eq = g.eq || {}; return g; };
+  /* owned is the player's, not the career's (Producer 14:43: "owned forever" means across careers): owned editions and when they were bought
+     live at save level (save.prestige); what you wear stays per career (c.prestige.eq). A career from before this keeps its owned list
+     until first read, when it moves up (merged, never lost). Bank and owned are still in one save, so they roll back together. */
+  const vault = () => { if (typeof save === 'undefined' || !save) return { own: [], at: {} }; const v = save.prestige = save.prestige && typeof save.prestige === 'object' ? save.prestige : {};
+    v.own = Array.isArray(v.own) ? v.own : []; v.at = v.at && typeof v.at === 'object' ? v.at : {}; return v; };
+  const pres = c => { c.prestige = c.prestige && typeof c.prestige === 'object' ? c.prestige : {}; const g = c.prestige; g.eq = g.eq || {};
+    if (Array.isArray(g.own)) { const v = vault(); g.own.forEach(id => { if (!v.own.includes(id)) v.own.push(id); if (g.at && g.at[id] && !v.at[id]) v.at[id] = g.at[id]; }); delete g.own; delete g.at; }
+    return g; };
+  const owns = id => vault().own.includes(id);
   function state(id) { const ed = ED.find(x => x.id === id), c = carOf(); if (!ed || !c) return null; const g = pres(c), k = c.circuit;
-    const owned = g.own.includes(id), won = wonAt(k, ed), fee = floorFee(c), left = c.bank - ed.price;
+    const owned = owns(id), won = wonAt(k, ed), fee = floorFee(c), left = c.bank - ed.price;
     return { id, n: ed.n, lv: ed.lv, price: ed.price, ready: !!READY[id], won, owned, worn: g.eq.darts === id, fee, canAfford: left >= fee,
       can: !!READY[id] && won && !owned && left >= fee }; }
   function buy(id) { const st = state(id), c = carOf(); if (!st) return { ok: false, why: 'No career' };
     if (!st.ready) return { ok: false, why: 'Not on sale yet' }; if (!st.won) return { ok: false, why: 'Win a title at this level to unlock it' };
     if (st.owned) return { ok: false, why: 'Already yours' }; if (!st.canAfford) return { ok: false, why: 'Keep ' + st.fee + ' for your next entry' };
     if (window.TOPS_TABS && TOPS_TABS.canWrite && !TOPS_TABS.canWrite()) return { ok: false, why: 'TOPS is open in another tab' };
-    c.bank -= st.price; const g = pres(c); g.own.push(id); g.at = g.at || {}; g.at[id] = Date.now(); if (ED.find(x => x.id === id).parts.includes('flight')) g.eq.darts = id;
+    c.bank -= st.price; const g = pres(c), v = vault(); v.own.push(id); v.at[id] = Date.now(); if (ED.find(x => x.id === id).parts.includes('flight')) g.eq.darts = id;
     try { persist(); } catch (e) {} try { window.TOPS_FLIGHT && TOPS_FLIGHT.log && TOPS_FLIGHT.log('prestige_buy', { id, price: st.price, bank: c.bank }); } catch (e) {}
     return { ok: true, id, bank: c.bank }; }
-  function wear(id) { const c = carOf(); if (!c) return { ok: false }; const g = pres(c); if (id && !g.own.includes(id)) return { ok: false, why: 'Not yours yet' };
+  function wear(id) { const c = carOf(); if (!c) return { ok: false }; const g = pres(c); if (id && !owns(id)) return { ok: false, why: 'Not yours yet' };
     g.eq.darts = id || null; try { persist(); } catch (e) {} return { ok: true, worn: g.eq.darts }; }
   /* the edition row under each level on the trophy shelf (Locker > Trophies). Self-contained: rb/s3.js only asks for the row's HTML; taps are
      handled here (delegated), and the row redraws itself. Buying takes two taps (the first arms it for 3 s), never a dialog. */
@@ -330,5 +338,9 @@
       ARM.id = null; const res = buy(id); if (!res.ok) { b.innerHTML = '<b>' + esc(res.why || 'Not bought') + '</b>'; setTimeout(() => redraw(lv), 1800); return; } redraw(lv);
       try { const bk = document.getElementById('rbBank'); if (bk) bk.textContent = $m(career().bank); } catch (x) {} }
     else { wear(b.dataset.edWear || null); redraw(lv); } }, true);
-  window.TOPS_PRESTIGE = { ED, paint, PARTS, READY, state, buy, wear, floorFee, row, swatch };
+  /* every level's edition in one block (Producer 14:43): the live Trophies view shows them all, locked ones with their unlock line; the Season 3
+     shelf (s3x) keeps each row under its level and lists the levels above yours here. Only what can render is listed (Club/Opens wait for kits). */
+  function section(from, title) { const rows = ED.filter(e => e.lv >= (from || 0) && READY[e.id]).map(e => row(e.lv)).filter(Boolean).join(''); if (!rows) return '';
+    return `<section class="rb-card s3-edsec"><div class="s3-row"><span class="s3-trn">${esc(title || 'Title editions')}</span><span class="rb-sub">Win a title, unlock its darts</span></div>${rows}</section>`; }
+  window.TOPS_PRESTIGE = { ED, paint, PARTS, READY, state, buy, wear, floorFee, row, section, swatch, owns };
 })();

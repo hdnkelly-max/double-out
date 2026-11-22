@@ -407,7 +407,8 @@
     const hero = `<div class="rb-hero" style="height:190px"><div class="rb-im" style="background-image:url(${IMG}trophies.jpg);background-position:50% 50%"></div><div class="rb-sh2" style="background:linear-gradient(180deg,transparent 45%,rgba(10,12,14,.92))"></div><div class="rb-tx"><span class="rb-t1">${won} of ${L.length} titles</span><span class="rb-sub">Win a league or a knockout and the trophy goes in the case</span></div></div>`;
     const rows = L.map((x, i) => { const g = t.troph.find(y => y.id === x.id), n = g ? g.wins.length : 0, last = g && g.wins[g.wins.length - 1];
       return `<div class="rb-row" style="cursor:default${g ? '' : ';opacity:.6'}"><div class="rb-slot rb-sq rb-r8" style="width:52px;background:#0d0f10"><div class="rb-im" style="background-image:url(assets/cards/${x.img}.webp);background-size:contain;${g ? '' : 'filter:grayscale(1) brightness(.5)'}"></div></div><span class="rb-tx"><small>${g ? 'Won' + (n > 1 ? ' ×' + n : '') : i === c.tier ? 'To win · this season' : i < c.tier ? 'Not won' : 'Locked'}</small><span class="rb-t2">${esc(x.n)}</span>${last && last.opp ? `<span class="rb-sub">Final v ${esc(last.opp)}${last.score ? ' · ' + esc(last.score) : ''}</span>` : ''}</span></div>`; }).join('');
-    return hero + `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Open the trophy cabinet</button>` + rows;
+    const ed = window.TOPS_PRESTIGE && TOPS_PRESTIGE.section ? (() => { try { return TOPS_PRESTIGE.section(0); } catch (e) { return ''; } })() : '';   /* CAR-PRESTIGE: the title editions, every level (Producer 14:43) */
+    return hero + ed + `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Open the trophy cabinet</button>` + rows;
   }
   function wire(M) {
     const go = $id('rbGo'); if (go) {

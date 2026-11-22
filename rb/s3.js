@@ -624,7 +624,8 @@
       const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
       const back = chipFrom ? `<button type="button" class="s3-trback" data-s3="trback">‹ Back to Circuit</button>` : '';
       const cab = window.TC_API && TC_API.cabinet ? `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Seasons 1 & 2 trophy cabinet</button>` : '';   /* the old 3D cabinet stays reachable under s3x */
-      return back + hero + gap + bl + empty + rows + next + oldSeasons() + cab;
+      const edAhead = window.TOPS_PRESTIGE && TOPS_PRESTIGE.section ? (() => { try { return TOPS_PRESTIGE.section(d.level + 1, 'Title editions ahead'); } catch (x) { return ''; } })() : '';   /* CAR-PRESTIGE: the levels above yours */
+      return back + hero + gap + bl + empty + rows + next + edAhead + oldSeasons() + cab;
     } catch (x) { console.warn('s3 shelf', x); return null; }
   }
   /* the Season 3 record line under your best leg: the board's top row (Career's tops_bestleg_s3), a separate value from yours */
