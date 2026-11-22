@@ -981,7 +981,7 @@
         if (!WK.hold0) WK.hold0 = now;
         const heldMs = (WK.held || 0) + now - WK.hold0, A = (typeof V !== 'undefined' && V) || {}, q = f => { try { return A[f] ? A[f]() : null; } catch (e) { return null; } };
         const dl = !!q('animsPending'), failed = !!q('animsFailed'), eta = q('animsEta');
-        if (!dl && !failed && !WK.askedAnims) { WK.askedAnims = 1; q('loadAnims'); }   // Walk on asks for the clip file now (high priority), even while the figure is still a stand-in
+        if (!failed && !WK.askedAnims) { WK.askedAnims = 1; q('loadAnims'); }   // Walk on asks for the clip file now (high priority), even while the figure is still a stand-in; an idle fetch with no bytes yet is replaced by it
         if (dl) WK.dlSeen = now; else if (WK.dlSeen && !WK.dlEnd) WK.dlEnd = now;   // the file just landed: give the clip a moment to start (parse, mixer) before giving up
         /* past 4 s, hold only while the file is still coming AND can land inside the 10 s cap at its rate so far (+15%, plus 1 s to parse);
            a file that can't make it skips at 4 s as before, not after 10 s of an empty room; a failed file (404) skips at once (Producer 14:55) */
