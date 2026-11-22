@@ -39,7 +39,9 @@ jobs:
         run: |
           # every test the branch added, changed or renamed since it left src (not only this push)
           git fetch -q origin src; B=$(git merge-base origin/src HEAD)
-          CHANGED=$(git diff --name-only --diff-filter=AMR "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' || true)
+          # SLOW: suites with their own dispatchable workflow, too long for a fast check (switch-on.js runs the gate tests itself, ~25 min)
+          SLOW="switch-on.js"
+          CHANGED=$(git diff --name-only --diff-filter=AMR "$B" HEAD -- 'tests/*.js' | sed 's#^tests/##' | grep -v '^_' | grep -vxF -f <(tr ' ' '\n' <<<"$SLOW") || true)
           ALL=""; for t in $FAST $CHANGED; do [ -f "tests/$t" ] || continue; case " $ALL " in *" $t "*) ;; *) ALL="$ALL $t";; esac; done
           echo "tests:$ALL"
           # longest first onto the least-loaded shard
