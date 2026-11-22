@@ -1,0 +1,18 @@
+v3 flag (baseline / candidate): false / false | v3 switches set in candidate: none
+base:ray               same  meshes 95 lit px 65536
+base:kai               same  meshes 93 lit px 65536
+base:tama              same  meshes 93 lit px 65536
+base:dazza             DIFF meshes 96 96 geom/mat differ pixels same
+   A: ,,1,488642796,2419079960,0,0,0,288786083,MeshStandardMaterial;alphaTest=0;alphaToCoverage=false;aoMapIntensity=1;blendDst=205;blendEquation=100;blendSrc=204;blending=1;bumpScale=1;clipIntersection=false;clipShadows=false;color=d21e28;colorW 
+   B: ,,1,494678550,3324475176,0,0,0,288786083,MeshStandardMaterial;alphaTest=0;alphaToCoverage=false;aoMapIntensity=1;blendDst=205;blendEquation=100;blendSrc=204;blending=1;bumpScale=1;clipIntersection=false;clipShadows=false;color=d21e28;colorW
+base:mia               same  meshes 94 lit px 65536
+opp:Big Mal            same  meshes 93 lit px 65536
+opp:Shazza             same  meshes 93 lit px 65536
+opp:Deano              same  meshes 95 lit px 65536
+opp:Jonno              same  meshes 93 lit px 65536
+pro:Michael van Gerwen same  meshes 94 lit px 65536
+pro:Luke Littler       same  meshes 94 lit px 65536
+pro:Gerwyn Price       same  meshes 86 lit px 65536
+pro:Peter Wright       same  meshes 93 lit px 65536
+clip pass: 2470 clip frames through V2POST, 19 clips x 10 frames per figure; 0 frames moved more than 0.01 mm
+V3-PARITY FAIL (1)
