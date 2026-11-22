@@ -1,0 +1,42 @@
+name: imgswitch-diag
+'on':
+  push:
+    branches:
+    - qa-diag-imgswitch
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.2-jammy
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: diag
+        sparse-checkout: diag
+        fetch-depth: 1
+    - uses: actions/checkout@v4
+      with:
+        ref: exp-s3-imgswitch
+        path: branch
+        fetch-depth: 1
+    - name: Build branch
+      working-directory: branch
+      run: git config --global --add safe.directory "*"; git log --oneline -1; npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+    - uses: actions/checkout@v4
+      with:
+        ref: dacc9b4c9a69c4657d9b54c44e732623eec30b43
+        path: live428
+        fetch-depth: 1
+    - name: Build live428
+      working-directory: live428
+      run: git config --global --add safe.directory "*"; git log --oneline -1; npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+    - name: Scan
+      run: for d in branch live428; do cp diag/diag/*.js diag/diag/a_long_s3.json $d/tests/; for br in webkit chromium; do echo "=== $d $br"; (cd $d && BR=$br node tests/imgscan.js "$PWD" | tail -1; BR=$br node tests/binder.js "$PWD" | tail -1); done;
+        done
