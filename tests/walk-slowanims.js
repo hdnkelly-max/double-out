@@ -1,6 +1,6 @@
 // The first walk-on of a session on a slow connection (Engine + Producer, 22 Nov): the walk clip file (assets/anims.glb) is still
 // downloading when Walk on is pressed. The walk-on used to give up after a flat 4 s held and skip, so the player never saw it. Now it
-// holds while the file is still coming and can land inside 10 s, then plays; a tap still skips; a file that sends nothing skips by ~6 s;
+// holds while the file is still coming and can land inside 10 s, then plays; a tap still skips; a file that sends nothing skips by ~7 s;
 // a failed file (404) skips at once.
 // Runs on v2 and v3 figures, the clip file delayed in the network layer (throttled: 5.5 s, past today's 4 s give-up), the match started before it lands.
 // usage: node tests/walk-slowanims.js [dir]
@@ -38,8 +38,8 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
     if (!(r.walked >= 1)) fail.push(`v3=${v3}: clip file 5.5 s late, the walk-on skipped instead of waiting for it ${JSON.stringify(r)}`);
     if (r.secs == null || r.secs > 17) fail.push(`v3=${v3}: walk-on length ${r.secs}s`);
   }
-  // a file that sends nothing (no rate to judge) gets the 4 s hold plus 2 s, then the walk-on skips: never 10 s of an empty room
-  { const r = await run('stalled', '1', Infinity); if (r.secs == null || r.secs < 5 || r.secs > 9) fail.push('a clip file that never arrives must skip by about 6 s ' + JSON.stringify(r)); }
+  // a file that sends nothing (no rate to judge) gets the 4 s hold plus 3 s, then the walk-on skips: never 10 s of an empty room
+  { const r = await run('stalled', '1', Infinity); if (r.secs == null || r.secs < 6 || r.secs > 10) fail.push('a clip file that never arrives must skip by about 7 s ' + JSON.stringify(r)); }
   // a failed file (404) skips at once
   { const r = await run('fail404', '1', 'fail'); if (r.secs == null || r.secs > 3) fail.push('a failed clip file must skip at once ' + JSON.stringify(r)); }
   { const r = await run('tap', '1', Infinity, 1500); if (r.afterTap == null || r.afterTap > 1.5) fail.push('a tap during the hold must skip at once ' + JSON.stringify(r)); }
