@@ -38,15 +38,15 @@ let url = ''; const f = []; const out = {};
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} }); if (init) await p.addInitScript(init);
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto(url, { timeout: 120000 }); await p.waitForFunction(() => window.TOPS_S3 && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(1500); return p; };
   const card = p => p.evaluate(() => { const d = document.getElementById('tabsCard'); return d && !d.hidden && d.getClientRects().length ? d.innerText.replace(/\s+/g, ' ') : null; }).catch(() => null);
-  const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key) || '{}'); const c = s.career, k = c && c.circuit; return { sv: s.sv || 0, has: !!c, week: k ? k.week : null, bank: c ? c.bank : null, mark: s.__mark || null }; });
+  const stored = p => p.evaluate(async () => { try { await TOPS_TABS.idle(); } catch (e) {} const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key) || '{}'); const c = s.career, k = c && c.circuit; return { sv: s.sv || 0, has: !!c, week: k ? k.week : null, bank: c ? c.bank : null, mark: s.__mark || null }; });
   // 1 Q&D's repro
   if (RUN(1)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} }); await A.waitForTimeout(1500);   // let the write reach the other tab's process (localStorage syncs between tabs asynchronously)
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} }); await A.waitForTimeout(1500);   // let the write reach the other tab's process (localStorage syncs between tabs asynchronously)
     const B = await open(ctx); await B.waitForFunction(() => typeof career === 'function' && career() && career().circuit, null, { timeout: 60000 }); await B.waitForTimeout(800);
     out.b0 = await B.evaluate(() => ({ week: career().circuit.week, bank: career().bank }));
-    await B.evaluate(() => { const c = career(); c.circuit.week = 2; c.bank = 90; c.circuit.history.push({ week: 1, id: 'pub_night', n: 'Kauri Arms League Night', level: 0, fin: 'W', prize: 35, pts: 50 }); persist(); });
+    await B.evaluate(async () => { const c = career(); c.circuit.week = 2; c.bank = 90; c.circuit.history.push({ week: 1, id: 'pub_night', n: 'Kauri Arms League Night', level: 0, fin: 'W', prize: 35, pts: 50 }); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
     await A.waitForTimeout(3000); out.aCard = await card(A);
-    const tap = await A.evaluate(() => { try { const e = TOPS_S3.view().calendar[0]; const r = TOPS_S3.book(e.id); persist(); return { ok: !!(r && r.ok) }; } catch (e) { return { err: String(e) }; } });
+    const tap = await A.evaluate(async () => { try { const e = TOPS_S3.view().calendar[0]; const r = TOPS_S3.book(e.id); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); return { ok: !!(r && r.ok) }; } catch (e) { return { err: String(e) }; } });
     await A.waitForTimeout(800); const C = await open(ctx); out.after = await stored(C); out.cCard = await card(C); out.tap = tap;
     if (out.after.week !== 2 || out.after.bank !== 90) f.push('1 tab A overwrote tab B\'s won Pub night ' + JSON.stringify(out.after));
     if (!out.aCard || !/TOPS is open in another tab/i.test(out.aCard) || !/Play here/i.test(out.aCard)) f.push('1 tab A shows the other-tab card ' + JSON.stringify(out.aCard));
@@ -60,8 +60,8 @@ let url = ''; const f = []; const out = {};
     out.errs1 = [...A._pe, ...B._pe].slice(0, 2); await ctx.close(); }
   // 2 the write guard alone: a newer save lands behind A's back (no claim message)
   if (RUN(2)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
-    await A.evaluate(() => { const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)); s.sv = (s.sv || 0) + 5; s.__mark = 'newer'; s.career.bank = 777; localStorage.setItem(TOPS_SAVE_NS.key, JSON.stringify(s)); career().bank = 1; persist(); });
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
+    await A.evaluate(async () => { const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)); s.sv = (s.sv || 0) + 5; s.__mark = 'newer'; s.career.bank = 777; localStorage[TOPS_SAVE_NS.key] = JSON.stringify(s);   /* another tab's write: past this page's own guard */ career().bank = 1; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
     await A.waitForTimeout(500); out.guard = await stored(A); out.guardCard = await card(A);
     if (out.guard.mark !== 'newer' || out.guard.bank !== 777) f.push('2 a tab overwrote a newer save it never read ' + JSON.stringify(out.guard));
     if (!out.guardCard) f.push('2 the stale tab shows the card instead of saving');
@@ -70,29 +70,29 @@ let url = ''; const f = []; const out = {};
     await ctx.close(); }
   // 3 no-career wipe
   if (RUN(3)) { const ctx = await b.newContext(); const A = await open(ctx); out.a3 = await A.evaluate(() => !!(save.career));
-    const B = await open(ctx); await B.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 4321; persist(); });
-    await A.evaluate(() => { try { save.vol = (save.vol || 0) + 1; persist(); } catch (e) {} }); await A.waitForTimeout(500);
+    const B = await open(ctx); await B.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 4321; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
+    await A.evaluate(async () => { try { save.vol = (save.vol || 0) + 1; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } catch (e) {} }); await A.waitForTimeout(500);
     out.wipe = await stored(B); if (!out.wipe.has || out.wipe.bank !== 4321) f.push('3 a stale tab with no career wiped the other tab\'s career ' + JSON.stringify(out.wipe));
     await ctx.close(); }
   // 4 cloud: the stale tab never pushes, the owner does
   if (RUN(4)) { const ctx = await b.newContext(); const stub = () => { window.__rpc = 0; window.__stubNet = () => { NET.user = { id: 'u1' }; NET.sb = { rpc: async n => { if (n === TOPS_SAVE_NS.rpc) window.__rpc++; return { data: { ok: true } }; }, from: () => ({ upsert: async () => { window.__rpc++; return {}; }, select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) }; }; };
-    const A = await open(ctx, stub); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); }); await A.waitForTimeout(1500);
-    const B = await open(ctx, stub); await B.waitForFunction(() => typeof career === 'function' && career(), null, { timeout: 60000 }); await B.evaluate(() => { career().bank = 555; persist(); }); await B.waitForTimeout(1500);
-    await A.evaluate(() => { __stubNet(); career().bank = 2; cloudPush(true); persist(); }); await B.evaluate(() => { __stubNet(); career().bank = 556; cloudPush(true); });
+    const A = await open(ctx, stub); await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await A.waitForTimeout(1500);
+    const B = await open(ctx, stub); await B.waitForFunction(() => typeof career === 'function' && career(), null, { timeout: 60000 }); await B.evaluate(async () => { career().bank = 555; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await B.waitForTimeout(1500);
+    await A.evaluate(async () => { __stubNet(); career().bank = 2; cloudPush(true); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await B.evaluate(async () => { __stubNet(); career().bank = 556; cloudPush(true); });
     await A.waitForTimeout(800); out.cloud = { stale: await A.evaluate(() => window.__rpc), owner: await B.evaluate(() => window.__rpc) };
     if (out.cloud.stale !== 0) f.push('4 the stale tab pushed its copy to the cloud ' + JSON.stringify(out.cloud));
     if (!(out.cloud.owner >= 1)) f.push('4 the owner tab still pushes ' + JSON.stringify(out.cloud));
     await ctx.close(); }
   // 5 the idle hub doesn't save on redraws
   if (RUN(5)) { const ctx = await b.newContext(); const A = await open(ctx, () => { const k = () => (window.TOPS_SAVE_NS || {}).key; const si = Storage.prototype.setItem; window.__w = 0; Storage.prototype.setItem = function (a, v) { if (a === k()) window.__w++; return si.apply(this, arguments); }; });
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); showHub('play'); }); await A.waitForTimeout(1500);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); showHub('play'); }); await A.waitForTimeout(1500);
     const w0 = await A.evaluate(() => { window.__pendAv = setInterval(() => { window.__avPending = 1; }, 500); return window.__w; });   // keep the portrait refresh (tops-avatars) firing, as while models load
     await A.waitForTimeout(30000); const w1 = await A.evaluate(() => window.__w); out.hubWrites = w1 - w0;
     if (out.hubWrites > 1) f.push('5 the idle hub saved ' + out.hubWrites + ' times in 30 s');
     await ctx.close(); }
   // 7 mid-match: a second tab opened while the owner is mid-match shows the card itself and doesn't take over; "Play here anyway" does
   if (RUN(7)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
     await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(1500); const sv0 = (await stored(A)).sv;
     const B = await open(ctx); await B.waitForTimeout(1500);
     out.mid = { bCard: await card(B), aCard: await card(A), aLive: await A.evaluate(() => typeof S !== 'undefined' && !!S && !S.done && !TOPS_TABS.away()), sv: (await stored(A)).sv, sv0 };
@@ -107,7 +107,7 @@ let url = ''; const f = []; const out = {};
     await ctx.close(); }
   // 8 the owner flushes on hello: a change it hadn't written yet is in the save the new tab loads
   if (RUN(8)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); }); await A.waitForTimeout(1500);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await A.waitForTimeout(1500);
     await A.evaluate(() => { career().bank = 4242; });   // in memory only
     const B = await open(ctx); await B.waitForTimeout(1000); out.flush = await B.evaluate(() => ({ bank: career() && career().bank, own: !TOPS_TABS.away() && !TOPS_TABS.pending() }));
     if (out.flush.bank !== 4242 || !out.flush.own) f.push('8 the new tab loads what the owner flushed and takes over ' + JSON.stringify(out.flush));
@@ -117,16 +117,16 @@ let url = ''; const f = []; const out = {};
       await ctx.exposeBinding('__cloudGet', () => cloud ? JSON.parse(JSON.stringify(cloud)) : null);
       await ctx.exposeBinding('__cloudPut', (src, d) => { rpcs.push(d.sv); if (cloud && (d.sv || 0) <= (cloud.sv || 0)) return { ok: false, err: 'older', sv: cloud.sv, data: cloud }; cloud = d; return { ok: true }; }); return ctx; };
     const net = () => { NET.user = { id: 'u1' }; NET.sb = { rpc: async (n, a) => ({ data: await __cloudPut(JSON.parse(JSON.stringify(a.p_data))) }), from: () => ({ upsert: async () => ({}), select: () => ({ eq: () => ({ maybeSingle: async () => { const c = await __cloudGet(); return { data: c ? { data: c } : null }; } }) }) }) }; };
-    const X = await open(await mk()); await X.evaluate(n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 100; persist(); cloudPush(true); }, '(' + net + ')'); await X.waitForTimeout(800);
+    const X = await open(await mk()); await X.evaluate(async n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 100; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); }, '(' + net + ')'); await X.waitForTimeout(800);
     const Y = await open(await mk()); await Y.evaluate(async n => { eval(n)(); save.authSeen = true; await TOPS_SAVEV.pull(); }, '(' + net + ')'); await Y.waitForTimeout(800);
     out.y0 = await Y.evaluate(() => ({ bank: career() && career().bank, sv: save.sv }));
-    await Y.evaluate(() => { for (let i = 1; i <= 3; i++) { career().bank = 200 + i; persist(); } cloudPush(true); }); await Y.waitForTimeout(800);
-    await X.evaluate(() => { for (let i = 1; i <= 12; i++) { career().bank = 100 + i; persist(); } cloudPush(true); }); await X.waitForTimeout(1500);
+    await Y.evaluate(async () => { for (let i = 1; i <= 3; i++) { career().bank = 200 + i; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } cloudPush(true); }); await Y.waitForTimeout(800);
+    await X.evaluate(async () => { for (let i = 1; i <= 12; i++) { career().bank = 100 + i; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } cloudPush(true); }); await X.waitForTimeout(1500);
     out.xsv = await X.evaluate(() => save.sv);
     out.cloud2 = { bank: cloud && cloud.career && cloud.career.bank, sv: cloud && cloud.sv, x: await X.evaluate(() => ({ bank: career().bank, sv: save.sv })), y0: out.y0 };
     if (out.y0.bank !== 100) f.push('6 setup: device Y should load X\'s save from the cloud ' + JSON.stringify(out.y0));
     // DQ P1: loading the other device's save must not put up the other-tab card on this lone device; it keeps saving; its own copy is kept
-    out.x6 = await X.evaluate(() => { const card = !!document.getElementById('tabsCard'); const away = TOPS_TABS.away(); career().bank = 303; persist(); const st = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key));
+    out.x6 = await X.evaluate(async () => { const card = !!document.getElementById('tabsCard'); const away = TOPS_TABS.away(); career().bank = 303; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const st = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key));
       return { card, away, saved: st.career.bank, rescue: TOPS_TABS.rescues().map(r => r.why + ':' + (r.save && r.save.career && r.save.career.bank)) }; });
     if (out.x6.card || out.x6.away || out.x6.saved !== 303) f.push('6 a lone device that loads a newer cloud save must not show the other-tab card, and keeps saving ' + JSON.stringify(out.x6));
     if (!out.x6.rescue.includes('cloud:112')) f.push('6 the device keeps a recovery copy of the save it replaced ' + JSON.stringify(out.x6));
@@ -137,8 +137,8 @@ let url = ''; const f = []; const out = {};
     out['pb' + supports] = await A.evaluate(async sup => { NET.user = { id: 'u1' }; NET.sb = { rpc: async (n, a) => { if (n !== TOPS_SAVE_NS.rpc) return { data: null }; __calls.push(Object.keys(a).sort().join(',') + (a.p_base != null ? '=' + a.p_base : ''));
         if (a.p_base != null && !sup) return { error: { code: 'PGRST202', message: 'Could not find the function public.tops_save3_put(p_base, p_data)' } }; return { data: { ok: true } }; },
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) };
-      save.authSeen = true; $('login').hidden = true; newCareer(); persist(); cloudPush(true); await new Promise(r => setTimeout(r, 300)); const s1 = TOPS_TABS.synced();
-      career().bank = 7; persist(); cloudPush(true); await new Promise(r => setTimeout(r, 300)); career().bank = 8; persist(); cloudPush(true); await new Promise(r => setTimeout(r, 300));
+      save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300)); const s1 = TOPS_TABS.synced();
+      career().bank = 7; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300)); career().bank = 8; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300));
       return { calls: __calls, s1, flag: localStorage.getItem('tops_pbase') }; }, supports);
     await ctx.close(); }
   if (RUN(9)) { const n = out.pbfalse, y = out.pbtrue;
@@ -149,7 +149,7 @@ let url = ''; const f = []; const out = {};
   //    behind the card. 10b: the same slow owner mid-match: its heartbeat already says "busy", so the new tab shows "a match is in progress"
   //    at once and the owner keeps playing; when that match ends the card turns into the ordinary "Play here"
   if (RUN(10)) for (const mid of [false, true]) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(m => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); if (m) { const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); } else try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: m ? 1700 : 4500 }; }, mid);
+    await A.evaluate(async m => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); if (m) { const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); } else try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: m ? 1700 : 4500 }; }, mid);
     if (mid) await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(1500); const sv0 = (await stored(A)).sv;
     const B = await open(ctx); await B.waitForTimeout(mid ? 3500 : 8000);
     const st = async P => P.evaluate(() => ({ card: (document.getElementById('tabsCard') || {}).dataset ? document.getElementById('tabsCard').dataset.mode || 'other' : null, away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), live: typeof S !== 'undefined' && !!S && !S.done && !S.paused }));
@@ -164,7 +164,7 @@ let url = ''; const f = []; const out = {};
   // 13 DQ 12:41: the owner starts a match and is at once too busy to run timers (main thread blocked 3 s, messages late); a tab opened right
   //    then still sees busy, because busy is written where the match starts, not by a poll: the busy card, and the owner keeps its match
   if (RUN(13)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); window.TOPS_TABS_QA = { delay: 1700 }; const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow();
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); window.TOPS_TABS_QA = { delay: 1700 }; const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow();
       setTimeout(() => { const t = Date.now(); while (Date.now() - t < 3000); }, 0); });
     const own = await A.evaluate(() => JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null')).catch(e => String(e));
     const B = await open(ctx); await B.waitForTimeout(3000);
@@ -176,7 +176,7 @@ let url = ''; const f = []; const out = {};
   // 11 the 2 s adopt: an owner that still flushes a late hello (as the old build did, or a write already under way when the claim lands)
   //    writes a newer save just after the new tab took over; the new tab loads it instead of stepping aside, and the change is kept
   if (RUN(11)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 4500, late: 1 }; }); await A.waitForTimeout(1500);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 4500, late: 1 }; }); await A.waitForTimeout(1500);
     await A.evaluate(() => { career().bank = 4343; });   // a change the owner hasn't written yet: its late flush writes it
     const B = await open(ctx); await B.waitForTimeout(8000);
     out.grace = await B.evaluate(() => ({ card: !!document.getElementById('tabsCard'), away: TOPS_TABS.away(), bank: career().bank, stored: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank }));
@@ -186,11 +186,11 @@ let url = ''; const f = []; const out = {};
   // 12 recovery copies when another build's tab writes the save (no counter bump past ours, so no "newer"): an owner writing over a save it
   //    didn't write keeps the stored one first; an owner stepping aside for a different newer save keeps its own even with nothing unsaved
   if (RUN(12)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 50; persist(); }); await A.waitForTimeout(800);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); career().bank = 50; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await A.waitForTimeout(800);
     const O = await ctx.newPage(); await O.goto(url.replace('index.html?s3=1', 'no-such-page.html'));   // same origin, no game: an older build's tab writing directly
     const key = await A.evaluate(() => TOPS_SAVE_NS.key);
     await O.evaluate(([k, sv]) => { const s = JSON.parse(localStorage.getItem(k)); s.sv = sv; s.career.bank = 999; localStorage.setItem(k, JSON.stringify(s)); }, [key, await A.evaluate(() => save.sv)]); await A.waitForTimeout(1500);
-    out.r12a = await A.evaluate(() => { career().bank = 51; persist(); return { r: TOPS_TABS.rescues().map(r => r.why + ':' + (r.save && r.save.career && r.save.career.bank)), stored: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, away: TOPS_TABS.away() }; });
+    out.r12a = await A.evaluate(async () => { career().bank = 51; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); return { r: TOPS_TABS.rescues().map(r => r.why + ':' + (r.save && r.save.career && r.save.career.bank)), stored: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, away: TOPS_TABS.away() }; });
     await O.evaluate(([k, sv]) => { const s = JSON.parse(localStorage.getItem(k)); s.sv = sv; s.career.bank = 777; localStorage.setItem(k, JSON.stringify(s)); }, [key, (await A.evaluate(() => save.sv)) + 5]); await A.waitForTimeout(1500);
     out.r12b = await A.evaluate(() => ({ r: TOPS_TABS.rescues().map(r => r.why + ':' + (r.save && r.save.career && r.save.career.bank)), away: TOPS_TABS.away() }));
     if (!out.r12a.r.includes('overwrite:999') || out.r12a.stored !== 51 || out.r12a.away) f.push('12 an owner writing over another build\'s save keeps a copy of it first ' + JSON.stringify(out.r12a));
@@ -198,7 +198,9 @@ let url = ''; const f = []; const out = {};
     await ctx.close(); }
   // ---- R5 (ChatGPT review): the races outside the paths above ----
   const own = P => P.evaluate(() => !window.TOPS_TABS ? { loading: 1 } : ({ owner: TOPS_TABS.owner(), away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), gen: TOPS_TABS.gen(), card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, live: typeof S !== 'undefined' && !!S && !S.done && !S.paused, key: JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null') }));
-  const settle = async (ps, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const r = await Promise.all(ps.map(own)); if (r.filter(x => x.owner).length === 1 && r.filter(x => !x.owner).every(x => x.away || x.card)) return r; await ps[0].waitForTimeout(300); } return Promise.all(ps.map(own)); };
+  const settle = async (ps, ms) => { const t0 = Date.now(); let prev = null;   /* settled: one owner, nobody still waiting on a lock, and the same owner a second later (R9: a steal waits for the write locks first) */
+    while (Date.now() - t0 < ms) { const r = await Promise.all(ps.map(own)); const ok = r.filter(x => x.owner).length === 1 && r.every(x => !x.pending) && r.filter(x => !x.owner).every(x => x.away || x.card);
+      const who = ok ? r.findIndex(x => x.owner) : -1; if (ok && prev === who) return r; prev = ok ? who : null; await ps[0].waitForTimeout(ok ? 1000 : 300); } return Promise.all(ps.map(own)); };
   // 14 P1-1: (a) two tabs starting together with no owner; (b) crossed claims from both, messages delayed 1 s; (c) a claim delivered late
   //    (an old gen) after the owner moved on. Always exactly one owner, and the late claim changes nothing
   if (RUN(14)) { const ctx = await b.newContext(); const [A, B] = await Promise.all([open(ctx), open(ctx)]);
@@ -211,7 +213,7 @@ let url = ''; const f = []; const out = {};
     const O = await ctx.newPage(); await O.goto(url.replace('index.html?s3=1', 'no-such-page.html'));   // a late claim from an older gen, on the channel and in the key
     await O.evaluate(([k, g]) => { const c = { t: 'claim', gen: g - 1, tab: 'zzzz-late', at: Date.now() }; new BroadcastChannel('tops-tabs-' + k).postMessage(c); localStorage.setItem('tops_owner_' + k, JSON.stringify(c)); }, [await W.evaluate(() => TOPS_SAVE_NS.key), g]);
     await W.waitForTimeout(2000); out.r14c = await own(W);
-    if (!out.r14c.owner || out.r14c.away || !out.r14c.key || out.r14c.key.tab === 'zzzz-late') f.push('14c a late claim from an older gen leaves the owner in place (and it re-asserts in the key) ' + JSON.stringify(out.r14c));
+    if (!out.r14c.owner || out.r14c.away || !out.r14c.key || out.r14c.key.tab === 'zzzz-late') f.push('14c a late claim from an older gen leaves the owner in place (and it re-asserts in the key) ' + JSON.stringify(out.r14c) + ' LOGS ' + JSON.stringify({ w: await W.evaluate(() => TOPS_TABS.log().slice(-16)), l: await L.evaluate(() => TOPS_TABS.log().slice(-16)) }));
     // 14d the key isn't a lock: the old owner's heartbeat can land on top of a newer claim before it hears it (CI run 44992335158). The newer
     //     owner sees that lower heartbeat and says its claim again at once (not at its next heartbeat)
     const ow = W, lo = L; const gW = (await own(ow)).gen; const loTab = await lo.evaluate(() => TOPS_TABS.tab);
@@ -223,7 +225,7 @@ let url = ''; const f = []; const out = {};
   // 15 P1-2: (a) B reads the owner key (busy 0), then A starts a match and is blocked past B's 4 s wait: B re-reads before taking over and
   //    shows the busy card (or, if B's re-read came first, A refuses B's claim and B shows it then); A keeps its match. (b) an ordinary claim reaching an owner mid-match is refused (B: busy card); Play here anyway wins
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
       window.TOPS_TABS_QA = { delay: 9000 };   // A hears nothing in time
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'hello') { clearInterval(iv); TOPS_S3._playNow(); setTimeout(() => { const t = Date.now(); while (Date.now() - t < 6000); }, 0); } }, 30); });
     await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
@@ -248,7 +250,7 @@ let url = ''; const f = []; const out = {};
     await ctx.close(); }
   // 15d B's claim lands just before A's Play tap: A steps aside (the claim came first) and the match must not start behind the card
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
       window.TOPS_TABS_QA = { delay: 9000 };
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'claim' && m.tab !== TOPS_TABS.tab) { clearInterval(iv); setTimeout(() => { window.__played = 1; TOPS_S3._playNow(); }, 200); } }, 30); });
     await A.waitForTimeout(600); const B = await open(ctx); await B.waitForTimeout(7000);
@@ -261,7 +263,7 @@ let url = ''; const f = []; const out = {};
   // 15e CI's order: A is mid-match when a fresh, better claim reaches it by the owner key (the channel copy still on its way): A refuses it
   //    there too (one rule wherever a claim is found), so the claimant ends on the busy card and A keeps its match
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
     await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); await A.waitForTimeout(800);
     // written by A's own page, so no storage event or message reaches A: it finds the claim on its next heartbeat (the non-message path)
     await A.evaluate(g => { localStorage.setItem('tops_owner_' + TOPS_SAVE_NS.key, JSON.stringify({ tab: 'zzzz-b', gen: g + 1, at: Date.now() })); }, (await own(A)).gen);
@@ -276,45 +278,45 @@ let url = ''; const f = []; const out = {};
     const net = () => { NET.user = { id: 'u1' }; window.__gate = null; window.__rpcGate = null; NET.sb = { rpc: async (n, a) => { if (n !== TOPS_SAVE_NS.rpc) return { data: null };
         if (window.__rpcGate) await new Promise(r => { window.__rpcGo = r; }); return { data: await __put({ tab: TOPS_TABS.tab, sv: a.p_data.sv }) }; },
       from: () => ({ upsert: async () => ({}), select: () => ({ eq: () => ({ maybeSingle: async () => { if (window.__gate) await new Promise(r => { window.__go = r; }); return { data: null }; } }) }) }) }; };
-    const A = await open(ctx); await A.evaluate(n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); persist(); }, '(' + net + ')');
-    await A.evaluate(() => { career().bank = 11; persist(); cloudPush(true); }); await A.waitForTimeout(800);   // first push: synced is set
-    const p0 = puts.length; await A.evaluate(() => { window.__gate = 1; career().bank = 12; persist(); cloudPush(true); }); await A.waitForTimeout(500);   // suspended in the preflight read
+    const A = await open(ctx); await A.evaluate(async n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }, '(' + net + ')');
+    await A.evaluate(async () => { career().bank = 11; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); }); await A.waitForTimeout(800);   // first push: synced is set
+    const p0 = puts.length; await A.evaluate(async () => { window.__gate = 1; career().bank = 12; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); }); await A.waitForTimeout(500);   // suspended in the preflight read
     const B = await open(ctx); await B.evaluate(n => { eval(n)(); }, '(' + net + ')'); await B.waitForTimeout(1500);
-    await B.evaluate(() => { if (!TOPS_TABS.owner()) TOPS_TABS._claim(true); }); await B.waitForTimeout(1500); await B.evaluate(() => { career().bank = 77; persist(); }); await B.waitForTimeout(800);
+    await B.evaluate(async () => { if (!TOPS_TABS.owner()) TOPS_TABS._claim(true); }); await B.waitForTimeout(1500); await B.evaluate(async () => { career().bank = 77; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await B.waitForTimeout(800);
     await A.evaluate(() => { window.__go && window.__go(); }); await A.waitForTimeout(1500);
     out.r16a = { aPuts: puts.slice(p0).filter(x => x.from === puts[0].from).length, a: await own(A), b: await own(B) };
     if (out.r16a.aPuts !== 0 || out.r16a.a.owner) f.push('16a a push suspended in preflight sends nothing once another tab owns the save ' + JSON.stringify(out.r16a));
-    out.r16b = await B.evaluate(async () => { career().bank = 80; persist(); const sent = save.sv; window.__rpcGate = 1; cloudPush(true); await new Promise(r => setTimeout(r, 400)); career().bank = 81; persist(); const later = save.sv; window.__rpcGate = null; window.__rpcGo && window.__rpcGo();
+    out.r16b = await B.evaluate(async () => { career().bank = 80; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const sent = save.sv; window.__rpcGate = 1; cloudPush(true); await new Promise(r => setTimeout(r, 400)); career().bank = 81; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const later = save.sv; window.__rpcGate = null; window.__rpcGo && window.__rpcGo();
       await new Promise(r => setTimeout(r, 1500)); return { sent, later, synced: TOPS_TABS.synced() }; });
     const bPuts = puts.filter(x => x.from !== puts[0].from).map(x => x.sv); out.r16b.puts = bPuts;
     if (!bPuts.includes(out.r16b.sent) || !bPuts.includes(out.r16b.later) || out.r16b.synced !== out.r16b.later) f.push('16b synced follows the acknowledged snapshot, and the change made in flight is pushed next ' + JSON.stringify(out.r16b));
-    out.r16c = await B.evaluate(async () => { const before = TOPS_TABS.synced(); NET.sb.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'network' } }) }) }) }); career().bank = 90; persist(); cloudPush(true); await new Promise(r => setTimeout(r, 600)); return { before, after: TOPS_TABS.synced(), failed: TOPS_TABS.log().some(l => l[1] === 'push_preflight_failed') }; });
+    out.r16c = await B.evaluate(async () => { const before = TOPS_TABS.synced(); NET.sb.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'network' } }) }) }) }); career().bank = 90; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 600)); return { before, after: TOPS_TABS.synced(), failed: TOPS_TABS.log().some(l => l[1] === 'push_preflight_failed') }; });
     if (!out.r16c.failed || out.r16c.after !== out.r16c.before) f.push('16c a failed preflight read pushes nothing and retries ' + JSON.stringify(out.r16c));
     await ctx.close(); }
   // 17 back-forward cache: A is hidden (pagehide) and restored (pageshow persisted). If B took over meanwhile, A steps aside before writing;
   //    alone, A carries on as owner
-  if (RUN(17)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
+  if (RUN(17)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
     await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); }); await A.waitForTimeout(500);
     out.r17a = await own(A); if (!out.r17a.owner) f.push('17a restored alone: still the owner ' + JSON.stringify(out.r17a));
     await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.TOPS_TABS_QA = { delay: 60000 }; });   // frozen: hears nothing
-    const B = await open(ctx); await B.waitForFunction(() => TOPS_TABS.owner(), null, { timeout: 15000 }).catch(() => {}); await B.evaluate(() => { career().bank = 5150; persist(); }); await B.waitForTimeout(800);
-    await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); career().bank = 1; persist(); }); await A.waitForTimeout(800);
+    const B = await open(ctx); await B.waitForFunction(() => TOPS_TABS.owner(), null, { timeout: 15000 }).catch(() => {}); await B.evaluate(async () => { career().bank = 5150; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await B.waitForTimeout(800);
+    await A.evaluate(async () => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); career().bank = 1; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); }); await A.waitForTimeout(800);
     out.r17b = { a: await own(A), b: await own(B), bank: (await stored(B)).bank };
     if (out.r17b.a.owner || !out.r17b.a.card || !out.r17b.b.owner || out.r17b.bank !== 5150) f.push('17b restored after another tab took over: steps aside without writing ' + JSON.stringify(out.r17b) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log()), b: await B.evaluate(() => TOPS_TABS.log()) }));
     await ctx.close(); }
   // 18 a save the browser refuses (storage full): a banner says so, nothing is marked saved, and the next save after space frees up lands
-  if (RUN(18)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
-    out.r18 = await A.evaluate(async () => { window.TOPS_TABS_QA = { failWrite: 1 }; career().bank = 4444; try { persist(); } catch (e) {} const banner = !!document.getElementById('tabsSaveFail'); const kept = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
-      window.TOPS_TABS_QA = null; try { persist(); } catch (e) {} return { banner, kept, after: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, gone: !document.getElementById('tabsSaveFail'), logged: TOPS_TABS.log().some(l => l[1] === 'save_write_failed') }; });
+  if (RUN(18)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); });
+    out.r18 = await A.evaluate(async () => { window.TOPS_TABS_QA = { failWrite: 1 }; career().bank = 4444; try { persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } catch (e) {} const banner = !!document.getElementById('tabsSaveFail'); const kept = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
+      window.TOPS_TABS_QA = null; try { persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } catch (e) {} return { banner, kept, after: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, gone: !document.getElementById('tabsSaveFail'), logged: TOPS_TABS.log().some(l => l[1] === 'save_write_failed') }; });
     if (!out.r18.banner || out.r18.kept === 4444 || out.r18.after !== 4444 || !out.r18.gone || !out.r18.logged) f.push('18 a refused write shows the banner and retries on the next save ' + JSON.stringify(out.r18));
     await ctx.close(); }
   // 19 R6 (DQ A5/A3): the sign-in pull loads an OLDER cloud copy (asked before the boot's saves, answered after). This tab keeps its newer save
   //    (no card, nothing lost, counter never backwards); an older copy from another device is kept as a recovery copy; a newer one still loads
   if (RUN(19)) { const ctx = await b.newContext(); const A = await open(ctx);
-    out.r19 = await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const old = JSON.parse(JSON.stringify(save)); old.dev = 'other-dev';
-      for (let i = 1; i <= 5; i++) { career().bank = 1000 + i; persist(); } const sv = save.sv;
+    out.r19 = await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const old = JSON.parse(JSON.stringify(save)); old.dev = 'other-dev';
+      for (let i = 1; i <= 5; i++) { career().bank = 1000 + i; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } const sv = save.sv;
       netAdopt(old); const r = { sv, after: save.sv, bank: career().bank, away: TOPS_TABS.away(), card: !!document.getElementById('tabsCard'), rescue: TOPS_TABS.rescues().map(x => x.why) };
-      career().bank = 2000; persist(); r.saved = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
+      career().bank = 2000; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); r.saved = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
       const newer = JSON.parse(JSON.stringify(save)); newer.sv = save.sv + 10; newer.dev = 'other-dev'; newer.career.bank = 3000; netAdopt(newer); r.newer = career().bank; r.awayN = TOPS_TABS.away(); return r; });
     const r = out.r19;
     if (r.bank !== 1005 || r.after < r.sv || r.away || r.card || !r.rescue.includes('cloud-older') || r.saved !== 2000 || r.newer !== 3000 || r.awayN) f.push('19 an older cloud copy at sign-in never replaces this tab\'s newer save; a newer one still loads ' + JSON.stringify(r));
@@ -322,10 +324,10 @@ let url = ''; const f = []; const out = {};
   // 20 R8 fallback (no Web Locks, Safari before 15.4) is conservative: a second tab never takes over by itself. B opens next to A mid-match:
   //    B shows the read-only card (Play here anyway only) and writes nothing; A keeps its match. Play here anyway is the one way in
   if (RUN(20)) { const ctx = await b.newContext(); const nl = () => { window.TOPS_NOLOCKS = 1; }; const A = await open(ctx, nl);
-    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
     await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); const sv0 = (await stored(A)).sv;
     const B = await open(ctx, nl); await B.waitForTimeout(6000);
-    out.r20 = { a: await own(A), b: await own(B), sv0 }; out.r20.bWrite = await B.evaluate(() => { try { career().bank = 9; persist(); } catch (e) {} return JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank; });
+    out.r20 = { a: await own(A), b: await own(B), sv0 }; out.r20.bWrite = await B.evaluate(async () => { try { career().bank = 9; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); } catch (e) {} return JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank; });
     if (out.r20.b.card !== 'fb' || out.r20.b.owner || !out.r20.a.owner || !out.r20.a.live || out.r20.bWrite === 9) f.push('20 fallback: the second tab waits read-only, the match plays on ' + JSON.stringify(out.r20));
     await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
     for (let k = 0; k < 16; k++) { await B.waitForTimeout(500); if ((await own(A)).card) break; }

@@ -222,7 +222,11 @@ body:has(#c3rw:not([hidden])) #achToasts{display:none!important}
 // ===== v1.56 versioned cloud saves: an older device can never overwrite newer progress =====
 (function(){if(typeof cloudPush!=='function'||typeof NET==='undefined')return;
  let DEV='';try{DEV=localStorage.getItem('tops-dev')||'';if(!DEV){DEV='d'+Math.random().toString(36).slice(2,10);localStorage.setItem('tops-dev',DEV);}}catch(e){DEV='d'+Math.random().toString(36).slice(2,10);}
- const _ps=persist;persist=function(){try{save.sv=(save.sv||0)+1;save.dev=DEV;}catch(e){}return _ps.apply(this,arguments);};
+ /* CAR-TABS R9 (DQ R8 trace): the sign-in pull can save before the two-tab guard (tc/s3.js, the last script) is installed, which wrote without
+    the save lock. Until that guard takes over, a save is held in memory and marked; the guard writes it once this tab owns the save.
+    If the guard never installs, the page's load event releases the hold and saves. */
+ window.TOPS_TABS_HOLD={dirty:0};window.addEventListener('DOMContentLoaded',()=>{const h=window.TOPS_TABS_HOLD;if(!h)return;window.TOPS_TABS_HOLD=null;if(h.dirty)try{persist();}catch(e){}});
+ const _ps=persist;persist=function(){if(window.TOPS_TABS_HOLD){TOPS_TABS_HOLD.dirty=1;return;}try{save.sv=(save.sv||0)+1;save.dev=DEV;}catch(e){}return _ps.apply(this,arguments);};
  const busy=()=>typeof S!=='undefined'&&S&&!S.done;
  const adopt=(cloud,why)=>{if(!cloud)return;if(busy()){NET.pendCloud=cloud;return;}NET.pendCloud=null;const keep={authSeen:true,cloudUser:save.cloudUser};save=Object.assign({},cloud,keep);save.dev=DEV;try{window.TOPS_v11Migrate&&TOPS_v11Migrate();}catch(e){}/* #12: newer save from another device may be a v1.75 one */try{localStorage.setItem(TOPS_SAVE_NS.key,JSON.stringify(save));}catch(e){}
    try{trackEv('save_newer',{why,sv:cloud.sv||0});}catch(e){}try{flash('Synced','',why==='push'?'Newer progress from your other device':'Loaded your latest progress');}catch(e){}try{if(document.querySelector('#hub:not([hidden])'))showHub();else if(document.querySelector('#title:not([hidden])'))showTitle();}catch(e){}};
