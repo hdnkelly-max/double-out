@@ -221,7 +221,7 @@
   const LK=!window.TOPS_NOLOCKS&&!!(navigator.locks&&navigator.locks.request),LOCK='tops-save-'+KEY;   /* TOPS_NOLOCKS: QA, runs the fallback */
   let held=false,acquiring=false,releaseLock=null,lastClaim=null;
   function lockAcquire(steal,quick){if(!LK)return Promise.resolve(true);acquiring=true;
-    return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};if(steal)setTimeout(()=>{if(acquiring&&!done){stealWait=true;ev('lock_steal_wait');fin(true);}},quick?400:2500);   /* quick: the holder already failed to answer a hello */
+    return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};if(steal)setTimeout(()=>{if(acquiring&&!done){stealWait=true;ev('lock_steal_wait');fin(true);}},quick?1000:2500);   /* quick: the holder already failed to answer a hello */
       try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{acquiring=false;if(!lock){fin(false);return;}held=true;stealWait=false;ev('lock_held',{steal:!!steal});fin(true);
         return new Promise(r=>{releaseLock=()=>{held=false;releaseLock=null;r();};});})
       .catch(e=>{acquiring=false;const was=held||stealWait;held=false;stealWait=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();fin(false);});}catch(e){acquiring=false;fin(false);}});}
@@ -339,7 +339,7 @@
   const handshake=live=>{if(live)seenGen=Math.max(seenGen,+(live.gen||0));
     if(!LK&&(!live||live.tab==='reload'))takeOver('alone');   /* an owner key of any age gets a hello: a tab starved of timers (CPU, background) can miss heartbeats and still be mid-match */
     else if(live&&live.busy&&Date.now()-(live.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
-    else{const WAITN=!LK&&live&&live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* Web Locks: 1.5 s whatever the heartbeat; a match that starts meanwhile is caught by the re-read below and by the owner's match gate (our claim is in the key before the steal), so a frozen holder costs a new tab ~2 s, not 5 (DQ A4 at x4) */   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
+    else{const WAITN=live&&live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
       try{const m=JSON.parse(localStorage.getItem(MSG)||'null');if(m&&m.t==='ack'&&m.to===TAB){on(m);return;}}catch(e){}
       setTimeout(()=>{if(!pending)return;const o=readOwn();   /* re-read right before taking over: the owner may have started a match since */
         if(o&&o.tab!==TAB&&o.busy&&(o.frozen||Date.now()-(+o.at||0)<9000)){pending=false;away=true;card('busy');ev('tabs_busy',{via:'timeout'});return;}
@@ -404,11 +404,6 @@
         if(cloud.dev&&dv&&cloud.dev!==dv)rescueObj('cloud-older',cloud);ev('signin_keep_local',{cloud:csv,local,dev:cloud.dev===dv?'same':'other'});
         try{if(svIn()>mine())reread();}catch(e){}try{cloudPush(true);}catch(e){}return;}}catch(e){}
     return _na.apply(this,arguments);};}
-  /* never stuck waiting: a tab still pending after 8 s (an ack or claim that never came, a handshake cut short) looks again: the lock if
-     it's free, else a fresh hello (DQ A1 crossed at x4: one tab pending, the other away, nobody owning) */
-  let pendTick=0;setInterval(()=>{if(!pending||away||acquiring){pendTick=0;return;}if(++pendTick<8)return;pendTick=0;ev('tabs_pending_retry');
-    if(LK)lockAcquire(false).then(ok=>{if(!pending)return;if(ok){const o=readOwn();if(o&&o.tab!==TAB&&o.busy&&(o.frozen||Date.now()-(+o.at||0)<9000)){releaseIt();pending=false;away=true;card('busy');return;}pending=false;takeOver2('alone');}else{clearTimeout(waitT);handshake(readOwn());}});
-    else{clearTimeout(waitT);handshake(readOwn());}},1000);
   lastBody=body();try{lastWrote=localStorage.getItem(KEY);}catch(e){}start();
   window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,owner:()=>owns(),gen:()=>myGen,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,
     _claim:(any)=>{away=false;takeOver(any?'anyway':'qa');},   /* QA: a claim from this tab now */rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
