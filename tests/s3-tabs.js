@@ -16,7 +16,7 @@
 //   12 recovery copies when another build's tab writes the save
 //   19 R6: an older cloud copy at sign-in never replaces this tab's newer save (DQ A5/A3)
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
-//   TABS_NOLOCKS=1 runs every case on the fallback (no Web Locks)
+//   20 R8: the no-Web-Locks fallback never takes over by itself (read-only card, Play here anyway only)
 //   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
 //   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
 // usage: node tests/s3-tabs.js [dir]   (cases 1-6; CASES=all for every case, CASES=7,10 for just those; pass an absolute dir)
@@ -36,7 +36,6 @@ let url = ''; const f = []; const out = {};
   const b = await chromium.launch({ args: ['--use-gl=swiftshader'] });
   const open = async (ctx, init) => { const p = await ctx.newPage({ viewport: { width: 390, height: 844 } }); const pe = []; p.on('pageerror', e => pe.push(e.message)); p._pe = pe;
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} }); if (init) await p.addInitScript(init);
-    if (process.env.TABS_NOLOCKS) await p.addInitScript(() => { window.TOPS_NOLOCKS = 1; });   /* the fallback (no Web Locks) */
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto(url, { timeout: 120000 }); await p.waitForFunction(() => window.TOPS_S3 && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(1500); return p; };
   const card = p => p.evaluate(() => { const d = document.getElementById('tabsCard'); return d && !d.hidden && d.getClientRects().length ? d.innerText.replace(/\s+/g, ' ') : null; }).catch(() => null);
   const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key) || '{}'); const c = s.career, k = c && c.circuit; return { sv: s.sv || 0, has: !!c, week: k ? k.week : null, bank: c ? c.bank : null, mark: s.__mark || null }; });
@@ -313,6 +312,19 @@ let url = ''; const f = []; const out = {};
       const newer = JSON.parse(JSON.stringify(save)); newer.sv = save.sv + 10; newer.dev = 'other-dev'; newer.career.bank = 3000; netAdopt(newer); r.newer = career().bank; r.awayN = TOPS_TABS.away(); return r; });
     const r = out.r19;
     if (r.bank !== 1005 || r.after < r.sv || r.away || r.card || !r.rescue.includes('cloud-older') || r.saved !== 2000 || r.newer !== 3000 || r.awayN) f.push('19 an older cloud copy at sign-in never replaces this tab\'s newer save; a newer one still loads ' + JSON.stringify(r));
+    await ctx.close(); }
+  // 20 R8 fallback (no Web Locks, Safari before 15.4) is conservative: a second tab never takes over by itself. B opens next to A mid-match:
+  //    B shows the read-only card (Play here anyway only) and writes nothing; A keeps its match. Play here anyway is the one way in
+  if (RUN(20)) { const ctx = await b.newContext(); const nl = () => { window.TOPS_NOLOCKS = 1; }; const A = await open(ctx, nl);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id); TOPS_S3._playNow(); });
+    await A.waitForFunction(() => typeof S !== 'undefined' && S && !S.done, null, { timeout: 60000 }); const sv0 = (await stored(A)).sv;
+    const B = await open(ctx, nl); await B.waitForTimeout(6000);
+    out.r20 = { a: await own(A), b: await own(B), sv0 }; out.r20.bWrite = await B.evaluate(() => { try { career().bank = 9; persist(); } catch (e) {} return JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank; });
+    if (out.r20.b.card !== 'fb' || out.r20.b.owner || !out.r20.a.owner || !out.r20.a.live || out.r20.bWrite === 9) f.push('20 fallback: the second tab waits read-only, the match plays on ' + JSON.stringify(out.r20));
+    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
+    for (let k = 0; k < 16; k++) { await B.waitForTimeout(500); if ((await own(A)).card) break; }
+    out.r20b = { a: await own(A), b: await own(B) };
+    if (!out.r20b.b.owner || out.r20b.a.owner || !out.r20b.a.card) f.push('20 fallback: Play here anyway takes over ' + JSON.stringify(out.r20b));
     await ctx.close(); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
