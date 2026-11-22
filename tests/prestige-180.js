@@ -2,8 +2,10 @@
 // doesn't load from file://), a Pub night; on your visit three darts go through the game's own throw path (V.fly -> land, the same calls a
 // release makes, aimed so they overlap in treble 20), the visit scores 180 and landCore fires the close-up itself. Shot as soon as it shows,
 // before the AI throws. ?v3=1 row + v2 row, 390 at 2x. Writes wip/car-prestige/c180-<model>-<edition>.png and c180-sheet.jpg (python).
-// usage: node tests/prestige-180.js <dir>   (capture tool: SKIP without arguments)
-if (process.argv.length < 3) { console.log('prestige-180: SKIP (capture tool; pass the repo dir)'); process.exit(0); }
+// usage: CAPTURE=1 node tests/prestige-180.js <dir>   (capture tool: SKIP without arguments)
+/* capture tool, never a CI test: CI passes the build dir to any test whose usage names one, which ran the whole capture set (24 page loads,
+   past CI's 600 s limit: FAIL 124). It runs only with CAPTURE=1; otherwise it skips at once. */
+if (!process.env.CAPTURE || process.argv.length < 3) { console.log('prestige-180: SKIP (capture tool; run with CAPTURE=1 and the repo dir)'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const http = require('http'); const dir = path.resolve(process.argv[2]);
 const out = path.join(dir, 'wip/car-prestige'); fs.mkdirSync(out, { recursive: true });
 const EDS = (process.env.EDS || 'default,pub,dpnz,tt,card,worlds').split(','); const MODELS = (process.env.MODELS || 'v3,v2').split(',');

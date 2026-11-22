@@ -2,8 +2,10 @@
 // match-winning double and any nine-darter (behind TOPS_GEARCAM). Per edition (and the default darts), on the current (v2) and the new (v3)
 // figures, at 390x844 and 360x800 (2x): three of your darts flown into treble 20 (V.fly, no scoring), then TOPS_GEARCAM_FIRE('180') and the
 // board pane shot mid-way through the close-up. Writes wip/car-prestige/gc-<model>-<w>-<edition>.png and contact sheets (via python, below).
-// usage: node tests/prestige-gearcam.js <dir>   (a capture tool: SKIP without arguments)
-if (process.argv.length < 3) { console.log('prestige-gearcam: SKIP (capture tool; pass the repo dir)'); process.exit(0); }
+// usage: CAPTURE=1 node tests/prestige-gearcam.js <dir>   (a capture tool: SKIP without arguments)
+/* capture tool, never a CI test: CI passes the build dir to any test whose usage names one, which ran the whole capture set (24 page loads,
+   past CI's 600 s limit: FAIL 124). It runs only with CAPTURE=1; otherwise it skips at once. */
+if (!process.env.CAPTURE || process.argv.length < 3) { console.log('prestige-gearcam: SKIP (capture tool; run with CAPTURE=1 and the repo dir)'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const dir = path.resolve(process.argv[2]);
 const out = path.join(dir, 'wip/car-prestige'); fs.mkdirSync(out, { recursive: true });
 const EDS = process.env.EDS ? process.env.EDS.split(',') : ['default', 'pub', 'dpnz', 'tt', 'card', 'worlds'];

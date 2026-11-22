@@ -1,8 +1,10 @@
 // CAR-PRESTIGE capture (Producer 22:43): do the title-edition darts read at the match camera? For each edition (and the default darts), a
 // Pub night on a 390x844 and 360x800 phone at 2x: three darts thrown at treble 20, then the board as the match shows it. Current figures
 // (v2) and the new Vinyl ones (?v3=1). Writes wip/car-prestige/<model>-<w>-<edition>.png and a contact sheet per model and width.
-// usage: node tests/prestige-capture.js [dir]   (not a pass/fail test: it skips when run without arguments, like the sims)
-if (process.argv.length < 3) { console.log('prestige-capture: SKIP (capture tool; pass the repo dir)'); process.exit(0); }
+// usage: CAPTURE=1 node tests/prestige-capture.js [dir]   (not a pass/fail test: it skips when run without arguments, like the sims)
+/* capture tool, never a CI test: CI passes the build dir to any test whose usage names one, which ran the whole capture set (24 page loads,
+   past CI's 600 s limit: FAIL 124). It runs only with CAPTURE=1; otherwise it skips at once. */
+if (!process.env.CAPTURE || process.argv.length < 3) { console.log('prestige-capture: SKIP (capture tool; run with CAPTURE=1 and the repo dir)'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const dir = path.resolve(process.argv[2]);
 const out = path.join(dir, 'wip/car-prestige'); fs.mkdirSync(out, { recursive: true });
 const EDS = (process.env.EDS ? process.env.EDS.split(',').map(x => x === 'default' ? null : x) : [null, 'pub', 'dpnz', 'tt', 'card', 'worlds']);

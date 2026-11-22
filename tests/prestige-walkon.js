@@ -1,7 +1,9 @@
 // CAR-PRESTIGE walk-on capture (Producer 22 Nov 07:03 / 12:12): your darts in hand on the walk-on, wearing the edition, with the two spares
 // matching (doc 76 spareDart). A real Pub night started with Play now; frames through the walk-on. Over http. Capture tool: SKIP without args.
-// usage: node tests/prestige-walkon.js <absolute dir>   env EDS=worlds,dpnz MODELS=v3,v2 TIMES=600,1400,2200,3000
-if (process.argv.length < 3) { console.log('prestige-walkon: SKIP (capture tool; pass the repo dir)'); process.exit(0); }
+// usage: CAPTURE=1 node tests/prestige-walkon.js <absolute dir>   env EDS=worlds,dpnz MODELS=v3,v2 TIMES=600,1400,2200,3000
+/* capture tool, never a CI test: CI passes the build dir to any test whose usage names one, which ran the whole capture set (24 page loads,
+   past CI's 600 s limit: FAIL 124). It runs only with CAPTURE=1; otherwise it skips at once. */
+if (!process.env.CAPTURE || process.argv.length < 3) { console.log('prestige-walkon: SKIP (capture tool; run with CAPTURE=1 and the repo dir)'); process.exit(0); }
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs'); const http = require('http'); const dir = path.resolve(process.argv[2]);
 const out = path.join(dir, 'wip/car-prestige'); fs.mkdirSync(out, { recursive: true });
 const EDS = (process.env.EDS || 'default,worlds,dpnz').split(','), MODELS = (process.env.MODELS || 'v3,v2').split(','), TIMES = (process.env.TIMES || '600,1400,2200,3000').split(',').map(Number);
