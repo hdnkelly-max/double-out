@@ -475,7 +475,7 @@
     if (cx && lvc && scr) { const r = lvc.getBoundingClientRect(), sr = scr.getBoundingClientRect(); cx.classList.toggle('on', r.bottom <= sr.top || r.top >= sr.bottom);   /* right away, then on scroll */
       if ('IntersectionObserver' in window) { wire.cxIO = new IntersectionObserver(es => es.forEach(en => { const x = document.querySelector('#rbApp .s3-ctx'); if (x) x.classList.toggle('on', !en.isIntersecting); }), { root: scr, threshold: 0 }); wire.cxIO.observe(lvc); } }
     if (app.querySelector('.s3-tr b')) { fitNames(app); if (!wire.fitRs) { wire.fitRs = 1; let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { const a = $id('rbApp'); if (a) fitNames(a); }, 120); }); } }
-    app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); });
+    app.querySelectorAll('[data-s3sub]').forEach(b => b.onclick = () => { sub = b.dataset.s3sub; render(); }); cabWire();
     app.querySelectorAll('[data-s3book]').forEach(b => b.onclick = () => { if (b.dataset.busy) return; b.dataset.busy = 1; let r = null; try { r = D.book(b.dataset.s3book); } catch (e) { console.warn('s3 book', e); }
       if (r && r.ok === false) toast(`<b>Not booked</b><span>${esc(r.why || '')}</span>`); else { const c = D.st(); if (c) seenSet(snap(c)); } render(); });
     const go = $id('s3Go'); if (go) go.onclick = () => { if (go.dataset.busy) return; go.dataset.busy = 1; setTimeout(() => { delete go.dataset.busy; }, 800); try { D.play(); } catch (e) { console.warn('s3 play', e); } };
@@ -500,6 +500,7 @@
   /* ---------- EXP-IDLE 1 · first night (behind s3x=1): before the first Circuit match, one screen that says what tonight is, who's first up,
      what winning pays and how you move up. Shown once per device; Walk on goes on into the match as before. ---------- */
   const X = (() => { try { if (q.has('s3x')) lsSet('tops_s3x', q.get('s3x') === '1' ? '1' : null); } catch (e) {} return lsGet('tops_s3x') === '1'; })();
+  try { if (X) document.documentElement.classList.add('s3x'); } catch (e) {}   /* CSS for s3x-only layout (the tab bar) */
   const FNK = 'tops_s3_firstnight';
   const CARD = ['anika', 'bigmal', 'deano', 'jonno', 'kev', 'mo', 'pete', 'phil', 'shazza', 'tama'];
   const oppArt = n => { const k = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); const c = CARD.find(x => k.startsWith(x)); return c ? swap('assets/cards/art/' + c + '.webp') : ''; };
@@ -624,10 +625,9 @@
       let rows = ''; for (let i = d.level; i >= 0; i--) rows += lvRow(i);
       const nx = C.LEVELS[d.level + 1], next = nx ? `<section class="s3-trlv s3-trlock"><div class="s3-row"><span class="s3-trn">${esc(nx.n)}</span><span class="rb-sub">Next level · ${nx.events.length} event${nx.events.length > 1 ? 's' : ''} to win</span></div></section>` : '';
       /* Seasons 1 & 2: Career's live tops_history view, read here (never a copy), so the shelf and the Circuit records board show the same numbers */
-      const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) el.outerHTML = oldSeasons(); });
+      const H = window.TOPS_HISTORY; if (H && H.rows) shelfHiAt = fetchOnce(() => H.rows(), shelfHiAt, r => { shelfHi = r; }, () => { const el = $id('s3TrHi'); if (el) { el.outerHTML = oldSeasons(); cabWire(); } });
       const back = chipFrom ? `<button type="button" class="s3-trback" data-s3="trback">‹ Back to Circuit</button>` : '';
-      const cab = window.TC_API && TC_API.cabinet ? `<button class="rb-ghost" type="button" id="rbCab" style="align-self:center">Seasons 1 & 2 trophy cabinet</button>` : '';   /* the old 3D cabinet stays reachable under s3x */
-      return back + hero + gap + bl + empty + rows + next + oldSeasons() + cab;
+      return back + hero + gap + bl + empty + rows + next + oldSeasons();
     } catch (x) { console.warn('s3 shelf', x); return null; }
   }
   /* the Season 3 record line under your best leg: the board's top row (Career's tops_bestleg_s3), a separate value from yours */
@@ -636,21 +636,78 @@
     const t = rec.you ? (leg === rec.darts ? 'You hold the Season 3 record' : `Season 3 record: ${rec.darts} darts · you`) : `Season 3 record: ${rec.darts} darts · ${esc(rec.name)}`;
     return `<small id="s3TrBl">${t}</small>`;
   }
+  /* Seasons 1 & 2 card: your old records (Career's tops_history) and the link to the old 3D trophy cabinet, which is how the cabinet stays
+     reachable under s3x (Producer 22 Nov 06:51: link it from this card, don't retire it). The link shows whenever the cabinet exists, records
+     or not, so a player whose history hasn't loaded (or is offline) still gets there. */
   function oldSeasons() {
-    const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null; if (!me || (!me.s1 && !me.s2)) return `<div id="s3TrHi"></div>`;
+    const me = Array.isArray(shelfHi) ? shelfHi.find(r => r.you) : null, rec = !!(me && (me.s1 || me.s2));
+    const cabOK = !!(window.TC_API && TC_API.cabinet); if (!rec && !cabOK) return `<div id="s3TrHi"></div>`;
     const one = (s, lab) => s ? `<li><span class="s3-lab">${lab}</span><span>${s.furthest ? esc(s.furthest.n) : '–'}</span><span>${s.bestAvg != null ? (+s.bestAvg).toFixed(1) + ' avg' : '–'}</span><span>${s.bestLeg != null ? s.bestLeg + ' darts' : '–'}</span></li>` : '';
-    return `<div class="rb-card" id="s3TrHi"><span class="rb-t2">Seasons 1 & 2 · yours</span><ol class="s3-tbl s3-trold">${one(me.s1, 'Season 1')}${one(me.s2, 'Season 2')}</ol><span class="rb-sub">Furthest level, best match average, fewest darts in a won leg. Kept from before the reset.</span></div>`;
+    let nT = 0; try { const t = TC_API.st(); nT = t && Array.isArray(t.troph) ? t.troph.length : 0; } catch (e) {}
+    const cab = cabOK ? `<button type="button" class="s3-trcab" id="rbCab" data-s3cab="1">${CUP(nT ? 'W' : 'F', 's3cupcab')}<span><b>Trophy cabinet</b><small>${nT ? `${nT} troph${nT > 1 ? 'ies' : 'y'} on the shelves` : 'The 3D cabinet from Seasons 1 & 2'}</small></span><i aria-hidden="true">›</i></button>` : '';
+    return `<div class="rb-card s3-trhi" id="s3TrHi"><span class="rb-t2">Seasons 1 & 2 · yours</span>${rec ? `<ol class="s3-tbl s3-trold">${one(me.s1, 'Season 1')}${one(me.s2, 'Season 2')}</ol><span class="rb-sub">Furthest level, best match average, fewest darts in a won leg. Kept from before the reset.</span>` : ''}${cab}</div>`;
   }
+  /* the cabinet link is wired here (not only by the shell's render) because the card is redrawn in place when the history arrives */
+  function cabWire() { document.querySelectorAll('#rbApp [data-s3cab]').forEach(b => b.onclick = () => { try { TC_API.cabinet(); } catch (e) { console.warn('s3 cabinet', e); } }); }
   /* where and when the best leg came: stamped when career().best.leg drops during a Circuit match (Career's recordBests sets the number) */
   if (typeof recordBests === 'function') { const _rb = recordBests; recordBests = function () { const c = typeof career === 'function' ? career() : null, was = c && c.best ? c.best.leg : 99; const r = _rb.apply(this, arguments);
     try { const b = c && c.best; if (b && b.leg < was && typeof S !== 'undefined' && S && S.s3 && CI()) { const e = CI().eventOf(S.s3.id), k = D.st(); b.legAt = { d: b.leg, ev: e ? e.n : '', week: k ? k.week : null }; } } catch (e) {} return r; }; }
+
+  /* ---------- v3 switch-on (Director doc 69): a one-time 'New look' card over the title. Once per ACCOUNT: the flag is in the save
+     (save.v3NewLook), so it syncs with the cloud save. Existing players only: a career started with v3 on sets the flag at once. It shows
+     the player's own v3 figure (V.heroShot, the hub's hero render) with their name; their base's v3 card stands in until that render is
+     ready. Copy approved by Hayden as written (22 Nov 12:20): locked, s3-v3newlook checks it word for word. Behind TOPS_V3FLAG. ---------- */
+  const V3NL = Object.freeze({ title: 'New look, same you', body: 'We’ve rebuilt every player and opponent from the ground up: new faces, new hair, more personality.', keep: 'Your career, cards and stats haven’t changed.', go: 'Let’s go', tweak: 'Tweak my look' });
+  function v3NewLook(n) {
+    try {
+      if (!window.TOPS_V3FLAG || !window.TOPS_S3FLAG || typeof save === 'undefined' || save.v3NewLook || $id('s3V3New')) return;
+      const c = typeof career === 'function' ? career() : null; if (!c || c.run) return;   // existing Season 3 players; the Run and a fresh account skip it
+      /* over the title only: it fades in, so wait for it (every 400 ms, about 5 s) rather than giving up on the first look */
+      const t = $id('title'), up = t && !t.hidden && getComputedStyle(t).display !== 'none' && getComputedStyle(t).visibility !== 'hidden' && t.getClientRects().length;
+      if (!up) { if ((n || 0) < 12) setTimeout(() => v3NewLook((n || 0) + 1), 400); return; }
+      const v = save.vlook || {}, base = v.base || 'dazza', nm = (save.name || '').trim() || 'You';
+      const card = swap('assets/creator/head_v3_' + base + '.png'), fig = /^s3\//.test(card) ? card : '';
+      const d = document.createElement('div'); d.id = 's3V3New'; d.className = 's3-v3nl'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 's3V3NewT');
+      d.innerHTML = `<div class="s3-v3nlbox"><div class="s3-v3nlfig">${fig ? `<img id="s3V3NewFig" src="${fig}" alt="">` : ''}</div>
+        <span class="s3-v3nlname">${esc(nm)}</span><h2 id="s3V3NewT">${esc(V3NL.title)}</h2><p>${esc(V3NL.body)}</p><p class="s3-v3nlkeep">${esc(V3NL.keep)}</p>
+        <button type="button" class="s3-v3nlgo" id="s3V3NewGo">${esc(V3NL.go)}</button><button type="button" class="s3-v3nltw" id="s3V3NewTw">${esc(V3NL.tweak)}</button></div>`;
+      document.body.appendChild(d);
+      let acted = false; const done = () => { save.v3NewLook = Date.now(); try { persist(); } catch (e) {} d.remove(); };
+      const act = k => { if (acted) return; acted = true; done(); v3log('s3_v3newlook', { act: k });
+        /* the creator builds a 3D preview: open it after the touch sequence has finished, not inside the finger's pointerup */
+        if (k === 'tweak') setTimeout(() => { try { showCreator(true); } catch (e) { console.warn('v3 new look: creator', e); } }, 0); };
+      /* DQ go/no-go: a first tap on Let's go while the card was coming in sometimes didn't count. The buttons now act on the finger lifting
+         (pointerup on the same button it went down on), not only on the browser's click, which a phone can drop when the page changes under
+         the finger (the figure swapping in); click stays for keyboard and anything without pointer events. One action per card. */
+      [['s3V3NewGo', 'go'], ['s3V3NewTw', 'tweak']].forEach(([id, k]) => { const b = $id(id); let down = false;
+        b.addEventListener('pointerdown', () => { down = true; });
+        b.addEventListener('pointerup', e => { if (down && (e.pointerType === 'touch' || e.pointerType === 'pen' || e.button === 0)) { e.preventDefault(); act(k); } down = false; });
+        b.addEventListener('pointercancel', () => { down = false; });
+        b.addEventListener('click', () => act(k)); });
+      setTimeout(() => { try { $id('s3V3NewGo').focus(); } catch (e) {} }, 50);
+      /* the player's own v3 figure: the hero render needs the rig, so try a few times; the base card stays if it never comes */
+      let n = 0; const hero = () => { if (!$id('s3V3New')) return; let u = ''; try { if (typeof V !== 'undefined' && V.heroShot) u = V.heroShot(save.look, nm, c.tier || 0, ''); } catch (e) {}
+        /* the render goes into the same <img> once it has decoded (no new element, no size change under a finger mid-tap) */
+        if (u) { const im = new Image(); im.onload = () => { if (!$id('s3V3New')) return; let f = $id('s3V3NewFig'); if (!f) { const w = d.querySelector('.s3-v3nlfig'); if (!w) return; w.innerHTML = '<img id="s3V3NewFig" alt="">'; f = $id('s3V3NewFig'); } f.src = u; f.classList.add('s3-v3nlhero'); }; im.src = u; } else if (++n < 12) setTimeout(hero, 500); else if (n < 72) setTimeout(hero, 2000); };
+      /* Q&D 22 Nov: the render only comes once the S3 rig file is in (V.heroShot gives '' for the stand-in): the game's avatar refresh
+         ('tops-avatars', sent when the rig lands) asks again at once; a slow poll backs it up while the card is up (about 2.5 min) */
+      const onAv = () => { if (!$id('s3V3New')) { document.removeEventListener('tops-avatars', onAv); return; } const f = $id('s3V3NewFig'); if (!(f && f.classList.contains('s3-v3nlhero'))) hero(); };
+      document.addEventListener('tops-avatars', onAv);
+      hero();
+    } catch (e) { console.warn('v3 new look', e); }
+  }
+  const v3log = (k, o) => { try { if (window.TOPS_LOG) TOPS_LOG.log(k, o); } catch (e) {} };   /* the same log Career's s3_* events use */
+  if (typeof showTitle === 'function') { const _stn = showTitle; showTitle = function () { const r = _stn.apply(this, arguments); setTimeout(() => v3NewLook(0), 700); return r; }; }
+  setTimeout(() => v3NewLook(0), 2500);   /* the title may already be up before this hook is in */
+  /* a career started with v3 on never needs the card */
+  if (typeof newCareer === 'function') { const _ncn = newCareer; newCareer = function () { const r = _ncn.apply(this, arguments); try { if (window.TOPS_V3FLAG) { save.v3NewLook = save.v3NewLook || Date.now(); persist(); } } catch (e) {} return r; }; }
 
   window.TOPS_S3UI = {
     TABS: [['circuit', 'Circuit'], ['money', 'Money'], ['shop', 'Shop'], ['locker', 'Locker'], ['practice', 'Practice']],
     owns: t => t === 'circuit' || t === 'money',
     view: t => t === 'money' ? moneyTab() : circuit(),
     wire, attach: (fn, go) => { shell = fn; nav = go || null; },
-    resultBlock, shelf, shelfData, navClear: () => { chipFrom = null; },
+    resultBlock, shelf, shelfData, v3NewLook, V3NL, navClear: () => { chipFrom = null; },
     refreshRecords: () => { blAt = 0; hiAt = 0; blRows = null; hiRows = null; render(); },
     _snap: snap, _seen: seenGet
   };

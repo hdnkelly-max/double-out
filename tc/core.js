@@ -935,7 +935,7 @@
   /* #17: every exit that isn't a completed walk (quit, back to the hub or title, the next beginMatch) ends the walk-on the same way:
      figures it hid come back, the player figure goes back to how the walk found it, its clip stops, lights/overlay/body class clear. */
   function walkAbort() {
-    const w = WK; if (!w) return; WK = null;
+    const w = WK; if (!w) return; walkInsertEnd(w); WK = null;
     try { if (w.hid) w.hid.forEach(o => { o.visible = true; }); } catch (e) {}
     try { if (w.act) w.act.stop(); } catch (e) {}
     try { if (w.me && w.vis0 !== undefined) w.me.visible = !!w.vis0; } catch (e) {}
@@ -962,7 +962,7 @@
     } catch (e) { console.warn('tc clip', e); return null; }
   }
   // re-apply the walk pose after the game's own posing, right before the frame renders
-  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); } if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
+  window.TOPS_WALKPOST = function () { if (WK && WK.act && WK.me && WK.me.userData.mixer) { WK.me.userData.mixer.update(0); WK.me.position.copy(WK.pos || WK.me.position); if (WK.raiseK != null && WK.T) try { const r = walkRaise(WK.T, WK.me, WK.raiseK, WK.ins ? WK.insDirW : null); if (window.TOPS_WALK76DBG) window.__wp76 = { r, ins: !!WK.ins, cd: !!WK.insDirW }; } catch (e) { window.__wp76err = e.message; } } if (WK && WK.ins && WK.insFov) { const c = typeof V !== 'undefined' && V._qa && V._qa.camera; if (c && Math.abs(c.fov - WK.insFov) > .01) { c.fov = WK.insFov; c.updateProjectionMatrix(); } } /* game4 sets camera.fov before TOPS_WALKFX runs, so a walk-on fov never reaches the camera: the insert sets its own here, and the game puts its fov back next frame */ if (WK && WK.fp) WK.fp.visible = false; if (WK && WK.hid) WK.hid.forEach(o => { o.visible = false; }); };
   window.TOPS_WALKFX = function (_now, v) {
     const now = performance.now();
     if (!WK || !v.me) return null;
@@ -1025,7 +1025,7 @@
       if (WK.hid) WK.hid.forEach(o => { o.visible = true; });
       walkLights(null);
       me.visible = !!WK.vis0;   // #17/#18: hand the figure back as the walk-on found it. Left visible, a whole extra skinned figure rendered every frame for the rest of the match and stood where the opponent throws.
-      WK = null; walkEnd(); return null;
+      walkInsertEnd(WK); WK = null; walkEnd(); return null;
     }
     // timeline (ChatGPT review 3): 0–1.4 s entrance, 1.4–2.4 s tracking close-up, cut to the oche, lightning ≈2.9 s, hero hold
     const e = Math.min(1, k / WA), ease = 1 - Math.pow(1 - e, 2.2);
@@ -1055,6 +1055,14 @@
       { const fw = new T3().subVectors(tgt, cam).normalize(), rt = new T3().crossVectors(fw, new T3(0, 1, 0)).normalize(), uv = new T3().crossVectors(rt, fw), d = new T3(0, 1.73, 0).sub(cam), z = d.dot(fw), th = Math.tan(fov * Math.PI / 360), as = innerWidth / innerHeight;
         if (z > .1) WK.anchor = { x: .5 + d.dot(rt) / z / (th * as) / 2, y: .5 - d.dot(uv) / z / th / 2 }; }
     }
+    // doc 76 (Director, for Experience): v3 walk-on cameras. TOPS_WALK76=1 (or ?walk76=1) pulls the tracking shot back: v3 heads are about
+    // twice the old rig's, so today's tracking camera sits inside the head. =2 also cuts to a 0.55 s darts-in-hand insert at k .30-.42 (taken
+    // from the start of the tracking beat, so the walk-on stays 4.8 s). v3 only; off or v2 = today's walk-on exactly.
+    { const W76 = walk76();
+      if (W76 >= 1 && k >= .29 && k < WA) { cam = tgt.clone().add(cam.clone().sub(tgt).multiplyScalar(2.3)); cam.y = 1.25; tgt = tgt.clone(); tgt.y = 1.15; fov = 38; }
+      const ins = W76 >= 2 && k >= .3 && k < .42 ? walkInsert(v.T, me, cam, (k - .3) / .12, k) : null;
+      if (ins) { cam = ins.cam; tgt = ins.tgt; fov = ins.fov; } else { walkInsertEnd(WK); if (W76 >= 2) walkRaise(v.T, me, k, null); }
+      WK.raiseK = W76 >= 2 ? k : null; WK.T = v.T; }
     // lightning shake: 2–3 px for a quarter second
     if (WK.flash && now - WK.flash < 260) { const a = (1 - (now - WK.flash) / 260) * .012; cam.x += (Math.random() - .5) * a; cam.y += (Math.random() - .5) * a; }
     const shot = k < .29 ? 0 : k < WA ? 1 : 2; if (WK.shot !== shot) { WK.shot = shot; if (WK.ov) WK.ov.dataset.shot = shot; }
@@ -1062,6 +1070,90 @@
     v.pos.lerp(cam, blend); v.look.lerp(tgt, blend);
     return { fov: fov + (1 - blend) * 4 };
   };
+  // doc 76: which walk-on cameras (0 today, 1 pull-back, 2 pull-back + darts-in-hand insert); v3 only.
+  // Experience's default under v3 is 1 (phone-size run, 22 Nov: today's tracking shot sits inside the v3 head on every base; the pull-back
+  // reads on all of them). The insert (=2) stays opt-in: 76c's framing read as a mistake at 360 (Producer 11:15); Director's 76d rework
+  // (darts-up raise, flights face-on, a third of the frame) is in below, pending review before it's anyone's default.
+  // TOPS_WALK76=0 or ?walk76=0 brings back today's camera.
+  function walk76() { if (window.TOPS_V3FLAG !== true) return 0; let w = window.TOPS_WALK76;
+    if (w == null) { try { const q = new URLSearchParams(location.search).get('walk76'); if (q != null) w = q; } catch (e) {} }
+    if (w == null) w = 1; w = +w || 0; return w >= 2 ? 2 : w >= 1 ? 1 : 0; }
+  // doc 76d: the darts-in-hand insert. A brief "darts up" raise of the left hand (k .27 to .48: up, held through the insert, down), and an
+  // insert camera outside and below the raised fist, looking up past it, so the backdrop is the room and the ceiling, not the shirt. The hand
+  // turns so one flight faces the camera square on, and the distance is solved so the flights fill FILL of the frame width (the narrow side).
+  // TOPS_WALK76S: the dart scale cheat during the insert (1 = none). TOPS_WALK76F: fill (.33). TOPS_WALK76V: fov (30).
+  const RAISE = { arm: [.95, -.15, .25], fore: [.8, .1, .6] };   // upper arm and forearm in the figure's frame [out, up, forward]: elbow out, forearm level and forward,
+  // so the darts can stand up out of the fist (v2Grip eases the wrist back toward straight if the darts come within 65 degrees of the forearm)
+  function walkRaiseW(k) { const sm = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); return k < .42 ? sm((k - .27) / .03) : 1 - sm((k - .42) / .06); }
+  function walkFrame(T, me, B) {   // the figure's own frame: S = its left (out, for the left hand), U = up, F = forward
+    const a = new T.Vector3(), c = new T.Vector3(); B.LeftArm.getWorldPosition(a); (B.Spine2 || B.Spine || me).getWorldPosition(c);
+    const S = a.sub(c); S.y = 0; if (S.lengthSq() < 1e-8) S.set(1, 0, 0); S.normalize(); const U = new T.Vector3(0, 1, 0); return { S, U, F: new T.Vector3().crossVectors(S, U) };
+  }
+  function aimBone(T, bone, child, dir, w) {   // turn the bone (shortest arc, in world) so it points along dir; w blends from the clip pose
+    bone.updateMatrixWorld(true); const bp = bone.getWorldPosition(new T.Vector3()), cp = child.getWorldPosition(new T.Vector3()); const cur = cp.sub(bp).normalize();
+    const dq = new T.Quaternion().setFromUnitVectors(cur, dir.clone().normalize()); const wq = bone.getWorldQuaternion(new T.Quaternion()), pq = bone.parent.getWorldQuaternion(new T.Quaternion());
+    const lq = pq.invert().multiply(dq.multiply(wq)); bone.quaternion.slerp(lq, w); bone.updateMatrixWorld(true);
+  }
+  function walkRaise(T, me, k, cd) {   // pose the raise over the clip pose (call after every mixer update). cd: the insert camera direction (from the flights), or null
+    const B = me.userData && me.userData.B; if (!B || !B.LeftArm || !B.LeftForeArm || !B.LeftHand) return 0; const w = walkRaiseW(k); if (w <= 0) return 0;
+    me.updateMatrixWorld(true); const { S, U, F } = walkFrame(T, me, B), dv = v => S.clone().multiplyScalar(v[0]).addScaledVector(U, v[1]).addScaledVector(F, v[2]);
+    const R = window.TOPS_WALK76R || RAISE; aimBone(T, B.LeftArm, B.LeftForeArm, dv(R.arm), w); aimBone(T, B.LeftForeArm, B.LeftHand, dv(R.fore), w);
+    const sp = B.LeftHand.children.filter(c => c.userData && c.userData.spare && c.visible !== false);
+    if (sp.length && cd) {   // the wrist: the darts' flights point up (square to the camera's view) and one flight faces the camera
+      const d0 = sp[0], hq = B.LeftHand.getWorldQuaternion(new T.Quaternion()), q0 = d0.getWorldQuaternion(new T.Quaternion()), L = hq.clone().invert().multiply(q0);
+      const z = U.clone().addScaledVector(cd, -U.dot(cd)).normalize(), n = cd.clone().addScaledVector(z, -cd.dot(z)).normalize();
+      let best = null, ba = 1e9;
+      for (const [ax, sg] of [['x', 1], ['x', -1], ['y', 1], ['y', -1]]) { const m = new T.Matrix4(), nn = n.clone().multiplyScalar(sg);
+        if (ax === 'x') { const y = new T.Vector3().crossVectors(z, nn); m.makeBasis(nn, y, z); } else { const x = new T.Vector3().crossVectors(nn, z); m.makeBasis(x, nn, z); }
+        const qd = new T.Quaternion().setFromRotationMatrix(m), a = qd.angleTo(q0); if (a < ba) { ba = a; best = qd; } }
+      const hw = best.multiply(L.invert()), lq = B.LeftHand.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(hw); B.LeftHand.quaternion.slerp(lq, w); B.LeftHand.updateMatrixWorld(true);
+    }
+    return w;
+  }
+  function insFlights(sp) { const fl = []; sp.forEach(d => d.traverse(o => { if (o.isMesh && o.geometry && o.geometry.type === 'ShapeGeometry') fl.push(o); })); return fl; }
+  function projW(T, fl, camP, tgt, fov, asp) {   // the flights' projected width as a share of the frame width, from camP looking at tgt
+    const c = new T.PerspectiveCamera(fov, asp, .01, 50); c.position.copy(camP); c.lookAt(tgt); c.updateMatrixWorld(true); let x0 = 1e9, x1 = -1e9; const v = new T.Vector3();
+    fl.forEach(o => { const pa = o.geometry.attributes.position; for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld).project(c); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); } });
+    return (x1 - x0) / 2;
+  }
+  function walkInsert(T, me, cam, q, k) {
+    const B = me.userData && me.userData.B; if (!B || !B.LeftHand) return null;
+    const sp = B.LeftHand.children.filter(c => c.userData && c.userData.spare && c.visible !== false); if (!sp.length) return null;
+    const SC = +(window.TOPS_WALK76S != null ? window.TOPS_WALK76S : 1.5), FILL = +(window.TOPS_WALK76F || .33), FOV = +(window.TOPS_WALK76V || 30);
+    const LIFT = +(window.TOPS_WALK76L || 0);   // the lift cheat: slide the spares this far (m) up out of the fist, along their own axis
+    const first = !WK.ins; if (first) { WK.ins = sp.map(d => [d, d.scale.clone(), d.position.clone()]); sp.forEach(d => { if (SC !== 1) d.scale.multiplyScalar(SC); if (LIFT) d.position.addScaledVector(new T.Vector3(0, 0, 1).applyQuaternion(d.quaternion), LIFT / Math.max(1e-6, d.parent.getWorldScale(new T.Vector3()).x)); }); }
+    const gc = (typeof V !== 'undefined' && V._qa && V._qa.camera) || null, asp = gc && gc.isPerspectiveCamera ? gc.aspect : Math.max(.3, Math.min(2, innerWidth / Math.max(1, innerHeight)));
+    me.updateMatrixWorld(true); const fr = walkFrame(T, me, B);
+    // once per insert: pick the camera direction (in the figure's frame) with nothing of the figure in front of or behind the flights.
+    // Candidates run from 30 degrees behind in front, round to out past the side, from level to 60 degrees below; the clear one nearest TOPS_WALK76A wins.
+    if (first || !WK.insCd) {
+      walkRaise(T, me, Math.max(k, .3), null); me.updateMatrixWorld(true);
+      const fl0 = insFlights(sp), bx = new T.Box3(); fl0.forEach(o => bx.expandByObject(o)); const tg = bx.getCenter(new T.Vector3());
+      const body = []; me.traverse(o => { if (o.isMesh && o.visible !== false && !o.isSprite) { let x = o, dart = false; while (x && x !== me) { if (x.userData && x.userData.spare) dart = true; x = x.parent; } if (!dart) body.push(o); } });
+      const rc = new T.Raycaster(); rc.camera = new T.PerspectiveCamera(); const hit = (from, d, far) => { rc.set(from, d); rc.far = far; try { return rc.intersectObjects(body, false).length > 0; } catch (e) { return false; } };
+      // the skinned body doesn't raycast where it's drawn, so the head, chest and hips are also kept off the line behind the flights as spheres
+      const balls = [[B.Spine2 || B.Spine, .3], [B.Hips, .3]].filter(b => b[0]).map(([b, r]) => [b.getWorldPosition(new T.Vector3()), r]);
+      { const hb = new T.Box3(); B.Head.traverse(o => { if (o.isMesh && o.visible !== false && !o.isSprite) hb.expandByObject(o); }); if (!hb.isEmpty()) { const sph = hb.getBoundingSphere(new T.Sphere()); balls.push([sph.center, sph.radius * .7 + .03]); } }   // the v3 head with its hair, as drawn
+      const clearOf = (p, cd) => balls.every(([c, r]) => { const v = c.clone().sub(p), t = -v.dot(cd); return t < 0 || v.addScaledVector(cd, t).length() > r; });
+      const AIM = window.TOPS_WALK76A || [135, 10];   // preferred camera: degrees round from in front toward out (135 = out and behind, looking up the room past the fist), degrees below level
+      let best = null, bs = -1e9;
+      for (let a = -30; a <= 135; a += 15) for (let e = 0; e <= 60; e += 10) {
+        const ar = a * Math.PI / 180, er = e * Math.PI / 180; const cd = fr.F.clone().multiplyScalar(Math.cos(ar)).addScaledVector(fr.S, Math.sin(ar)).multiplyScalar(Math.cos(er)).addScaledVector(fr.U, -Math.sin(er)).normalize();
+        const front = !hit(tg.clone().addScaledVector(cd, .06), cd, 1.2), back = !hit(tg.clone().addScaledVector(cd, -.06), cd.clone().negate(), 3) && clearOf(tg, cd);
+        const sc = (back ? 4 : 0) + (front ? 1 : 0) - Math.abs(a - AIM[0]) / 60 - Math.abs(e - AIM[1]) / 40; /* the backdrop matters most; the fist under the flights is fine */ if (sc > bs) { bs = sc; best = { a, e, front, back }; } }
+      WK.insCd = best; WK.insOk = { front: best.front, back: best.back, a: best.a, e: best.e };
+    }
+    const ar = (WK.insCd.a + (q - .5) * 6) * Math.PI / 180, er = WK.insCd.e * Math.PI / 180;   // a slow 6 degree drift round the fist
+    const cd = fr.F.clone().multiplyScalar(Math.cos(ar)).addScaledVector(fr.S, Math.sin(ar)).multiplyScalar(Math.cos(er)).addScaledVector(fr.U, -Math.sin(er)).normalize();
+    WK.insDirW = cd; walkRaise(T, me, k, cd); me.updateMatrixWorld(true);
+    const fl = insFlights(sp), bx = new T.Box3(); fl.forEach(o => bx.expandByObject(o)); const fc = bx.getCenter(new T.Vector3());
+    let D = .6; for (let it = 0; it < 3; it++) { const f = projW(T, fl, fc.clone().addScaledVector(cd, D), fc, FOV, asp); if (f > 1e-4) D = D * f / FILL; }
+    const H = 2 * D * Math.tan(FOV * Math.PI / 360), tgt = fc.clone().addScaledVector(fr.U, -(window.TOPS_WALK76Y != null ? +window.TOPS_WALK76Y : .1) * H);   // the flights above centre, the fist under them
+    const camP = fc.clone().addScaledVector(cd, D);
+    if (window.TOPS_WALK76DBG) window.__ins76 = Object.assign({ D: +D.toFixed(3), fl, fc: fc.toArray(), tgt: tgt.toArray(), cam: camP.toArray(), fov: FOV, asp: +asp.toFixed(3) }, WK.insOk);
+    WK.insFov = FOV; return { cam: camP, tgt, fov: FOV };
+  }
+  function walkInsertEnd(w) { if (w && w.ins) { try { w.ins.forEach(([d, sc, ps]) => { d.scale.copy(sc); if (ps) d.position.copy(ps); }); } catch (e) {} w.ins = null; w.insCd = null; w.insDirW = null; w.insFov = null; } }
   // walk-on lighting: a warm follow spot above the player and a cool rim light behind; the lightning flashes the rim
   function walkLights(v, me, now) {
     const L = walkLights.L;
