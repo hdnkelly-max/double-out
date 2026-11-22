@@ -3,7 +3,9 @@
 // round with the "Through" toast. usage: node tests/s3-match.js [dir]
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 (async () => { const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files'] });
-  const p = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const pe = []; p.on('pageerror', e => pe.push(e.message)); await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); } catch (e) {} });   /* the welcome has its own test (s3-welcome.js) */
+  const p = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const pe = []; p.on('pageerror', e => pe.push(e.message)); await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); } catch (e) {} });
+  /* every s3 toast the page shows, recorded as it appears: the toast lives 3.1 s, and on a slow runner (CI 126 s) it could come and go while the test was still re-opening the hub (CI 44985330617: seen moved on, i.e. the toast fired, but none was on screen) */
+  await p.addInitScript(() => { window.__s3Toasts = []; new MutationObserver(() => { const t = document.getElementById('s3Toast'); if (t && t.innerText && window.__s3Toasts[window.__s3Toasts.length - 1] !== t.innerText) window.__s3Toasts.push(t.innerText); }).observe(document, { childList: true, subtree: true }); });   /* the welcome has its own test (s3-welcome.js) */
   await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); let loads = 0; p.on('load', () => loads++);
   const fail = [], out = {};
   const vis = sel => p.evaluate(sel => { const e = document.querySelector(sel); return !!(e && e.getClientRects().length && !e.disabled && getComputedStyle(e).visibility !== 'hidden'); }, sel).catch(() => false);
@@ -33,9 +35,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   out.reloaded = loads > l0;
   if (out.reloaded) { await ready(); for (let i = 0; i < 40; i++) { if (await vis('#rbApp .s3-live')) break; await p.evaluate(() => { try { $('login').hidden = true; showHub(); } catch (e) {} }); await p.waitForTimeout(500); } }
   for (let i = 0; i < 40; i++) { if (await p.evaluate(() => !!document.getElementById('s3Toast')).catch(() => false)) break; await p.waitForTimeout(250); }   /* the toast waits for the loader to lift */
-  out.after = await p.evaluate(() => ({ seen: localStorage.getItem('tops_s3_seen'), rs: window.TOPS_RESET && TOPS_RESET.state && TOPS_RESET.state(), rsg: !!window.TOPS_RESETTING, live: !!document.querySelector('#rbApp .s3-live'), toast: (document.getElementById('s3Toast') || {}).innerText || '', sheet: (document.querySelector('#s3Sheet .s3-sbox') || {}).innerText || '', circ: career().circuit && career().circuit.live, tab: (document.querySelector('#rbTabs [aria-selected="true"]') || {}).dataset?.t }));
+  out.after = await p.evaluate(() => ({ seen: localStorage.getItem('tops_s3_seen'), rs: window.TOPS_RESET && TOPS_RESET.state && TOPS_RESET.state(), rsg: !!window.TOPS_RESETTING, live: !!document.querySelector('#rbApp .s3-live'), toast: (document.getElementById('s3Toast') || {}).innerText || '', toasts: window.__s3Toasts || [], sheet: (document.querySelector('#s3Sheet .s3-sbox') || {}).innerText || '', circ: career().circuit && career().circuit.live, tab: (document.querySelector('#rbTabs [aria-selected="true"]') || {}).dataset?.t }));
   if (!out.won) fail.push('match not won'); if (!out.res || !out.res.next) fail.push('Circuit did not move to the next round: ' + JSON.stringify(out.res));
   if (out.after.tab !== 'circuit') fail.push('after the match the shell is on ' + out.after.tab); if (!out.after.live) fail.push('live event not shown after the match');
-  if (!/through/i.test(out.after.toast)) fail.push('no Through toast after the match');
+  if (!/through/i.test(out.after.toast) && !out.after.toasts.some(t => /through/i.test(t))) fail.push('no Through toast after the match (seen: ' + JSON.stringify(out.after.toasts) + ')');
   if (pe.length) fail.push('page errors ' + pe.join('; ').slice(0, 200));
   console.log(JSON.stringify(out)); console.log(fail.length ? 's3-match FAIL: ' + fail.join('; ') : 's3-match PASS'); await b.close(); process.exit(fail.length ? 1 : 0); })();
