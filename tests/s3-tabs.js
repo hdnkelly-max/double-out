@@ -255,10 +255,15 @@ let url = ''; const f = []; const out = {};
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'claim' && m.tab !== TOPS_TABS.tab) { clearInterval(iv); setTimeout(() => { window.__played = 1; TOPS_S3._playNow(); }, 200); } }, 30); });
     await A.waitForTimeout(600); const B = await open(ctx); await B.waitForTimeout(7000);
     for (let k = 0; k < 16 && !(await A.evaluate(() => !!window.__played)); k++) await A.waitForTimeout(500);   /* the tap itself can run late on a slow box */
+    /* R9: the claim reaches A's process late on a busy box (the key syncs between processes asynchronously), so the tap can start a match
+       A still believes it owns. Then A keeps that match (refusing the ordinary claim, as in 15a) and B shows the busy card. Both orders are
+       right: what must never happen is a match running behind a card, or two owners. Settle up to 12 s for either end */
+    for (let k = 0; k < 24; k++) { const [x, y] = [await own(A), await own(B)]; if ((y.owner && x.away && !x.live) || (x.owner && x.live && y.card === 'busy')) break; await A.waitForTimeout(500); }
     out.r15d = { a: await own(A), b: await own(B), played: await A.evaluate(() => !!window.__played), blocked: await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_match_blocked')) };
     /* what matters: the tap came and no match runs behind the card. 'blocked' is logged only when the tap reaches the match gate; on a slow box
        (CI 45050499558) A can already be behind the card when it taps, and the hub doesn't offer the match at all */
-    if (!out.r15d.b.owner || out.r15d.a.owner || !out.r15d.a.card || out.r15d.a.live || !out.r15d.played) f.push('15d a Play tap just after a claim: no match starts behind the card ' + JSON.stringify(out.r15d));
+    out.r15d.order = out.r15d.a.owner ? 'match-first' : 'claim-first'; const ok15d = out.r15d.played && (out.r15d.order === 'claim-first' ? (out.r15d.b.owner && !!out.r15d.a.card && !out.r15d.a.live) : (out.r15d.a.live && !out.r15d.b.owner && out.r15d.b.card === 'busy'));
+    if (!ok15d) f.push('15d a Play tap just after a claim: no match starts behind the card ' + JSON.stringify(out.r15d));
     await ctx.close(); }
   // 15e CI's order: A is mid-match when a fresh, better claim reaches it by the owner key (the channel copy still on its way): A refuses it
   //    there too (one rule wherever a claim is found), so the claimant ends on the busy card and A keeps its match
