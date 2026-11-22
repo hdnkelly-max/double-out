@@ -980,12 +980,12 @@
       else {
         if (!WK.hold0) WK.hold0 = now;
         const heldMs = (WK.held || 0) + now - WK.hold0, A = (typeof V !== 'undefined' && V) || {}, q = f => { try { return A[f] ? A[f]() : null; } catch (e) { return null; } };
-        const dl = !!q('animsPending'), failed = !!q('animsFailed'), eta = q('animsEta');
+        const dl = !!q('animsPending'), failed = !!q('animsFailed'), eta = q('animsEta'), age = +q('animsAge') || 0, got = +q('animsGot') || 0;
         if (!failed && !WK.askedAnims) { WK.askedAnims = 1; q('loadAnims'); }   // Walk on asks for the clip file now (high priority), even while the figure is still a stand-in; an idle fetch with no bytes yet is replaced by it
         if (dl) WK.dlSeen = now; else if (WK.dlSeen && !WK.dlEnd) WK.dlEnd = now;   // the file just landed: give the clip a moment to start (parse, mixer) before giving up
         /* past 4 s, hold only while the file is still coming AND can land inside the 10 s cap at its rate so far (+15%, plus 1 s to parse);
            a file that can't make it skips at 4 s as before, not after 10 s of an empty room; a failed file (404) skips at once (Producer 14:55) */
-        const canLand = dl && (eta == null ? heldMs < 7000 : heldMs + (eta * 1.15 + 1) * 1000 < 10000);   // no bytes yet to judge a rate by: 3 s past the base hold
+        const canLand = dl && (eta == null ? heldMs < 7000 && (got > 0 || age < 3000) : heldMs + (eta * 1.15 + 1) * 1000 < 10000);   // no rate yet: 3 s past the base hold, only while bytes are arriving or the request is under 3 s old (429c: a request that has sent nothing for seconds skips at 4 s, as 4.30)
         if (!failed && (heldMs < 4000 || (heldMs < 10000 && (canLand || (WK.dlEnd && now - WK.dlEnd < 2500))))) {
           WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
           const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board
