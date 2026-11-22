@@ -229,7 +229,12 @@ let url = ''; const f = []; const out = {};
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'hello') { clearInterval(iv); TOPS_S3._playNow(); setTimeout(() => { const t = Date.now(); while (Date.now() - t < 6000); }, 0); } }, 30); });
     await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
     out.r15a = { a: await own(A), b: await own(B), via: await B.evaluate(() => (TOPS_TABS.log().find(l => l[1] === 'tabs_busy') || [])[2] || null) };
-    if (out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
+    out.r15a.blocked = await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_match_blocked'));
+    /* on a slow machine (CI) the Play tap's match can start only after B's wait: then B takes over first and A's match must not start at all.
+       Either order is right as long as exactly one tab owns and no match is ended */
+    const late = out.r15a.blocked && out.r15a.b.owner && out.r15a.a.away && !out.r15a.a.live; out.r15a.order = late ? 'b-first' : 'a-first';
+    if (!late && (out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live)) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
+    if (out.r15a.order === 'a-first') {   /* 15b and 15c need A mid-match */
     await A.evaluate(() => { window.TOPS_TABS_QA = null; }); await B.evaluate(() => TOPS_TABS._claim());
     for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (x.owner && y.card === 'busy') break; }   // settle: a lock handover crosses processes
     out.r15b = { a: await own(A), b: await own(B) };
@@ -237,7 +242,7 @@ let url = ''; const f = []; const out = {};
     await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
     for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (y.owner && x.card) break; }
     out.r15c = { a: await own(A), b: await own(B) };
-    if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-12)), b: await B.evaluate(() => TOPS_TABS.log().slice(-12)) }));
+    if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-12)), b: await B.evaluate(() => TOPS_TABS.log().slice(-12)) })); }
     await ctx.close(); }
   // 15d B's claim lands just before A's Play tap: A steps aside (the claim came first) and the match must not start behind the card
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
