@@ -258,7 +258,7 @@
   const PARTS = {   // shaft colour and barrel finish per edition (the flight is painted above)
     pub:    {},
     dpnz:   { shaft: 0x0d0e10, barrel: { col: 0x2a2d31, met: .9, rough: .28, band: 0xd8dde2 } },
-    tt:     { shaft: 0xf2c230 },
+    tt:     { shaft: 0xf2c230, cap: 0x00843d, band: 0x00843d },   // doc 82: Australia green on the shaft top, the point ring and two barrel bands, so the set reads end-on at match size (the gold shaft and a brass barrel alone read as the default)
     card:   { shaft: 0xf4f4f1, barrel: { col: 0xb9c0c6, met: .95, rough: .18, band: 0x121316 } },
     worlds: { shaft: 0xd9b24a, barrel: { col: 0xd4a63c, met: .95, rough: .2, band: 0x111111 } }
   };
