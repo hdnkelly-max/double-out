@@ -15,6 +15,8 @@
 //   11 a tab that took over on a timeout adopts the late write of the tab it claimed from (2 s) instead of stepping aside
 //   12 recovery copies when another build's tab writes the save
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
+//   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
+//   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
 // usage: node tests/s3-tabs.js [dir]   (CASES=7,10 runs just those; pass an absolute dir)
 const { chromium } = require('playwright'); const path = require('path'); const dir = process.argv[2] || path.resolve(__dirname, '..');
 require('fs').mkdirSync(path.join(dir, 'wip/car-tabs'), { recursive: true });
@@ -188,8 +190,80 @@ let url = ''; const f = []; const out = {};
     if (!out.r12a.r.includes('overwrite:999') || out.r12a.stored !== 51 || out.r12a.away) f.push('12 an owner writing over another build\'s save keeps a copy of it first ' + JSON.stringify(out.r12a));
     if (!out.r12b.away || !out.r12b.r.some(x => /^(newer|overwritten):51$/.test(x))) f.push('12 stepping aside for a different newer save keeps this tab\'s copy ' + JSON.stringify(out.r12b));
     await ctx.close(); }
+  // ---- R5 (ChatGPT review): the races outside the paths above ----
+  const own = P => P.evaluate(() => ({ owner: TOPS_TABS.owner(), away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), gen: TOPS_TABS.gen(), card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, live: typeof S !== 'undefined' && !!S && !S.done && !S.paused, key: JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null') }));
+  const settle = async (ps, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const r = await Promise.all(ps.map(own)); if (r.filter(x => x.owner).length === 1 && r.filter(x => !x.owner).every(x => x.away || x.card)) return r; await ps[0].waitForTimeout(300); } return Promise.all(ps.map(own)); };
+  // 14 P1-1: (a) two tabs starting together with no owner; (b) crossed claims from both, messages delayed 1 s; (c) a claim delivered late
+  //    (an old gen) after the owner moved on. Always exactly one owner, and the late claim changes nothing
+  if (RUN(14)) { const ctx = await b.newContext(); const [A, B] = await Promise.all([open(ctx), open(ctx)]);
+    out.r14a = await settle([A, B], 8000); if (out.r14a.filter(x => x.owner).length !== 1) f.push('14a two tabs starting together: exactly one owner ' + JSON.stringify(out.r14a));
+    await Promise.all([A, B].map(P => P.evaluate(() => { window.TOPS_TABS_QA = { delay: 1000 }; })));
+    await Promise.all([A.evaluate(() => TOPS_TABS._claim()), B.evaluate(() => TOPS_TABS._claim())]);
+    out.r14b = await settle([A, B], 10000); if (process.env.TABSLOG) fs.writeFileSync(process.env.TABSLOG, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14b.filter(x => x.owner).length !== 1) f.push('14b crossed claims (messages 1 s late): exactly one owner ' + JSON.stringify(out.r14b));
+    await Promise.all([A, B].map(P => P.evaluate(() => { window.TOPS_TABS_QA = null; })));
+    const W = out.r14b[0].owner ? A : B, L = W === A ? B : A; const g = (await own(W)).gen;
+    const O = await ctx.newPage(); await O.goto(url.replace('index.html?s3=1', 'no-such-page.html'));   // a late claim from an older gen, on the channel and in the key
+    await O.evaluate(([k, g]) => { const c = { t: 'claim', gen: g - 1, tab: 'zzzz-late', at: Date.now() }; new BroadcastChannel('tops-tabs-' + k).postMessage(c); localStorage.setItem('tops_owner_' + k, JSON.stringify(c)); }, [await W.evaluate(() => TOPS_SAVE_NS.key), g]);
+    await W.waitForTimeout(2000); out.r14c = await own(W);
+    if (!out.r14c.owner || out.r14c.away || !out.r14c.key || out.r14c.key.tab === 'zzzz-late') f.push('14c a late claim from an older gen leaves the owner in place (and it re-asserts in the key) ' + JSON.stringify(out.r14c));
+    await ctx.close(); }
+  // 15 P1-2: (a) B reads the owner key (busy 0), then A starts a match and is blocked past B's 4 s wait: B re-reads before taking over and
+  //    shows the busy card; A keeps its match. (b) an ordinary claim reaching an owner mid-match is refused (B: busy card); Play here anyway wins
+  if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
+    await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); try { showHub('play'); } catch (e) {} const e = TOPS_S3.view().calendar[0]; TOPS_S3.book(e.id);
+      window.TOPS_TABS_QA = { delay: 9000 };   // A hears nothing in time
+      const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'hello') { clearInterval(iv); TOPS_S3._playNow(); setTimeout(() => { const t = Date.now(); while (Date.now() - t < 6000); }, 0); } }, 30); });
+    await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
+    out.r15a = { a: await own(A), b: await own(B), via: await B.evaluate(() => (TOPS_TABS.log().find(l => l[1] === 'tabs_busy') || [])[2] || null) };
+    if (!/timeout/.test(out.r15a.via || '') || out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
+    await A.evaluate(() => { window.TOPS_TABS_QA = null; }); await B.evaluate(() => TOPS_TABS._claim()); await B.waitForTimeout(3000);
+    out.r15b = { a: await own(A), b: await own(B) };
+    if (!out.r15b.a.owner || !out.r15b.a.live || out.r15b.b.owner || out.r15b.b.card !== 'busy') f.push('15b an ordinary claim mid-match is refused: A plays on, B shows the busy card ' + JSON.stringify(out.r15b));
+    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); }); await B.waitForTimeout(3000);
+    out.r15c = { a: await own(A), b: await own(B) };
+    if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c));
+    await ctx.close(); }
+  // 16 P1-3: A's push is suspended in its preflight cloud read while B takes over and writes; when the read returns, A sends nothing.
+  //    Then B's own push: the save changes while its RPC is in flight; synced is the counter it sent, and a second push follows
+  if (RUN(16)) { const ctx = await b.newContext(); const puts = [];
+    await ctx.exposeBinding('__put', (src, d) => { puts.push({ from: d.tab, sv: d.sv }); return { ok: true }; });
+    const net = () => { NET.user = { id: 'u1' }; window.__gate = null; window.__rpcGate = null; NET.sb = { rpc: async (n, a) => { if (n !== TOPS_SAVE_NS.rpc) return { data: null };
+        if (window.__rpcGate) await new Promise(r => { window.__rpcGo = r; }); return { data: await __put({ tab: TOPS_TABS.tab, sv: a.p_data.sv }) }; },
+      from: () => ({ upsert: async () => ({}), select: () => ({ eq: () => ({ maybeSingle: async () => { if (window.__gate) await new Promise(r => { window.__go = r; }); return { data: null }; } }) }) }) }; };
+    const A = await open(ctx); await A.evaluate(n => { eval(n)(); save.authSeen = true; $('login').hidden = true; newCareer(); persist(); }, '(' + net + ')');
+    await A.evaluate(() => { career().bank = 11; persist(); cloudPush(true); }); await A.waitForTimeout(800);   // first push: synced is set
+    const p0 = puts.length; await A.evaluate(() => { window.__gate = 1; career().bank = 12; persist(); cloudPush(true); }); await A.waitForTimeout(500);   // suspended in the preflight read
+    const B = await open(ctx); await B.evaluate(n => { eval(n)(); }, '(' + net + ')'); await B.waitForTimeout(1500);
+    await B.evaluate(() => { if (!TOPS_TABS.owner()) TOPS_TABS._claim(true); }); await B.waitForTimeout(1500); await B.evaluate(() => { career().bank = 77; persist(); }); await B.waitForTimeout(800);
+    await A.evaluate(() => { window.__go && window.__go(); }); await A.waitForTimeout(1500);
+    out.r16a = { aPuts: puts.slice(p0).filter(x => x.from === puts[0].from).length, a: await own(A), b: await own(B) };
+    if (out.r16a.aPuts !== 0 || out.r16a.a.owner) f.push('16a a push suspended in preflight sends nothing once another tab owns the save ' + JSON.stringify(out.r16a));
+    out.r16b = await B.evaluate(async () => { career().bank = 80; persist(); const sent = save.sv; window.__rpcGate = 1; cloudPush(true); await new Promise(r => setTimeout(r, 400)); career().bank = 81; persist(); const later = save.sv; window.__rpcGate = null; window.__rpcGo && window.__rpcGo();
+      await new Promise(r => setTimeout(r, 1500)); return { sent, later, synced: TOPS_TABS.synced() }; });
+    const bPuts = puts.filter(x => x.from !== puts[0].from).map(x => x.sv); out.r16b.puts = bPuts;
+    if (!bPuts.includes(out.r16b.sent) || !bPuts.includes(out.r16b.later) || out.r16b.synced !== out.r16b.later) f.push('16b synced follows the acknowledged snapshot, and the change made in flight is pushed next ' + JSON.stringify(out.r16b));
+    out.r16c = await B.evaluate(async () => { const before = TOPS_TABS.synced(); NET.sb.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'network' } }) }) }) }); career().bank = 90; persist(); cloudPush(true); await new Promise(r => setTimeout(r, 600)); return { before, after: TOPS_TABS.synced(), failed: TOPS_TABS.log().some(l => l[1] === 'push_preflight_failed') }; });
+    if (!out.r16c.failed || out.r16c.after !== out.r16c.before) f.push('16c a failed preflight read pushes nothing and retries ' + JSON.stringify(out.r16c));
+    await ctx.close(); }
+  // 17 back-forward cache: A is hidden (pagehide) and restored (pageshow persisted). If B took over meanwhile, A steps aside before writing;
+  //    alone, A carries on as owner
+  if (RUN(17)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
+    await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); }); await A.waitForTimeout(500);
+    out.r17a = await own(A); if (!out.r17a.owner) f.push('17a restored alone: still the owner ' + JSON.stringify(out.r17a));
+    await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.TOPS_TABS_QA = { delay: 60000 }; });   // frozen: hears nothing
+    const B = await open(ctx); await B.waitForTimeout(1500); await B.evaluate(() => { career().bank = 5150; persist(); }); await B.waitForTimeout(800);
+    await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); career().bank = 1; persist(); }); await A.waitForTimeout(800);
+    out.r17b = { a: await own(A), b: await own(B), bank: (await stored(B)).bank };
+    if (out.r17b.a.owner || !out.r17b.a.card || !out.r17b.b.owner || out.r17b.bank !== 5150) f.push('17b restored after another tab took over: steps aside without writing ' + JSON.stringify(out.r17b));
+    await ctx.close(); }
+  // 18 a save the browser refuses (storage full): a banner says so, nothing is marked saved, and the next save after space frees up lands
+  if (RUN(18)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
+    out.r18 = await A.evaluate(async () => { window.TOPS_TABS_QA = { failWrite: 1 }; career().bank = 4444; try { persist(); } catch (e) {} const banner = !!document.getElementById('tabsSaveFail'); const kept = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
+      window.TOPS_TABS_QA = null; try { persist(); } catch (e) {} return { banner, kept, after: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, gone: !document.getElementById('tabsSaveFail'), logged: TOPS_TABS.log().some(l => l[1] === 'save_write_failed') }; });
+    if (!out.r18.banner || out.r18.kept === 4444 || out.r18.after !== 4444 || !out.r18.gone || !out.r18.logged) f.push('18 a refused write shows the banner and retries on the next save ' + JSON.stringify(out.r18));
+    await ctx.close(); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }
-  if (process.env.CASES) { console.log('PASS cases ' + process.env.CASES + ' ' + JSON.stringify(out).slice(0, 900)); return; }
+  if (process.env.CASES) { console.log('PASS cases ' + process.env.CASES + ' ' + JSON.stringify(out).slice(0, +(process.env.OUTLEN || 900))); return; }
   console.log(`PASS: two tabs: B's won Pub night (week ${out.after.week}, $${out.after.bank}) survives tab A's poster tap; A shows "${(out.aCard || '').slice(0, 80)}"; Play here reloads A with the latest save and B steps aside; a newer save behind a tab's back is never overwritten (that tab shows the card); a tab with no career can't wipe another tab's career; a stale tab never pushes to the cloud (RPC calls ${out.cloud.stale}), the owner does (${out.cloud.owner}); an idle hub saved ${out.hubWrites} time(s) in 30 s; mid-match, the new tab shows "a match is in progress" and leaves the owner playing until Play here anyway; the owner flushes on hello (the new tab loads $${out.flush.bank}); two devices on a mocked cloud: stale device X (12 saves after Y's 3, so its counter is higher) loads Y's newer save ($${out.cloud2.bank}) instead of overwriting it, without the other-tab card, and keeps a recovery copy of what it replaced; p_base goes to the server only once it takes it (today: one probe, then plain pushes)`);
 })();

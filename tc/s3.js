@@ -157,12 +157,25 @@
    wait (no flush, no ack; the claim follows), and a tab that took over on a timeout adopts a save the tab it claimed from finishes writing in
    the next 2 s instead of stepping aside. The owner's heartbeat also says whether it is mid-match, written the moment a match starts or ends,
    so a new tab shows "a match is in progress" without waiting on an answer (and turns it into Play here when that match ends). A recovery copy is also kept whenever the stored save isn't this tab's last write (an older build's
-   tab wrote over it): this tab's copy when it steps aside, the stored one before this tab writes over it. */
+   tab wrote over it): this tab's copy when it steps aside, the stored one before this tab writes over it.
+   R5 (ChatGPT review, Producer 22 Nov 17:26):
+   - Ownership has a generation. Every claim carries {gen, tab}; gen is one more than any gen this browser has seen (kept under <owner>_gen,
+     never removed), and ties go to the higher tab id. A tab steps aside only for a claim that beats its own; an owner that hears a losing
+     claim re-asserts. So two tabs starting together, crossed claims or a claim delivered late always leave exactly one owner. Heartbeats
+     carry the gen and an owner that finds a better claim in the owner key steps aside.
+   - A match is never ended by an ordinary claim: the owner, mid-match, refuses a fresh claim from a tab that hasn't saved since (it
+     re-claims one gen higher, marked busy, and that tab shows "a match is in progress"). Only Play here anyway interrupts a match. A stale
+     claim, or one whose tab has already saved, is accepted. A new tab re-reads the owner key right before taking over on a timeout.
+   - Cloud pushes are snapshots: the save, its counter, the owner gen and the base are copied when a push starts; ownership is checked after
+     every await and right before the RPC; one push at a time per tab; synced moves only to the counter the server acknowledged. A failed
+     preflight read doesn't push: it retries with backoff.
+   - A page restored from the back-forward cache revalidates ownership before it writes. A save the browser refused to write (storage full,
+     blocked) is detected, shown as a banner and retried on the next save; a recovery copy that can't be kept is logged. */
 (function(){
   if(typeof persist!=='function'||typeof TOPS_SAVE_NS==='undefined'||!window.localStorage)return;
   const KEY=TOPS_SAVE_NS.key,OWN='tops_owner_'+KEY,MSG=OWN+'_msg',RES=KEY+'_rescue',TAB='t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
-  const SI=Storage.prototype.setItem;let away=false,pending=true,owner=false,passing=0,adopting=0,lastBody=null,waitT=0,synced=null,lastWrote=null,grace=null;
-  const WAIT=1500,WAIT_LIVE=4000,WR=KEY+'_w';   /* WAIT: how long a new tab waits for the owner's ack; WR: which tab wrote the save last */
+  const SI=Storage.prototype.setItem;let away=false,pending=true,owner=false,passing=0,adopting=0,lastBody=null,waitT=0,synced=null,lastWrote=null,grace=null,myGen=0,seenGen=0;
+  const WAIT=1500,WAIT_LIVE=4000,WR=KEY+'_w',GEN=OWN+'_gen',FRESH=8000;   /* FRESH: a claim younger than this, from a tab that hasn't saved since, can be refused by an owner mid-match */   /* WAIT: how long a new tab waits for the owner's ack; WR: which tab wrote the save last */
   const raw=(k,v)=>SI.call(localStorage,k,v);
   const svIn=()=>{try{const s=localStorage.getItem(KEY);return s?+(JSON.parse(s).sv||0):0;}catch(e){return 0;}};
   const mine=()=>{try{return +(save&&save.sv||0);}catch(e){return 0;}};
@@ -170,9 +183,9 @@
   const body=()=>{try{const sv=save.sv,dev=save.dev;save.sv=0;save.dev='';const j=JSON.stringify(save);save.sv=sv;save.dev=dev;return j;}catch(e){return null;}};
   const LOG=[];const ev=(n,d)=>{try{LOG.push([Date.now()%100000,n,JSON.stringify(d||{})]);if(LOG.length>40)LOG.shift();}catch(e){}try{window.TOPS_FLIGHT&&TOPS_FLIGHT.log&&TOPS_FLIGHT.log(n,d||{});}catch(e){}};
   function rescue(why){try{const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);list.push({at:Date.now(),why,sv:mine(),tab:TAB,save:JSON.parse(JSON.stringify(save))});
-    try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why,sv:mine()});}catch(e){}}
+    try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why,sv:mine()});}catch(e){ev('tabs_rescue_failed',{why,err:String(e&&e.name||e)});console.warn('TOPS: recovery copy not kept',e);}}
   function rescueStored(why){try{const cur=localStorage.getItem(KEY);if(!cur)return;const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);
-    list.push({at:Date.now(),why,sv:(()=>{try{return +(JSON.parse(cur).sv||0);}catch(e){return 0;}})(),tab:'stored',save:JSON.parse(cur)});try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why});}catch(e){}}
+    list.push({at:Date.now(),why,sv:(()=>{try{return +(JSON.parse(cur).sv||0);}catch(e){return 0;}})(),tab:'stored',save:JSON.parse(cur)});try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why});}catch(e){ev('tabs_rescue_failed',{why,err:String(e&&e.name||e)});console.warn('TOPS: recovery copy not kept',e);}}
   const norm=x=>{try{const o=JSON.parse(x);o.sv=0;o.dev='';return JSON.stringify(o);}catch(e){return x;}};
   const foreign=()=>{try{const cur=localStorage.getItem(KEY);return !!cur&&lastWrote!=null&&cur!==lastWrote&&norm(cur)!==norm(lastWrote);}catch(e){return false;}};   /* storage holds a save other than this tab's last write (counter and device aside): what this tab last wrote is no longer stored anywhere */
   // the card
@@ -181,16 +194,27 @@
     const d=document.createElement('div');d.id='tabsCard';d.dataset.mode=mode||'';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
     d.innerHTML=mode==='busy'?'<div class="tc-in"><b>TOPS is open in another tab</b><p>A match is in progress there. Finish it there, or play here anyway: the match in the other tab stops and isn’t saved.</p><button type="button">Play here anyway</button><small>Your progress up to that match is safe either way.</small></div>'
       :'<div class="tc-in"><b>TOPS is open in another tab</b><p>Only one tab can play at a time, so your progress stays safe. Keep playing there, or play here instead.</p><button type="button">Play here</button><small>Play here loads your latest save.</small></div>';
-    d.querySelector('button').onclick=mode==='busy'?()=>{d.remove();takeOver('anyway');}:()=>{try{raw(OWN,JSON.stringify({tab:'reload',at:Date.now()}));}catch(e){}location.reload();};
+    d.querySelector('button').onclick=mode==='busy'?()=>{d.remove();takeOver('anyway');}:()=>{try{raw(OWN,JSON.stringify({tab:'reload',gen:nextGen(),at:Date.now()}));}catch(e){}location.reload();};
     const stop=e=>{if(!e.target.closest||!e.target.closest('button'))e.stopPropagation();};['pointerdown','touchstart','click','keydown'].forEach(t=>d.addEventListener(t,stop,true));
     (document.body||document.documentElement).appendChild(d);try{d.querySelector('button').focus();}catch(e){}}
-  function stepAside(why){if(away)return;if((why==='newer'&&body()!==lastBody)||foreign())rescue(why==='newer'?'newer':'overwritten');away=true;try{clearTimeout(NET.pushT);}catch(e){}try{if(typeof S!=='undefined'&&S&&!S.done)S.paused=true;}catch(e){}ev('tabs_away',{why});card();}
+  function stepAside(why,mode){if(away)return;if((why==='newer'&&body()!==lastBody)||foreign())rescue(why==='newer'?'newer':'overwritten');away=true;owner=false;try{clearTimeout(NET.pushT);}catch(e){}try{if(typeof S!=='undefined'&&S&&!S.done)S.paused=true;}catch(e){}ev('tabs_away',{why,mode});card(mode);}
   // 2: every write of the save key passes the guard (passing = this tab's own guarded save, or a cloud adopt)
-  Storage.prototype.setItem=function(k,v){if(k===KEY&&this===localStorage&&!passing&&!adopting){
-      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
+  Storage.prototype.setItem=function(k,v){if(k===KEY&&this===localStorage&&quiet)return;
+    if(k===KEY&&this===localStorage&&!passing&&!adopting){
+      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(owner&&!ownsKey()){stepAside('claim');throw new Error('TOPS: another tab has claimed the save');}if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
+    if(k===KEY&&this===localStorage&&window.TOPS_TABS_QA&&TOPS_TABS_QA.failWrite){const e=new Error('QA: storage full');e.name='QuotaExceededError';throw e;}   /* QA (s3-tabs 18): a browser that refuses the write */
     const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&passing&&!adopting){lastWrote=String(v);try{raw(WR,JSON.stringify({tab:TAB,sv:mine()}));}catch(e){}}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
   // 1 ownership
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
+  const readOwn=()=>{try{return JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){return null;}};
+  const beats=(a,b)=>{const ga=+(a&&a.gen||0),gb=+(b&&b.gen||0);return ga>gb||(ga===gb&&String(a&&a.tab||'')>String(b&&b.tab||''));};
+  const me=()=>({gen:myGen,tab:TAB});
+  const nextGen=()=>{let g=seenGen;try{g=Math.max(g,+(localStorage.getItem(GEN)||0));}catch(e){}const o=readOwn();if(o)g=Math.max(g,+(o.gen||0));g+=1;seenGen=g;try{raw(GEN,String(g));}catch(e){ev('tabs_own_write_failed',{k:'gen'});}return g;};
+  const writeOwn=x=>{try{raw(OWN,JSON.stringify(Object.assign({tab:TAB,gen:myGen,at:Date.now()},x||{})));return true;}catch(e){ev('tabs_own_write_failed',{err:String(e&&e.name||e)});return false;}};
+  /* this tab still owns the save: nobody's claim in the owner key beats its own (an empty key, after a page hide, counts as still its) */
+  const ownsKey=()=>{const o=readOwn();return !o||o.tab==='reload'?!o:(o.tab===TAB&&+(o.gen||0)===myGen)||!beats(o,me());};
+  const owns=()=>owner&&!away&&!pending&&ownsKey()&&!stale();
+  const done=new Set();   // claims already handled (they arrive twice: the channel and the owner key)
   let bc=null;try{bc=new BroadcastChannel('tops-tabs-'+KEY);bc.onmessage=m=>recv(m&&m.data);}catch(e){}
   const send=d=>{d.tab=TAB;d.at=Date.now();try{bc&&bc.postMessage(d);}catch(e){}try{raw(MSG,JSON.stringify(d));}catch(e){}};
   /* QA (tests/s3-tabs 10, 11): TOPS_TABS_QA={delay:ms} makes this tab handle messages late, as a busy or just-woken tab does; late:1 also
@@ -201,22 +225,35 @@
       const busy=midMatch();try{persist();}catch(e){}send({t:'ack',to:d.tab,busy,sv:mine()});}   // flush the last completed state, then answer
     else if(d.t==='ack'&&d.to===TAB&&pending){clearTimeout(waitT);if(d.busy){pending=false;away=true;card('busy');ev('tabs_busy');return;}
       const want=+(d.sv||0),t0=Date.now();const wait=()=>{if(!pending)return;if(svIn()>=want||Date.now()-t0>800)takeOver('ack');else setTimeout(wait,25);};wait();}   // the ack can beat the flushed save to this tab's storage
-    else if(d.t==='claim'){if(pending){clearTimeout(waitT);pending=false;}stepAside('claim');}}
+    else if(d.t==='claim')claimed(d);}
+  function claimed(c){const id=c.tab+':'+(c.gen||0)+':'+(c.busy?1:0);if(done.has(id))return;done.add(id);seenGen=Math.max(seenGen,+(c.gen||0));
+    if(away)return;
+    if(pending){clearTimeout(waitT);pending=false;stepAside('claim',c.busy?'busy':'');return;}
+    if(!owner)return;
+    if(!beats(c,me())){ev('tabs_reassert',{them:c.gen,me:myGen});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});return;}   // a losing claim (crossed or late): this tab stays, and says so
+    const fresh=Date.now()-(+c.at||0)<FRESH;
+    if(midMatch()&&!c.anyway&&fresh&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});return;}   // mid-match: only Play here anyway ends it
+    stepAside('claim',c.busy?'busy':'');}
   /* a tab that took over on a timeout: the tab it claimed from may still finish a write it had started (or answer late) in the next ~2 s;
      that save is adopted here instead of making this tab step aside (DQ: both tabs ended behind the card) */
   const inGrace=()=>{if(!grace||Date.now()>grace.until)return false;try{const w=JSON.parse(localStorage.getItem(WR)||'null');return !!w&&w.tab===grace.from;}catch(e){return false;}};
   function graceAdopt(){if(body()!==lastBody)rescue('grace');ev('tabs_grace',{sv:svIn()});reread();}
-  function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt)TOPS_SAVEV.adopt(s,'tab');}catch(e){}}
-  function takeOver(why,from){if(away&&why!=='anyway')return;pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};reread();try{persist();}catch(e){}send({t:'claim'});
-    try{raw(OWN,JSON.stringify({tab:TAB,at:Date.now()}));}catch(e){}ev('tabs_own',{why});}
+  /* loading this browser's own stored save: the adopt's migration save is not written back (it would bump the counter and look like a newer
+     save to the other tab, which is how two claimants both ended behind the card); the next real change writes it */
+  let quiet=0;function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){quiet++;try{TOPS_SAVEV.adopt(s,'tab');}finally{quiet--;}}}catch(e){}}
+  function takeOver(why,from){if(away&&why!=='anyway')return;pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};
+    myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});   // claim first, so a refusal can arrive before this tab writes
+    reread();ev('tabs_own',{why,gen:myGen});}   // no write here: a claim that loses must never have written (its next save checks the key first)
   window.addEventListener('storage',e=>{try{
     if(e.key===MSG&&e.newValue){if(!bc)recv(JSON.parse(e.newValue));}
-    else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(o&&!o.hb&&o.tab!==TAB&&!pending)stepAside('claim');
-      else if(o&&o.hb&&!o.busy&&o.tab!==TAB&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}}   /* the match there ended: offer Play here (loads the save it just made) */
+    else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
+      if(o.tab==='reload'){if(owner&&!away)stepAside('claim');return;}   // Play here in another tab: it reloads and takes over
+      if(!o.hb)claimed(o);else if(owner&&!away&&beats(o,me()))stepAside('claim');
+      else if(!o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}}   /* the match there ended: offer Play here (loads the save it just made) */
     else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale()){if(inGrace())graceAdopt();else stepAside('newer');}}catch(x){}});
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
      tab knows without waiting on an answer: a tab busy rendering a match can take seconds to hear a hello (DQ's race) */
-  let hbBusy=null;const beat=()=>{if(owner&&!away)try{hbBusy=midMatch();raw(OWN,JSON.stringify({tab:TAB,at:Date.now(),hb:1,busy:hbBusy?1:0}));}catch(e){}};
+  let hbBusy=null;const beat=()=>{if(!owner||away||pending)return;const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){stepAside('claim',o.busy?'busy':'');return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
   setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);   /* the poll is only a refresh: */
   /* busy is written synchronously where a match starts and ends (DQ 12:41: a tab busy rendering a match missed the 400 ms ticks, so a new
      tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
@@ -225,44 +262,65 @@
   if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){try{return _bm.apply(this,arguments);}finally{edge();}};}
   if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
-  window.addEventListener('pagehide',()=>{try{const o=JSON.parse(localStorage.getItem(OWN)||'null');if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
-  const start=()=>{let live=null;try{live=JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){}
+  window.addEventListener('pagehide',()=>{try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
+  /* back-forward cache: a restored page was frozen, so before it writes it checks it still owns the save */
+  window.addEventListener('pageshow',e=>{if(!e.persisted)return;ev('tabs_pageshow',{owner,away});if(!owner||away||pending)return;
+    const o=readOwn();if(stale()||(o&&o.tab!==TAB&&(o.tab==='reload'||beats(o,me())))){stepAside(stale()?'newer':'claim',o&&o.busy?'busy':'');return;}
+    myGen=nextGen();writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});});
+  const start=()=>{const live=readOwn();if(live)seenGen=Math.max(seenGen,+(live.gen||0));
     if(!live||live.tab==='reload'||!(Date.now()-(live.at||0)<9000))takeOver('alone');
     else if(live.hb&&live.busy){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
     else{const WAITN=live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
       try{const m=JSON.parse(localStorage.getItem(MSG)||'null');if(m&&m.t==='ack'&&m.to===TAB){on(m);return;}}catch(e){}
-      setTimeout(()=>{if(pending)takeOver('timeout',live.tab);},60);},WAITN);}};
+      setTimeout(()=>{if(!pending)return;const o=readOwn();   /* re-read right before taking over: the owner may have started a match since */
+        if(o&&o.tab!==TAB&&o.busy&&Date.now()-(+o.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'timeout'});return;}
+        takeOver('timeout',live.tab);},60);},WAITN);}};
   // 2 + 4 the save itself
   const _p=persist;
   persist=function(){
     if(adopting){passing++;try{return _p.apply(this,arguments);}finally{passing--;lastBody=body();}}   // the migration inside an adopt saves the adopted save
     if(away||pending)return;
+    if(owner&&!ownsKey()){const o=readOwn();stepAside('claim',o&&o.busy?'busy':'');return;}   // a better claim is in the owner key: never write over it
     const j=body();if(j!==null&&j===lastBody){try{hubBankUpdate();}catch(e){}return;}   // nothing changed: no write, no counter bump
     if(stale()){if(inGrace()){graceAdopt();return;}stepAside('newer');return;}
     if(foreign()&&svIn()>0)rescueStored('overwrite');   /* storage holds a save this tab didn't write (an older build's tab): keep it before overwriting */
-    passing++;try{const r=_p.apply(this,arguments);lastBody=j;return r;}finally{passing--;}};
+    passing++;let r;try{r=_p.apply(this,arguments);}finally{passing--;}
+    if(svIn()!==mine()){failed();return r;}   // the browser refused the write (storage full or blocked): lastBody stays, so the next save tries again
+    lastBody=j;okWrite();return r;};
+  let failN=0;function failed(){failN++;ev('save_write_failed',{n:failN});try{let b=document.getElementById('tabsSaveFail');if(!b){b=document.createElement('div');b.id='tabsSaveFail';b.setAttribute('role','status');
+      b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483500;padding:12px 14px;border-radius:12px;background:#3a1416;color:#fde8e8;font:600 14px/1.35 Manrope,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45)';
+      b.textContent='This device couldn\u2019t save your progress (storage full or blocked). TOPS keeps trying; free some space or leave private browsing.';(document.body||document.documentElement).appendChild(b);}}catch(e){}}
+  function okWrite(){if(!failN)return;failN=0;ev('save_write_ok');try{const b=document.getElementById('tabsSaveFail');if(b)b.remove();}catch(e){}}
   // 3 the cloud
   const PB='tops_pbase';const pbase=()=>{try{const v=JSON.parse(localStorage.getItem(PB)||'null');if(!v)return null;if(v.ok)return true;return Date.now()-v.at<864e5?false:null;}catch(e){return null;}};
-  const rpcPut=async()=>{const args={p_data:save};const pb=synced!=null?pbase():false;
-    if(pb!==false&&synced!=null){const r=await NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:synced},args));
+  const still=snap=>owns()&&myGen===snap.gen;   // checked after every await and right before each RPC
+  const rpcPut=async snap=>{const args={p_data:snap.data};const pb=snap.base!=null?pbase():false;
+    if(pb!==false&&snap.base!=null){const r=await NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:snap.base},args));
       if(!r.error){if(pb==null)try{raw(PB,JSON.stringify({ok:1,at:Date.now()}));}catch(e){}return r;}
-      const m=String((r.error&&(r.error.code+' '+r.error.message))||'');if(/PGRST202/.test(m)){try{raw(PB,JSON.stringify({ok:0,at:Date.now()}));}catch(e){}}else return r;}
+      const m=String((r.error&&(r.error.code+' '+r.error.message))||'');if(/PGRST202/.test(m)){try{raw(PB,JSON.stringify({ok:0,at:Date.now()}));}catch(e){}}else return r;
+      if(!still(snap))return {data:null,error:null,skipped:1};}
     return NET.sb.rpc(TOPS_SAVE_NS.rpc,args);};
   if(typeof cloudPush==='function'&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){
     const SV=TOPS_SAVEV,_adopt=SV.adopt;
     SV.adopt=function(c,why){if(c&&why!=='tab'&&mine()>0&&(synced==null||mine()>synced))rescue('cloud');   // this device saved since it last synced: keep its copy
       adopting++;let r;try{r=_adopt.apply(this,arguments);}finally{adopting--;}try{if(c&&why!=='tab')synced=+(c.sv||0);lastBody=body();}catch(e){}return r;};
     const _pull=SV.pull;SV.pull=async function(){if(away||pending)return;return _pull.apply(this,arguments);};
-    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||away||pending||stale())return;clearTimeout(NET.pushT);
-      const go=async()=>{if(away||pending||stale())return;try{
-        if(synced!=null){let c=null;try{const r=await NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle();c=r&&r.data&&r.data.data;}catch(e){}
-          if(c&&c.dev!==SV.dev()&&+(c.sv||0)>synced){ev('save_conflict',{cloud:c.sv||0,synced,mine:mine()});SV.adopt(c,'push');return;}}
-        const {data,error}=await rpcPut();if(error)throw error;
-        if(data&&data.ok){NET.cloudAt=Date.now();synced=mine();return;}
-        if(data&&data.err==='older'&&data.data){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+mine()+'), loading it');SV.adopt(data.data,'push');}
-      }catch(e){console.warn('cloud push',e);}};
-      if(now)go();else NET.pushT=setTimeout(go,2500);};
+    let inflight=null,again=false,retry=0;
+    const go=async()=>{if(!owns())return;
+      const snap={data:JSON.parse(JSON.stringify(save)),sv:mine(),gen:myGen,base:synced};   // what this push sends, fixed now
+      if(snap.base!=null){let c=null,ok=false;try{const r=await NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle();if(r&&r.error)throw r.error;c=r&&r.data&&r.data.data;ok=true;}catch(e){}
+        if(!ok){retry++;ev('push_preflight_failed',{retry});if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));return;}   // fail closed, retry later
+        retry=0;if(!still(snap)){ev('push_dropped',{at:'preflight'});return;}
+        if(c&&c.dev!==SV.dev()&&+(c.sv||0)>snap.base){ev('save_conflict',{cloud:c.sv||0,synced:snap.base,mine:mine()});SV.adopt(c,'push');return;}}
+      if(!still(snap)){ev('push_dropped',{at:'rpc'});return;}
+      const res=await rpcPut(snap);if(res.skipped){ev('push_dropped',{at:'fallback'});return;}const {data,error}=res;if(error)throw error;
+      if(data&&data.ok){NET.cloudAt=Date.now();synced=snap.sv;if(mine()>snap.sv)again=true;return;}   // synced = what the server acknowledged
+      if(data&&data.err==='older'&&data.data&&owns()){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+mine()+'), loading it');SV.adopt(data.data,'push');}};
+    const run=()=>{if(inflight){again=true;return;}inflight=go().catch(e=>console.warn('cloud push',e)).finally(()=>{inflight=null;if(again){again=false;if(owns())cloudPush(true);}});};   // one push at a time
+    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns())return;clearTimeout(NET.pushT);
+      if(now)run();else NET.pushT=setTimeout(run,2500);};
   }else if(typeof cloudPush==='function'){const _c=cloudPush;cloudPush=function(){if(away||pending||stale())return;return _c.apply(this,arguments);};}
   lastBody=body();try{lastWrote=localStorage.getItem(KEY);}catch(e){}start();
-  window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
+  window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,owner:()=>owns(),gen:()=>myGen,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,
+    _claim:(any)=>{away=false;takeOver(any?'anyway':'qa');},   /* QA: a claim from this tab now */rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
 })();
