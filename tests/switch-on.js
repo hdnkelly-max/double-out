@@ -316,16 +316,32 @@ async function v3saves(b) {
           else { const o = (OPT[k] || []).find(x => String(x).toLowerCase() !== String(v[k]).toLowerCase() && x !== 'bald'); if (o == null) continue; alt[k] = o; out.alt[k] = o; }
           out.without[k] = await build(alt); }
         const again = await build(v); out.stable = !!(again && out.full && again.px === out.full.px); save.vlook = v;
-        // ChatGPT C-P3 (Producer 07:50): hair and beard close-ups of the saved look for a human to eyeball: front, 3/4, side, back
+        // ChatGPT C-P3 (Producer 07:50): hair and beard close-ups of the saved look for a human to eyeball: front, 3/4, side (profile), back.
+        // Angles follow the HEAD's own facing (the throw pose turns it), only the head is drawn (hands and the held dart hidden), in neutral light (the
+        // oche's warm stage lights off for the shot), so hair, beard and skin colours read true in every view.
         try { const f = V._qa.meFig(), keep = []; Q.scene.children.forEach(c => { if (c.visible && !c.isLight) { keep.push(c); c.visible = false; } });
           const vis = f.visible, pp = f.parent, pos = f.position.clone(), rot = f.rotation.clone(); f.visible = true; Q.scene.add(f); f.position.set(0, 0, 0); f.rotation.set(0, Math.PI, 0); f.updateMatrixWorld(true);
-          const hb = new T3.Box3(); f.traverse(m => { if (m.isMesh && m.visible && ['skull', 'hair', 'cap', 'beard'].includes(m.userData.cap ? 'cap' : m.userData.tag)) hb.union(new T3.Box3().setFromObject(m)); });
-          const c = hb.getCenter(new T3.Vector3()), sz = hb.getSize(new T3.Vector3()), r = Math.max(sz.x, sz.y, sz.z) * 3.2, N = 384, rt2 = new T3.WebGLRenderTarget(N, N), b = new Uint8Array(N * N * 4), cv = document.createElement('canvas'); cv.width = cv.height = N;
-          out.heads = {}; const R = Q.renderer, oc = R.getClearColor(new T3.Color()), oa = R.getClearAlpha();
+          const HEADTAG = ['skull', 'hair', 'cap', 'beard', 'lens', 'chinao', 'brow', 'eye', 'ear'], hb = new T3.Box3();
+          f.traverse(m => { if (m.isMesh && m.visible && HEADTAG.includes(m.userData.cap ? 'cap' : m.userData.tag)) hb.union(new T3.Box3().setFromObject(m)); });
+          const big = hb.clone().expandByScalar(Math.max(...hb.getSize(new T3.Vector3()).toArray()) * .08), hid = [];
+          f.traverse(m => { if (!(m.isMesh || m.isLine || m.isPoints || m.isSprite) || !m.visible) return; const t = m.userData.cap ? 'cap' : m.userData.tag; if (m.isMesh && HEADTAG.includes(t)) return;
+            const mb = new T3.Box3().setFromObject(m); if (!t && big.containsPoint(mb.getCenter(new T3.Vector3())) && big.containsBox(mb.clone().expandByScalar(-1e-4))) return;   /* untagged face parts (eyes, brows, beard pieces) inside the head */
+            m.visible = false; hid.push(m); });
+          Q.scene.traverse(m => { if ((m.isMesh || m.isLine || m.isPoints || m.isSprite) && m.visible && !new T3.Box3().setFromObject(m).intersectsBox(big)) { m.visible = false; hid.push(m); } });   /* the held dart and anything else not at the head */
+          let hd = null; f.traverse(o => { if (!hd && o.isBone && /Head$/.test(o.name)) hd = o; });
+          const fwd = new T3.Vector3(0, 0, 1); if (hd) { fwd.applyQuaternion(hd.getWorldQuaternion(new T3.Quaternion())); } else fwd.set(0, 0, 1); fwd.y = 0; if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, 1); fwd.normalize();
+          const c = hb.getCenter(new T3.Vector3()), sz = hb.getSize(new T3.Vector3()), r = Math.max(sz.x, sz.y, sz.z) * 2.6, N = 384, rt2 = new T3.WebGLRenderTarget(N, N, { encoding: T3.sRGBEncoding }), b = new Uint8Array(N * N * 4), cv = document.createElement('canvas'); cv.width = cv.height = N;
+          /* neutral light only, so skin, hair and beard colours read true: the oche's own warm stage lights are switched off for the shot */
+          const offL = []; Q.scene.traverse(o => { if (o.isLight && o.visible) { offL.push(o); o.visible = false; } });
+          const amb = new T3.HemisphereLight(0xffffff, 0x444444, .9), key = new T3.DirectionalLight(0xffffff, 1.1); Q.scene.add(amb); Q.scene.add(key); Q.scene.add(key.target);
+          rt2.texture.encoding = T3.sRGBEncoding;   /* the screen is sRGB (renderer.outputEncoding): without this the picture holds linear values, darker and too saturated */
+          out.heads = {}; out.headFwd = fwd.toArray().map(x => +x.toFixed(2)); out.headHid = hid.length; const R = Q.renderer, oc = R.getClearColor(new T3.Color()), oa = R.getClearAlpha();
           for (const [nm, a] of [['front', 0], ['three-quarter', Math.PI / 4], ['side', Math.PI / 2], ['back', Math.PI]]) {
-            const cm = new T3.PerspectiveCamera(28, 1, .02, 20); cm.position.set(c.x + Math.sin(a) * r, c.y + sz.y * .15, c.z + Math.cos(a) * r);   /* the figure faces +z after the half turn */ cm.lookAt(c);
+            const d = fwd.clone().applyAxisAngle(new T3.Vector3(0, 1, 0), a), cm = new T3.PerspectiveCamera(28, 1, .02, 20);
+            cm.position.set(c.x + d.x * r, c.y + sz.y * .1, c.z + d.z * r); cm.lookAt(c); key.position.copy(cm.position).add(new T3.Vector3(0, sz.y, 0)); key.target.position.copy(c);
             R.setRenderTarget(rt2); R.setClearColor(0x2b2b30, 1); R.clear(); R.render(Q.scene, cm); R.readRenderTargetPixels(rt2, 0, 0, N, N, b); R.setRenderTarget(null);
             const im = cv.getContext('2d').createImageData(N, N); for (let y = 0; y < N; y++) im.data.set(b.subarray((N - 1 - y) * N * 4, (N - y) * N * 4), y * N * 4); cv.getContext('2d').putImageData(im, 0, 0); out.heads[nm] = cv.toDataURL('image/png'); }
+          Q.scene.remove(amb); Q.scene.remove(key); Q.scene.remove(key.target); offL.forEach(o => o.visible = true); hid.forEach(m => m.visible = true);
           R.setClearColor(oc, oa); Q.scene.remove(f); if (pp) pp.add(f); f.position.copy(pos); f.rotation.copy(rot); f.visible = vis; keep.forEach(x => x.visible = true); } catch (e) { out.headsErr = e.message; }
         return out; });   /* control: the same look twice must give the same picture */
       // 0. control (ChatGPT C-P2 a): open with the models off first, as any player does today; what that open writes is not the models'
