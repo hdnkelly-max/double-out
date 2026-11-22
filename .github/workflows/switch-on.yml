@@ -1,0 +1,117 @@
+# SWITCH-ON: "is Season 3's s3x ready to be the default?" as one run (Producer Sat 20:47; Experience's checklist in the EXP-IDLE row).
+# Dispatch it (Actions > switch-on > Run workflow). It builds the chosen code, then runs tests/switch-on.js (from src):
+#   gate   - every gate test the checklist names (a test the build doesn't have yet is a FAIL)
+#   saves  - real save shapes (no personal data) opened with s3x=1: money, XP, level and history unchanged; no first night mid-season;
+#            the shelf built from the save's own history; a Season 2-only save untouched
+#   phones - iPhone 13, Pixel 7 and a 360 px phone as new players: first night, 3 results, the Trophies shelf, the chip and back;
+#            no stuck overlay, nothing under MENU, no word splits, no sideways scroll, no page errors
+# A green run is AUTOMATED PASS for checklist items 1-3 only: the release is not cleared until the manual items are signed off.
+# The parts run as parallel jobs (gate in two halves, saves, one per phone, ~15 min; the models: v3 gate + v3 saves); a report job merges them into one table.
+# The PASS/FAIL table is in the run summary; screenshots and the JSON are an artifact. Hayden's real-phone play stays manual.
+name: switch-on
+run-name: "switch-on on ${{ inputs.build }} (${{ inputs.parts }}, flag ${{ inputs.flag }})"
+on:
+  workflow_dispatch:
+    inputs:
+      build: { description: 'live (the src commit of the version live now), src (src head), or a commit sha', required: true, default: 'live' }
+      parts: { description: 'gate,saves,phones (Season 3) and/or v3gate,v3saves (the models: run on the switch-on candidate before the flip)', required: true, default: 'gate,saves,phones' }
+      flag: { description: 's3x (open with ?s3x=1: the opt-in, today) or none (no flag, stored opt-in cleared: run this after the default flips)', required: true, default: 's3x', type: choice, options: [s3x, none] }
+      test_ref: { description: 'Branch holding tests/switch-on.js and the gate tests (default src)', required: false, default: 'src' }
+permissions: { contents: read }
+concurrency: { group: switch-on, cancel-in-progress: false }
+jobs:
+  part:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container: { image: 'mcr.microsoft.com/playwright:v1.48.2-jammy', options: '--ipc=host' }
+    defaults: { run: { shell: bash } }   # the Playwright image's default shell is sh
+    strategy:
+      fail-fast: false
+      matrix:
+        p:
+          - { id: gate-a, part: gate, gate: 's3-trophies,s3-shelf-data,s3-welcome' }
+          - { id: gate-b, part: gate, gate: 's3-progress,s3-firstnight,s3-xp,s3-match,s3-screens' }
+          - { id: saves, part: saves }
+          - { id: iphone13, part: phones, phone: 'iPhone 13' }
+          - { id: pixel7, part: phones, phone: 'Pixel 7' }
+          - { id: p360, part: phones, phone: '360 px phone' }
+          # the models switch-on (Producer Sun 05:09): parts v3gate,v3saves; run on the switch-on candidate before the flip
+          - { id: v3-gate, part: v3gate }
+          - { id: v3-saves, part: v3saves }
+    name: '${{ matrix.p.id }}'
+    steps:
+      - name: Skip parts not asked for
+        id: want
+        env: { PARTS: '${{ inputs.parts }}', P: '${{ matrix.p.part }}' }
+        run: |
+          case ",$PARTS," in *",$P,"*) echo "run=1" >> $GITHUB_OUTPUT ;; *) echo "skipped: $P not in $PARTS" ;; esac
+      - uses: actions/checkout@v4
+        if: steps.want.outputs.run
+        with: { ref: main, path: site, fetch-depth: 1 }
+      - uses: actions/checkout@v4
+        if: steps.want.outputs.run
+        with: { ref: src, path: code, fetch-depth: 0 }
+      - name: Pick the build
+        id: pick
+        if: steps.want.outputs.run
+        env: { BUILD: '${{ inputs.build }}', TREF: '${{ inputs.test_ref || ''src'' }}' }
+        run: |
+          git config --global --add safe.directory '*'
+          cd code; LIVE=$(node -e "console.log(require('../site/version.json').v)")
+          # the newest src commit whose v051.js IS the live version (git log -S also lists the later commit that removes it); it is also
+          # v3-parity's baseline (what default players have now)
+          LC=""; for c in $(git log --format=%H -S "TOPS_VER='$LIVE'" origin/src -- v051.js); do git show "$c:v051.js" | grep -c "TOPS_VER='$LIVE'" >/dev/null && { LC=$c; break; }; done
+          case "$BUILD" in
+            live) C="$LC"; [ -n "$C" ] || { echo "::error::no src commit has TOPS_VER='$LIVE'"; exit 1; } ;;
+            src)  C=$(git rev-parse origin/src) ;;
+            *)    C=$(git rev-parse --verify "$BUILD^{commit}") || { echo "::error::unknown commit $BUILD"; exit 1; } ;;
+          esac
+          git checkout -q --detach "$C"
+          # live: every test comes from src's head (or test_ref), newer than the build, so a gate test not shipped yet is a real FAIL.
+          # A candidate (src or a sha): its OWN tests win (a branch's newer tests must not be replaced by older ones); only the switch-on
+          # runner and its fixtures come from test_ref.
+          git fetch -q origin "$TREF"
+          if [ "$BUILD" = live ]; then git checkout -q FETCH_HEAD -- tests; else git checkout -q FETCH_HEAD -- tests/switch-on.js tests/fixtures/switch-on; fi
+          git reset -q -- tests
+          V=$(sed -n "s/.*TOPS_VER='\([^']*\)'.*/\1/p" v051.js | head -1)
+          echo "c=$C" >> $GITHUB_OUTPUT; echo "v=$V" >> $GITHUB_OUTPUT; echo "live=$LIVE" >> $GITHUB_OUTPUT; echo "lc=$LC" >> $GITHUB_OUTPUT
+          echo "build $BUILD = ${C:0:7} (v$V; live is v$LIVE); tests from $TREF"
+      - name: Build (tests/setup.sh)
+        if: steps.want.outputs.run
+        working-directory: code
+        run: npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+      - name: Build the live release as v3-parity's baseline
+        if: steps.want.outputs.run && matrix.p.part == 'v3gate'
+        env: { LC: '${{ steps.pick.outputs.lc }}' }
+        run: |
+          [ -n "$LC" ] || { echo "::warning::no live commit found: v3-parity will report no baseline"; exit 0; }
+          git -C code worktree add -q -f ../base "$LC" && cd base && npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
+          echo "baseline = live v${{ steps.pick.outputs.live }} (${LC:0:7})" >> "$GITHUB_STEP_SUMMARY"
+      - name: Switch-on checks (${{ matrix.p.id }})
+        if: steps.want.outputs.run
+        working-directory: code
+        env: { BASELINE: '${{ matrix.p.part == ''v3gate'' && ''../base'' || '''' }}', FLAG: '${{ inputs.flag }}', GATE_ONLY: '${{ matrix.p.gate }}', PHONES: '${{ matrix.p.phone }}', OUT: '../out/${{ matrix.p.id }}.json', SHOTS: '../out/shots' }
+        run: |
+          mkdir -p ../out; set +e; node tests/switch-on.js "$PWD" "${{ matrix.p.part }}" | tee ../out/${{ matrix.p.id }}.txt; rc=${PIPESTATUS[0]}
+          echo "build ${{ steps.pick.outputs.c }} v${{ steps.pick.outputs.v }}" > ../out/${{ matrix.p.id }}.build; exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.want.outputs.run
+        with: { name: 'switch-on-${{ matrix.p.id }}', path: out, retention-days: 14 }
+  report:
+    needs: part
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.test_ref || ''src'' }}', sparse-checkout: tests/switch-on.js, sparse-checkout-cone-mode: false }
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'switch-on-*', path: parts }
+      - name: One PASS/FAIL table
+        env: { PARTS: '${{ inputs.parts }}' }
+        run: |
+          # every asked-for part must have its JSON (a crashed or cancelled job is a FAIL row, never a silent gap)
+          F=""; for id in gate-a gate-b saves iphone13 pixel7 p360 v3-gate v3-saves; do case "$id" in gate-*) p=gate;; iphone13|pixel7|p360) p=phones;; v3-gate) p=v3gate;; v3-saves) p=v3saves;; *) p=$id;; esac
+            case ",$PARTS," in *",$p,"*) F="$F parts/switch-on-$id/$id.json";; esac; done
+          B=$(cat parts/*/*.build 2>/dev/null | sort -u | tr '\n' ' ')
+          set +e; node tests/switch-on.js --merge $F > table.md; rc=$?
+          { echo "$B"; echo; cat table.md; } >> "$GITHUB_STEP_SUMMARY"; cat table.md; exit $rc
