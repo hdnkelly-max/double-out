@@ -688,7 +688,11 @@
       /* the player's own v3 figure: the hero render needs the rig, so try a few times; the base card stays if it never comes */
       let n = 0; const hero = () => { if (!$id('s3V3New')) return; let u = ''; try { if (typeof V !== 'undefined' && V.heroShot) u = V.heroShot(save.look, nm, c.tier || 0, ''); } catch (e) {}
         /* the render goes into the same <img> once it has decoded (no new element, no size change under a finger mid-tap) */
-        if (u) { const im = new Image(); im.onload = () => { if (!$id('s3V3New')) return; let f = $id('s3V3NewFig'); if (!f) { const w = d.querySelector('.s3-v3nlfig'); if (!w) return; w.innerHTML = '<img id="s3V3NewFig" alt="">'; f = $id('s3V3NewFig'); } f.src = u; f.classList.add('s3-v3nlhero'); }; im.src = u; } else if (++n < 12) setTimeout(hero, 500); };
+        if (u) { const im = new Image(); im.onload = () => { if (!$id('s3V3New')) return; let f = $id('s3V3NewFig'); if (!f) { const w = d.querySelector('.s3-v3nlfig'); if (!w) return; w.innerHTML = '<img id="s3V3NewFig" alt="">'; f = $id('s3V3NewFig'); } f.src = u; f.classList.add('s3-v3nlhero'); }; im.src = u; } else if (++n < 12) setTimeout(hero, 500); else if (n < 72) setTimeout(hero, 2000); };
+      /* Q&D 22 Nov: the render only comes once the S3 rig file is in (V.heroShot gives '' for the stand-in): the game's avatar refresh
+         ('tops-avatars', sent when the rig lands) asks again at once; a slow poll backs it up while the card is up (about 2.5 min) */
+      const onAv = () => { if (!$id('s3V3New')) { document.removeEventListener('tops-avatars', onAv); return; } const f = $id('s3V3NewFig'); if (!(f && f.classList.contains('s3-v3nlhero'))) hero(); };
+      document.addEventListener('tops-avatars', onAv);
       hero();
     } catch (e) { console.warn('v3 new look', e); }
   }

@@ -288,7 +288,13 @@ html.s3-on.s3x #rbApp .rb-tabs{padding:0 4px}html.s3-on.s3x #rbApp .rb-tabs butt
    only (masked by its own alpha): warm toward the locker lamp at the top left, falling off low and to the right; the render's grade eased
    toward the plate's (a touch less contrast and saturation, a little warmth; no blur, no outline); a tight contact shadow plus a soft one
    onto the locker (ChatGPT P2, Producer 22 Nov 14:20). Under the name's shade, so the name always reads. */
-#rbApp .rb-hero .rb-lkfig{position:absolute;right:9%;pointer-events:none;filter:drop-shadow(-3px 3px 4px rgba(8,5,3,.55)) drop-shadow(-12px 9px 16px rgba(8,5,3,.38))}
-#rbApp .rb-hero .rb-lkfig img{display:block;width:100%;height:100%;filter:contrast(.93) saturate(.92) sepia(.08) brightness(.93)}
-#rbApp .rb-hero .rb-lkshade{position:absolute;inset:0;background:radial-gradient(ellipse 85% 60% at 12% 0%,rgba(255,190,120,.2) 0,rgba(255,190,120,.07) 45%,rgba(255,190,120,0) 70%),linear-gradient(160deg,rgba(10,6,4,0) 38%,rgba(10,6,4,.32) 70%,rgba(10,6,4,.58) 100%);
+#rbApp .rb-hero .rb-lkfig{position:absolute;right:9%;pointer-events:none}
+/* Director doc 82 (22 Nov): the lamp is above and to the left, so the figure casts a visible shadow onto the locker down and to the right
+   (its own silhouette, ~30%, softened); a tight contact edge; an ambient-occlusion band low on the figure; a warm lamp rim on its top-left edge */
+#rbApp .rb-hero .rb-lkcast{position:absolute;inset:0;background:rgb(8,5,3);opacity:.32;transform:translate(7%,3.5%);filter:blur(4px);
   -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#rbApp .rb-hero .rb-lkfig img{position:relative;display:block;width:100%;height:100%;filter:contrast(.93) saturate(.92) sepia(.08) brightness(.93) drop-shadow(1px 1px 1.5px rgba(8,5,3,.5))}
+#rbApp .rb-hero .rb-lkshade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,6,4,0) 52%,rgba(10,6,4,.36) 76%,rgba(10,6,4,.6) 100%),linear-gradient(115deg,rgba(10,6,4,0) 45%,rgba(10,6,4,.16) 100%);
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#rbApp .rb-hero .rb-lkrim{position:absolute;inset:0;mix-blend-mode:screen;background:radial-gradient(ellipse 80% 60% at 12% 2%,rgba(255,196,130,.5) 0,rgba(255,184,112,.26) 38%,rgba(255,170,100,0) 66%);
+  -webkit-mask-size:100% 100%,100% 100%;mask-size:100% 100%,100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0,2px 1.5px;mask-position:0 0,2px 1.5px;-webkit-mask-composite:source-out;mask-composite:subtract}

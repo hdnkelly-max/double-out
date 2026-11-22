@@ -159,12 +159,16 @@
         const d = g.getImageData(0, 0, w, h).data; find: for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) { top = y / h; break find; } } catch (e) {}
       lkTop[u] = [top, ar]; done(lkTop[u]); }; im.onerror = () => done([0, .8]); im.src = u; };
   const lkPlace = (w, u, m) => { const card = w.parentNode, H = (card ? card.clientHeight : 170) + LK_EXTRA; w.style.height = H + 'px'; w.style.width = Math.round(H * m[1]) + 'px';
-    w.style.top = Math.round(LK_HEAD - m[0] * H) + 'px'; w.querySelector('img').src = u; const sh = w.querySelector('.rb-lkshade'); sh.style.webkitMaskImage = sh.style.maskImage = `url(${u})`; w.hidden = false; };
-  const lkFigTag = () => `<div class="rb-lkfig" id="rbLkFig" hidden><img alt=""><i class="rb-lkshade"></i></div>`;
+    w.style.top = Math.round(LK_HEAD - m[0] * H) + 'px'; w.querySelector('img').src = u; const sh = w.querySelector('.rb-lkshade'); sh.style.webkitMaskImage = sh.style.maskImage = `url(${u})`;
+    const ca = w.querySelector('.rb-lkcast'); if (ca) ca.style.webkitMaskImage = ca.style.maskImage = `url(${u})`; const ri = w.querySelector('.rb-lkrim'); if (ri) ri.style.webkitMaskImage = ri.style.maskImage = `url(${u}),url(${u})`; w.hidden = false; };
+  const lkFigTag = () => `<div class="rb-lkfig" id="rbLkFig" hidden><i class="rb-lkcast"></i><img alt=""><i class="rb-lkshade"></i><i class="rb-lkrim"></i></div>`;
+  /* Q&D 22 Nov: V.heroShot gives '' while the figure would be the stand-in (S3 rig file not in yet); when the rig lands the game's avatar
+     refresh ('tops-avatars') fills a Locker still showing the plain room, however long the file took */
+  let lkAgain = null; document.addEventListener('tops-avatars', () => { const w = $id('rbLkFig'); if (lkAgain && w && w.hidden && v3Lk()) lkAgain(); });
   let lkWait = 0; const v3LockerBg = (tier, scene) => { clearTimeout(lkWait); let n = 0;
     const again = () => { const e = $id('rbLkHero'), w = $id('rbLkFig'); if (!e || !w) { if (++n < 24) lkWait = setTimeout(again, 60); return; } const u = lkFig(tier);
       if (u) { lkMeasure(u, m => { if ($id('rbLkFig') !== w) return; e.style.background = lkPlate(scene); lkPlace(w, u, m); e.dataset.lk74 = 1; }); return; } if (++n < 24) lkWait = setTimeout(again, 500); };
-    lkWait = setTimeout(again, 0); return lkFig(tier) && lkTop[lkMemo.u] ? lkPlate(scene) : scene; };
+    lkAgain = () => { n = 0; clearTimeout(lkWait); again(); }; lkWait = setTimeout(again, 0); return lkFig(tier) && lkTop[lkMemo.u] ? lkPlate(scene) : scene; };
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
     if (v3Lk()) return v3LockerBg(tier, scene);
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
