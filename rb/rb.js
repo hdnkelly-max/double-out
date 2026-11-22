@@ -13,7 +13,8 @@
   if (!ON) return;
   try { document.documentElement.classList.add('rb-on'); } catch (e) {}
   const $id = id => document.getElementById(id), qa = (s, r) => [...(r || document).querySelectorAll(s)];
-  const IMG = 'assets/rb/';   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
+  const IMG = 'assets/rb/';
+  const s3img = v => { try { return typeof window.TOPS_S3_IMG === 'function' ? TOPS_S3_IMG(v) : v; } catch (e) { return v; } };   // the Season 3 picture switch for styles set from script (Chromium skips the prototype setter patch)   // review build: images on main under assets/rb (Shipping copies them from exp-rebrand-assets)
   const IC = {
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
@@ -132,7 +133,7 @@
   const meFem = () => isFemModel(save.look || {}, save.name || '');
   const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
-    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = `url(${url}) 80% 30%/cover no-repeat,${scene}`; });
+    const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = s3img(`url(${url}) 80% 30%/cover no-repeat,${scene}`); });   /* EXP-S3-BINDER: Chromium skips the style setter patch, so the switch runs here */
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
   function locker(M) {
     const { c, v } = M;
