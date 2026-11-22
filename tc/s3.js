@@ -136,18 +136,29 @@
 })();
 /* ===== REN-WI (Hayden 22 Nov, Director doc 80): Tama Rewiri is now Wiremu 'Wi' Rewiri =====
    Saves from before the rename still name him: the next match, the season's fixtures and table, history, rivals, head-to-heads, and the
-   contracts he hands out (from 'Tama'). On load (and when another device's save is loaded) every 'Tama Rewiri' in the save, in values and in
-   keys, becomes 'Wiremu Rewiri', and a contract from 'Tama' is from 'Wi'. Card ids stay ('tama'), and the player base Tama is untouched: only
+   contracts he hands out (from 'Tama'). Every 'Tama Rewiri' in the save, in values and in keys, becomes 'Wiremu Rewiri', and a contract from
+   'Tama' is from 'Wi'. It runs on load, on every save (so an adopted older copy, from the cloud or another tab, can never be written or pushed
+   back with the old name), and after a cloud adopt (netAdopt, v11's adopt). A key that already exists under the new name is merged: head-to-
+   head wins and losses add up and the results lists join, older first. Card ids stay ('tama'), and the player base Tama is untouched: only
    the full name, and 'Tama' as a contract's from, are rewritten. His look is pinned to his old name in game4 (NAME_PIN). */
 (function(){
-  const OLD='Tama Rewiri',NEW='Wiremu Rewiri';
+  const OLD='Tama Rewiri',NEW='Wiremu Rewiri',SUM=/^(w|l|wins|losses|won|lost|played|legsW|legsL)$/;
+  function merge(a,b){   // a: the old key's value, b: the new key's
+    if(Array.isArray(a)&&Array.isArray(b))return a.concat(b);
+    if(a&&b&&typeof a==='object'&&typeof b==='object'){const o=Object.assign({},a,b);for(const k of Object.keys(a))if(k in b){
+        if(SUM.test(k)&&typeof a[k]==='number'&&typeof b[k]==='number')o[k]=a[k]+b[k];else o[k]=merge(a[k],b[k]);}return o;}
+    return b;}
   function fix(v,k){if(typeof v==='string'){if(k==='from'&&v==='Tama')return 'Wi';return v.indexOf(OLD)>=0?v.split(OLD).join(NEW):v;}
     if(Array.isArray(v)){for(let i=0;i<v.length;i++)v[i]=fix(v[i]);return v;}
-    if(v&&typeof v==='object'){for(const key of Object.keys(v)){const nv=fix(v[key],key);if(key.indexOf(OLD)>=0){const nk=key.split(OLD).join(NEW);if(!(nk in v))v[nk]=nv;delete v[key];}else v[key]=nv;}return v;}
+    if(v&&typeof v==='object'){for(const key of Object.keys(v)){const nv=fix(v[key],key);if(key.indexOf(OLD)>=0){const nk=key.split(OLD).join(NEW);v[nk]=(nk in v)?merge(nv,fix(v[nk],nk)):nv;delete v[key];}else v[key]=nv;}return v;}
     return v;}
   function needs(o){try{const j=JSON.stringify(o);return j.indexOf(OLD)>=0||j.indexOf('"from":"Tama"')>=0;}catch(e){return false;}}
-  function migrate(why){try{if(typeof save==='undefined'||!save||!needs(save))return false;fix(save);try{window.TOPS_FLIGHT&&TOPS_FLIGHT.log&&TOPS_FLIGHT.log('ren_wi',{why});}catch(e){}try{persist();}catch(e){}return true;}catch(e){console.warn('ren-wi',e);return false;}}
-  window.TOPS_RENWI={migrate,fix,needs};
-  migrate('load');
+  const log=why=>{try{window.TOPS_FLIGHT&&TOPS_FLIGHT.log&&TOPS_FLIGHT.log('ren_wi',{why});}catch(e){}};
+  function clean(why){try{if(typeof save!=='undefined'&&save&&needs(save)){fix(save);log(why);return true;}}catch(e){console.warn('ren-wi',e);}return false;}
+  function migrate(why){if(clean(why))try{persist();}catch(e){}}
+  if(typeof persist==='function'){const _p=persist;persist=function(){clean('save');return _p.apply(this,arguments);};}   // every write is clean
+  if(typeof netAdopt==='function'){const _n=netAdopt;netAdopt=function(){const r=_n.apply(this,arguments);migrate('netAdopt');return r;};}
   if(window.TOPS_SAVEV&&TOPS_SAVEV.adopt){const _a=TOPS_SAVEV.adopt;TOPS_SAVEV.adopt=function(){const r=_a.apply(this,arguments);migrate('adopt');return r;};}
+  window.TOPS_RENWI={migrate,fix,needs,merge};
+  migrate('load');
 })();
