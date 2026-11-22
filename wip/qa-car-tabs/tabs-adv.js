@@ -69,7 +69,10 @@ const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem
     const exp = Math.floor(Date.now() / 1000) + 21600, b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
     const user = { id: UID, aud: 'authenticated', role: 'authenticated', email: 'qa@example.invalid', user_metadata: { full_name: 'QA' }, app_metadata: { provider: 'google' } };
     const sess = { access_token: b64({ alg: 'none' }) + '.' + b64({ sub: UID, role: 'authenticated', exp }) + '.qa', token_type: 'bearer', expires_in: 21600, expires_at: exp, refresh_token: 'r', user };
-    const seed = JSON.parse(FIX); seed.cloudUser = { id: UID, name: 'QA' }; seed.authSeen = true; seed.dev = 'dseed'; const st = { row: { data: seed }, log: [] }; let hold = null, holdOld = null;
+    // a SETTLED save, as a returning player has it: the fixture opened once by this build (guest), so the boot has nothing left to change;
+    // the cloud holds exactly the same copy (same counter and device), as after that player's last push
+    let local = FIX; { const c0 = await b.newContext({ serviceWorkers: "block" }); const g = await open(c0); await g.evaluate(() => { save.authSeen = true; save.cloudUser = { id: '00000000-0000-4000-8000-00000000c10d', name: 'QA' }; try { persist(); } catch (e) {} }); await g.waitForTimeout(6000); local = await g.evaluate(() => localStorage.getItem('doubleout_s3')); await c0.close(); }
+    const seed = JSON.parse(local); const st = { row: { data: seed }, log: [] }; let hold = null, holdOld = null; const LOCAL = local;
     const sbjs = (() => { try { return fs.readFileSync(process.env.SBJS, 'utf8'); } catch (e) { return null; } })();
     const J = (r, s, o) => r.fulfill({ status: s, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: o === undefined ? '' : JSON.stringify(o) });
     const attach = async (p, who) => { await p.addInitScript(s => { try { localStorage.setItem('sb-thyirfwoqkshsaqowdpe-auth-token', JSON.stringify(s)); } catch (e) {} }, sess);
@@ -84,16 +87,24 @@ const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem
           if (hold && who === 'A') { st.log.push({ who, t: Date.now(), preflight: 'held' }); await hold; holdOld = snap; }   // answers with the cloud as it was when asked
           const one = /pgrst\.object/.test(q.headers()['accept'] || ''); const rowv = { user_id: UID, ...(holdOld && who === 'A' ? holdOld : snap) }; return one ? J(r, 200, rowv) : J(r, 200, [rowv]); }
         if (u.pathname.startsWith('/rest/v1/rpc/')) return J(r, 200, null); return m === 'GET' ? J(r, 200, []) : J(r, 201); }); };
-    const A = await open(ctx, {}, p => attach(p, 'A')); await hub(A); await A.waitForTimeout(4000);
+    const A = await open(ctx, {}, async p => { await p.addInitScript(raw => { try { localStorage.setItem('doubleout_s3', raw); } catch (e) {} }, LOCAL); await attach(p, 'A'); }); await hub(A);
+    // A5 (inside A3's setup): this one signed-in tab, alone, must never show "open in another tab" (the cloud already has its save)
+    const seen = []; let tPrev = 0; for (const t of [2, 5, 8, 12]) { await A.waitForTimeout((t - tPrev) * 1000); tPrev = t; const s5 = await state(A); seen.push({ t, own: s5.own, card: s5.card, sv: s5.sv }); }
+    const lg5 = await A.evaluate(() => (window.TOPS_TABS && TOPS_TABS.log) ? TOPS_TABS.log().slice(-8) : null).catch(() => null);
+    row(seen.every(x => !x.card), 'A5 one signed-in tab, alone, for 12 s: never "open in another tab"', { seen, tabsLog: lg5, cloudLog: st.log.map(x => x.who + (x.preflight ? ' preflight' : ' put sv' + x.sv + (x.ok ? ' ok' : ' refused'))).join(', ') });
     if (process.env.DBG) console.log('DBG A3', JSON.stringify(await A.evaluate(() => ({ user: !!(window.NET && NET.user), sb: !!(window.NET && NET.sb), supa: !!window.supabase, cp: typeof cloudPush, tok: !!localStorage.getItem('sb-thyirfwoqkshsaqowdpe-auth-token') }))), 'log', JSON.stringify(st.log));
     let release; hold = new Promise(z => release = z);
-    await A.evaluate(() => { career().bank += 100; persist(); try { cloudPush(true); } catch (e) {} }); await A.waitForTimeout(800);
+    const sA0 = await state(A), st0 = await stored(A);
+    await A.evaluate(() => { career().bank += 100; persist(); try { cloudPush(true); } catch (e) {} }); await A.waitForTimeout(800); const stA = await stored(A);
+    if (process.env.DBG) console.log('DBG A before +100', JSON.stringify(sA0), 'stored', JSON.stringify(st0), 'after', JSON.stringify(stA), 'log', JSON.stringify(await A.evaluate(() => (window.TOPS_TABS && TOPS_TABS.log) ? TOPS_TABS.log().slice(-12) : null)).slice(0, 1500));
     const B = await open(ctx, {}, p => attach(p, 'B')); await hub(B); await B.waitForTimeout(3000);
     const sA1 = await state(A), sB1 = await state(B);
     await B.evaluate(() => { career().bank += 300; persist(); try { cloudPush(true); } catch (e) {} }); await B.waitForTimeout(3000); const cloudB = st.row.data.career.bank, tRel = Date.now();
-    release(); hold = null; await A.waitForTimeout(4000);
+    release(); hold = null;
+    const want0 = JSON.parse(LOCAL).career.bank + 400; for (let k = 0; k < 40 && st.row.data.career.bank !== want0; k++) await A.waitForTimeout(500);   // give B's push up to 20 s (preflight, retries): slow is not lost
+    await A.waitForTimeout(1500);
     const late = st.log.filter(x => x.who === 'A' && !x.preflight && x.t >= tRel);
-    const want = JSON.parse(FIX).career.bank + 400, bEnd = (await state(B)).bank;   /* A's +100 then B's +300: nothing may be lost */
+    const want = JSON.parse(LOCAL).career.bank + 400, bEnd = (await state(B)).bank;   /* A's +100 then B's +300: nothing may be lost */
     row(!late.length && st.row.data.career.bank === want && bEnd === want, 'A3 cloud push suspended in preflight while B takes over and saves: A writes nothing after losing ownership; B starts from A\'s latest save; the cloud ends with both A\'s +$100 and B\'s +$300',
       { want, bEnd, A_whenB_open: sA1, B: sB1, cloudAfterB: cloudB, A_putsAfterRelease: late, cloudEnd: st.row.data.career.bank, log: st.log.map(x => x.who + (x.preflight ? ' preflight held' : ' put sv' + x.sv + ' $' + x.bank + (x.ok ? ' ok' : ' refused'))).join(', ') });
     await ctx.close(); }
