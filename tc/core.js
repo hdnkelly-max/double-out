@@ -983,9 +983,11 @@
         const dl = !!q('animsPending'), failed = !!q('animsFailed'), eta = q('animsEta'), age = +q('animsAge') || 0, got = +q('animsGot') || 0;
         if (!failed && !WK.askedAnims) { WK.askedAnims = 1; q('loadAnims'); }   // Walk on asks for the clip file now (high priority), even while the figure is still a stand-in; an idle fetch with no bytes yet is replaced by it
         if (dl) WK.dlSeen = now; else if (WK.dlSeen && !WK.dlEnd) WK.dlEnd = now;   // the file just landed: give the clip a moment to start (parse, mixer) before giving up
-        /* past 4 s, hold only while the file is still coming AND can land inside the 10 s cap at its rate so far (+15%, plus 1 s to parse);
-           a file that can't make it skips at 4 s as before, not after 10 s of an empty room; a failed file (404) skips at once (Producer 14:55) */
-        const canLand = dl && (eta == null ? heldMs < 7000 && (got > 0 || age < 3000) : heldMs + (eta * 1.15 + 1) * 1000 < 10000);   // no rate yet: 3 s past the base hold, only while bytes are arriving or the request is under 3 s old (429c: a request that has sent nothing for seconds skips at 4 s, as 4.30)
+        /* 429c: the call is made once, at the 4 s mark, and kept: hold on only if the file can land inside the 10 s cap at its rate so far
+           (+10%, plus 0.6 s to parse); with no rate yet, up to 7 s while bytes are arriving or the request is under 3 s old. A request that
+           has sent nothing for seconds skips at 4 s, as 4.30. Once committed, a dip in the rate doesn't turn it into a 7 s empty room. */
+        if (heldMs >= 4000 && dl && (WK.commit == null || (WK.commit === 'wait' && eta != null))) WK.commit = eta != null ? (heldMs + (eta * 1.1 + .6) * 1000 < 10000 ? 'eta' : false) : (got > 0 || age < 3000 ? 'wait' : false);
+        const canLand = dl && (WK.commit === 'eta' || (WK.commit === 'wait' && heldMs < 7000));
         if (!failed && (heldMs < 4000 || (heldMs < 10000 && (canLand || (WK.dlEnd && now - WK.dlEnd < 2500))))) {
           WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
           const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board

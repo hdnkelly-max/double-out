@@ -1,5 +1,5 @@
 const fs=require('fs');
-const eng=fs.readFileSync('engine.js','utf8'),g=fs.readFileSync('game4.js','utf8').replace('ENGINE',()=>eng);
+const eng=fs.readFileSync('engine.js','utf8'),g=fs.readFileSync('game4.js','utf8').replace('ENGINE',()=>eng).replace('/*ANIMS_BYTES*/0',()=>{try{return String(fs.statSync('assets/anims.glb').size);}catch(e){return '0';}});/* 429c: the clip file's size, for a host that sends it without a Content-Length (chunked) */
 const head=fs.readFileSync('head3.html','utf8'),body=fs.readFileSync('body4.html','utf8');
 const BUILD=String(Date.now());
 // ENG-RIGCACHE (Engine 19:40 + Experience): the update check used to re-download the whole page (6.5 MB, no-store) on every load and every
