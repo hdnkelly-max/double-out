@@ -1,0 +1,27 @@
+--- 16:30
+dart-hair-v3 exit 0 :: S3-DART-HAIR PASS (17312 samples, k step 0.01, margin >= 8 mm; closest: ray 99 mm, kai 99 mm, tama 99 mm, dazza 39.3 mm, mia 36.4 mm, opp:Big Mal 45.7 mm, opp:Shazza 99 mm, opp:Deano 99 mm; 71 s)
+dart-hair-v2 exit 0 :: S3-DART-HAIR PASS (17312 samples, k step 0.01, margin >= 8 mm; closest: ray 99 mm, kai 99 mm, tama 99 mm, dazza 39.3 mm, mia 36.4 mm, opp:Big Mal 45.7 mm, opp:Shazza 99 mm, opp:Deano 99 mm; 68 s)
+dart-cast-v3 exit 0 :: S3-DART-HAIR PASS (25968 samples, k step 0.01, margin >= 8 mm; closest: Big Mal 45.7 mm, Shazza 99 mm, Dave Hurring 99 mm, Pete the Plumber 39.9 mm, Deano Marsh 99 mm, Jonno 99 mm, Kev Marsh 99 mm, Lisa Tane 99 mm, Luke Littler 99 mm, Michael van Gerwen 99 mm, Gerwyn Price 32.3 mm, Luke Humphries 39.9 mm; 42 s)
+dartvis exit 0 :: 
+gripcap-v3 exit 0 :: S3-GRIP-CAP PASS (v3: 24 poses closed round the barrel, player = opponents; v3 cap: its own build)
+gripcap-v2 exit 0 :: S3-GRIP-CAP PASS (v2: 24 poses closed round the barrel, player = opponents; 20 capped looks (5 bases x 4 builds) with a front peak at the rim, clear of glasses)
+dart-hold exit 0 :: S3-DART-HOLD PASS
+v2clear exit 0 :: S3-V2-CLEAR PASS (8 figures, 44 poses + 19 clips, 48398400 checks, 0 head penetration, 0 darts in arms (spares >= 67 deg off the forearm), throwing dart clear of the skull (closest 1.13 at opp:Deano/throw0.5) and of the hair (closest 999 mm at ); glasses ray 6.8mm, kai 6.8mm, tama 6.8mm, dazza 6.8mm, mia 6.8mm; remy fe
+v2clear-v3 exit 0 :: S3-V2-CLEAR PASS (8 figures, 44 poses + 19 clips, 47799537 checks, 0 head penetration, 0 darts in arms (spares >= 67 deg off the forearm), throwing dart clear of the skull (closest 1.151 at ray/throw0.8) and of the hair (closest 44.2 mm at mia/throw0); glasses ray 8.3mm, kai 8.3mm, tama 8.3mm, dazza 8.3mm, mia 8.3mm; r
+herocolour exit 0 :: V3-HEROCOLOUR PASS (12 looks: hero + portrait match the screen pipeline; red/green/blue/black/charcoal/purple shirts keep hue, saturation and darkness; a skin swatch per base; framing: hero clear of the top and side edges, portrait head from 6.3-6.6% down, clear of the sides)
+match-v3 exit 0 :: s3-match PASS
+match-v2 exit 0 :: s3-match PASS
+creator-v3 exit 0 :: S3-CREATOR PASS
+creator-v2 exit 0 :: S3-CREATOR PASS
+clip-v3 exit 0 :: S3-CLIP-GAME PASS (8 figures, 19 clips, 23299729 checks)
+clip-v2 exit 0 :: S3-CLIP-GAME PASS (8 figures, 19 clips, 23831077 checks)
+clip-cast exit 0 :: S3-CLIP-GAME PASS (12 figures, 19 clips, 34612818 checks)
+pers exit 0 :: S3-PERS-CLEAR PASS (5 figures, 75 poses, 1633743 checks)
+pers-match exit 0 :: S3-PERS-MATCH PASS (5 bases, 25 moments held through the game's hooks, 429135 clip checks, release on pull OK)
+blend exit 0 :: S3-BLEND PASS (8 v3 figures, 9 transitions x 4 blend weights x 2 start points (+ layered throw phases) = 1088 mid-crossfade samples, 52064371 checks: 0 head penetration, 0 darts in arms/shirt, 0 clip pokes, 0 collar in the skull; throwing dart closest to the skull 1.233 at opp:Deano/throw>celebrate@0.25/w0.8+throw.6, t
+hubfps exit 0 :: V3-HUBFPS PASS (v3 hub, CPU x1: from 4 s every 2 s window >= 72 frames; from 12 s >= 120 frames and <= 0 ms of portrait / hero rendering; 2 avatar refreshes)
+parity-off exit 0 :: V3-PARITY PASS: 13 figures identical in geometry, materials and pixels, and 2470 clip frames through V2POST identical at 0.01 mm, without ?v3=1
+parity-on exit 1 :: V3-PARITY FAIL (1)
+hay-v2 exit 0 :: 
+hay-v3 exit 0 :: 
+JOBDONE
