@@ -31,7 +31,7 @@ begin
   end if;
   return jsonb_build_object('ok',true,'sv',nv);
 end $function$;
-revoke all on function public.tops_save3_put(jsonb, bigint) from public;
+revoke all on function public.tops_save3_put(jsonb, bigint) from public, anon, authenticated, service_role;   -- Supabase's default privileges grant EXECUTE on every new public function to anon, authenticated and service_role: take them all away, then grant back only these two
 grant execute on function public.tops_save3_put(jsonb, bigint) to authenticated, service_role;   -- not anon (ChatGPT P2-2): a signed-out call gets a permission error, which the client already treats as a failed push
 -- close the direct-write path (ChatGPT P1-3): players keep reading their own row; writes go through the function only.
 -- The one client direct write (game4.js cloudPush's upsert) is replaced by v11's rpc push in every build since v1.56.

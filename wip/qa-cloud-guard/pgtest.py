@@ -7,6 +7,8 @@ a = C(); a.autocommit = True; x = a.cursor()
 x.execute("drop schema if exists public cascade; create schema public; drop schema if exists auth cascade; create schema auth")
 for r in ('anon', 'authenticated', 'service_role'):
     x.execute(f"do $$ begin create role {r}; exception when duplicate_object then null; end $$")
+# Supabase's default privileges, as on the project (pg_default_acl, 22 Nov): new public functions get EXECUTE for anon, authenticated, service_role
+x.execute("alter default privileges in schema public grant execute on functions to anon, authenticated, service_role")
 x.execute("create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('qa.uid', true),'')::uuid $$")
 x.execute("create table public.tops_saves_s3(user_id uuid primary key, data jsonb, updated_at timestamptz); alter table public.tops_saves_s3 enable row level security; grant usage on schema public, auth to anon, authenticated, service_role; grant execute on function auth.uid() to anon, authenticated; grant all on public.tops_saves_s3 to anon, authenticated, service_role")
 x.execute("create policy tops_saves_s3_own_select on public.tops_saves_s3 for select using (auth.uid() = user_id)")
@@ -70,4 +72,5 @@ rows = x.fetchall(); chk("one function, grants authenticated/service_role, not P
 x.execute(sql('rollback.sql')); b, r, s = stale('legacy'); chk("rollback: today's function and behaviour back", (r['ok'], s['bank']), (True, 2050))
 x.execute("select count(*) from pg_proc where proname='tops_save3_put'"); chk("rollback leaves one function", x.fetchone()[0], 1)
 _, kd = sess(); kd.execute("update public.tops_saves_s3 set updated_at = now()"); chk("rollback: the direct write works again (today)", kd.rowcount, 1)
+x.execute("select md5(pg_get_functiondef(p.oid)) from pg_proc p where proname='tops_save3_put'"); chk("rollback recreates production's function text exactly (md5 of pg_get_functiondef, prod 22 Nov 17:0x)", x.fetchone()[0], '8ec7c5ed166473e8f7187854102a0178')
 print('\n'.join(res)); print(f"{sum(r.startswith('PASS') for r in res)}/{len(res)} pass")
