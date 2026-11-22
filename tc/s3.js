@@ -170,7 +170,13 @@
      every await and right before the RPC; one push at a time per tab; synced moves only to the counter the server acknowledged. A failed
      preflight read doesn't push: it retries with backoff.
    - A page restored from the back-forward cache revalidates ownership before it writes. A save the browser refused to write (storage full,
-     blocked) is detected, shown as a banner and retried on the next save; a recovery copy that can't be kept is logged. */
+     blocked) is detected, shown as a banner and retried on the next save; a recovery copy that can't be kept is logged.
+   R7 (DQ 22:2x, A2 at CPU x4): a localStorage key is not a lock, so where the browser has Web Locks (navigator.locks: Chrome 69+, Safari 15.4+,
+   Firefox 96+) the save is owned by holding a real lock, 'tops-save-<key>'. A tab writes only while it holds it; taking over steals it, and
+   the old holder learns at once (its lock request rejects) and steps aside, or, mid-match, steals it back once (marked busy) unless the
+   claim was Play here anyway. The owner key, messages and heartbeats stay as information (who, busy) and as the whole mechanism where Web
+   Locks is missing. In both: an owner that acks a hello (not mid-match) hands over at once (it stops and shows the card, so it can't start a
+   match or beat over the new owner), and no match starts unless this tab owns the save at that moment. */
 (function(){
   if(typeof persist!=='function'||typeof TOPS_SAVE_NS==='undefined'||!window.localStorage)return;
   const KEY=TOPS_SAVE_NS.key,OWN='tops_owner_'+KEY,MSG=OWN+'_msg',RES=KEY+'_rescue',TAB='t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
@@ -202,23 +208,36 @@
     d.querySelector('button').onclick=mode==='busy'?()=>{d.remove();takeOver('anyway');}:()=>{try{raw(OWN,JSON.stringify({tab:'reload',gen:nextGen(),at:Date.now()}));}catch(e){}location.reload();};
     const stop=e=>{if(!e.target.closest||!e.target.closest('button'))e.stopPropagation();};['pointerdown','touchstart','click','keydown'].forEach(t=>d.addEventListener(t,stop,true));
     (document.body||document.documentElement).appendChild(d);try{d.querySelector('button').focus();}catch(e){}}
-  function stepAside(why,mode){if(away)return;if((why==='newer'&&body()!==lastBody)||foreign())rescue(why==='newer'?'newer':'overwritten');away=true;owner=false;try{clearTimeout(NET.pushT);}catch(e){}try{if(typeof S!=='undefined'&&S&&!S.done)S.paused=true;}catch(e){}ev('tabs_away',{why,mode});card(mode);}
+  function stepAside(why,mode){if(away)return;if((why==='newer'&&body()!==lastBody)||foreign())rescue(why==='newer'?'newer':'overwritten');away=true;owner=false;releaseIt();try{clearTimeout(NET.pushT);}catch(e){}try{if(typeof S!=='undefined'&&S&&!S.done)S.paused=true;}catch(e){}ev('tabs_away',{why,mode});card(mode);}
   // 2: every write of the save key passes the guard (passing = this tab's own guarded save, or a cloud adopt)
   Storage.prototype.setItem=function(k,v){if(k===KEY&&this===localStorage&&quiet)return;
     if(k===KEY&&this===localStorage&&!passing&&!adopting){
-      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(owner&&!ownsKey()&&lost(readOwn()))throw new Error('TOPS: another tab has claimed the save');if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
+      if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(LK){if(!held)throw new Error('TOPS: this tab does not hold the save');}else if(owner&&!ownsKey()&&lost(readOwn()))throw new Error('TOPS: another tab has claimed the save');if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
     if(k===KEY&&this===localStorage&&window.TOPS_TABS_QA&&TOPS_TABS_QA.failWrite){const e=new Error('QA: storage full');e.name='QuotaExceededError';throw e;}   /* QA (s3-tabs 18): a browser that refuses the write */
     if(k===KEY&&this===localStorage&&passing&&!adopting){try{raw(WR,JSON.stringify({tab:TAB,sv:mine()}));}catch(e){}}   // the writer tag goes first, so another tab never sees the save before its tag
     const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&passing&&!adopting){lastWrote=String(v);}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
   // 1 ownership
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
+  const LK=!window.TOPS_NOLOCKS&&!!(navigator.locks&&navigator.locks.request),LOCK='tops-save-'+KEY;   /* TOPS_NOLOCKS: QA, runs the fallback */
+  let held=false,acquiring=false,releaseLock=null,lastClaim=null;
+  function lockAcquire(steal){if(!LK)return Promise.resolve(true);acquiring=true;
+    return new Promise(res=>{try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{acquiring=false;if(!lock){res(false);return;}held=true;ev('lock_held',{steal:!!steal});res(true);
+        return new Promise(r=>{releaseLock=()=>{held=false;releaseLock=null;r();};});})
+      .catch(e=>{acquiring=false;const was=held;held=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();res(false);});}catch(e){acquiring=false;res(false);}});}
+  /* the lock was stolen: give the stealer's claim (owner key or message) a moment to arrive, then the one rule. Writes are blocked meanwhile. */
+  function lockLost(){if(away||!owner)return;setTimeout(()=>{if(away)return;const o=readOwn();
+      const any=(o&&o.tab!==TAB&&o.anyway)||(lastClaim&&lastClaim.anyway&&Date.now()-lastClaim.rx<4000);
+      if(midMatch()&&!any&&!stale()){lockAcquire(true).then(ok=>{if(!ok||away){stepAside('claim');return;}myGen=nextGen();ev('tabs_refuse',{via:'lock'});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});});return;}
+      stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');},300);}
+  const releaseIt=()=>{try{releaseLock&&releaseLock();}catch(e){}};
   const readOwn=()=>{try{return JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){return null;}};
   const beats=(a,b)=>{const ga=+(a&&a.gen||0),gb=+(b&&b.gen||0);return ga>gb||(ga===gb&&String(a&&a.tab||'')>String(b&&b.tab||''));};
   const me=()=>({gen:myGen,tab:TAB});
   const nextGen=()=>{let g=seenGen;try{g=Math.max(g,+(localStorage.getItem(GEN)||0));}catch(e){}const o=readOwn();if(o)g=Math.max(g,+(o.gen||0));g+=1;seenGen=g;try{raw(GEN,String(g));}catch(e){ev('tabs_own_write_failed',{k:'gen'});}return g;};
-  const writeOwn=x=>{try{raw(OWN,JSON.stringify(Object.assign({tab:TAB,gen:myGen,at:Date.now()},x||{})));return true;}catch(e){ev('tabs_own_write_failed',{err:String(e&&e.name||e)});return false;}};
+  let anyUntil=0;   /* after Play here anyway the key keeps saying so for 10 s, so the old holder reads it whenever its lock news arrives */
+  const writeOwn=x=>{try{raw(OWN,JSON.stringify(Object.assign({tab:TAB,gen:myGen,at:Date.now()},Date.now()<anyUntil?{anyway:1}:{},x||{})));return true;}catch(e){ev('tabs_own_write_failed',{err:String(e&&e.name||e)});return false;}};
   /* this tab still owns the save: nobody's claim in the owner key beats its own (an empty key, after a page hide, counts as still its) */
-  const ownsKey=()=>{const o=readOwn();return !o||o.tab==='reload'?!o:(o.tab===TAB&&+(o.gen||0)===myGen)||!beats(o,me());};
+  const ownsKey=()=>{if(LK)return held;const o=readOwn();return !o||o.tab==='reload'?!o:(o.tab===TAB&&+(o.gen||0)===myGen)||!beats(o,me());};
   const owns=()=>owner&&!away&&!pending&&ownsKey()&&!stale();
   /* a better claim than this tab's, however it is found (a message, the owner key on a save or a heartbeat, a page restore): the one rule for
      what happens next. Mid-match, a fresh ordinary claim from a tab that hasn't saved since is refused (this tab re-claims one gen higher,
@@ -233,14 +252,17 @@
   function recv(d){const q=window.TOPS_TABS_QA;if(q&&q.delay>0)setTimeout(()=>on(d),q.delay);else on(d);}
   function on(d){if(!d||d.tab===TAB)return;ev('tabs_msg',{t:d.t,age:Date.now()-(+d.at||0),pending,away});
     if(d.t==='hello'&&!away&&!pending){if(Date.now()>(+d.at||0)+(+d.wait||WAIT)-150&&!(window.TOPS_TABS_QA&&TOPS_TABS_QA.late)){ev('tabs_late_hello',{age:Date.now()-(+d.at||0)});return;}   /* too late to answer: that tab has taken over (or is about to), so neither flush nor ack; its claim follows */
-      const busy=midMatch();try{persist();}catch(e){}send({t:'ack',to:d.tab,busy,sv:mine()});}   // flush the last completed state, then answer
+      const busy=midMatch();try{persist();}catch(e){}send({t:'ack',to:d.tab,busy,sv:mine()});   // flush the last completed state, then answer
+      if(!busy)stepAside('handover');}   /* not mid-match: hand over now (no match can start here, no heartbeat can land over the new owner's claim) */
     else if(d.t==='ack'&&d.to===TAB&&pending){clearTimeout(waitT);if(d.busy){pending=false;away=true;card('busy');ev('tabs_busy');return;}
       const want=+(d.sv||0),t0=Date.now();const wait=()=>{if(!pending)return;if(svIn()>=want||Date.now()-t0>800)takeOver('ack');else setTimeout(wait,25);};wait();}   // the ack can beat the flushed save to this tab's storage
     else if(d.t==='claim')claimed(d);}
-  function claimed(c){const id=c.tab+':'+(c.gen||0)+':'+(c.busy?1:0);if(done.has(id))return;done.add(id);seenGen=Math.max(seenGen,+(c.gen||0));
+  function claimed(c){lastClaim={anyway:!!c.anyway,busy:!!c.busy,rx:Date.now()};if(away&&c.busy){const k=document.getElementById('tabsCard');if(k&&k.dataset.mode!=='busy')card('busy');}   /* refused after stepping aside: say a match is in progress there */const id=c.tab+':'+(c.gen||0)+':'+(c.busy?1:0);if(done.has(id))return;done.add(id);seenGen=Math.max(seenGen,+(c.gen||0));
     if(away)return;
-    if(pending){clearTimeout(waitT);pending=false;stepAside('claim',c.busy?'busy':'');return;}
+    if(pending){if(LK)return;   /* Web Locks: a tab waiting on its hello or its lock carries on; the lock decides */
+      clearTimeout(waitT);pending=false;stepAside('claim',c.busy?'busy':'');return;}
     if(!owner)return;
+    if(LK)return;   /* Web Locks: a claim is information; losing the lock is what moves this tab (lockLost) */
     if(!beats(c,me())){ev('tabs_reassert',{them:c.gen,me:myGen});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});return;}   // a losing claim (crossed or late): this tab stays, and says so
     lost(c);}   // mid-match: only Play here anyway ends it
   /* a tab that took over on a timeout: the tab it claimed from may still finish a write it had started (or answer late) in the next ~2 s;
@@ -254,12 +276,17 @@
   /* loading this browser's own stored save: the adopt's migration save is not written back (it would bump the counter and look like a newer
      save to the other tab, which is how two claimants both ended behind the card); the next real change writes it */
   let quiet=0;function reread(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&+(s.sv||0)>mine()&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){quiet++;try{TOPS_SAVEV.adopt(s,'tab');}finally{quiet--;}}}catch(e){}}
-  function takeOver(why,from){if(away&&why!=='anyway')return;pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};
-    myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});   // claim first, so a refusal can arrive before this tab writes
+  function takeOver(why,from){if(away&&why!=='anyway')return;
+    if(LK&&!held){pending=true;away=false;const st=why!=='alone';if(why==='anyway')anyUntil=Date.now()+10000;if(st){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   /* the claim (and whether it is Play here anyway) goes out before the steal, so the old holder can read it */
+      lockAcquire(st).then(ok=>{if(ok){pending=false;takeOver2(why,from,st);}else{pending=true;handshake(readOwn());}});return;}
+    takeOver2(why,from);}
+  function takeOver2(why,from,claimed){pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};
+    if(!claimed){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   // claim first, so a refusal can arrive before this tab writes
     reread();ev('tabs_own',{why,gen:myGen});}   // no write here: a claim that loses must never have written (its next save checks the key first)
   window.addEventListener('storage',e=>{try{
     if(e.key===MSG&&e.newValue){if(!bc)recv(JSON.parse(e.newValue));}
     else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
+      if(LK){if(owner&&!away&&!pending&&held)writeOwn({busy:midMatch()?1:0});if(o.hb&&!o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}if(!o.hb&&o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode!=='busy')card('busy');}if(!o.hb)lastClaim={anyway:!!o.anyway,busy:!!o.busy,rx:Date.now()};return;}   /* the key says who: this tab holds the lock, so it says so again */
       if(o.tab==='reload'){if(owner&&!away)stepAside('claim');return;}   // Play here in another tab: it reloads and takes over
       if(!o.hb){if(owner&&!away&&!pending&&!beats(o,me())){writeOwn({busy:midMatch()?1:0});return;}claimed(o);}else if(owner&&!away&&beats(o,me()))lost(o);
       else if(owner&&!away&&!pending){ev('tabs_reassert',{hb:o.gen,me:myGen});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});}   /* a heartbeat from a tab with a lower claim: it wrote over this tab's claim before hearing it (the key isn't a lock), so say it again at once */
@@ -267,35 +294,40 @@
     else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale()){if(inGrace())graceAdopt();else stepAside('newer');}}catch(x){}});
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
      tab knows without waiting on an answer: a tab busy rendering a match can take seconds to hear a hello (DQ's race) */
-  let hbBusy=null,gone=false;const beat=()=>{if(!owner||away||pending||gone)return;   /* gone: between pagehide and pageshow nothing is said for this page */const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){lost(o);return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
+  let hbBusy=null,gone=false;const beat=()=>{if(!owner||away||pending||gone)return;   /* gone: between pagehide and pageshow nothing is said for this page */if(LK&&!held)return;const o=readOwn();if(!LK&&o&&o.tab!==TAB&&beats(o,me())){lost(o);return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
   setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);   /* the poll is only a refresh: */
   /* busy is written synchronously where a match starts and ends (DQ 12:41: a tab busy rendering a match missed the 400 ms ticks, so a new
      tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
      (showHub), or a reload (pagehide clears the owner key). */
   const edge=()=>{try{if(owner&&!away&&midMatch()!==hbBusy)beat();}catch(e){}};
-  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(away||pending){ev('tabs_match_blocked',{away,pending});card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
+  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(away||pending||(LK&&!held)||(!LK&&owner&&!ownsKey())){ev('tabs_match_blocked',{away,pending,held});if(!away&&!pending)stepAside('claim');card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
     try{return _bm.apply(this,arguments);}finally{edge();}};}
   if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
   window.addEventListener('pagehide',()=>{gone=true;try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
   /* back-forward cache: a restored page was frozen, so before it writes it checks it still owns the save */
-  window.addEventListener('pageshow',e=>{gone=false;if(!e.persisted)return;ev('tabs_pageshow',{owner,away});if(!owner||away||pending)return;
+  window.addEventListener('pageshow',e=>{gone=false;if(!e.persisted)return;ev('tabs_pageshow',{owner,away,held});if(!owner||away||pending)return;
+    if(LK){if(!held||stale())stepAside(stale()?'newer':'claim');return;}
     const o=readOwn();if(stale()||(o&&o.tab!==TAB&&(o.tab==='reload'||beats(o,me())))){stepAside(stale()?'newer':'claim',o&&o.busy?'busy':'');return;}
     myGen=nextGen();writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});});
   const start=()=>{const live=readOwn();if(live)seenGen=Math.max(seenGen,+(live.gen||0));
-    if(!live||live.tab==='reload')takeOver('alone');   /* an owner key of any age gets a hello: a tab starved of timers (CPU, background) can miss heartbeats and still be mid-match */
-    else if(live.busy&&Date.now()-(live.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
-    else{const WAITN=live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
+    if(LK){lockAcquire(false).then(ok=>{if(ok)takeOver2('alone');else handshake(readOwn());});return;}   /* Web Locks: free means nobody else is alive with the save */
+    handshake(live);};
+  const handshake=live=>{if(live)seenGen=Math.max(seenGen,+(live.gen||0));
+    if(!LK&&(!live||live.tab==='reload'))takeOver('alone');   /* an owner key of any age gets a hello: a tab starved of timers (CPU, background) can miss heartbeats and still be mid-match */
+    else if(live&&live.busy&&Date.now()-(live.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'beat'});}   /* mid-match there: no handshake needed */
+    else{const WAITN=live&&live.hb&&Date.now()-(live.at||0)<6000?WAIT_LIVE:WAIT;   /* a heartbeat this recent: the owner is alive but its busy is unknown (it may be starting a match), so wait longer for its answer */send({t:'hello',wait:WAITN});waitT=setTimeout(()=>{if(!pending)return;   /* this tab's own load can hold the ack in its queue past the timer: read the ack from storage, then give queued messages one more turn */
       try{const m=JSON.parse(localStorage.getItem(MSG)||'null');if(m&&m.t==='ack'&&m.to===TAB){on(m);return;}}catch(e){}
       setTimeout(()=>{if(!pending)return;const o=readOwn();   /* re-read right before taking over: the owner may have started a match since */
         if(o&&o.tab!==TAB&&o.busy&&Date.now()-(+o.at||0)<9000){pending=false;away=true;card('busy');ev('tabs_busy',{via:'timeout'});return;}
-        takeOver('timeout',live.tab);},60);},WAITN);}};
+        takeOver('timeout',live&&live.tab);},60);},WAITN);}};
   // 2 + 4 the save itself
   const _p=persist;
   persist=function(){
     if(adopting){passing++;try{return _p.apply(this,arguments);}finally{passing--;lastBody=body();}}   // the migration inside an adopt saves the adopted save
     if(away||pending)return;
-    if(owner&&!ownsKey()&&lost(readOwn()))return;   // a better claim is in the owner key: never write over it (unless this tab, mid-match, refuses it)
+    if(LK){if(!held)return;}   /* Web Locks: only the holder writes (a stolen lock is handled by lockLost); lastBody stays, so nothing is dropped */
+    else if(owner&&!ownsKey()&&lost(readOwn()))return;   // a better claim is in the owner key: never write over it (unless this tab, mid-match, refuses it)
     const j=body();if(j!==null&&j===lastBody){try{hubBankUpdate();}catch(e){}return;}   // nothing changed: no write, no counter bump
     if(stale()){if(inGrace()){graceAdopt();return;}stepAside('newer');return;}
     if(foreign()&&svIn()>0)rescueStored('overwrite');

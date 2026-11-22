@@ -16,6 +16,7 @@
 //   12 recovery copies when another build's tab writes the save
 //   19 R6: an older cloud copy at sign-in never replaces this tab's newer save (DQ A5/A3)
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
+//   TABS_NOLOCKS=1 runs every case on the fallback (no Web Locks)
 //   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
 //   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
 // usage: node tests/s3-tabs.js [dir]   (cases 1-6; CASES=all for every case, CASES=7,10 for just those; pass an absolute dir)
@@ -35,6 +36,7 @@ let url = ''; const f = []; const out = {};
   const b = await chromium.launch({ args: ['--use-gl=swiftshader'] });
   const open = async (ctx, init) => { const p = await ctx.newPage({ viewport: { width: 390, height: 844 } }); const pe = []; p.on('pageerror', e => pe.push(e.message)); p._pe = pe;
     await p.addInitScript(() => { try { localStorage.setItem('tops_s3_welcome', '1'); localStorage.setItem('tops_s3_firstnight', '1'); } catch (e) {} }); if (init) await p.addInitScript(init);
+    if (process.env.TABS_NOLOCKS) await p.addInitScript(() => { window.TOPS_NOLOCKS = 1; });   /* the fallback (no Web Locks) */
     await p.route(/jsdelivr|googleapis|gstatic|supabase\.co/, r => r.abort()); await p.goto(url, { timeout: 120000 }); await p.waitForFunction(() => window.TOPS_S3 && window.C3, null, { timeout: 180000 }); await p.waitForTimeout(1500); return p; };
   const card = p => p.evaluate(() => { const d = document.getElementById('tabsCard'); return d && !d.hidden && d.getClientRects().length ? d.innerText.replace(/\s+/g, ' ') : null; }).catch(() => null);
   const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key) || '{}'); const c = s.career, k = c && c.circuit; return { sv: s.sv || 0, has: !!c, week: k ? k.week : null, bank: c ? c.bank : null, mark: s.__mark || null }; });
@@ -99,7 +101,8 @@ let url = ''; const f = []; const out = {};
     if (out.mid.aCard || !out.mid.aLive) f.push('7 the owner keeps playing its match ' + JSON.stringify(out.mid));
     out.mid.aSv = await A.evaluate(() => save.sv); if (out.mid.sv !== out.mid.aSv) f.push('7 the waiting tab must not write the save (only the owner\'s flush) ' + JSON.stringify(out.mid));
     await B.setViewportSize({ width: 390, height: 844 }); await B.waitForTimeout(300); await B.screenshot({ path: path.join(dir, 'wip/car-tabs/tabs-busy-390.png') }).catch(() => {});
-    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); }); await B.waitForTimeout(1500);
+    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
+    for (let k = 0; k < 16; k++) { await B.waitForTimeout(500); if (await card(A)) break; }   // the old tab learns from its lock (crosses processes)
     out.anyway = { aCard: await card(A), bOwner: await B.evaluate(() => !TOPS_TABS.away() && !TOPS_TABS.pending() && !document.getElementById('tabsCard')) };
     if (!out.anyway.aCard || !out.anyway.bOwner) f.push('7 Play here anyway takes over and the other tab steps aside ' + JSON.stringify(out.anyway));
     await ctx.close(); }
@@ -195,7 +198,7 @@ let url = ''; const f = []; const out = {};
     if (!out.r12b.away || !out.r12b.r.some(x => /^(newer|overwritten):51$/.test(x))) f.push('12 stepping aside for a different newer save keeps this tab\'s copy ' + JSON.stringify(out.r12b));
     await ctx.close(); }
   // ---- R5 (ChatGPT review): the races outside the paths above ----
-  const own = P => P.evaluate(() => ({ owner: TOPS_TABS.owner(), away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), gen: TOPS_TABS.gen(), card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, live: typeof S !== 'undefined' && !!S && !S.done && !S.paused, key: JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null') }));
+  const own = P => P.evaluate(() => !window.TOPS_TABS ? { loading: 1 } : ({ owner: TOPS_TABS.owner(), away: TOPS_TABS.away(), pending: TOPS_TABS.pending(), gen: TOPS_TABS.gen(), card: document.getElementById('tabsCard') ? document.getElementById('tabsCard').dataset.mode || 'other' : null, live: typeof S !== 'undefined' && !!S && !S.done && !S.paused, key: JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key) || 'null') }));
   const settle = async (ps, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const r = await Promise.all(ps.map(own)); if (r.filter(x => x.owner).length === 1 && r.filter(x => !x.owner).every(x => x.away || x.card)) return r; await ps[0].waitForTimeout(300); } return Promise.all(ps.map(own)); };
   // 14 P1-1: (a) two tabs starting together with no owner; (b) crossed claims from both, messages delayed 1 s; (c) a claim delivered late
   //    (an old gen) after the owner moved on. Always exactly one owner, and the late claim changes nothing
@@ -203,7 +206,7 @@ let url = ''; const f = []; const out = {};
     out.r14a = await settle([A, B], 8000); if (process.env.TABSLOG2) fs.writeFileSync(process.env.TABSLOG2, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14a.filter(x => x.owner).length !== 1) f.push('14a two tabs starting together: exactly one owner ' + JSON.stringify(out.r14a) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log()), b: await B.evaluate(() => TOPS_TABS.log()) }));
     await Promise.all([A, B].map(P => P.evaluate(() => { window.TOPS_TABS_QA = { delay: 1000 }; })));
     await Promise.all([A.evaluate(() => TOPS_TABS._claim()), B.evaluate(() => TOPS_TABS._claim())]);
-    out.r14b = await settle([A, B], 10000); if (process.env.TABSLOG) fs.writeFileSync(process.env.TABSLOG, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14b.filter(x => x.owner).length !== 1) f.push('14b crossed claims (messages 1 s late): exactly one owner ' + JSON.stringify(out.r14b));
+    out.r14b = await settle([A, B], 10000); if (out.r14b.filter(x => x.owner).length !== 1) out.r14blog = { a: await A.evaluate(() => TOPS_TABS.log().slice(-12)), b: await B.evaluate(() => TOPS_TABS.log().slice(-12)) }; if (process.env.TABSLOG) fs.writeFileSync(process.env.TABSLOG, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14b.filter(x => x.owner).length !== 1) f.push('14b crossed claims (messages 1 s late): exactly one owner ' + JSON.stringify(out.r14b));
     await Promise.all([A, B].map(P => P.evaluate(() => { window.TOPS_TABS_QA = null; })));
     const W = out.r14b[0].owner ? A : B, L = W === A ? B : A; const g = (await own(W)).gen;
     const O = await ctx.newPage(); await O.goto(url.replace('index.html?s3=1', 'no-such-page.html'));   // a late claim from an older gen, on the channel and in the key
@@ -227,12 +230,14 @@ let url = ''; const f = []; const out = {};
     await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
     out.r15a = { a: await own(A), b: await own(B), via: await B.evaluate(() => (TOPS_TABS.log().find(l => l[1] === 'tabs_busy') || [])[2] || null) };
     if (out.r15a.b.card !== 'busy' || out.r15a.b.owner || !out.r15a.a.owner || !out.r15a.a.live) f.push('15a a match started after B read the key: B shows the busy card, A keeps its match ' + JSON.stringify(out.r15a));
-    await A.evaluate(() => { window.TOPS_TABS_QA = null; }); await B.evaluate(() => TOPS_TABS._claim()); await B.waitForTimeout(3000);
+    await A.evaluate(() => { window.TOPS_TABS_QA = null; }); await B.evaluate(() => TOPS_TABS._claim());
+    for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (x.owner && y.card === 'busy') break; }   // settle: a lock handover crosses processes
     out.r15b = { a: await own(A), b: await own(B) };
-    if (!out.r15b.a.owner || !out.r15b.a.live || out.r15b.b.owner || out.r15b.b.card !== 'busy') f.push('15b an ordinary claim mid-match is refused: A plays on, B shows the busy card ' + JSON.stringify(out.r15b));
-    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); }); await B.waitForTimeout(3000);
+    if (!out.r15b.a.owner || !out.r15b.a.live || out.r15b.b.owner || out.r15b.b.card !== 'busy') f.push('15b an ordinary claim mid-match is refused: A plays on, B shows the busy card ' + JSON.stringify(out.r15b) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-14)), b: await B.evaluate(() => TOPS_TABS.log().slice(-14)) }));
+    await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
+    for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (y.owner && x.card) break; }
     out.r15c = { a: await own(A), b: await own(B) };
-    if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c));
+    if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-12)), b: await B.evaluate(() => TOPS_TABS.log().slice(-12)) }));
     await ctx.close(); }
   // 15d B's claim lands just before A's Play tap: A steps aside (the claim came first) and the match must not start behind the card
   if (RUN(15)) { const ctx = await b.newContext(); const A = await open(ctx);
@@ -251,7 +256,8 @@ let url = ''; const f = []; const out = {};
     // written by A's own page, so no storage event or message reaches A: it finds the claim on its next heartbeat (the non-message path)
     await A.evaluate(g => { localStorage.setItem('tops_owner_' + TOPS_SAVE_NS.key, JSON.stringify({ tab: 'zzzz-b', gen: g + 1, at: Date.now() })); }, (await own(A)).gen);
     await A.waitForTimeout(5000); out.r15e = { a: await own(A), refused: await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_refuse')) };
-    if (!out.r15e.refused || !out.r15e.a.owner || !out.r15e.a.live || !out.r15e.a.key || out.r15e.a.key.tab === 'zzzz-b') f.push('15e a fresh claim found in the key mid-match is refused ' + JSON.stringify(out.r15e));
+    const lk = await A.evaluate(() => !window.TOPS_NOLOCKS && !!(navigator.locks && navigator.locks.request)); out.r15e.lk = lk;   /* with Web Locks a key alone moves nothing: no refusal needed, the owner just says so again in the key */
+    if ((!lk && !out.r15e.refused) || !out.r15e.a.owner || !out.r15e.a.live || !out.r15e.a.key || out.r15e.a.key.tab === 'zzzz-b') f.push('15e a fresh claim found in the key mid-match is refused ' + JSON.stringify(out.r15e));
     await ctx.close(); }
   // 16 P1-3: A's push is suspended in its preflight cloud read while B takes over and writes; when the read returns, A sends nothing.
   //    Then B's own push: the save changes while its RPC is in flight; synced is the counter it sent, and a second push follows
