@@ -14,6 +14,7 @@
 //   10 the handshake race (DQ 22 Nov 10:52): a slow owner never leaves both tabs behind the card; mid-match it is known busy from its heartbeat
 //   11 a tab that took over on a timeout adopts the late write of the tab it claimed from (2 s) instead of stepping aside
 //   12 recovery copies when another build's tab writes the save
+//   19 R6: an older cloud copy at sign-in never replaces this tab's newer save (DQ A5/A3)
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
 //   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
 //   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
@@ -290,6 +291,17 @@ let url = ''; const f = []; const out = {};
     out.r18 = await A.evaluate(async () => { window.TOPS_TABS_QA = { failWrite: 1 }; career().bank = 4444; try { persist(); } catch (e) {} const banner = !!document.getElementById('tabsSaveFail'); const kept = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
       window.TOPS_TABS_QA = null; try { persist(); } catch (e) {} return { banner, kept, after: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank, gone: !document.getElementById('tabsSaveFail'), logged: TOPS_TABS.log().some(l => l[1] === 'save_write_failed') }; });
     if (!out.r18.banner || out.r18.kept === 4444 || out.r18.after !== 4444 || !out.r18.gone || !out.r18.logged) f.push('18 a refused write shows the banner and retries on the next save ' + JSON.stringify(out.r18));
+    await ctx.close(); }
+  // 19 R6 (DQ A5/A3): the sign-in pull loads an OLDER cloud copy (asked before the boot's saves, answered after). This tab keeps its newer save
+  //    (no card, nothing lost, counter never backwards); an older copy from another device is kept as a recovery copy; a newer one still loads
+  if (RUN(19)) { const ctx = await b.newContext(); const A = await open(ctx);
+    out.r19 = await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); const old = JSON.parse(JSON.stringify(save)); old.dev = 'other-dev';
+      for (let i = 1; i <= 5; i++) { career().bank = 1000 + i; persist(); } const sv = save.sv;
+      netAdopt(old); const r = { sv, after: save.sv, bank: career().bank, away: TOPS_TABS.away(), card: !!document.getElementById('tabsCard'), rescue: TOPS_TABS.rescues().map(x => x.why) };
+      career().bank = 2000; persist(); r.saved = JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank;
+      const newer = JSON.parse(JSON.stringify(save)); newer.sv = save.sv + 10; newer.dev = 'other-dev'; newer.career.bank = 3000; netAdopt(newer); r.newer = career().bank; r.awayN = TOPS_TABS.away(); return r; });
+    const r = out.r19;
+    if (r.bank !== 1005 || r.after < r.sv || r.away || r.card || !r.rescue.includes('cloud-older') || r.saved !== 2000 || r.newer !== 3000 || r.awayN) f.push('19 an older cloud copy at sign-in never replaces this tab\'s newer save; a newer one still loads ' + JSON.stringify(r));
     await ctx.close(); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }

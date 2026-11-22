@@ -179,13 +179,18 @@
   const raw=(k,v)=>SI.call(localStorage,k,v);
   const svIn=()=>{try{const s=localStorage.getItem(KEY);return s?+(JSON.parse(s).sv||0):0;}catch(e){return 0;}};
   const mine=()=>{try{return +(save&&save.sv||0);}catch(e){return 0;}};
-  const stale=()=>svIn()>mine();
+  /* the newest save in storage is this tab's own last write (its tag): never a reason to step aside, even when a sign-in adopt has put an
+     older copy in memory (DQ A5) */
+  const ownLast=()=>{try{const w=JSON.parse(localStorage.getItem(KEY+'_w')||'null');return !!w&&w.tab===TAB&&+(w.sv||0)===svIn();}catch(e){return false;}};
+  const stale=()=>svIn()>mine()&&!ownLast();
   const body=()=>{try{const sv=save.sv,dev=save.dev;save.sv=0;save.dev='';const j=JSON.stringify(save);save.sv=sv;save.dev=dev;return j;}catch(e){return null;}};
   const LOG=[];const ev=(n,d)=>{try{LOG.push([Date.now()%100000,n,JSON.stringify(d||{})]);if(LOG.length>40)LOG.shift();}catch(e){}try{window.TOPS_FLIGHT&&TOPS_FLIGHT.log&&TOPS_FLIGHT.log(n,d||{});}catch(e){}};
   function rescue(why){try{const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);list.push({at:Date.now(),why,sv:mine(),tab:TAB,save:JSON.parse(JSON.stringify(save))});
     try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why,sv:mine()});}catch(e){ev('tabs_rescue_failed',{why,err:String(e&&e.name||e)});console.warn('TOPS: recovery copy not kept',e);}}
   function rescueStored(why){try{const cur=localStorage.getItem(KEY);if(!cur)return;const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);
     list.push({at:Date.now(),why,sv:(()=>{try{return +(JSON.parse(cur).sv||0);}catch(e){return 0;}})(),tab:'stored',save:JSON.parse(cur)});try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why});}catch(e){ev('tabs_rescue_failed',{why,err:String(e&&e.name||e)});console.warn('TOPS: recovery copy not kept',e);}}
+  function rescueObj(why,o){try{const list=JSON.parse(localStorage.getItem(RES)||'[]').filter(Boolean).slice(-2);list.push({at:Date.now(),why,sv:+(o.sv||0),tab:'cloud',save:JSON.parse(JSON.stringify(o))});
+    try{raw(RES,JSON.stringify(list));}catch(e){raw(RES,JSON.stringify(list.slice(-1)));}ev('tabs_rescue',{why});}catch(e){ev('tabs_rescue_failed',{why});}}
   const norm=x=>{try{const o=JSON.parse(x);o.sv=0;o.dev='';return JSON.stringify(o);}catch(e){return x;}};
   const foreign=()=>{try{const cur=localStorage.getItem(KEY);return !!cur&&lastWrote!=null&&cur!==lastWrote&&norm(cur)!==norm(lastWrote);}catch(e){return false;}};   /* storage holds a save other than this tab's last write (counter and device aside): what this tab last wrote is no longer stored anywhere */
   // the card
@@ -293,7 +298,8 @@
     if(owner&&!ownsKey()&&lost(readOwn()))return;   // a better claim is in the owner key: never write over it (unless this tab, mid-match, refuses it)
     const j=body();if(j!==null&&j===lastBody){try{hubBankUpdate();}catch(e){}return;}   // nothing changed: no write, no counter bump
     if(stale()){if(inGrace()){graceAdopt();return;}stepAside('newer');return;}
-    if(foreign()&&svIn()>0)rescueStored('overwrite');   /* storage holds a save this tab didn't write (an older build's tab): keep it before overwriting */
+    if(foreign()&&svIn()>0)rescueStored('overwrite');
+    if(svIn()>mine())try{save.sv=svIn();}catch(e){}   /* storage is ahead only by this tab's own write: carry on from its counter, never backwards */   /* storage holds a save this tab didn't write (an older build's tab): keep it before overwriting */
     passing++;let r;try{r=_p.apply(this,arguments);}finally{passing--;}
     if(svIn()!==mine()){failed();return r;}   // the browser refused the write (storage full or blocked): lastBody stays, so the next save tries again
     lastBody=j;okWrite();return r;};
@@ -330,6 +336,15 @@
     cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns())return;clearTimeout(NET.pushT);
       if(now)run();else NET.pushT=setTimeout(run,2500);};
   }else if(typeof cloudPush==='function'){const _c=cloudPush;cloudPush=function(){if(away||pending||stale())return;return _c.apply(this,arguments);};}
+  /* R6 (DQ A3/A5): the sign-in pull (game4 netSignedIn -> netAdopt, "cloud always wins") is answered after the boot's own saves, so it could load
+     an OLDER cloud copy over what this tab already has. Now a cloud copy older than this tab's save (in memory or in storage) is not loaded:
+     this tab keeps its save and pushes it. If that older copy came from another device it is kept as a recovery copy, so nothing is lost.
+     A newer cloud copy loads as before. */
+  if(typeof netAdopt==='function'){const _na=netAdopt;netAdopt=function(cloud){try{const local=Math.max(mine(),svIn()),csv=+(cloud&&cloud.sv||0);
+      if(cloud&&local>0&&csv<local){const dv=window.TOPS_SAVEV&&TOPS_SAVEV.dev?TOPS_SAVEV.dev():null;
+        if(cloud.dev&&dv&&cloud.dev!==dv)rescueObj('cloud-older',cloud);ev('signin_keep_local',{cloud:csv,local,dev:cloud.dev===dv?'same':'other'});
+        try{if(svIn()>mine())reread();}catch(e){}try{cloudPush(true);}catch(e){}return;}}catch(e){}
+    return _na.apply(this,arguments);};}
   lastBody=body();try{lastWrote=localStorage.getItem(KEY);}catch(e){}start();
   window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,owner:()=>owns(),gen:()=>myGen,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,
     _claim:(any)=>{away=false;takeOver(any?'anyway':'qa');},   /* QA: a claim from this tab now */rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
