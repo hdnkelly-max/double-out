@@ -48,11 +48,11 @@ const srv = http.createServer((q, r) => { let u = decodeURIComponent(q.url.split
       cap.push(o); }
     return { grip, cap, g77: window.TOPS_GRIP77, c77: window.TOPS_CAP77 }; });
   await b.close(); srv.close();
-  const fails = []; const opp = r.grip.filter(g => g.kind === 2), THUMB = +(process.env.THUMB || .25), CLR = +(process.env.CLR || .01);
+  const fails = []; const opp = r.grip.filter(g => g.kind === 2), THUMB = +(process.env.THUMB || .03), CLR = +(process.env.CLR || .01);
   for (const g of r.grip) { const t = `${g.id}/${g.ph}`; if (g.Index == null) { fails.push(t + ': no finger bones'); continue; }
     if (g.Index < 60) fails.push(`${t}: index bend ${g.Index} deg (< 60: an open pinch)`); if (g.Middle < 75) fails.push(`${t}: middle bend ${g.Middle} deg (< 75)`);
     if (g.Ring < 75 || g.Pinky < 75) fails.push(`${t}: ring/pinky ${g.Ring}/${g.Pinky} deg (< 75: not tucked)`);
-    if (g.thumb != null && g.thumb > THUMB) fails.push(`${t}: thumb pad ${g.thumb} hand-lengths off the barrel (> ${THUMB}: not pressing on it; index hook ${g.hook})`);
+    if (g.thumb != null && g.thumb > g.hook + THUMB) fails.push(`${t}: thumb pad ${g.thumb} hand-lengths off the barrel, further than the index hook (${g.hook}) + ${THUMB}: the thumb swings away instead of closing on the barrel`);
     if (g.aimDot != null && g.aimDot < .7) fails.push(`${t}: shaft not along the aim (|cos| ${g.aimDot})`); }
   for (const g of r.grip.filter(g => g.kind === 1)) { const o = opp.filter(x => x.ph === g.ph); const mi = o.reduce((s, x) => s + x.Index, 0) / o.length, mm = o.reduce((s, x) => s + x.Middle, 0) / o.length;
     if (Math.abs(g.Index - mi) > 6 || Math.abs(g.Middle - mm) > 6) fails.push(`player/${g.ph}: grip differs from the opponents (index ${g.Index} vs ${mi.toFixed(1)}, middle ${g.Middle} vs ${mm.toFixed(1)})`); }
