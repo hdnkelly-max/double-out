@@ -309,13 +309,16 @@
   function okWrite(){if(!failN)return;failN=0;ev('save_write_ok');try{const b=document.getElementById('tabsSaveFail');if(b)b.remove();}catch(e){}}
   // 3 the cloud
   const PB='tops_pbase';const pbase=()=>{try{const v=JSON.parse(localStorage.getItem(PB)||'null');if(!v)return null;if(v.ok)return true;return Date.now()-v.at<864e5?false:null;}catch(e){return null;}};
-  const still=snap=>owns()&&myGen===snap.gen;   // checked after every await and right before each RPC
+  const still=snap=>owns()&&myGen===snap.gen;
+  /* a request that never answers must not hold every later push behind it: the preflight read gives up after 8 s, a put after 15 s (then
+     retried; a put that did land is refused as not newer and nothing changes) */
+  const within=(pr,ms,what)=>Promise.race([pr,new Promise((_,no)=>setTimeout(()=>no(new Error('TOPS: '+what+' timed out')),ms))]);   // checked after every await and right before each RPC
   const rpcPut=async snap=>{const args={p_data:snap.data};const pb=snap.base!=null?pbase():false;
-    if(pb!==false&&snap.base!=null){const r=await NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:snap.base},args));
+    if(pb!==false&&snap.base!=null){const r=await within(NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:snap.base},args)),15000,'put');
       if(!r.error){if(pb==null)try{raw(PB,JSON.stringify({ok:1,at:Date.now()}));}catch(e){}return r;}
       const m=String((r.error&&(r.error.code+' '+r.error.message))||'');if(/PGRST202/.test(m)){try{raw(PB,JSON.stringify({ok:0,at:Date.now()}));}catch(e){}}else return r;
       if(!still(snap))return {data:null,error:null,skipped:1};}
-    return NET.sb.rpc(TOPS_SAVE_NS.rpc,args);};
+    return within(NET.sb.rpc(TOPS_SAVE_NS.rpc,args),15000,'put');};
   if(typeof cloudPush==='function'&&window.TOPS_SAVEV&&TOPS_SAVEV.adopt){
     const SV=TOPS_SAVEV,_adopt=SV.adopt;
     SV.adopt=function(c,why){if(c&&why!=='tab'&&mine()>0&&(synced==null||mine()>synced))rescue('cloud');   // this device saved since it last synced: keep its copy
@@ -324,16 +327,17 @@
     let inflight=null,again=false,retry=0;
     const go=async()=>{if(!owns())return;
       const snap={data:JSON.parse(JSON.stringify(save)),sv:mine(),gen:myGen,base:synced};   // what this push sends, fixed now
-      if(snap.base!=null){let c=null,ok=false;try{const r=await NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle();if(r&&r.error)throw r.error;c=r&&r.data&&r.data.data;ok=true;}catch(e){}
+      ev('push_start',{sv:snap.sv,base:snap.base});
+      if(snap.base!=null){let c=null,ok=false;try{const r=await within(NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle(),8000,'preflight');if(r&&r.error)throw r.error;c=r&&r.data&&r.data.data;ok=true;}catch(e){}
         if(!ok){retry++;ev('push_preflight_failed',{retry});if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));return;}   // fail closed, retry later
         retry=0;if(!still(snap)){ev('push_dropped',{at:'preflight'});return;}
         if(c&&c.dev!==SV.dev()&&+(c.sv||0)>snap.base){ev('save_conflict',{cloud:c.sv||0,synced:snap.base,mine:mine()});SV.adopt(c,'push');return;}}
       if(!still(snap)){ev('push_dropped',{at:'rpc'});return;}
       const res=await rpcPut(snap);if(res.skipped){ev('push_dropped',{at:'fallback'});return;}const {data,error}=res;if(error)throw error;
-      if(data&&data.ok){NET.cloudAt=Date.now();synced=snap.sv;if(mine()>snap.sv)again=true;return;}   // synced = what the server acknowledged
+      if(data&&data.ok){ev('push_ok',{sv:snap.sv});NET.cloudAt=Date.now();synced=snap.sv;if(mine()>snap.sv)again=true;return;}   // synced = what the server acknowledged
       if(data&&data.err==='older'&&data.data&&owns()){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+mine()+'), loading it');SV.adopt(data.data,'push');}};
-    const run=()=>{if(inflight){again=true;return;}inflight=go().catch(e=>console.warn('cloud push',e)).finally(()=>{inflight=null;if(again){again=false;if(owns())cloudPush(true);}});};   // one push at a time
-    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns())return;clearTimeout(NET.pushT);
+    const run=()=>{if(inflight){again=true;ev('push_queued');return;}inflight=go().catch(e=>{console.warn('cloud push',e);ev('push_failed',{err:String(e&&e.message||e)});retry++;if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));}).finally(()=>{inflight=null;if(again){again=false;if(owns())cloudPush(true);}});};   // one push at a time
+    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns()){ev('push_skip',{user:!!(typeof NET!=='undefined'&&NET.user),owns:owns()});return;}clearTimeout(NET.pushT);
       if(now)run();else NET.pushT=setTimeout(run,2500);};
   }else if(typeof cloudPush==='function'){const _c=cloudPush;cloudPush=function(){if(away||pending||stale())return;return _c.apply(this,arguments);};}
   /* R6 (DQ A3/A5): the sign-in pull (game4 netSignedIn -> netAdopt, "cloud always wins") is answered after the boot's own saves, so it could load
