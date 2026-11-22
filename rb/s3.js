@@ -55,7 +55,11 @@
     try { wrapSet(Element.prototype, 'innerHTML', v => swap(v)); } catch (e) {}
     try { const sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function (k, v) { return sa.call(this, k, (k === 'src' || k === 'style') ? swap(v) : v); }; } catch (e) {}
     try { const sp = CSSStyleDeclaration.prototype.setProperty; CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { return sp.call(this, k, swap(v), p); };
-      ['background', 'backgroundImage', 'cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
+      /* EXP-S3-BINDER follow-up (ChatGPT, 4.28): only cssText here. style.background / style.backgroundImage are own properties of each
+         style object in Chromium, so a prototype setter for them ran in Safari and Firefox only; the scripts that set them now call the
+         switch themselves (TOPS_S3_IMG at the point of use: tc/cards.js, rb/rb.js), so one path per URL on every engine. The switch is
+         idempotent anyway (an s3/, s3/v3/ or data: URL is left alone); s3-imgswitch checks both. */
+      ['cssText'].forEach(p => wrapSet(CSSStyleDeclaration.prototype, p, v => swap(v))); } catch (e) {}
     const sheets = () => { try { document.querySelectorAll('style').forEach(s => { if (s.dataset.s3) return; const t = s.textContent, n = swap(t); if (n !== t) s.textContent = n; s.dataset.s3 = 1; }); } catch (e) {} };
     /* images the game set before this file loaded (title menu art, sign-in splash at boot): set them again through the switch */
     const rescan = () => { try { sheets(); document.querySelectorAll('img[src]').forEach(im => { const v = im.getAttribute('src'), n = swap(v); if (n !== v) im.src = v; });
