@@ -237,8 +237,23 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .rb-ghost.s3-bkopt small{font-size:12.5px;line-height:1.3;color:var(--ink2);font-weight:500}
 #rbApp .rb-primary.s3-bkopt small{line-height:1.3}
 #rbApp .s3-wkline .s3-rpoff{opacity:.8;color:var(--ink3)}
-/* 320 px: five Season 3 tabs fit their labels (PRACTICE was clipped) */
-@media (max-width:350px){html.s3-on #rbApp .rb-tabs button{font-size:12px;letter-spacing:0}}
+/* the five Season 3 tabs: each is as wide as its label plus an equal share of what's left (not five equal slots), so short SHOP gives room
+   to LOCKER and PRACTICE and the gaps between labels are even (five equal slots left PRACTICE 1 px off the edge at 360). 320-350 px: the
+   letter-spacing comes off; the text stays 13 px (Producer 22 Nov 06:51: no 12 px text).
+   Behind s3x (html.s3x); s3x off keeps the live rule (12 px under 351 px). */
+@media (max-width:350px){html.s3-on:not(.s3x) #rbApp .rb-tabs button{font-size:12px;letter-spacing:0}}
+html.s3-on.s3x #rbApp .rb-tabs{padding:0 4px}html.s3-on.s3x #rbApp .rb-tabs button{flex:1 1 auto;padding:0 2px;white-space:nowrap}
+@media (max-width:350px){html.s3-on.s3x #rbApp .rb-tabs{padding:0 2px}html.s3-on.s3x #rbApp .rb-tabs button{font-size:13px;letter-spacing:0}}
+/* Seasons 1 & 2 card: the link to the old 3D trophy cabinet */
+#rbApp .s3-trcab{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin-top:4px;padding:8px 12px 8px 8px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+#rbApp .s3-trcab .s3-cup{width:34px;height:34px;flex:none}
+#rbApp .s3-trcab span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+#rbApp .s3-trcab b{font:800 17px/1.1 var(--d,"Barlow Condensed",sans-serif);text-transform:uppercase;letter-spacing:.02em}
+#rbApp .s3-trcab small{font-size:13px;line-height:1.3;color:var(--ink2)}
+#rbApp .s3-trcab i{font-style:normal;font-size:22px;color:var(--ink3);flex:none}
+#rbApp .s3-trcab:active{background:var(--line)}
+/* 360 px and under the Seasons 1 & 2 rows cut the level name ("Reg…", "DP…" at 320): the season label goes above its row */
+@media (max-width:360px){#rbApp .s3-trold li{grid-template-columns:minmax(0,1fr) auto auto;row-gap:2px}#rbApp .s3-trold li .s3-lab{grid-column:1/-1}}
 /* ---------- 4b ---------- */
 #rbApp .s3-ctx{position:sticky;top:-12px;z-index:6;margin:0 -16px -4px;padding:10px 16px 8px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .15s}
 #rbApp .s3-ctx>span{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -251,3 +266,35 @@ html.s3-on body.lk-match #hud .event span,html.s3-on body.lk-match #hud .event i
 #rbApp .s3-wk{scroll-margin-top:44px}   /* scrolled to, it sits below the pinned context line */
 #rbApp .s3-wkh .s3-wkup .s3-nw{white-space:nowrap;font:inherit;color:inherit;letter-spacing:inherit}
 @media (max-width:374px){#rbApp .s3-wkback .rb-primary.s3-grow b{font-size:18px;letter-spacing:.5px}}   /* 'Back to the DPNZ Tour' on one line at 360 (as Career's card) */
+/* ---------- v3 switch-on: the one-time 'New look' card (on <body>, so it carries its own tokens) ---------- */
+.s3-on .s3-v3nl{--bg:#121517;--card:#1a1e21;--line:#343a3e;--ink:#f3f4f2;--ink2:#c3c8c5;--ink3:#a0a6a3;--red:#d7232d;--d:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,9,11,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+@keyframes s3nlin{from{opacity:0}to{opacity:1}}
+.s3-on .s3-v3nl{animation:s3nlin .18s ease-out}
+.s3-on .s3-v3nlgo,.s3-on .s3-v3nltw{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.s3-on .s3-v3nlgo:active,.s3-on .s3-v3nltw:active{transform:scale(.985);filter:brightness(.92)}
+.s3-on .s3-v3nlbox{width:100%;max-width:420px;max-height:100%;overflow:auto;background:radial-gradient(120% 70% at 50% 0%,#3a1418 0%,var(--card) 62%);border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;box-shadow:0 18px 48px rgba(0,0,0,.6)}
+.s3-on .s3-v3nlfig{width:200px;height:200px;flex:none;display:flex;align-items:flex-end;justify-content:center;margin-top:-4px}
+.s3-on .s3-v3nlfig img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.55))}
+.s3-on .s3-v3nlname{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.s3-on .s3-v3nlbox h2{margin:0;font:800 italic 34px/.95 var(--d);text-transform:uppercase;letter-spacing:.3px;text-wrap:balance}
+.s3-on .s3-v3nlbox p{margin:0;color:var(--ink2);max-width:34ch}
+.s3-on .s3-v3nlbox .s3-v3nlkeep{color:var(--ink);font-weight:600}
+.s3-on .s3-v3nlgo{margin-top:8px;width:100%;min-height:52px;border:0;border-radius:12px;background:var(--red);color:#fff;font:800 22px/1 var(--d);text-transform:uppercase;letter-spacing:.6px;cursor:pointer}
+.s3-on .s3-v3nltw{width:100%;min-height:46px;border:1px solid #6b7276;border-radius:12px;background:none;color:var(--ink);font-weight:600;font-size:15px;cursor:pointer}
+
+/* Director doc 74, framing pass (ChatGPT 8.0, Producer 22 Nov 09:34): the player's figure at the Kauri Arms locker. Size and top are set per
+   look by rb.js (the highest hair point 10 px below the card top). A restrained shadow onto the locker; a light falloff painted on the figure
+   only (masked by its own alpha): warm toward the locker lamp at the top left, falling off low and to the right; the render's grade eased
+   toward the plate's (a touch less contrast and saturation, a little warmth; no blur, no outline); a tight contact shadow plus a soft one
+   onto the locker (ChatGPT P2, Producer 22 Nov 14:20). Under the name's shade, so the name always reads. */
+#rbApp .rb-hero .rb-lkfig{position:absolute;right:9%;pointer-events:none}
+/* Director doc 82 (22 Nov): the lamp is above and to the left, so the figure casts a visible shadow onto the locker down and to the right
+   (its own silhouette, ~30%, softened); a tight contact edge; an ambient-occlusion band low on the figure; a warm lamp rim on its top-left edge */
+#rbApp .rb-hero .rb-lkcast{position:absolute;inset:0;background:rgb(8,5,3);opacity:.32;transform:translate(7%,3.5%);filter:blur(4px);
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#rbApp .rb-hero .rb-lkfig img{position:relative;display:block;width:100%;height:100%;filter:contrast(.93) saturate(.92) sepia(.08) brightness(.93) drop-shadow(1px 1px 1.5px rgba(8,5,3,.5))}
+#rbApp .rb-hero .rb-lkshade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,6,4,0) 52%,rgba(10,6,4,.36) 76%,rgba(10,6,4,.6) 100%),linear-gradient(115deg,rgba(10,6,4,0) 45%,rgba(10,6,4,.16) 100%);
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#rbApp .rb-hero .rb-lkrim{position:absolute;inset:0;mix-blend-mode:screen;background:radial-gradient(ellipse 80% 60% at 12% 2%,rgba(255,196,130,.7) 0,rgba(255,184,112,.38) 40%,rgba(255,170,100,0) 66%);
+  -webkit-mask-size:100% 100%,100% 100%;mask-size:100% 100%,100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0,4px 3px;mask-position:0 0,4px 3px;-webkit-mask-composite:source-out;mask-composite:subtract}

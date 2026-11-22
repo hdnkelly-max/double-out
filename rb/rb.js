@@ -130,8 +130,47 @@
   // Locker hero (roll-out 2, Hayden 09:05): a generated locker room with the player from behind, wearing his real shirt colour (recoloured in
   // code), so it always matches the Wearing tile; a woman's version when the player's character is a woman. Not a portrait: the face and hair
   // are the photo's. While the recolour runs (or if it fails) the tier scene shows.
-  const meFem = () => isFemModel(save.look || {}, save.name || '');
-  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = (save.look && save.look.shirt) || '#1c1c1c';
+  /* v3 switch-on (Director doc 69): with ?v3=1 the player is the v3 figure, so the Locker hero and reward photos use the v3 look (save.vlook:
+     its shirt, else the base's default; Mia or a female build is the woman's photo), not the legacy look (that was the blue shirt). */
+  const v3Look = () => { if (!window.TOPS_V3FLAG || !save.vlook || typeof save.vlook !== 'object') return null; const v = save.vlook, B = (window.TOPS_S3_LABLOOKS || {})[v.base] || {};
+    const c = v.shirt != null ? v.shirt : B.shirt, hex = c == null ? null : (typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : String(c)).toLowerCase();
+    return { hex: /^#[0-9a-f]{6}$/.test(hex || '') ? hex : null, fem: v.base === 'mia' || (v.body || B.body) === 'female' }; };
+  const meFem = () => { const v = v3Look(); return v ? v.fem : isFemModel(save.look || {}, save.name || ''); };
+  const myShirt = () => { const v = v3Look(); return (v && v.hex) || (save.look && save.look.shirt) || '#1c1c1c'; };
+  /* Director doc 74 (Producer 22 Nov 07:14): under v3 the Locker hero is the player's OWN figure (V.heroShot of save.look: every creator choice
+     and the real shirt colour, so a Mia player sees Mia) at the Kauri Arms locker (lk_plate.jpg: the same locker with the photo's person taken
+     out). No recolour, no masks, no fixed man/woman photo. Until the render is ready the tier's venue shows (the plate never shows alone: its
+     filled-in patch is where the figure stands), and the card fills in when it is. TOPS_LK74 = 0 brings back the photos. V is a script-level
+     const, not on window. */
+  const v3Lk = () => !!window.TOPS_V3FLAG && window.TOPS_LK74 !== 0 && typeof V !== 'undefined' && !!V.heroShot;
+  /* one render per look: heroShot draws and reads back the figure on every call, and the Locker redraws on every tab change */
+  let lkMemo = { k: '', u: '' }; const lkFig = tier => { const k = JSON.stringify([save.look, save.vlook, save.name, tier | 0, save.flight]); if (lkMemo.k === k && lkMemo.u) return lkMemo.u;
+    let u = ''; try { u = V.heroShot(save.look, save.name || 'You', tier | 0, save.flight) || ''; } catch (e) { u = ''; } if (u) lkMemo = { k, u }; return u; };
+  /* the figure is its own layer over the plate (not a background), so it can sit in the room (ChatGPT 8.0 framing pass, Producer 09:34):
+     - headroom by framing, not by shrinking: the render's own highest point (hair, bun, cap; read from its alpha once per look) is placed
+       LK_HEAD px below the card top, so every look gets the same headroom at every width;
+     - a light falloff painted on the figure only (masked by its own alpha): warm toward the locker lamp, darker low and away from it;
+     - a restrained contact shadow and a soft shadow onto the locker (rb/s3.css), under the name's shade so the name always reads. */
+  const LK_HEAD = 10, LK_EXTRA = 40;   // px of headroom above the highest point; px the figure runs past the card bottom (waist-up)
+  const lkPlate = scene => `radial-gradient(ellipse 24% 26% at 70% 100%,rgba(8,5,3,.62) 0,rgba(8,5,3,.3) 55%,rgba(8,5,3,0) 100%),radial-gradient(ellipse 22% 55% at 76% 40%,rgba(30,17,10,.62) 0,rgba(30,17,10,.35) 55%,rgba(30,17,10,0) 100%),radial-gradient(ellipse 30% 75% at 66% 52%,rgba(14,9,6,.6) 0,rgba(14,9,6,.36) 45%,rgba(14,9,6,0) 100%),url(${s3img(IMG + 'lk_plate.jpg')}) 80% 30%/cover no-repeat,${scene}`;
+  const lkTop = {};   // render url -> [highest opaque row / height, width / height]
+  const lkMeasure = (u, done) => { if (lkTop[u]) return done(lkTop[u]); const im = new Image(); im.onload = () => { let top = 0, ar = im.width / im.height || .8;
+      try { const c = document.createElement('canvas'), w = 120, h = Math.round(120 / ar); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(im, 0, 0, w, h);
+        const d = g.getImageData(0, 0, w, h).data; find: for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) { top = y / h; break find; } } catch (e) {}
+      lkTop[u] = [top, ar]; done(lkTop[u]); }; im.onerror = () => done([0, .8]); im.src = u; };
+  const lkPlace = (w, u, m) => { const card = w.parentNode, H = (card ? card.clientHeight : 170) + LK_EXTRA; w.style.height = H + 'px'; w.style.width = Math.round(H * m[1]) + 'px';
+    w.style.top = Math.round(LK_HEAD - m[0] * H) + 'px'; w.querySelector('img').src = u; const sh = w.querySelector('.rb-lkshade'); sh.style.webkitMaskImage = sh.style.maskImage = `url(${u})`;
+    const ca = w.querySelector('.rb-lkcast'); if (ca) ca.style.webkitMaskImage = ca.style.maskImage = `url(${u})`; const ri = w.querySelector('.rb-lkrim'); if (ri) ri.style.webkitMaskImage = ri.style.maskImage = `url(${u}),url(${u})`; w.hidden = false; };
+  const lkFigTag = () => `<div class="rb-lkfig" id="rbLkFig" hidden><i class="rb-lkcast"></i><img alt=""><i class="rb-lkshade"></i><i class="rb-lkrim"></i></div>`;
+  /* Q&D 22 Nov: V.heroShot gives '' while the figure would be the stand-in (S3 rig file not in yet); when the rig lands the game's avatar
+     refresh ('tops-avatars') fills a Locker still showing the plain room, however long the file took */
+  let lkAgain = null; document.addEventListener('tops-avatars', () => { const w = $id('rbLkFig'); if (lkAgain && w && w.hidden && v3Lk()) lkAgain(); });
+  let lkWait = 0; const v3LockerBg = (tier, scene) => { clearTimeout(lkWait); let n = 0;
+    const again = () => { const e = $id('rbLkHero'), w = $id('rbLkFig'); if (!e || !w) { if (++n < 24) lkWait = setTimeout(again, 60); return; } const u = lkFig(tier);
+      if (u) { lkMeasure(u, m => { if ($id('rbLkFig') !== w) return; e.style.background = lkPlate(scene); lkPlace(w, u, m); e.dataset.lk74 = 1; }); return; } if (++n < 24) lkWait = setTimeout(again, 500); };
+    lkAgain = () => { n = 0; clearTimeout(lkWait); again(); }; lkWait = setTimeout(again, 0); return lkFig(tier) && lkTop[lkMemo.u] ? lkPlate(scene) : scene; };
+  const lockerHeroBg = tier => { const scene = `url(${sceneImg(tier)}) 50% 40%/cover no-repeat`; const hex = myShirt();
+    if (v3Lk()) return v3LockerBg(tier, scene);
     if (window.TOPS_S3FLAG && !(window.TOPS_S3_HAVE || []).includes('assets/rb/lk_m_mask.png')) return `url(${IMG}${meFem() ? 'lk_f' : 'lk_m'}.jpg) 80% 30%/cover no-repeat,${scene}`;   /* S3: recolour only once the Vinyl Locker has its shirt masks (s3-art has them); otherwise the plain redo or placeholder */
     const u = recolour(meFem() ? 'lk_f' : 'lk_m', hex, '', url => { const e = $id('rbLkHero'); if (e && url) e.style.background = s3img(`url(${url}) 80% 30%/cover no-repeat,${scene}`); });   /* EXP-S3-BINDER: Chromium skips the style setter patch, so the switch runs here */
     return u ? `url(${u}) 80% 30%/cover no-repeat,${scene}` : scene; };
@@ -142,7 +181,7 @@
     if (lk === 'cards') return seg + cards(M);
     if (lk === 'troph') { const sh = S3 && S3.shelf ? S3.shelf() : null; return seg + (sh || trophies(M)); }   /* EXP-IDLE 3: the Season 3 shelf (behind s3x=1), else the old list */
     const t = M.t, title = v.title || '', nd = nextDart(v.lv);
-    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div><div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
+    const hero = `<div class="rb-hero" style="height:170px"><div class="rb-im" id="rbLkHero" data-base="${v3Lk() ? 'lk74' : meFem() ? 'lk_f' : 'lk_m'}" style="background:${lockerHeroBg(c.tier)}"></div>${v3Lk() ? lkFigTag() : ''}<div class="rb-sh2" style="background:linear-gradient(90deg,rgba(10,12,14,.9) 0,rgba(10,12,14,.25) 62%,rgba(10,12,14,0) 80%)"></div><div class="rb-tx" style="right:42%"><span class="rb-big" style="font-size:32px">${esc(M.name)}</span><span class="rb-sub">${title ? esc(title) + ' · ' : ''}${esc(t.n)}</span></div></div>`;
     const lvl = `<div class="rb-card" style="flex-direction:row;align-items:center;gap:14px"><div class="rb-ring">${ring(M.pct, v.lv)}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span class="rb-t2">${M.need - v.xp} XP to level ${v.lv + 1}</span>${nd ? `<div style="display:flex;align-items:center;gap:8px"><div class="rb-slot rb-dart rb-r8" style="width:84px;flex:0 0 84px"><div class="rb-im" style="background-image:url(${dartImg(nd.b, 'ds')})"></div></div><span class="rb-sub" style="font-size:12.5px">${nd.lv === v.lv + 1 ? 'Next level' : 'Level ' + nd.lv}: ${esc(nd.b.n.replace(/ \d+g$/, ''))} unlocks</span></div>` : ''}</div></div>`;
     let game = '';
     const A = window.TOPS_ST2_API, st = window.TOPS_st && TOPS_st();
@@ -443,6 +482,8 @@
     qa('#rbApp [data-card]').forEach(b => b.onclick = () => { try { T.binder(); } catch (e) {} });
     const lo = $id('rbLoad'); if (lo && T) lo.onclick = () => { close(); const bk = $id('rbBack'); if (bk) bk.hidden = false; try { T.loadout(); } catch (e) { console.warn('rb loadout', e); } };
     qa('#rbApp [data-drill]').forEach(b => b.onclick = () => { try { startDrill(b.dataset.drill); } catch (e) { console.warn('rb drill', e); } });
+    if (v3Lk()) { const nm = document.querySelector('#rbApp .rb-hero #rbLkHero ~ .rb-tx .rb-big'); if (nm) { nm.style.whiteSpace = 'nowrap'; nm.style.display = 'block'; const one = !/[\s-]/.test(nm.textContent.trim()); let fs = 32; const lo = one ? 18 : 22;
+      while (fs > lo && nm.scrollWidth > nm.clientWidth + 1) { fs -= 1; nm.style.fontSize = fs + 'px'; } if (nm.scrollWidth > nm.clientWidth + 1) { nm.style.whiteSpace = ''; if (one) nm.style.overflowWrap = 'anywhere'; } } }   /* long names at 360: one line from 32 down to 22 px (18 for one long word), then two lines */
     const cb = $id('rbCab'); if (cb && window.TC_API) cb.onclick = () => { try { TC_API.cabinet(); } catch (e) { console.warn('rb cabinet', e); } };
     qa('#rbApp [data-go]').forEach(b => b.onclick = () => { const k = b.dataset.go; if (BUILT[k]) { tab = k; render(); } else toOld(k); });
   }
@@ -467,14 +508,15 @@
   // player (in a shirt that often didn't match). They now show the generated shirt photo in the unlocked colour (the same recolour as the new
   // Result), and the card's top figure becomes the player's Locker photo in his own shirt. Only the reward overlay and the poster are watched
   // (a body childList observer, no subtree), so nothing runs during play.
-  const swapShirt = (ri, L) => { if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
+  const swapShirt = (ri, L) => { if (v3Lk()) return true;   /* doc 74: under v3 the reward tile keeps career3's own render (the figure in the reward shirt) */
+    if (!ri || ri.dataset.rb == L) return true; const img = ri.querySelector('img'); if (!img) return false;   // not drawn yet: try again on the next change
     const r = (window.C3 && C3.rewardAt && L) ? C3.rewardAt(L) : null; ri.dataset.rb = L; if (!r || r.k !== 'shirt') return true; img.style.visibility = 'hidden';
     const put = url => { if (!url) return; img.src = url; ri.classList.add('rb-ri-photo'); if (ri.closest('#lvFirst')) ri.classList.add('rb-lv-photo'); img.removeAttribute('style'); };
     const u = recolour(shirtBase(), r.v, shirtFb(), put); if (u) put(u); return true; };
   let lvMO = null, lvEl = null; const lvStop = () => { if (lvMO) lvMO.disconnect(); lvMO = null; lvEl = null; };
   const fixReward = () => { try {
     const ov = $id('c3rw'); if (ov) { const unl = $id('c3rwUnl'); const m = unl && unl.textContent.match(/Level (\d+)/); if (m) swapShirt(unl.querySelector('.ri.ri-hero'), +m[1]);
-      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h) { h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = (save.look && save.look.shirt) || '#1c1c1c';
+      const h = ov.querySelector('img.rwhero:not([data-rb])'); if (h && !v3Lk()) {   /* doc 74: under v3 the reward hero stays the player's own render */ h.dataset.rb = 1; const base = meFem() ? 'lk_f' : 'lk_m', hex = myShirt();
         const fb = (() => { try { return sceneImg(career().tier); } catch (e) { return sceneImg(0); } })();   // ChatGPT P2: the venue, never an empty top
         const put = url => { if (url) { h.src = url; h.classList.add('rb-rwphoto'); h.style.visibility = ''; } }; const u = recolour(base, hex, fb, put); if (u) put(u); else h.style.visibility = 'hidden'; } }
     // the first-level-up poster clones the reward tile; it may be filled after it is added, so it is watched until its photo is in (ChatGPT P1)
@@ -487,6 +529,6 @@
   { let rwMO = null; new MutationObserver(() => { const ov = $id('c3rw'); if (ov && !ov.dataset.rbw) { ov.dataset.rbw = 1; if (rwMO) rwMO.disconnect(); rwMO = new MutationObserver(fixReward); rwMO.observe(ov, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); }
       if (lvEl && !document.body.contains(lvEl)) lvStop();   // ChatGPT P2: the poster left the page, so its watcher goes too
       if ($id('lvFirst') || ov) fixReward(); }).observe(document.body, { childList: true }); }
-  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward };
+  window.TOPS_RB = { open, close, render, model, showResult, pickUnlock, shirtImg, recolour, fixReward, myShirt, meFem, v3Lk, lkFig, lkInfo: () => { const w = $id('rbLkFig'), u = w && w.querySelector('img').src, m = u && lkTop[u]; if (!w || w.hidden || !m) return null; const H = parseFloat(w.style.height); return { head: Math.round(parseFloat(w.style.top) + m[0] * H), H, u }; } };
 })();
 ;try { if (window.TOPS_PRE) TOPS_PRE.ready(window.TOPS_REBRAND !== false); } catch (e) {}   // EXP-OLDOUT: the new look is installed (or off); only reached if the block above didn't throw
