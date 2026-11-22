@@ -48,7 +48,7 @@ let url = ''; const f = []; const out = {};
     await A.waitForTimeout(3000); out.aCard = await card(A);
     const tap = await A.evaluate(async () => { try { const e = TOPS_S3.view().calendar[0]; const r = TOPS_S3.book(e.id); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); return { ok: !!(r && r.ok) }; } catch (e) { return { err: String(e) }; } });
     await A.waitForTimeout(800); const C = await open(ctx); out.after = await stored(C); out.cCard = await card(C); out.tap = tap;
-    if (out.after.week !== 2 || out.after.bank !== 90) f.push('1 tab A overwrote tab B\'s won Pub night ' + JSON.stringify(out.after));
+    if (out.after.week !== 2 || out.after.bank !== 90) f.push('1 tab A overwrote tab B\'s won Pub night ' + JSON.stringify(out.after) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-14)), b: await B.evaluate(() => TOPS_TABS.log().slice(-14)), c: await C.evaluate(() => TOPS_TABS.log().slice(-10)) }));
     if (!out.aCard || !/TOPS is open in another tab/i.test(out.aCard) || !/Play here/i.test(out.aCard)) f.push('1 tab A shows the other-tab card ' + JSON.stringify(out.aCard));
     // Play here on A: reloads with the latest save and takes ownership; B and C step aside
     await A.setViewportSize({ width: 390, height: 844 }); await A.waitForTimeout(300); await A.screenshot({ path: path.join(dir, 'wip/car-tabs/tabs-card-390.png') }).catch(() => {}); await A.setViewportSize({ width: 360, height: 640 }); await A.screenshot({ path: path.join(dir, 'wip/car-tabs/tabs-card-360.png') }).catch(() => {});
