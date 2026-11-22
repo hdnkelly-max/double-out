@@ -38,5 +38,5 @@ jobs:
       working-directory: live428
       run: git config --global --add safe.directory "*"; git log --oneline -1; npm i --no-save three@0.128.0 playwright@1.48.2 >/dev/null && bash tests/setup.sh
     - name: Scan
-      run: for d in branch live428; do cp diag/diag/*.js diag/diag/a_long_s3.json $d/tests/; for br in webkit chromium; do echo "=== $d $br"; (cd $d && BR=$br node tests/imgscan.js "$PWD" | tail -1; BR=$br node tests/binder.js "$PWD" | tail -1); done;
+      run: for d in branch live428; do cp diag/diag/*.js diag/diag/a_long_s3.json $d/tests/; for br in webkit chromium; do set +e; echo "=== $d $br"; (cd $d && BR=$br node tests/imgscan.js "$PWD" | tail -1; BR=$br node tests/binder.js "$PWD" | tail -1); done;
         done
