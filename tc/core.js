@@ -970,7 +970,7 @@
     // EXP-1d (Q&D 22:46): never a T-pose. Until the walk clip plays (clipOn asks for anims.glb and returns null until the clip and a
     // mixer exist; a rebuilt figure starts without one) the figure stays hidden on an establishing shot. Held time doesn't count
     // against the timeline; after 4 s held in total the walk-on skips cleanly to its end, unless the clip file (anims.glb) is still
-    // downloading: then it keeps holding up to 10 s (the first walk-on of a session on a slow connection used to be lost to a 4 s skip;
+    // downloading and can land inside 10 s at its rate so far: then it keeps holding (a failed file skips at once) (the first walk-on of a session on a slow connection used to be lost to a 4 s skip;
     // Engine + Producer 22 Nov). A tap still skips at any time. v2 and v3 alike.
     if (WK.me && WK.me !== v.me) { WK.walking = false; WK.arrived = false; WK.me = v.me; }   // the figure was rebuilt mid-walk (models landing): its clip starts again before it's shown (ChatGPT P1)
     if (!WK.walking && !WK.holdSkip && (k < WA || WK.hold0)) {   // once holding, the timeline is paused: a slow frame mustn't carry k past the walk and show an unposed figure
@@ -979,9 +979,13 @@
       if (a) { WK.walking = true; WK.me = v.me; if (WK.hold0) { const d = now - WK.hold0; WK.held = (WK.held || 0) + d; WK.t0 += d; WK.hold0 = 0; } WK.holding = false; k = (now - WK.t0) / WK.dur; }
       else {
         if (!WK.hold0) WK.hold0 = now;
-        const heldMs = (WK.held || 0) + now - WK.hold0, dl = (() => { try { return typeof V !== 'undefined' && V.animsPending && V.animsPending(); } catch (e) { return false; } })();
+        const heldMs = (WK.held || 0) + now - WK.hold0, A = (typeof V !== 'undefined' && V) || {}, q = f => { try { return A[f] ? A[f]() : null; } catch (e) { return null; } };
+        const dl = !!q('animsPending'), failed = !!q('animsFailed'), eta = q('animsEta');
         if (dl) WK.dlSeen = now; else if (WK.dlSeen && !WK.dlEnd) WK.dlEnd = now;   // the file just landed: give the clip a moment to start (parse, mixer) before giving up
-        if (heldMs < 4000 || (heldMs < 10000 && (dl || (WK.dlEnd && now - WK.dlEnd < 2500)))) {
+        /* past 4 s, hold only while the file is still coming AND can land inside the 10 s cap at its rate so far (+15%, plus 1 s to parse);
+           a file that can't make it skips at 4 s as before, not after 10 s of an empty room; a failed file (404) skips at once (Producer 14:55) */
+        const canLand = dl && (eta == null ? heldMs < 6000 : heldMs + (eta * 1.15 + 1) * 1000 < 10000);
+        if (!failed && (heldMs < 4000 || (heldMs < 10000 && (canLand || (WK.dlEnd && now - WK.dlEnd < 2500))))) {
           WK.holding = true; v.me.visible = false; if (v.fpFig) v.fpFig.visible = false;
           const OZ = typeof OCHE_Z !== 'undefined' ? OCHE_Z : 2.37; v.pos.set(.6, 1.55, OZ + .08 + 3.4); v.look.set(0, 1.6, 0);   // 3.4 m behind the oche, 0.6 m to the side, on the board
           return { fov: 52 };
