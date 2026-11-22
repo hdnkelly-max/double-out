@@ -248,7 +248,7 @@
     if(e.key===MSG&&e.newValue){if(!bc)recv(JSON.parse(e.newValue));}
     else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
       if(o.tab==='reload'){if(owner&&!away)stepAside('claim');return;}   // Play here in another tab: it reloads and takes over
-      if(!o.hb)claimed(o);else if(owner&&!away&&beats(o,me()))stepAside('claim');
+      if(!o.hb){if(owner&&!away&&!pending&&!beats(o,me())){writeOwn({busy:midMatch()?1:0});return;}claimed(o);}else if(owner&&!away&&beats(o,me()))stepAside('claim');
       else if(!o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}}   /* the match there ended: offer Play here (loads the save it just made) */
     else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale()){if(inGrace())graceAdopt();else stepAside('newer');}}catch(x){}});
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
