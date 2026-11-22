@@ -227,6 +227,9 @@ let url = ''; const f = []; const out = {};
       window.TOPS_TABS_QA = { delay: 9000 };   // A hears nothing in time
       const iv = setInterval(() => { let m = null; try { m = JSON.parse(localStorage.getItem('tops_owner_' + TOPS_SAVE_NS.key + '_msg') || 'null'); } catch (x) {} if (m && m.t === 'hello') { clearInterval(iv); TOPS_S3._playNow(); setTimeout(() => { const t = Date.now(); while (Date.now() - t < 6000); }, 0); } }, 30); });
     await A.waitForTimeout(1200); const B = await open(ctx); await B.waitForTimeout(6000);
+    /* settle (R8b, CI 45042148242): A is starved 6 s on purpose, so its lock news can arrive after the snapshot; B may own for a moment
+       (no write of A's can land meanwhile: A doesn't hold the lock). Wait up to 12 s for one of the two right ends */
+    for (let k = 0; k < 24; k++) { const [x, y] = [await own(A), await own(B)]; if ((x.owner && x.live && y.card === 'busy') || (y.owner && x.away && !x.live)) break; await B.waitForTimeout(500); }
     out.r15a = { a: await own(A), b: await own(B), via: await B.evaluate(() => (TOPS_TABS.log().find(l => l[1] === 'tabs_busy') || [])[2] || null) };
     out.r15a.blocked = await A.evaluate(() => TOPS_TABS.log().some(l => l[1] === 'tabs_match_blocked'));
     /* on a slow machine (CI) the Play tap's match can start only after B's wait: then B takes over first and A's match must not start at all.
@@ -239,7 +242,7 @@ let url = ''; const f = []; const out = {};
     out.r15b = { a: await own(A), b: await own(B) };
     if (!out.r15b.a.owner || !out.r15b.a.live || out.r15b.b.owner || out.r15b.b.card !== 'busy') f.push('15b an ordinary claim mid-match is refused: A plays on, B shows the busy card ' + JSON.stringify(out.r15b) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-14)), b: await B.evaluate(() => TOPS_TABS.log().slice(-14)) }));
     await B.evaluate(() => { const bt = document.querySelector('#tabsCard button'); if (bt) bt.click(); });
-    for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (y.owner && x.card) break; }
+    for (let k = 0; k < 20; k++) { await B.waitForTimeout(500); const [x, y] = [await own(A), await own(B)]; if (y.owner && x.away) break; }   // A's card alone isn't the end: wait for A to step aside
     out.r15c = { a: await own(A), b: await own(B) };
     if (!out.r15c.b.owner || out.r15c.a.owner || out.r15c.a.live) f.push('15c Play here anyway still takes over ' + JSON.stringify(out.r15c) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log().slice(-12)), b: await B.evaluate(() => TOPS_TABS.log().slice(-12)) })); }
     await ctx.close(); }

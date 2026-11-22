@@ -225,22 +225,22 @@
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
   const LK=!window.TOPS_NOLOCKS&&!!(navigator.locks&&navigator.locks.request),LOCK='tops-save-'+KEY;   /* TOPS_NOLOCKS: QA, runs the fallback */
   let held=false,acquiring=false,releaseLock=null,lastClaim=null,reqN=0;
-  function lockAcquire(steal){if(!LK)return Promise.resolve(true);acquiring=true;
+  function lockAcquire(steal,refuse){if(!LK)return Promise.resolve(true);acquiring=true;
     return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};
       /* R8 (ChatGPT): a request that hasn't been granted is never ownership. A steal from a frozen holder can wait until it thaws; this tab
          stays waiting behind a card and writes nothing until the lock is really granted */
-      if(steal)setTimeout(()=>{if(acquiring&&!done){ev('lock_steal_slow');card('wait');}},2500);
+      if(steal)setTimeout(()=>{if(acquiring&&!done){ev('lock_steal_slow');if(!refuse)card('wait');}},2500);   /* R8b: a mid-match tab taking its lock back keeps its match on screen (writes stay blocked until granted) */
       /* R8b: each request has a number; only the newest one is this tab's lock. A request this tab replaced itself (a second steal) neither
          sets nor clears held, never answers its caller, and its loss is not a lost lock (DQ A1 crossed: a doubled ack made two steals, the second stole the first) */
       const my=++reqN;
-      try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{if(my!==reqN)return;acquiring=false;if(!lock){fin(false);return;}held=true;ev('lock_held',{steal:!!steal});fin(true);
+      try{navigator.locks.request(LOCK,steal?{steal:true}:{ifAvailable:true},lock=>{if(my!==reqN)return;acquiring=false;if(!lock){fin(false);return;}held=true;ev('lock_held',{steal:!!steal});{const k=document.getElementById('tabsCard');if(k&&k.dataset.mode==='wait')k.remove();}fin(true);
         return new Promise(r=>{releaseLock=()=>{held=false;releaseLock=null;r();};});})
       .catch(e=>{if(my!==reqN)return;acquiring=false;const was=held;held=false;releaseLock=null;ev('lock_lost',{err:String(e&&e.name||e)});if(was)lockLost();fin(false);});}catch(e){acquiring=false;fin(false);}});}
   /* the lock was stolen: give the stealer's claim (owner key or message) a moment to arrive, then the one rule. Writes are blocked meanwhile. */
   function lockLost(){if(away||!owner)return;if(!midMatch()){const o=readOwn();stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');return;}   /* nothing to protect: go now */
     setTimeout(()=>{if(away)return;const o=readOwn();
       const any=(o&&o.tab!==TAB&&o.anyway)||(lastClaim&&lastClaim.anyway&&Date.now()-lastClaim.rx<4000);
-      if(midMatch()&&!any&&!stale()){lockAcquire(true).then(ok=>{if(!ok||away){stepAside('claim');return;}myGen=nextGen();ev('tabs_refuse',{via:'lock'});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});});return;}
+      if(midMatch()&&!any&&!stale()){lockAcquire(true,1).then(ok=>{if(!ok||away){stepAside('claim');return;}myGen=nextGen();ev('tabs_refuse',{via:'lock'});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});});return;}
       stepAside('claim',o&&o.tab!==TAB&&o.busy?'busy':'');},300);}
   const releaseIt=()=>{try{releaseLock&&releaseLock();}catch(e){}};
   const keyOK=()=>{const o=readOwn();return !o||o.tab===TAB||(o.tab!=='reload'&&!beats(o,me()));};
@@ -260,7 +260,7 @@
   /* a better claim than this tab's, however it is found (a message, the owner key on a save or a heartbeat, a page restore): the one rule for
      what happens next. Mid-match, a fresh ordinary claim from a tab that hasn't saved since is refused (this tab re-claims one gen higher,
      marked busy); anything else wins and this tab steps aside. Returns true when this tab stepped aside. */
-  function lost(c){if(c&&c.tab!=='reload'&&midMatch()&&!c.anyway&&Date.now()-(+c.at||0)<FRESH&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});if(LK&&!held)lockAcquire(true);return false;}
+  function lost(c){if(c&&c.tab!=='reload'&&midMatch()&&!c.anyway&&Date.now()-(+c.at||0)<FRESH&&!stale()){myGen=nextGen();ev('tabs_refuse',{them:c.gen,me:myGen});writeOwn({busy:1});send({t:'claim',gen:myGen,busy:1,refuse:1});if(LK&&!held)lockAcquire(true,1);return false;}
     stepAside('claim',c&&c.busy?'busy':'');return true;}
   const done=new Set();   // claims already handled (they arrive twice: the channel and the owner key)
   let bc=null;try{bc=new BroadcastChannel('tops-tabs-'+KEY);bc.onmessage=m=>recv(m&&m.data);}catch(e){}
