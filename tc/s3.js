@@ -203,7 +203,8 @@
     if(k===KEY&&this===localStorage&&!passing&&!adopting){
       if(away||pending)throw new Error('TOPS: the save belongs to another tab');if(owner&&!ownsKey()&&lost(readOwn()))throw new Error('TOPS: another tab has claimed the save');if(stale()){if(inGrace()){graceAdopt();throw new Error('TOPS: a newer save was just loaded');}stepAside('newer');throw new Error('TOPS: a newer save is in storage');}}
     if(k===KEY&&this===localStorage&&window.TOPS_TABS_QA&&TOPS_TABS_QA.failWrite){const e=new Error('QA: storage full');e.name='QuotaExceededError';throw e;}   /* QA (s3-tabs 18): a browser that refuses the write */
-    const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&passing&&!adopting){lastWrote=String(v);try{raw(WR,JSON.stringify({tab:TAB,sv:mine()}));}catch(e){}}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
+    if(k===KEY&&this===localStorage&&passing&&!adopting){try{raw(WR,JSON.stringify({tab:TAB,sv:mine()}));}catch(e){}}   // the writer tag goes first, so another tab never sees the save before its tag
+    const r=SI.apply(this,arguments);if(k===KEY&&this===localStorage&&passing&&!adopting){lastWrote=String(v);}else if(k===KEY&&this===localStorage&&adopting){lastWrote=String(v);}return r;};
   // 1 ownership
   const midMatch=()=>{try{return typeof S!=='undefined'&&!!S&&!S.done;}catch(e){return false;}};
   const readOwn=()=>{try{return JSON.parse(localStorage.getItem(OWN)||'null');}catch(e){return null;}};
@@ -239,7 +240,11 @@
     lost(c);}   // mid-match: only Play here anyway ends it
   /* a tab that took over on a timeout: the tab it claimed from may still finish a write it had started (or answer late) in the next ~2 s;
      that save is adopted here instead of making this tab step aside (DQ: both tabs ended behind the card) */
-  const inGrace=()=>{if(!grace||Date.now()>grace.until)return false;try{const w=JSON.parse(localStorage.getItem(WR)||'null');return !!w&&w.tab===grace.from;}catch(e){return false;}};
+  /* a newer save written by another TOPS tab of this build (it tags its writes) while this tab holds the winning claim: that tab wrote before
+     it heard the claim (two tabs starting together, the key isn't a lock). It's adopted (this tab's unsaved changes kept as a recovery copy)
+     instead of this tab stepping aside. A write with no tag (an older build's tab) still makes this tab step aside, as before. */
+  const peerWrote=()=>{try{const w=JSON.parse(localStorage.getItem(WR)||'null');return !!w&&w.tab!==TAB&&+(w.sv||0)===svIn()&&owner&&ownsKey();}catch(e){return false;}};
+  const inGrace=()=>{if(peerWrote())return true;if(!grace||Date.now()>grace.until)return false;try{const w=JSON.parse(localStorage.getItem(WR)||'null');return !!w&&w.tab===grace.from;}catch(e){return false;}};
   function graceAdopt(){if(body()!==lastBody)rescue('grace');ev('tabs_grace',{sv:svIn()});reread();}
   /* loading this browser's own stored save: the adopt's migration save is not written back (it would bump the counter and look like a newer
      save to the other tab, which is how two claimants both ended behind the card); the next real change writes it */
@@ -252,11 +257,12 @@
     else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
       if(o.tab==='reload'){if(owner&&!away)stepAside('claim');return;}   // Play here in another tab: it reloads and takes over
       if(!o.hb){if(owner&&!away&&!pending&&!beats(o,me())){writeOwn({busy:midMatch()?1:0});return;}claimed(o);}else if(owner&&!away&&beats(o,me()))lost(o);
+      else if(owner&&!away&&!pending){ev('tabs_reassert',{hb:o.gen,me:myGen});writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});}   /* a heartbeat from a tab with a lower claim: it wrote over this tab's claim before hearing it (the key isn't a lock), so say it again at once */
       else if(!o.busy&&away){const c=document.getElementById('tabsCard');if(c&&c.dataset.mode==='busy')card();}}   /* the match there ended: offer Play here (loads the save it just made) */
     else if(e.key===KEY&&e.newValue&&!away&&!pending&&!adopting&&stale()){if(inGrace())graceAdopt();else stepAside('newer');}}catch(x){}});
   /* hb: a heartbeat, never a claim. It also says whether the owner is mid-match (busy), written the moment a match starts or ends, so a new
      tab knows without waiting on an answer: a tab busy rendering a match can take seconds to hear a hello (DQ's race) */
-  let hbBusy=null;const beat=()=>{if(!owner||away||pending)return;const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){lost(o);return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
+  let hbBusy=null,gone=false;const beat=()=>{if(!owner||away||pending||gone)return;   /* gone: between pagehide and pageshow nothing is said for this page */const o=readOwn();if(o&&o.tab!==TAB&&beats(o,me())){lost(o);return;}hbBusy=midMatch();writeOwn({hb:1,busy:hbBusy?1:0});};
   setInterval(beat,4000);setInterval(()=>{if(owner&&!away&&midMatch()!==hbBusy)beat();},400);   /* the poll is only a refresh: */
   /* busy is written synchronously where a match starts and ends (DQ 12:41: a tab busy rendering a match missed the 400 ms ticks, so a new
      tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
@@ -266,9 +272,9 @@
     try{return _bm.apply(this,arguments);}finally{edge();}};}
   if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
-  window.addEventListener('pagehide',()=>{try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
+  window.addEventListener('pagehide',()=>{gone=true;try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
   /* back-forward cache: a restored page was frozen, so before it writes it checks it still owns the save */
-  window.addEventListener('pageshow',e=>{if(!e.persisted)return;ev('tabs_pageshow',{owner,away});if(!owner||away||pending)return;
+  window.addEventListener('pageshow',e=>{gone=false;if(!e.persisted)return;ev('tabs_pageshow',{owner,away});if(!owner||away||pending)return;
     const o=readOwn();if(stale()||(o&&o.tab!==TAB&&(o.tab==='reload'||beats(o,me())))){stepAside(stale()?'newer':'claim',o&&o.busy?'busy':'');return;}
     myGen=nextGen();writeOwn({busy:midMatch()?1:0});send({t:'claim',gen:myGen,busy:midMatch()?1:0});});
   const start=()=>{const live=readOwn();if(live)seenGen=Math.max(seenGen,+(live.gen||0));

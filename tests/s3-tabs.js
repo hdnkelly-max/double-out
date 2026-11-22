@@ -199,7 +199,7 @@ let url = ''; const f = []; const out = {};
   // 14 P1-1: (a) two tabs starting together with no owner; (b) crossed claims from both, messages delayed 1 s; (c) a claim delivered late
   //    (an old gen) after the owner moved on. Always exactly one owner, and the late claim changes nothing
   if (RUN(14)) { const ctx = await b.newContext(); const [A, B] = await Promise.all([open(ctx), open(ctx)]);
-    out.r14a = await settle([A, B], 8000); if (out.r14a.filter(x => x.owner).length !== 1) f.push('14a two tabs starting together: exactly one owner ' + JSON.stringify(out.r14a));
+    out.r14a = await settle([A, B], 8000); if (process.env.TABSLOG2) fs.writeFileSync(process.env.TABSLOG2, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14a.filter(x => x.owner).length !== 1) f.push('14a two tabs starting together: exactly one owner ' + JSON.stringify(out.r14a) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log()), b: await B.evaluate(() => TOPS_TABS.log()) }));
     await Promise.all([A, B].map(P => P.evaluate(() => { window.TOPS_TABS_QA = { delay: 1000 }; })));
     await Promise.all([A.evaluate(() => TOPS_TABS._claim()), B.evaluate(() => TOPS_TABS._claim())]);
     out.r14b = await settle([A, B], 10000); if (process.env.TABSLOG) fs.writeFileSync(process.env.TABSLOG, JSON.stringify({ a: await A.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]), b: await B.evaluate(() => [TOPS_TABS.tab, TOPS_TABS.log()]) }, null, 1)); if (out.r14b.filter(x => x.owner).length !== 1) f.push('14b crossed claims (messages 1 s late): exactly one owner ' + JSON.stringify(out.r14b));
@@ -209,6 +209,13 @@ let url = ''; const f = []; const out = {};
     await O.evaluate(([k, g]) => { const c = { t: 'claim', gen: g - 1, tab: 'zzzz-late', at: Date.now() }; new BroadcastChannel('tops-tabs-' + k).postMessage(c); localStorage.setItem('tops_owner_' + k, JSON.stringify(c)); }, [await W.evaluate(() => TOPS_SAVE_NS.key), g]);
     await W.waitForTimeout(2000); out.r14c = await own(W);
     if (!out.r14c.owner || out.r14c.away || !out.r14c.key || out.r14c.key.tab === 'zzzz-late') f.push('14c a late claim from an older gen leaves the owner in place (and it re-asserts in the key) ' + JSON.stringify(out.r14c));
+    // 14d the key isn't a lock: the old owner's heartbeat can land on top of a newer claim before it hears it (CI run 44992335158). The newer
+    //     owner sees that lower heartbeat and says its claim again at once (not at its next heartbeat)
+    const ow = W, lo = L; const gW = (await own(ow)).gen; const loTab = await lo.evaluate(() => TOPS_TABS.tab);
+    await ow.evaluate(([t, g]) => { localStorage.setItem('tops_owner_' + TOPS_SAVE_NS.key, JSON.stringify({ tab: t, gen: g - 1, at: Date.now(), hb: 1, busy: 0 })); }, [loTab, gW]);   // written in the owner's own page: no event there
+    await lo.evaluate(([t, g]) => { localStorage.setItem('tops_owner_' + TOPS_SAVE_NS.key, JSON.stringify({ tab: t, gen: g - 1, at: Date.now(), hb: 1, busy: 0 })); }, [loTab, gW]);   // and from the other page, so the owner gets the event
+    await ow.waitForTimeout(1200); out.r14d = await own(ow);
+    if (!out.r14d.owner || !out.r14d.key || out.r14d.key.tab === loTab) f.push('14d an older heartbeat over the claim: the owner re-asserts within a second ' + JSON.stringify(out.r14d));
     await ctx.close(); }
   // 15 P1-2: (a) B reads the owner key (busy 0), then A starts a match and is blocked past B's 4 s wait: B re-reads before taking over and
   //    shows the busy card (or, if B's re-read came first, A refuses B's claim and B shows it then); A keeps its match. (b) an ordinary claim reaching an owner mid-match is refused (B: busy card); Play here anyway wins
@@ -273,10 +280,10 @@ let url = ''; const f = []; const out = {};
     await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); }); await A.waitForTimeout(500);
     out.r17a = await own(A); if (!out.r17a.owner) f.push('17a restored alone: still the owner ' + JSON.stringify(out.r17a));
     await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); window.TOPS_TABS_QA = { delay: 60000 }; });   // frozen: hears nothing
-    const B = await open(ctx); await B.waitForTimeout(1500); await B.evaluate(() => { career().bank = 5150; persist(); }); await B.waitForTimeout(800);
+    const B = await open(ctx); await B.waitForFunction(() => TOPS_TABS.owner(), null, { timeout: 15000 }).catch(() => {}); await B.evaluate(() => { career().bank = 5150; persist(); }); await B.waitForTimeout(800);
     await A.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); career().bank = 1; persist(); }); await A.waitForTimeout(800);
     out.r17b = { a: await own(A), b: await own(B), bank: (await stored(B)).bank };
-    if (out.r17b.a.owner || !out.r17b.a.card || !out.r17b.b.owner || out.r17b.bank !== 5150) f.push('17b restored after another tab took over: steps aside without writing ' + JSON.stringify(out.r17b));
+    if (out.r17b.a.owner || !out.r17b.a.card || !out.r17b.b.owner || out.r17b.bank !== 5150) f.push('17b restored after another tab took over: steps aside without writing ' + JSON.stringify(out.r17b) + ' LOGS ' + JSON.stringify({ a: await A.evaluate(() => TOPS_TABS.log()), b: await B.evaluate(() => TOPS_TABS.log()) }));
     await ctx.close(); }
   // 18 a save the browser refuses (storage full): a banner says so, nothing is marked saved, and the next save after space frees up lands
   if (RUN(18)) { const ctx = await b.newContext(); const A = await open(ctx); await A.evaluate(() => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); });
