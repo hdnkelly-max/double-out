@@ -311,7 +311,8 @@
      tab 1.5 s in found no busy and took over). Every start goes through beginMatch; every end through endMatch, a quit back to the hub
      (showHub), or a reload (pagehide clears the owner key). */
   const edge=()=>{try{if(owner&&!away&&midMatch()!==hbBusy)beat();}catch(e){}};
-  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(away||pending||(LK&&!lockOK())||(!LK&&owner&&!ownsKey())){ev('tabs_match_blocked',{away,pending,held});if(!away&&!pending)stepAside('claim');card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
+  if(typeof beginMatch==='function'){const _bm=beginMatch;beginMatch=function(){if(LK&&held&&!away&&!pending&&!keyOK()){keyClash();ev('tabs_match_blocked',{why:'key'});return;}   /* the lock flag is cached: a newer claim already in the key means the steal may be on its way, so no match starts on it */
+    if(away||pending||(LK&&!lockOK())||(!LK&&owner&&!ownsKey())){ev('tabs_match_blocked',{away,pending,held});if(!away&&!pending)stepAside('claim');card(document.getElementById('tabsCard')&&document.getElementById('tabsCard').dataset.mode||'');return;}   /* never start a match behind the card (a Play tap that lands just after a claim) */
     try{return _bm.apply(this,arguments);}finally{edge();}};}
   if(typeof endMatch==='function'){const _em=endMatch;endMatch=function(){try{return _em.apply(this,arguments);}finally{edge();}};}
   if(typeof showHub==='function'){const _sh=showHub;showHub=function(){try{return _sh.apply(this,arguments);}finally{edge();}};}
