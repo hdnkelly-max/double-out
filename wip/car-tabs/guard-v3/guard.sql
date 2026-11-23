@@ -11,6 +11,7 @@
 begin;
 alter table public.tops_saves_s3 add column if not exists base_guarded boolean not null default false;
 drop function if exists public.tops_save3_put(jsonb);
+drop function if exists public.tops_save3_put(jsonb, bigint);   -- DQ: so a re-apply works
 create function public.tops_save3_put(p_data jsonb, p_base bigint default null)
  returns jsonb language plpgsql security definer set search_path = '' as $function$
 -- security definer (ChatGPT P1-3): the only way a player writes a save. The owner is always auth.uid(), never anything in p_data.
