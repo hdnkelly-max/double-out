@@ -184,6 +184,8 @@ let url = ''; const f = []; const out = {};
     await A.evaluate(async () => { save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); try { showHub('play'); } catch (e) {} window.TOPS_TABS_QA = { delay: 4500, late: 1 }; }); await A.waitForTimeout(1500);
     await A.evaluate(() => { career().bank = 4343; });   // a change the owner hasn't written yet: its late flush writes it
     const B = await open(ctx); await B.waitForTimeout(8000);
+    /* settle (CI 45106096268/45108049723: on CI's slower box A, 4.5 s deaf, hadn't stepped aside yet at the fixed 8 s check): up to 15 s more */
+    for (let k = 0; k < 30; k++) { const g = await B.evaluate(() => ({ card: !!document.getElementById('tabsCard'), away: TOPS_TABS.away(), bank: career().bank })); if (!g.card && !g.away && g.bank === 4343 && await card(A)) break; await B.waitForTimeout(500); }
     out.grace = await B.evaluate(() => ({ card: !!document.getElementById('tabsCard'), away: TOPS_TABS.away(), bank: career().bank, stored: JSON.parse(localStorage.getItem(TOPS_SAVE_NS.key)).career.bank }));
     out.grace.aCard = !!(await card(A));
     if (out.grace.card || out.grace.away || out.grace.bank !== 4343 || out.grace.stored !== 4343 || !out.grace.aCard) f.push('11 the new tab adopts the late flush instead of stepping aside ' + JSON.stringify(out.grace));
