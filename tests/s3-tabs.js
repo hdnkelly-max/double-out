@@ -422,6 +422,18 @@ let url = ''; const f = []; const out = {};
     if (!(out.r24b.puts[0] && out.r24b.puts[0].r === 'upgrade_required' && out.r24b.puts.some(x => x.base != null && x.r === 'ok') && out.r24b.a.synced === out.r24b.a.sv && !out.r24b.a.card)) f.push('24b after the flag: upgrade_required, then the same client pushes with p_base, no card ' + JSON.stringify(out.r24b));
     if (!(out.r24c.a.card && /Reload/.test(out.r24c.a.card) && out.r24c.a.rescued && out.r24c.more === 0)) f.push('24c a server that still says upgrade_required: reload card, recovery copy, pushes stop ' + JSON.stringify(out.r24c));
     await ctx.close(); }
+  // 26 DQ residual 4 (A3 at 2 s: a new owner's push never landed): a push whose claim moves on mid-push (a re-assert raises the gen) was
+  //    dropped and never sent again. Now it runs again while this tab still owns the save, and the save reaches the cloud
+  if (RUN(26)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
+    out.r26 = await A.evaluate(async () => { let go; const gate = new Promise(r => { go = r; }); const sb = NET.sb, from = sb.from;
+      NET.sb = Object.assign({}, sb, { from: (...x) => { const q = from(...x); return { select: (...y) => { const s = q.select(...y); return { eq: (...z) => { const e = s.eq(...z); return { maybeSingle: async () => { await gate; return e.maybeSingle(); } }; } }; } }; } });
+      career().bank = 260; persist(); await TOPS_TABS.idle(); const gen0 = TOPS_TABS.gen(); cloudPush(true); await new Promise(r => setTimeout(r, 300));
+      TOPS_TABS._claim(); await new Promise(r => setTimeout(r, 300)); const gen1 = TOPS_TABS.gen(); go();   // the claim moves on while the push waits in its preflight read
+      for (let i = 0; i < 100 && TOPS_TABS.synced() !== save.sv; i++) await new Promise(r => setTimeout(r, 100));
+      return { gen0, gen1, owner: TOPS_TABS.owner(), sv: save.sv, synced: TOPS_TABS.synced(), dropped: TOPS_TABS.log().filter(l => l[1] === 'push_dropped').map(l => JSON.parse(l[2])) }; });
+    out.r26.cloud = S.row && S.row.career && S.row.career.bank;
+    if (!(out.r26.gen1 > out.r26.gen0 && out.r26.owner && out.r26.dropped.some(d => d && d.again) && out.r26.synced === out.r26.sv && out.r26.cloud === 260)) f.push('26 a push dropped because the claim moved on is sent again, and lands ' + JSON.stringify(out.r26));
+    await ctx.close(); }
   // 25 ENG-RESET (v16, the between-match reset) pushes through the same pipeline: TOPS_TABS.pushNow() puts this exact save with p_base and
   //    resolves true; v16.js has no push of its own without p_base
   if (RUN(25)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
