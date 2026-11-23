@@ -1,4 +1,7 @@
 -- Rollback: today's function exactly as it is on 22 Nov (pg_get_functiondef), today's grants, today's table grants and write policies.
+-- The base_guarded column (guard v3) is LEFT in place on purpose: today's function never reads or writes it, its default keeps inserts
+-- working, and keeping it means a later re-apply still knows which players already have a new client. To remove it as well (only if the
+-- guard is abandoned for good), run after this file: alter table public.tops_saves_s3 drop column if exists base_guarded;
 begin;
 drop function if exists public.tops_save3_put(jsonb, bigint);
 CREATE FUNCTION public.tops_save3_put(p_data jsonb)
