@@ -8,7 +8,7 @@
 //   3 no-career wipe: tab A sits on the title with no career; tab B starts a career; A saves once: B's career is still there
 //   4 cloud: a stale tab never pushes its copy (the save RPC is not called), the owner does
 //   5 the hub does not save on its redraws: an idle owner hub writes the save no more than once in 30 s (it was every 2.5 s)
-//   9 p_base (DQ's server-side guard, a proposal): sent only when the server supports it; today's server gets exactly what it gets now
+//   9 p_base (guard v3): every put tries it, the first too; a server without it (PGRST202) gets plain pushes, as today
 //   6 cloud, two devices (mocked cloud that keeps the higher counter, like tops_save3_put): device Y loads X's save and plays on; stale device X,
 //     never pulling, saves more times than Y did; X's push must load Y's newer save, not overwrite it (a counter alone let X win)
 //   10 the handshake race (DQ 22 Nov 10:52): a slow owner never leaves both tabs behind the card; mid-match it is known busy from its heartbeat
@@ -17,6 +17,8 @@
 //   19 R6: an older cloud copy at sign-in never replaces this tab's newer save (DQ A5/A3)
 //   13 busy is written where a match starts: a new tab opened while the owner is blocked still sees it (DQ 12:41)
 //   20 R8: the no-Web-Locks fallback never takes over by itself (read-only card, Play here anyway only)
+//   21-25 R10: a delayed put refused by the server (guard v3 model), equal-version conflict, rebase on this browser's own copy, legacy
+//   writes before and after the base_guarded flag (and the reload card), ENG-RESET's push with p_base (tests/s3-tabs-4.js)
 //   14-18 R5 (ChatGPT review): simultaneous, crossed and late claims; a match started after B read the key, and claims refused mid-match;
 //   a push suspended in preflight while another tab takes over, the acknowledged snapshot, a failed preflight; the back-forward cache; a refused write
 // usage: node tests/s3-tabs.js [dir]   (cases 1-6; CASES=all for every case, CASES=7,10 for just those; pass an absolute dir)
@@ -143,8 +145,10 @@ let url = ''; const f = []; const out = {};
       return { calls: __calls, s1, flag: localStorage.getItem('tops_pbase') }; }, supports);
     await ctx.close(); }
   if (RUN(9)) { const n = out.pbfalse, y = out.pbtrue;
-    if (n.calls[0] !== 'p_data' || !n.calls.includes('p_base,p_data=' + n.s1) || n.calls[n.calls.length - 1] !== 'p_data' || !/"ok":0/.test(n.flag || '')) f.push('9 without server support: plain push, one probe, then plain again ' + JSON.stringify(n));
-    if (!y.calls.slice(1).every(c => /^p_base,p_data=\d+$/.test(c)) || !/"ok":1/.test(y.flag || '')) f.push('9 with server support every push after the first sync sends p_base ' + JSON.stringify(y)); }
+    /* R10: every put tries p_base first (the first one's base comes from the preflight read: 0 for an empty cloud). Without the guard
+       (PGRST202: a rollback) it falls back to a plain push at once and keeps pushing plain for 10 min */
+    if (n.calls[0] !== 'p_base,p_data=0' || n.calls[1] !== 'p_data' || n.calls.slice(1).some(c => c !== 'p_data') || !/"ok":0/.test(n.flag || '')) f.push('9 without server support: one p_base try, then plain pushes ' + JSON.stringify(n));
+    if (!y.calls.length || !y.calls.every(c => /^p_base,p_data=\d+$/.test(c)) || !/"ok":1/.test(y.flag || '')) f.push('9 with server support every push sends p_base, the first one too ' + JSON.stringify(y)); }
   // 10 the handshake race (DQ 10:52): an owner that hears the hello late (4.5 s, past the new tab's wait: 4 s with a live heartbeat, as a busy
   //    or just-woken tab does) ignores it (no flush, no ack); the new tab takes over and the owner steps aside on the claim: exactly one tab plays, never both
   //    behind the card. 10b: the same slow owner mid-match: its heartbeat already says "busy", so the new tab shows "a match is in progress"
@@ -293,9 +297,11 @@ let url = ''; const f = []; const out = {};
     out.r16a = { aPuts: puts.slice(p0).filter(x => x.from === puts[0].from).length, a: await own(A), b: await own(B) };
     if (out.r16a.aPuts !== 0 || out.r16a.a.owner) f.push('16a a push suspended in preflight sends nothing once another tab owns the save ' + JSON.stringify(out.r16a));
     out.r16b = await B.evaluate(async () => { career().bank = 80; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const sent = save.sv; window.__rpcGate = 1; cloudPush(true); await new Promise(r => setTimeout(r, 400)); career().bank = 81; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); const later = save.sv; window.__rpcGate = null; window.__rpcGo && window.__rpcGo();
-      await new Promise(r => setTimeout(r, 1500)); return { sent, later, synced: TOPS_TABS.synced() }; });
+      /* R10: the follow-up push waits for the lock and the preflight read; under load that can take more than a fixed 1.5 s (DQ: 1 in 3 full
+         runs, puts [6,8] with synced still 6). Wait for the acknowledgement itself, up to 15 s */
+      for (let i = 0; i < 150 && TOPS_TABS.synced() !== save.sv; i++) await new Promise(r => setTimeout(r, 100)); return { sent, later, synced: TOPS_TABS.synced(), now: save.sv }; });
     const bPuts = puts.filter(x => x.from !== puts[0].from).map(x => x.sv); out.r16b.puts = bPuts;
-    if (!bPuts.includes(out.r16b.sent) || !bPuts.includes(out.r16b.later) || out.r16b.synced !== out.r16b.later) f.push('16b synced follows the acknowledged snapshot, and the change made in flight is pushed next ' + JSON.stringify(out.r16b));
+    if (!bPuts.includes(out.r16b.sent) || !bPuts.some(v => v >= out.r16b.later) || out.r16b.synced !== out.r16b.now || out.r16b.now < out.r16b.later) f.push('16b synced follows the acknowledged snapshot, and the change made in flight is pushed next ' + JSON.stringify(out.r16b) + ' LOG ' + JSON.stringify(await B.evaluate(() => TOPS_TABS.log().slice(-24))));
     out.r16c = await B.evaluate(async () => { const before = TOPS_TABS.synced(); NET.sb.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'network' } }) }) }) }); career().bank = 90; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 600)); return { before, after: TOPS_TABS.synced(), failed: TOPS_TABS.log().some(l => l[1] === 'push_preflight_failed') }; });
     if (!out.r16c.failed || out.r16c.after !== out.r16c.before) f.push('16c a failed preflight read pushes nothing and retries ' + JSON.stringify(out.r16c));
     await ctx.close(); }
@@ -339,6 +345,89 @@ let url = ''; const f = []; const out = {};
     for (let k = 0; k < 16; k++) { await B.waitForTimeout(500); if ((await own(A)).card) break; }
     out.r20b = { a: await own(A), b: await own(B) };
     if (!out.r20b.b.owner || out.r20b.a.owner || !out.r20b.a.card) f.push('20 fallback: Play here anyway takes over ' + JSON.stringify(out.r20b));
+    await ctx.close(); }
+  // 21-25 R10 (ChatGPT on R9, Producer 16:13): every cloud write carries p_base, and a refused put is handled without losing anything or
+  // looping. The cloud is a model of guard v3 (wip/car-tabs/guard-v3/guard.sql) shared by every page: compare-and-set on p_base, today's
+  // sv rule, and the base_guarded flag (set by the first p_base write; then a write without p_base gets upgrade_required).
+  const V3 = () => { const S = { row: null, guarded: false, puts: [], mode: 'v3', hold: null };
+    S.put = a => { const d = a.p_data, base = a.p_base == null ? null : +a.p_base, cur = S.row, nv = +(d.sv || 0), cv = cur ? +(cur.sv || 0) : 0, nd = d.dev || '';
+      if (S.mode === 'noguard' && base != null) { S.puts.push({ sv: nv, base, r: 'PGRST202' }); return { error: { code: 'PGRST202', message: 'Could not find the function public.tops_save3_put(p_base, p_data)' } }; }
+      let r; if (S.mode === 'upgrade' || (base == null && S.guarded && S.mode === 'v3')) r = { ok: false, err: 'upgrade_required', sv: cv };
+      else if (cur && ((base != null && cv !== base) || cv > nv || (cv === nv && (cur.dev || '') !== nd && cv > 0))) r = { ok: false, err: 'older', sv: cv, data: JSON.parse(JSON.stringify(cur)) };
+      else { S.row = JSON.parse(JSON.stringify(d)); if (base != null) S.guarded = true; r = { ok: true, sv: nv }; }
+      S.puts.push({ sv: nv, base, r: r.ok ? 'ok' : r.err }); return { data: r }; };
+    return S; };
+  const v3ctx = async S => { const ctx = await b.newContext(); await ctx.exposeBinding('__v3get', () => S.row ? JSON.parse(JSON.stringify(S.row)) : null);
+    await ctx.exposeBinding('__v3put', async (src, a) => { if (S.hold) await S.hold; return S.put(a); }); return ctx; };
+  const v3net = () => { NET.user = { id: 'u1' }; NET.sb = { rpc: async (n, a) => { if (n !== TOPS_SAVE_NS.rpc) return { data: null }; const late = window.__late; return await (late ? new Promise(r => setTimeout(r, late)) : Promise.resolve()).then(() => __v3put(JSON.parse(JSON.stringify(a)))); },
+    from: () => ({ upsert: async () => ({ error: { message: 'direct writes closed' } }), select: () => ({ eq: () => ({ maybeSingle: async () => { const c = await __v3get(); return { data: c ? { data: c } : null }; } }) }) }) }; };
+  const signIn = (p, S) => p.evaluate(async n => { eval(n)(); save.authSeen = true; $('login').hidden = true; if (!career()) newCareer(); persist(); await TOPS_TABS.idle(); }, '(' + v3net + ')');
+  const until = async (p, fn, ms) => { for (let t = 0; t < ms; t += 250) { if (await p.evaluate(fn).catch(() => false)) return true; await p.waitForTimeout(250); } return false; };
+  // 21 a delayed put (the fetch goes out after the push lock is let go: here the request outlives the client's put timeout) reaches the
+  //    server after another tab has taken over and pushed: the server refuses it (stale base), the old tab doesn't load anything, and the
+  //    cloud keeps the new owner's save
+  if (RUN(21)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
+    await A.evaluate(async () => { window.TOPS_TABS_QA = { putMs: 1500 }; career().bank = 100; persist(); await TOPS_TABS.idle(); cloudPush(true); });
+    await until(A, () => TOPS_TABS.synced() === save.sv, 15000); const a0 = await A.evaluate(() => save.sv);
+    await A.evaluate(async () => { window.__late = 6000; career().bank = 150; persist(); await TOPS_TABS.idle(); cloudPush(true); });   // this put arrives 6 s late
+    await A.waitForTimeout(2500); const B = await open(ctx); await B.evaluate(n => { eval(n)(); }, '(' + v3net + ')');
+    await until(B, () => TOPS_TABS.owner(), 20000);
+    await B.evaluate(async () => { save.authSeen = true; career().bank = 300; persist(); await TOPS_TABS.idle(); cloudPush(true); });
+    await until(B, () => TOPS_TABS.synced() === save.sv, 20000); await A.waitForTimeout(6000);
+    out.r21 = { a0, puts: S.puts, cloud: S.row && S.row.career && S.row.career.bank, b: await B.evaluate(() => ({ bank: career().bank, synced: TOPS_TABS.synced(), sv: save.sv })),
+      a: await A.evaluate(() => ({ owner: TOPS_TABS.owner(), loaded: TOPS_TABS.log().some(l => l[1] === 'push_refused_load'), rescues: JSON.parse(localStorage.getItem('doubleout_s3_rescue') || '[]').length })) };
+    /* A's put (and its retry) are both late; one landing while A still held the save is correct (its base was current). What must hold:
+       once B's put has landed, every later arrival of A's is refused */
+    const bOk = S.puts.findIndex(x => x.r === 'ok' && x.sv === out.r21.b.sv), after = bOk < 0 ? [] : S.puts.slice(bOk + 1).filter(x => x.sv < out.r21.b.sv);
+    if (out.r21.cloud !== 300 || bOk < 0 || !after.length || after.some(x => x.r === 'ok') || out.r21.b.synced !== out.r21.b.sv || out.r21.a.owner || out.r21.a.loaded || S.puts.some(x => x.base == null))
+      f.push('21 a delayed put is refused by the server, the old tab loads nothing, the cloud keeps the new owner\'s save ' + JSON.stringify(out.r21));
+    await ctx.close(); }
+  // 22 equal-version conflict: another device saved the same counter with different progress; the push is refused, this tab loads the
+  //    other device's save and keeps its own as a recovery copy; no loop (a bounded number of puts)
+  if (RUN(22)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
+    await A.evaluate(async () => { career().bank = 120; persist(); await TOPS_TABS.idle(); cloudPush(true); }); await until(A, () => TOPS_TABS.synced() === save.sv, 15000);
+    const me = await A.evaluate(() => ({ sv: save.sv }));
+    await A.evaluate(async () => { career().bank = 777; persist(); await TOPS_TABS.idle(); });   // A's change, sv me.sv + 1, not pushed yet
+    S.row = Object.assign(JSON.parse(JSON.stringify(S.row)), { sv: me.sv + 1, dev: 'OTHERDEV', career: Object.assign({}, S.row.career, { bank: 555 }) });   // the other device, same counter
+    await A.evaluate(() => cloudPush(true)); await A.waitForTimeout(4000); const n0 = S.puts.length; await A.waitForTimeout(3000);
+    out.r22 = { puts: S.puts, more: S.puts.length - n0, a: await A.evaluate(() => ({ bank: career().bank, conflict: TOPS_TABS.log().some(l => l[1] === 'save_conflict' || l[1] === 'push_refused_load'), rescued: JSON.parse(localStorage.getItem('doubleout_s3_rescue') || '[]').map(r => r.save && r.save.career ? r.save.career.bank : r.why) })) };
+    if (out.r22.a.bank !== 555 || !out.r22.a.conflict || !JSON.stringify(out.r22.a.rescued).includes('777') || out.r22.more > 1)
+      f.push('22 equal-version conflict: refused, the other device\'s save loads, this tab\'s own kept as a recovery copy, no loop ' + JSON.stringify(out.r22));
+    await ctx.close(); }
+  // 23 this browser's own copy in the cloud (another tab of this browser pushed, or a put of ours landed first) with a base this tab hadn't
+  //    seen: rebase on it and push again, once; the cloud ends with this tab's save
+  if (RUN(23)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
+    await A.evaluate(async () => { career().bank = 10; persist(); await TOPS_TABS.idle(); cloudPush(true); }); await until(A, () => TOPS_TABS.synced() === save.sv, 15000);
+    await A.evaluate(async () => { career().bank = 20; persist(); await TOPS_TABS.idle(); career().bank = 30; persist(); await TOPS_TABS.idle(); });
+    const dev = await A.evaluate(() => TOPS_SAVEV.dev()); const sv = await A.evaluate(() => save.sv);
+    S.row = Object.assign(JSON.parse(JSON.stringify(S.row)), { sv: sv - 1, dev, career: Object.assign({}, S.row.career, { bank: 20 }) });   // this browser's sv-1, pushed by "another tab"
+    await A.evaluate(() => cloudPush(true)); await until(A, () => TOPS_TABS.synced() === save.sv, 15000); await A.waitForTimeout(1500);
+    out.r23 = { puts: S.puts.slice(-3), cloud: S.row.career.bank, a: await A.evaluate(() => ({ bank: career().bank, synced: TOPS_TABS.synced(), sv: save.sv, rebase: TOPS_TABS.log().filter(l => l[1] === 'push_rebase').length })) };
+    if (out.r23.cloud !== 30 || out.r23.a.bank !== 30 || out.r23.a.rebase !== 1 || out.r23.a.synced !== out.r23.a.sv)
+      f.push('23 its own browser\'s copy in the cloud: rebase once and push, the cloud ends with this tab\'s save ' + JSON.stringify(out.r23));
+    await ctx.close(); }
+  // 24 legacy: (a) before the flag a write without p_base is accepted (here: this client holds a fresh "no p_base support" note); (b) after
+  //    another device sets the flag, that write gets upgrade_required: the client forgets the note and pushes again with p_base, no card;
+  //    (c) a server that refuses even p_base with upgrade_required: the reload card shows, a recovery copy is kept, pushes stop
+  if (RUN(24)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx, () => { try { localStorage.setItem('tops_pbase', JSON.stringify({ ok: 0, at: Date.now() })); } catch (e) {} }); await signIn(A, S);
+    await A.evaluate(async () => { career().bank = 40; persist(); await TOPS_TABS.idle(); cloudPush(true); }); await until(A, () => TOPS_TABS.synced() === save.sv, 15000);
+    out.r24a = { puts: S.puts.slice(), guarded: S.guarded };
+    S.guarded = true; await A.evaluate(async () => { localStorage.setItem('tops_pbase', JSON.stringify({ ok: 0, at: Date.now() })); career().bank = 50; persist(); await TOPS_TABS.idle(); cloudPush(true); });
+    await until(A, () => TOPS_TABS.synced() === save.sv, 15000);
+    out.r24b = { puts: S.puts.slice(out.r24a.puts.length), a: await A.evaluate(() => ({ synced: TOPS_TABS.synced(), sv: save.sv, card: !!document.getElementById('tabsUpgrade'), note: localStorage.getItem('tops_pbase') })) };
+    S.mode = 'upgrade'; await A.evaluate(async () => { career().bank = 60; persist(); await TOPS_TABS.idle(); cloudPush(true); }); await A.waitForTimeout(5000); const n0 = S.puts.length;
+    await A.evaluate(async () => { career().bank = 61; persist(); await TOPS_TABS.idle(); cloudPush(true); }); await A.waitForTimeout(3000);
+    out.r24c = { puts: S.puts.slice(out.r24a.puts.length + out.r24b.puts.length), more: S.puts.length - n0, a: await A.evaluate(() => ({ card: (document.getElementById('tabsUpgrade') || {}).innerText || null, rescued: JSON.parse(localStorage.getItem('doubleout_s3_rescue') || '[]').some(r => /upgrade/.test(JSON.stringify(r))) })) };
+    if (!(out.r24a.puts.length && out.r24a.puts.every(x => x.base == null && x.r === 'ok') && !out.r24a.guarded)) f.push('24a before the flag a write without p_base is accepted ' + JSON.stringify(out.r24a));
+    if (!(out.r24b.puts[0] && out.r24b.puts[0].r === 'upgrade_required' && out.r24b.puts.some(x => x.base != null && x.r === 'ok') && out.r24b.a.synced === out.r24b.a.sv && !out.r24b.a.card)) f.push('24b after the flag: upgrade_required, then the same client pushes with p_base, no card ' + JSON.stringify(out.r24b));
+    if (!(out.r24c.a.card && /Reload/.test(out.r24c.a.card) && out.r24c.a.rescued && out.r24c.more === 0)) f.push('24c a server that still says upgrade_required: reload card, recovery copy, pushes stop ' + JSON.stringify(out.r24c));
+    await ctx.close(); }
+  // 25 ENG-RESET (v16, the between-match reset) pushes through the same pipeline: TOPS_TABS.pushNow() puts this exact save with p_base and
+  //    resolves true; v16.js has no push of its own without p_base
+  if (RUN(25)) { const S = V3(); const ctx = await v3ctx(S); const A = await open(ctx); await signIn(A, S);
+    out.r25 = await A.evaluate(async () => { career().bank = 70; persist(); const ok = await TOPS_TABS.pushNow(); return { ok, sv: save.sv, synced: TOPS_TABS.synced() }; });
+    out.r25.puts = S.puts; const v16 = fs.readFileSync(path.join(dir, 'v16.js'), 'utf8'); out.r25.v16 = { pushNow: /TOPS_TABS\.pushNow\(\)/.test(v16), bare: (v16.match(/\.rpc\(TOPS_SAVE_NS\.rpc,\{p_data:save\}\)/g) || []).length };
+    if (!out.r25.ok || out.r25.synced !== out.r25.sv || !S.puts.length || S.puts.some(x => x.base == null) || !out.r25.v16.pushNow || out.r25.v16.bare) f.push('25 ENG-RESET pushes this exact save with p_base through the pipeline ' + JSON.stringify(out.r25));
     await ctx.close(); }
   await b.close(); srv.close();
   if (f.length) { console.log('FAIL\n- ' + f.join('\n- ') + '\n' + JSON.stringify(out)); process.exit(1); }

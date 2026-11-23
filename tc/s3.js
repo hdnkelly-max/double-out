@@ -333,7 +333,9 @@
   function takeOver2(why,from,claimed){pending=false;away=false;owner=true;{const c=document.getElementById('tabsCard');if(c)c.remove();}if(why==='timeout'&&from)grace={from,until:Date.now()+2000};
     if(!claimed){myGen=nextGen();const any=why==='anyway'?1:0;writeOwn({anyway:any});send({t:'claim',gen:myGen,anyway:any});}   // claim first, so a refusal can arrive before this tab writes
     reread();ev('tabs_own',{why,gen:myGen});
-    if(((LK&&held)||(!LK&&why==='alone'))&&body()!==lastBody){ev('tabs_flush_held');try{persist();}catch(e){}}}   /* R9: a change kept in memory while this tab waited (a sign-in adopt, the boot's own save) is written now it owns the save */   // no write here: a claim that loses must never have written (its next save checks the key first)
+    try{if(typeof NET!=='undefined'&&NET.user&&NET.sb&&window.TOPS_TABS&&TOPS_TABS.unsynced())cloudPush(false);}catch(e){}   /* R10: a new owner whose save isn't in the cloud yet pushes it (a push asked for while it waited was skipped) */
+    if(((LK&&held)||(!LK&&why==='alone'))&&body()!==lastBody){ev('tabs_flush_held');try{persist();}catch(e){}}
+    if(bootPush&&owns()){bootPush=false;ev('tabs_boot_push');try{cloudPush(true);}catch(e){}}}   /* R9: a change kept in memory while this tab waited (a sign-in adopt, the boot's own save) is written now it owns the save */   // no write here: a claim that loses must never have written (its next save checks the key first)
   window.addEventListener('storage',e=>{try{
     if(e.key===MSG&&e.newValue){if(!bc)recv(JSON.parse(e.newValue));}
     else if(e.key===OWN&&e.newValue){const o=JSON.parse(e.newValue);if(!o||o.tab===TAB)return;seenGen=Math.max(seenGen,+(o.gen||0));
@@ -409,21 +411,27 @@
   let failN=0;function failed(){failN++;ev('save_write_failed',{n:failN});try{let b=document.getElementById('tabsSaveFail');if(!b){b=document.createElement('div');b.id='tabsSaveFail';b.setAttribute('role','status');
       b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483500;padding:12px 14px;border-radius:12px;background:#3a1416;color:#fde8e8;font:600 14px/1.35 Manrope,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45)';
       b.textContent='This device couldn\u2019t save your progress (storage full or blocked). TOPS keeps trying; free some space or leave private browsing.';(document.body||document.documentElement).appendChild(b);}}catch(e){}}
+  function upgradeCard(){try{if(document.getElementById('tabsUpgrade'))return;const b=document.createElement('div');b.id='tabsUpgrade';b.setAttribute('role','alert');
+      b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483500;padding:12px 14px;border-radius:12px;background:#14233a;color:#e8f0fd;font:600 14px/1.35 Manrope,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.45);display:flex;gap:12px;align-items:center';
+      b.innerHTML='<span style="flex:1">TOPS has been updated. Reload to keep saving to the cloud; your progress on this device is safe.</span><button type="button" style="min-height:44px;padding:0 16px;border-radius:10px;border:0;background:#c6f432;color:#0b1220;font:800 14px Manrope,system-ui,sans-serif">Reload</button>';
+      b.querySelector('button').onclick=()=>location.reload();(document.body||document.documentElement).appendChild(b);}catch(e){}}   /* R10: the server refused a push without p_base (upgrade_required) */
   function okWrite(){if(!failN)return;failN=0;ev('save_write_ok');try{const b=document.getElementById('tabsSaveFail');if(b)b.remove();}catch(e){}}
   // 3 the cloud
-  const PB='tops_pbase';const pbase=()=>{try{const v=JSON.parse(localStorage.getItem(PB)||'null');if(!v)return null;if(v.ok)return true;return Date.now()-v.at<864e5?false:null;}catch(e){return null;}};
+  const PB='tops_pbase';const pbase=()=>{try{const v=JSON.parse(localStorage.getItem(PB)||'null');if(!v)return null;if(v.ok)return true;return Date.now()-v.at<6e5?false:null;}catch(e){return null;}};   /* R10: the guard ships just before this client, so every put tries p_base; a PGRST202 (no guard: a rollback) is trusted for 10 min */
+  const pbForget=()=>{try{localStorage.removeItem(PB);}catch(e){}};
   const still=snap=>owns()&&myGen===snap.gen&&(!LK||keyOK());
   /* a request that never answers must not hold every later push behind it: the preflight read gives up after 8 s, a put after 15 s (then
      retried; a put that did land is refused as not newer and nothing changes) */
   const within=(pr,ms,what)=>Promise.race([pr,new Promise((_,no)=>setTimeout(()=>no(new Error('TOPS: '+what+' timed out')),ms))]);   // checked after every await and right before each RPC
-  const rpcPut=async snap=>{const args={p_data:snap.data};const pb=snap.base!=null?pbase():false;
-    if(pb!==false&&snap.base!=null){const r=await within(NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:snap.base},args)),15000,'put');
+  const rpcPut=async snap=>{const args={p_data:snap.data};const pb=snap.base!=null?pbase():false;snap.sentBase=false;
+    if(pb!==false&&snap.base!=null){snap.sentBase=true;const r=await within(NET.sb.rpc(TOPS_SAVE_NS.rpc,Object.assign({p_base:snap.base},args)),(window.TOPS_TABS_QA&&TOPS_TABS_QA.putMs)||15000,'put');
       if(!r.error){if(pb==null)try{raw(PB,JSON.stringify({ok:1,at:Date.now()}));}catch(e){}return r;}
       const m=String((r.error&&(r.error.code+' '+r.error.message))||'');if(/PGRST202/.test(m)){try{raw(PB,JSON.stringify({ok:0,at:Date.now()}));}catch(e){}}else return r;
-      if(!still(snap))return {data:null,error:null,skipped:1};}
-    return within(NET.sb.rpc(TOPS_SAVE_NS.rpc,args),15000,'put');};
+      if(!still(snap))return {data:null,error:null,skipped:1};snap.sentBase=false;}
+    return within(NET.sb.rpc(TOPS_SAVE_NS.rpc,args),(window.TOPS_TABS_QA&&TOPS_TABS_QA.putMs)||15000,'put');};
   /* R9: a cloud put starts only inside its write lock (PLOCK), after the browser confirms this tab holds the owner lock; the lock is let go when the
      put answers (15 s at most) or the page freezes */
+  let pushImpl=null;   /* R10: TOPS_TABS.pushNow's body, set by the cloud block below */
   let fz=null;const putLocked=snap=>{if(!LK)return rpcPut(snap);let pr=null;
     return navigator.locks.request(PLOCK,async()=>{if(!held||away||pending||!(await ownerOK())||!still(snap))return;pr=rpcPut(snap);
         await Promise.race([pr.catch(()=>{}),new Promise(r=>{fz=r;})]);fz=null;})
@@ -434,19 +442,51 @@
       adopting++;let r;try{r=_adopt.apply(this,arguments);}finally{adopting--;}try{if(c&&why!=='tab')synced=+(c.sv||0);if(!LK||why==='tab')lastBody=body();}catch(e){}if(LK&&why!=='tab')persist();return r;};   /* R9: Web Locks: the adopted save is written through the write lock (or kept in memory until this tab holds the lock) */
     const _pull=SV.pull;SV.pull=async function(){if(away||pending)return;return _pull.apply(this,arguments);};
     let inflight=null,again=false,retry=0;
-    const go=async()=>{if(!owns())return;
+    /* R10 (ChatGPT on R9): the server's atomic version check (guard v3) is what refuses a put that lands late, so every put carries p_base, and
+       a refusal is handled without losing anything and without looping:
+       - not the owner any more: nothing (the owner pushes);
+       - the cloud copy is this browser's own (same device id) and not newer than this tab's save (a put of ours, or another tab's of this
+         browser, that landed first): rebase on it and push again, at most twice per change;
+       - another device's save, or a newer one: load it; this tab's unsynced copy is kept as a recovery copy (SV.adopt);
+       - upgrade_required (sent without p_base, e.g. a stale "no support" note): forget the note and push again with p_base, once; if the
+         server still says so, stop pushing, keep a recovery copy and show the reload card.
+       Until a push is acknowledged the save is marked unsynced (TOPS_TABS.unsynced()). */
+    let rebaseN=0,rebaseAt=0,upTried=false,upStop=false;
+    /* R10 (DQ residual 4, A3 at 2 s): a push dropped because this tab's claim moved on mid-push (a re-assert raises the gen) was never sent
+       again, so with no further change the new owner's save stayed only on this device. Now, if this tab still owns the save and only the
+       gen moved, the push runs again (once per gen change, so it can't spin) */
+    const dropped=(snap,at)=>{const re=owns()&&myGen!==snap.gen&&(!LK||keyOK());ev('push_dropped',{at,again:re});if(re)again=true;};
+    const refusedOlder=(c,snap)=>{const csv=+(c.sv||0);
+      if(c.dev&&c.dev===SV.dev()&&csv<=mine()){if(snap.sv>rebaseAt){rebaseAt=snap.sv;rebaseN=0;}synced=csv;
+        if(rebaseN<2){rebaseN++;again=true;ev('push_rebase',{cloud:csv,mine:mine(),n:rebaseN});}else ev('push_rebase_stop',{cloud:csv,mine:mine()});return;}
+      console.warn('TOPS cloud save is newer (sv '+csv+' vs '+mine()+'), loading it');ev('push_refused_load',{cloud:csv,mine:mine()});SV.adopt(c,'push');};
+    const go=async()=>{if(!owns()||upStop)return;
       const snap={data:JSON.parse(JSON.stringify(save)),sv:mine(),gen:myGen,base:synced};   // what this push sends, fixed now
       ev('push_start',{sv:snap.sv,base:snap.base});
-      if(snap.base!=null){let c=null,ok=false;try{const r=await within(NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle(),8000,'preflight');if(r&&r.error)throw r.error;c=r&&r.data&&r.data.data;ok=true;}catch(e){}
-        if(!ok){retry++;ev('push_preflight_failed',{retry});if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));return;}   // fail closed, retry later
-        retry=0;if(!still(snap)){ev('push_dropped',{at:'preflight'});return;}
-        if(c&&c.dev!==SV.dev()&&+(c.sv||0)>snap.base){ev('save_conflict',{cloud:c.sv||0,synced:snap.base,mine:mine()});SV.adopt(c,'push');return;}}
-      if(!still(snap)){ev('push_dropped',{at:'rpc'});return;}
-      const res=await putLocked(snap);if(res.skipped){ev('push_dropped',{at:'fallback'});return;}const {data,error}=res;if(error)throw error;
-      if(data&&data.ok){ev('push_ok',{sv:snap.sv});NET.cloudAt=Date.now();synced=snap.sv;if(mine()>snap.sv)again=true;return;}   // synced = what the server acknowledged
-      if(data&&data.err==='older'&&data.data&&owns()){console.warn('TOPS cloud save is newer (sv '+data.sv+' vs '+mine()+'), loading it');SV.adopt(data.data,'push');}};
+      let c=null,ok=false;try{const r=await within(NET.sb.from(TOPS_SAVE_NS.table).select('data').eq('user_id',NET.user.id).maybeSingle(),8000,'preflight');if(r&&r.error)throw r.error;c=r&&r.data&&r.data.data;ok=true;}catch(e){}
+      if(!ok){retry++;ev('push_preflight_failed',{retry});if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));return;}   // fail closed, retry later
+      retry=0;if(!still(snap)){dropped(snap,'preflight');return;}
+      const csv=c?+(c.sv||0):0,me=SV.dev();
+      if(c&&csv===snap.sv&&c.dev===me&&JSON.stringify(c)===JSON.stringify(snap.data)){synced=csv;ev('push_in_cloud',{sv:csv});return;}   /* R10: this exact save is already in the cloud */
+      if(snap.base==null){   /* R10: this tab hasn't synced yet: the cloud it just read is the base (an empty cloud is base 0) */
+        if(!c)snap.base=0;
+        else if(csv<snap.sv||(c.dev===me&&csv<=snap.sv)){if(c.dev&&c.dev!==me)rescueObj('cloud-older',c);snap.base=csv;}
+        else{ev('save_conflict',{cloud:csv,synced:null,mine:snap.sv});SV.adopt(c,'push');return;}}
+      else if(c&&c.dev!==me&&csv>snap.base){ev('save_conflict',{cloud:csv,synced:snap.base,mine:mine()});SV.adopt(c,'push');return;}
+      if(!still(snap)){dropped(snap,'rpc');return;}
+      const res=await putLocked(snap);if(res.skipped){dropped(snap,'fallback');return;}const {data,error}=res;if(error)throw error;
+      if(data&&data.ok){ev('push_ok',{sv:snap.sv,base:snap.sentBase?snap.base:null});NET.cloudAt=Date.now();synced=snap.sv;rebaseN=0;upTried=false;if(mine()>snap.sv)again=true;return;}   // synced = what the server acknowledged
+      ev('cloud_unsynced',{mine:mine(),synced,err:data&&data.err||'?'});
+      if(!owns()){ev('push_refused',{err:data&&data.err,owner:false});return;}   // a put that landed after this tab lost the save: the owner pushes
+      if(data&&data.err==='older'&&data.data){refusedOlder(data.data,snap);return;}
+      if(data&&data.err==='upgrade_required'){pbForget();
+        if(!snap.sentBase&&!upTried){upTried=true;again=true;ev('push_upgrade_retry');return;}
+        upStop=true;ev('push_upgrade_stop');rescue('upgrade');upgradeCard();return;}};
+    pushImpl=async want=>{try{clearTimeout(NET.pushT);}catch(e){}
+      for(let i=0;i<4&&synced!==want;i++){while(inflight)await inflight.catch(()=>{});if(synced===want||!owns()||upStop||mine()!==want)break;run();if(inflight)await inflight.catch(()=>{});}
+      return synced===want&&mine()===want;};
     const run=()=>{if(inflight){again=true;ev('push_queued');return;}inflight=go().catch(e=>{console.warn('cloud push',e);ev('push_failed',{err:String(e&&e.message||e)});retry++;if(retry<=6)NET.pushT=setTimeout(()=>cloudPush(true),Math.min(60000,2000*Math.pow(2,retry)));}).finally(()=>{inflight=null;if(again){again=false;if(owns())cloudPush(true);}});};   // one push at a time
-    cloudPush=function(now){if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns()){ev('push_skip',{user:!!(typeof NET!=='undefined'&&NET.user),owns:owns()});return;}clearTimeout(NET.pushT);
+    cloudPush=function(now){if(upStop)return;if(typeof NET==='undefined'||!NET.user||!NET.sb||!owns()){ev('push_skip',{user:!!(typeof NET!=='undefined'&&NET.user),owns:owns()});return;}clearTimeout(NET.pushT);
       if(now)run();else NET.pushT=setTimeout(run,2500);};
   }else if(typeof cloudPush==='function'){const _c=cloudPush;cloudPush=function(){if(away||pending||stale())return;return _c.apply(this,arguments);};}
   /* R6 (DQ A3/A5): the sign-in pull (game4 netSignedIn -> netAdopt, "cloud always wins") is answered after the boot's own saves, so it could load
@@ -458,12 +498,16 @@
         if(cloud.dev&&dv&&cloud.dev!==dv)rescueObj('cloud-older',cloud);ev('signin_keep_local',{cloud:csv,local,dev:cloud.dev===dv?'same':'other'});
         try{if(svIn()>mine())reread();}catch(e){}try{cloudPush(true);}catch(e){}return;}}catch(e){}
     return _na.apply(this,arguments);};}
+  /* R10: a push asked for before the guard installed (v11's, or one still on its timer) is cancelled and sent by the guard, with p_base, once this tab owns the save */
+  let bootPush=!!(HOLD&&HOLD.push);try{if(typeof NET!=='undefined'&&NET.pushT){clearTimeout(NET.pushT);bootPush=true;}}catch(e){}
   lastBody=HOLD&&HOLD.dirty?null:body();if(HOLD&&HOLD.dirty)ev('tabs_boot_held');try{lastWrote=localStorage.getItem(KEY);}catch(e){}start();
   window.TOPS_TABS={tab:TAB,log:()=>LOG.slice(),away:()=>away,pending:()=>pending,owner:()=>owns(),gen:()=>myGen,canWrite:()=>!away&&!pending&&!stale(),stepAside,takeOver,synced:()=>synced,
     idle:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});},
     /* R9: true once every queued save is written and the stored save is this tab's (v16 waits on it before reloading between matches) */
     flushed:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});return !LK||(held&&!away&&!pending&&svIn()===mine()&&body()===lastBody);},
-    /* R9: a cloud put of the save that other code sends itself goes through the push lock, after the ownership check */
-    put:args=>LK?navigator.locks.request(PLOCK,async()=>{if(!held||away||pending||!(await ownerOK()))return {data:null,error:{message:'TOPS: this tab does not hold the save'}};return await NET.sb.rpc(TOPS_SAVE_NS.rpc,args);}):NET.sb.rpc(TOPS_SAVE_NS.rpc,args),   /* QA: saves are written in the write lock (R9); resolves once the queue is empty */
+    /* R10: code that needs this exact save in the cloud (v16's between-match reset) pushes it through the same pipeline (p_base, the push lock,
+       the refusal rules): resolves true once the server acknowledged this tab's current save */
+    pushNow:async()=>{for(let i=0;i<50&&wq;i++)await wq.catch(()=>{});const want=mine();return pushImpl?pushImpl(want):false;},
+    unsynced:()=>synced==null||synced!==mine(),   /* QA: saves are written in the write lock (R9); resolves once the queue is empty */
     _claim:(any)=>{away=false;takeOver(any?'anyway':'qa');},   /* QA: a claim from this tab now */rescues:()=>{try{return JSON.parse(localStorage.getItem(RES)||'[]');}catch(e){return [];}}};
 })();
