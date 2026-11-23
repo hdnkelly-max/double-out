@@ -216,8 +216,8 @@ async function cloud(b) {
   // 1) device B signs in on a new phone: it takes the cloud save, money/XP/level/history and look equal, no New look card again
   { const srv = cloudServer(); srv.st.row = { data: { ...seed(), v3NewLook: 1763700000000, vlook: { v: 1, base: 'tama', body: 'heavy', hair: 'quiff', skin: '#c98e64', at: 1 } }, updated_at: new Date().toISOString() };
     let R = {}; const pe = await session(b, 'Pixel 7', init, async (p, T) => { await open(p, T, srv, 'B'); R.s = await S(p); R.local = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('doubleout_s3')); } catch (e) { return null; } });
-      R.card = await p.evaluate(() => !!document.getElementById('s3V3New')); });
-    const c = srv.st.row.data, l = R.local; const bad = l ? Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(c)) !== JSON.stringify(g(l))).map(([k]) => k) : ['no local save'];
+      R.card = await p.evaluate(() => !!document.getElementById('s3V3New')); if (process.env.MOCK_RULE === 'realdb') R.tl = await p.evaluate(() => window.TOPS_TABS ? TOPS_TABS.log().filter(x => /push|put|cloud|adopt|rescue|net|pre|sign/.test(x[1])).slice(-20) : null).catch(() => null); });
+    const c = srv.st.row.data, l = R.local; if (process.env.MOCK_RULE === 'realdb') console.log('DBG second device', JSON.stringify({ log: srv.st.log, cloudBank: c && c.career && c.career.bank, cloudSv: c && c.sv, localBank: l && l.career && l.career.bank, localSv: l && l.sv, tl: R.tl }).slice(0, 3000)); const bad = l ? Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(c)) !== JSON.stringify(g(l))).map(([k]) => k) : ['no local save'];
     const lookSame = l && JSON.stringify(l.vlook) === JSON.stringify(c.vlook) && l.v3NewLook === c.v3NewLook;
     row(L, 'a second device takes the cloud save', R.s && R.s.mem.user && !bad.length && lookSame, !R.s || !R.s.mem.user ? 'not signed in (mock not used?)' : bad.length ? 'differs: ' + bad.join(', ') : `signed in, took it: bank ${l.career.bank}, ${Object.keys(KEEP).length} fields, look and card flag equal${R.card ? '' : ''}`);
     row(L, 'no page errors (second device)', !pe.length, pe.join(' | ')); }
@@ -253,9 +253,10 @@ async function cloud(b) {
   { const srv = cloudServer(); const on = { ...seed(), v3NewLook: 1763700000000, vlook: { v: 1, base: 'ray', body: 'skinny', hair: 'crop', skin: '#8d5a3b', at: 2 } }; srv.st.row = { data: on, updated_at: new Date().toISOString() };
     let R = {}; const pe = await session(b, 'iPhone 13', init, async (p, T) => { await srv.attach(p, 'C'); await p.goto(URLQ + '&v3=0', { timeout: 180000 }); await T.ready();
       await p.waitForFunction(() => window.NET && NET.user && save.career, null, { timeout: 30000 }).catch(() => {}); await p.waitForTimeout(2500); await hub(p); await p.waitForTimeout(1500);
-      await p.evaluate(() => { save.setup = save.setup || {}; save.setup.shaft = 'long'; persist(); }); await p.waitForTimeout(4500); R.v3 = await p.evaluate(() => !!window.TOPS_V3FLAG); });
+      await p.evaluate(() => { save.setup = save.setup || {}; save.setup.shaft = 'long'; persist(); }); for (let k = 0; k < 60 && !srv.st.log.some(x => x.who === 'C' && x.ok); k++) await p.waitForTimeout(500); await p.waitForTimeout(1000); R.v3 = await p.evaluate(() => !!window.TOPS_V3FLAG); if (process.env.MOCK_RULE === 'realdb') console.log('DBG models-off log', JSON.stringify(srv.st.log), 'cloud vlook', JSON.stringify(srv.st.row && srv.st.row.data && srv.st.row.data.vlook)); });
     const c = srv.st.row.data; const bad = Object.entries(KEEP).filter(([, g]) => JSON.stringify(g(on)) !== JSON.stringify(g(c))).map(([k]) => k);
-    const same = JSON.stringify(c.vlook) === JSON.stringify(on.vlook) && c.v3NewLook === on.v3NewLook, pushed = srv.st.log.some(x => x.who === 'C' && x.ok);
+    const canon = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((a, x) => (a[x] = v[x], a), {}) : v);   /* jsonb in Postgres keeps keys sorted, not in insertion order */
+    const same = canon(c.vlook) === canon(on.vlook) && c.v3NewLook === on.v3NewLook, pushed = srv.st.log.some(x => x.who === 'C' && x.ok);
     row(L, 'models-on save through a models-off device and back to the cloud', !R.v3 && pushed && !bad.length && same, `models ${R.v3 ? 'ON (flag not off?)' : 'off'}; pushed ${pushed}; ${bad.length ? 'changed: ' + bad.join(', ') : Object.keys(KEEP).length + ' fields equal'}; look ${same ? 'and card flag kept' : 'or card flag LOST'}`);
     row(L, 'no page errors (models-off device)', !pe.length, pe.join(' | ')); }
 }

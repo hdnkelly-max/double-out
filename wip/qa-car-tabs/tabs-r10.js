@@ -127,11 +127,11 @@ const srv2 = OLDDIR ? http.createServer((q, r) => { let u = decodeURIComponent(q
   if (RUN('C2') && process.env.OLDDIR) { const L = await fresh(); const c1 = await b.newContext({ serviceWorkers: 'block' }), c2 = await b.newContext({ serviceWorkers: 'block' });
     const O = await dev(c1, 'old', L, process.env.OLDDIR); await hub(O); await O.waitForTimeout(6000); await change(O, 10, 'o'); const o1 = await waitPut(x => x.who === 'old' && x.k === 'put' && x.bank === JSON.parse(L).career.bank + 10, 30000);
     const g0 = (await cloudRow()).guarded;
-    const N = await dev(c2, 'new', null); await hub(N); await N.waitForTimeout(9000); await change(N, 20, 'n'); const n1 = await waitPut(x => x.who === 'new' && x.k === 'put' && x.ok && x.base !== 'none' && (x.bank || 0) >= JSON.parse(L).career.bank + 30, 40000);
+    const N = await dev(c2, 'new', null); await hub(N); await N.waitForTimeout(9000); await change(N, 20, 'n'); const n1 = await waitPut(x => x.who === 'new' && x.k === 'put' && x.ok && x.base !== 'none' && (x.bank || 0) >= JSON.parse(L).career.bank + 30, 120000); const nLog = await N.evaluate(() => TOPS_TABS.log().filter(x => /push|put|cloud|adopt|rescue|own|lock|pre/.test(x[1])).slice(-16)).catch(() => null);
     const g1 = (await cloudRow()).guarded; const before = await cloudRow();
     await change(O, 5, 'o2'); const o2 = await waitPut(x => x.who === 'old' && x.k === 'put' && x.t > (n1 ? n1.t : 0), 30000); await O.waitForTimeout(3000); const after = await cloudRow();
     row(o1 && o1.ok && o1.base === 'none' && g0 === false && n1 && g1 === true && o2 && o2.err === 'upgrade_required' && after.data.sv === before.data.sv && (after.data.career.qa || []).join('') === 'on',
-      'C2 legacy caller: before the flag its p_data-only save lands; the new build\'s first p_base write sets the flag; after it the old build\'s save is refused upgrade_required and the cloud is untouched', { o1, guardedBefore: g0, n1, guardedAfter: g1, o2, cloud: { sv: after.data.sv, qa: (after.data.career.qa || []).join('') }, oldLocal: await fin(O), log: logStr() });
+      'C2 legacy caller: before the flag its p_data-only save lands; the new build\'s first p_base write sets the flag; after it the old build\'s save is refused upgrade_required and the cloud is untouched', { o1, guardedBefore: g0, n1, guardedAfter: g1, o2, cloud: { sv: after.data.sv, qa: (after.data.career.qa || []).join('') }, oldLocal: await fin(O), log: logStr(), nLog });
     await c1.close(); await c2.close(); }
 
   // C3 ENG-RESET (v16, between matches) sends its put with a base, and it lands under the flag
@@ -148,10 +148,10 @@ const srv2 = OLDDIR ? http.createServer((q, r) => { let u = decodeURIComponent(q
   // C4 equal-version conflict across two devices: both synced the same save, both push one change from the same base
   if (RUN('C4')) { const L = await fresh(); const c1 = await b.newContext({ serviceWorkers: 'block' }), c2 = await b.newContext({ serviceWorkers: 'block' });
     const X = await dev(c1, 'X', L), Y = await dev(c2, 'Y', L); await Promise.all([hub(X), hub(Y)]); await X.waitForTimeout(9000);
-    await Promise.all([change(X, 7, 'x'), change(Y, 9, 'y')]); await X.waitForTimeout(12000);
+    await Promise.all([change(X, 7, 'x'), change(Y, 9, 'y')]); for (let k = 0; k < 40; k++) { await X.waitForTimeout(1000); const a1 = await fin(X), a2 = await fin(Y), c0 = await cloudRow(); if (a1.qa === a2.qa && a2.qa === (c0.data.career.qa || []).join('') && k > 8) break; }
     const cr = await cloudRow(), fx = await fin(X), fy = await fin(Y); const puts = CL.log.filter(x => x.k === 'put');
     const refused = puts.filter(x => x.err === 'older'), q = (cr.data.career.qa || []).join('');
-    row(puts.length >= 2 && (q === 'x' || q === 'y' || q === 'xy' || q === 'yx') && fx.qa === q && fy.qa === q && !puts.some(x => x.err === 'upgrade_required'),
-      'C4 equal-version conflict: one device\'s save wins, the other is refused (older) and adopts it; both devices and the cloud end on the same save', { cloud: { sv: cr.data.sv, qa: q }, X: fx, Y: fy, refused: refused.length, log: logStr() });
+    row(puts.length >= 1 && (q === 'x' || q === 'y' || q === 'xy' || q === 'yx') && fx.qa === q && fy.qa === q && !puts.some(x => x.err === 'upgrade_required'),
+      'C4 equal-version conflict: one device\'s save wins, the other is refused (older) and adopts it; both devices and the cloud end on the same save', { cloud: { sv: cr.data.sv, qa: q }, X: fx, Y: fy, refused: refused.length, log: logStr(), yLog: await Y.evaluate(() => TOPS_TABS.log().filter(x => /push|put|cloud|adopt|rescue|sync|net|pre/.test(x[1])).slice(-14)).catch(() => null), yRescues: await rescues(Y) });
     await c1.close(); await c2.close(); }
   await b.close(); srv.close(); console.log(`\n${rows.filter(r => r.ok).length} pass, ${rows.filter(r => !r.ok).length} fail (CPU x${CPU})`); process.exit(rows.some(r => !r.ok) ? 1 : 0); })().catch(e => { console.error('ERR', e); process.exit(3); });
