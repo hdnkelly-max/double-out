@@ -237,21 +237,22 @@
      whether this tab still holds the owner lock. A tab taking the owner lock (a steal) holds the write locks (local and cloud) until its steal is granted. So the
      old holder's last write always lands before the new holder's grant, and after it the old holder's query says no and nothing is written.
      This tab knows its own client id from a lock it holds for its whole life ('tops-tab-<id>'). */
-  const WLOCK='tops-write-'+KEY,PLOCK='tops-push-'+KEY;let inW=0,wq=null;const wfns=[];   /* PLOCK: cloud puts, so a slow put never holds up a local save */
+  const WLOCK='tops-write-'+KEY,PLOCK='tops-push-'+KEY;let inW=0,wq=null,frozeNow=false;const wfns=[],fzW=new Set();   /* fzW: sections to let go of their lock on freeze (DQ R9: a frozen tab held the write lock, so a new tab waited 25-41 s) */   /* PLOCK: cloud puts, so a slow put never holds up a local save */
   if(LK)try{navigator.locks.query().catch(()=>{});}catch(e){}   /* the first query can be slow on a busy device: warm it up now, before the first save */
   const meP=LK?new Promise(res=>{try{navigator.locks.request('tops-tab-'+TAB,()=>{res(true);return new Promise(()=>{});}).catch(()=>res(false));}catch(e){res(false);}}):null;
   async function ownerOK(){try{await meP;const q=await navigator.locks.query();const H=(q&&q.held)||[];const me=H.find(l=>l.name==='tops-tab-'+TAB),o=H.find(l=>l.name===LOCK);
       return !!(me&&o&&me.clientId&&me.clientId===o.clientId);}catch(e){ev('lock_query_failed',{err:String(e&&e.name||e)});return false;}}   /* no answer: no write (lastBody stays, so it is kept) */
   /* queue fn to run inside the write lock once ownership is confirmed; fns queued meanwhile run in the same turn, in order */
   function inLock(fn){wfns.push(fn);if(wq)return wq;
-    wq=navigator.locks.request(WLOCK,async()=>{while(wfns.length){if(!held||away||pending){wfns.length=0;return;}
+    wq=navigator.locks.request(WLOCK,()=>{let fr=null;return Promise.race([new Promise(r=>{fr=r;fzW.add(r);}),(async()=>{while(wfns.length){if(!held||away||pending){wfns.length=0;return;}
         const ok=await ownerOK();if(!ok){ev('write_refused',{why:'not owner',n:wfns.length});wfns.length=0;return;}   /* lost the lock: nothing is written (stepAside keeps a recovery copy) */
-        const run=wfns.splice(0);inW++;try{run.forEach(f=>{try{f();}catch(e){console.warn('TOPS save',e);}});}finally{inW--;}}})
+        if(!held||away||pending||frozeNow){wfns.length=0;return;}   /* the page froze (or lost the lock) while asking: nothing is written */
+        const run=wfns.splice(0);inW++;try{run.forEach(f=>{try{f();}catch(e){console.warn('TOPS save',e);}});}finally{inW--;}}})()]).finally(()=>fzW.delete(fr));})
       .catch(e=>{ev('write_lock_failed',{err:String(e&&e.name||e)});wfns.length=0;}).finally(()=>{wq=null;if(wfns.length)inLock(()=>{});});
     return wq;}
   function lockAcquire(steal,refuse){if(!LK)return Promise.resolve(true);
-    if(steal)return new Promise(res=>{acquiring=true;   /* R9: a steal holds the write lock until it is granted (or fails) */
-      try{navigator.locks.request(WLOCK,()=>navigator.locks.request(PLOCK,()=>new Promise(r=>{lockAcquire2(steal,refuse).then(v=>{r();if(v!==SUPER)res(v);},()=>{r();res(false);});}))).catch(()=>res(false));}catch(e){res(false);}});
+    if(steal)return new Promise(res=>{acquiring=true;let got=false;setTimeout(()=>{if(acquiring&&!got){ev('lock_steal_slow',{at:'write'});if(!refuse)card('wait');}},2500);   /* DQ R9: the card shows while the takeover waits for the write locks too */   /* R9: a steal holds the write lock until it is granted (or fails) */
+      try{navigator.locks.request(WLOCK,()=>navigator.locks.request(PLOCK,()=>new Promise(r=>{got=true;lockAcquire2(steal,refuse).then(v=>{r();if(v!==SUPER)res(v);},()=>{r();res(false);});}))).catch(()=>res(false));}catch(e){res(false);}});
     return lockAcquire2(steal,refuse).then(v=>v===SUPER?new Promise(()=>{}):v);}   /* a request this tab replaced never answers its caller (R8b) */
   const SUPER={};
   function lockAcquire2(steal,refuse){acquiring=true;
@@ -362,7 +363,7 @@
   let frozeHeld=false;
   const thaw=why=>{if(!frozeHeld)return;frozeHeld=false;if(away||!owner)return;lockAcquire(false).then(ok=>{if(away)return;const o=readOwn();
       if(ok&&!stale()){ev('tabs_thaw',{why});writeOwn({busy:midMatch()?1:0});return;}stepAside(stale()?'newer':'claim',o&&o.tab!==TAB&&o.busy?'busy':'');});};
-  if(LK){document.addEventListener('freeze',()=>{if(fz){fz();fz=null;}if(owner&&!away&&held){ev('tabs_freeze',{busy:midMatch()});writeOwn({busy:midMatch()?1:0,frozen:1});frozeHeld=true;releaseIt();}});
+  if(LK){document.addEventListener('resume',()=>{frozeNow=false;});document.addEventListener('freeze',()=>{frozeNow=true;fzW.forEach(r=>r());fzW.clear();if(fz){fz();fz=null;}if(owner&&!away&&held){ev('tabs_freeze',{busy:midMatch()});writeOwn({busy:midMatch()?1:0,frozen:1});frozeHeld=true;releaseIt();}});
     document.addEventListener('resume',()=>thaw('resume'));}
   window.addEventListener('pagehide',()=>{gone=true;try{if(LK&&owner&&!away&&wfns.length&&body()!==lastBody)rescue('unload');}catch(e){}   /* R9: a save still queued for the write lock when the page goes is kept as a recovery copy (not the save: only the lock holder writes that) */
     try{const o=readOwn();if(owner&&o&&o.tab===TAB)localStorage.removeItem(OWN);}catch(e){}});
