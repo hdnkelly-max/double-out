@@ -138,7 +138,7 @@ let url = ''; const f = []; const out = {};
     out['pb' + supports] = await A.evaluate(async sup => { NET.user = { id: 'u1' }; NET.sb = { rpc: async (n, a) => { if (n !== TOPS_SAVE_NS.rpc) return { data: null }; __calls.push(Object.keys(a).sort().join(',') + (a.p_base != null ? '=' + a.p_base : ''));
         if (a.p_base != null && !sup) return { error: { code: 'PGRST202', message: 'Could not find the function public.tops_save3_put(p_base, p_data)' } }; return { data: { ok: true } }; },
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) };
-      save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300)); const s1 = TOPS_TABS.synced();
+      save.authSeen = true; $('login').hidden = true; newCareer(); persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); for (let i = 0; i < 40 && TOPS_TABS.synced() == null; i++) await new Promise(r => setTimeout(r, 100)); const s1 = TOPS_TABS.synced();   /* R9: a put starts inside the push lock, a moment later */
       career().bank = 7; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300)); career().bank = 8; persist(); await (window.TOPS_TABS && TOPS_TABS.idle()); cloudPush(true); await new Promise(r => setTimeout(r, 300));
       return { calls: __calls, s1, flag: localStorage.getItem('tops_pbase') }; }, supports);
     await ctx.close(); }
