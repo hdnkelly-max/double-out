@@ -85,6 +85,10 @@ reset(); c1, k1 = sess(); c1.autocommit = False; c2, k2 = sess(); out = {}
 r1 = put(k1, 1, 'B', 2, 0)
 th = threading.Thread(target=lambda: out.update(r=put(k2, 2, 'A', 9, 'legacy'))); th.start(); time.sleep(1.5); blocked = th.is_alive(); c1.commit(); th.join(10)
 chk("v3 race: no row yet, a first p_base save and an old client's first save at once: the old one waits, then upgrade_required", (blocked, r1['ok'], out['r'].get('err'), stored()['bank'], flag()), (True, True, 'upgrade_required', 2, True))
+reset(); c1, k1 = sess(); c1.autocommit = False; c2, k2 = sess(); out = {}
+r1 = put(k1, 50, 'B', 2, 'legacy')
+th = threading.Thread(target=lambda: out.update(r=put(k2, 40, 'A', 9, 'legacy'))); th.start(); time.sleep(1.5); blocked = th.is_alive(); c1.commit(); th.join(10)
+chk("v3 race: two legacy first saves at once, the second with a LOWER sv: it waits, then today's counter rule refuses it in the upsert", (blocked, r1['ok'], out['r'].get('err'), stored()['bank']), (True, True, 'older', 2))
 _, kd = sess(); reset(); put(k, 7, 'A', 1, 0)
 try: kd.execute("update public.tops_saves_s3 set base_guarded = false"); dflag = 'allowed'
 except Exception as e: dflag = 'refused'

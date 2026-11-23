@@ -33,8 +33,10 @@ begin
   insert into public.tops_saves_s3(user_id,data,updated_at,base_guarded) values (uid,p_data,now(),p_base is not null)
     on conflict (user_id) do update set data = excluded.data, updated_at = now(),
       base_guarded = tops_saves_s3.base_guarded or excluded.base_guarded                         -- never cleared by a save
-    where (p_base is null and not tops_saves_s3.base_guarded)
-       or (p_base is not null and coalesce((tops_saves_s3.data->>'sv')::bigint, 0) = p_base);
+    where (p_base is not null and coalesce((tops_saves_s3.data->>'sv')::bigint, 0) = p_base)
+       or (p_base is null and not tops_saves_s3.base_guarded                                     -- (Career's R10 version) a racing legacy first save
+           and (coalesce((tops_saves_s3.data->>'sv')::bigint, 0) < nv                            -- also re-checks today's counter rule
+             or (coalesce((tops_saves_s3.data->>'sv')::bigint, 0) = nv and coalesce(tops_saves_s3.data->>'dev','') = coalesce(p_data->>'dev',''))));
   get diagnostics n = row_count;
   if n = 0 then   -- lost a race for the first save: the other device's row is there now
     select data, base_guarded into cur, g from public.tops_saves_s3 where user_id = uid;
