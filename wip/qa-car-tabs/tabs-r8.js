@@ -116,7 +116,11 @@ const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem
     // a SETTLED save, as a returning player has it: the fixture opened once by this build (guest), so the boot has nothing left to change;
     // the cloud holds exactly the same copy (same counter and device), as after that player's last push
     let local = FIX; { const c0 = await b.newContext({ serviceWorkers: "block" }); const g = await open(c0); await g.evaluate(() => { save.authSeen = true; save.cloudUser = { id: '00000000-0000-4000-8000-00000000c10d', name: 'QA' }; try { persist(); } catch (e) {} }); await g.waitForTimeout(6000); local = await g.evaluate(() => localStorage.getItem('doubleout_s3')); await c0.close(); }
-    const seed = JSON.parse(local); const st = { row: { data: seed }, log: [] }; let hold = null, holdOld = null; const LOCAL = local;
+    const seed = JSON.parse(local); const REAL = process.env.MOCK_RULE === 'realdb';
+    const cp = require('child_process'); const shimSync = (path, body) => { try { return JSON.parse(cp.execSync(`curl -s -X POST http://127.0.0.1:55500${path} -d @-`, { input: JSON.stringify(body || {}) }).toString() || 'null'); } catch (e) { return null; } };
+    const shim = (path, body) => fetch('http://127.0.0.1:55500' + path, body ? { method: 'POST', body: JSON.stringify(body) } : undefined).then(r => r.json());
+    const st = { row: { data: seed }, log: [] }; if (REAL) { shimSync('/reset'); shimSync('/seed', { uid: UID, data: seed, guarded: false }); }
+    const refresh = async () => { if (!REAL) return; const x = await shim('/row?uid=' + UID); st.row = x ? { data: x.data, guarded: x.guarded } : { data: {} }; }; let hold = null, holdOld = null; const LOCAL = local;
     const sbjs = (() => { try { return fs.readFileSync(process.env.SBJS, 'utf8'); } catch (e) { return null; } })();
     const J = (r, s, o) => r.fulfill({ status: s, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: o === undefined ? '' : JSON.stringify(o) });
     const attach = async (p, who) => { await p.addInitScript(s => { try { localStorage.setItem('sb-thyirfwoqkshsaqowdpe-auth-token', JSON.stringify(s)); } catch (e) {} }, sess);
@@ -124,10 +128,12 @@ const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem
       await p.route(u => u.href.startsWith(SB), async r => { const q = r.request(), u = new URL(q.url()), m = q.method();
         if (m === 'OPTIONS') return r.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
         if (u.pathname.startsWith('/auth/v1/user')) return J(r, 200, user); if (u.pathname.startsWith('/auth/v1/')) return J(r, 200, sess);
-        if (u.pathname === '/rest/v1/rpc/tops_save3_put') { const bd = JSON.parse(q.postData() || '{}'); if ('p_base' in bd) return J(r, 404, { code: 'PGRST202', message: 'Could not find the function' });
+        if (u.pathname === '/rest/v1/rpc/tops_save3_put') { const bd = JSON.parse(q.postData() || '{}');
+          if (REAL) { const x = await shim('/rpc', Object.assign({ uid: UID, p_data: bd.p_data }, 'p_base' in bd ? { p_base: bd.p_base } : {})); await refresh(); st.log.push({ who, t: Date.now(), sv: +(bd.p_data.sv || 0), bank: bd.p_data.career && bd.p_data.career.bank, ok: !!x.ok, err: x.err, base: bd.p_base }); return J(r, 200, x); }
+          if ('p_base' in bd) return J(r, 404, { code: 'PGRST202', message: 'Could not find the function' });
           const cur = st.row.data, nv = +(bd.p_data.sv || 0), cv = +(cur.sv || 0); const ok = !(cv > nv || (cv === nv && cur.dev !== bd.p_data.dev && cv > 0));
           st.log.push({ who, t: Date.now(), sv: nv, bank: bd.p_data.career && bd.p_data.career.bank, ok }); if (ok) st.row = { data: bd.p_data }; return J(r, 200, ok ? { ok: true, sv: nv } : { ok: false, err: 'older', sv: cv, data: cur }); }
-        if (u.pathname === '/rest/v1/tops_saves_s3' && m === 'GET') { const snap = JSON.parse(JSON.stringify(st.row));
+        if (u.pathname === '/rest/v1/tops_saves_s3' && m === 'GET') { await refresh(); const snap = JSON.parse(JSON.stringify(st.row));
           if (hold && who === 'A') { st.log.push({ who, t: Date.now(), preflight: 'held' }); await hold; holdOld = snap; }   // answers with the cloud as it was when asked
           const one = /pgrst\.object/.test(q.headers()['accept'] || ''); const rowv = { user_id: UID, ...(holdOld && who === 'A' ? holdOld : snap) }; return one ? J(r, 200, rowv) : J(r, 200, [rowv]); }
         if (u.pathname.startsWith('/rest/v1/rpc/')) return J(r, 200, null); return m === 'GET' ? J(r, 200, []) : J(r, 201); }); };
@@ -145,13 +151,13 @@ const stored = p => p.evaluate(() => { const s = JSON.parse(localStorage.getItem
     const sA1 = await state(A), sB1 = await state(B);
     const wk0 = (await fin(B)).wk; await B.evaluate(() => { const c = career(); c.bank += 300; c.week = (c.week || 0) + 1; c.qa = (c.qa || []).concat('B'); persist(); try { cloudPush(true); } catch (e) {} }); await B.waitForTimeout(3000); const cloudB = st.row.data.career.bank, tRel = Date.now();
     release(); hold = null;
-    const want0 = JSON.parse(LOCAL).career.bank + 400; for (let k = 0; k < 40 && st.row.data.career.bank !== want0; k++) await A.waitForTimeout(500);   // give B's push up to 20 s (preflight, retries): slow is not lost
+    const want0 = JSON.parse(LOCAL).career.bank + 400; for (let k = 0; k < 40 && (await refresh(), st.row.data.career && st.row.data.career.bank) !== want0; k++) await A.waitForTimeout(500);   // give B's push up to 20 s (preflight, retries): slow is not lost
     await A.waitForTimeout(1500);
     const late = st.log.filter(x => x.who === 'A' && !x.preflight && x.t >= tRel);
     const want = JSON.parse(LOCAL).career.bank + 400, bEnd = (await state(B)).bank;   /* A's +100 then B's +300: nothing may be lost */
     row(!late.length && st.row.data.career.bank === want && bEnd === want, 'A3 cloud push suspended in preflight while B takes over and saves: A writes nothing after losing ownership; B starts from A\'s latest save; the cloud ends with both A\'s +$100 and B\'s +$300',
-      { want, bEnd, A_whenB_open: sA1, B: sB1, cloudAfterB: cloudB, A_putsAfterRelease: late, cloudEnd: st.row.data.career.bank, log: st.log.map(x => x.who + (x.preflight ? ' preflight held' : ' put sv' + x.sv + ' $' + x.bank + (x.ok ? ' ok' : ' refused'))).join(', ') });
-    { const fl = await finAll(A, B), cd = st.row.data.career; const okM = fl.qa === 'AB' && (cd.qa || []).join('') === 'AB' && cd.week === wk0 + 1 && fl.wk === wk0 + 1 && fl.bank === want; if (!okM || process.env.DBG) { console.log('LOG A3 B ' + JSON.stringify(await B.evaluate(() => TOPS_TABS.log().filter(x => /push|put|lock|own|cloud|net/.test(x[1])).slice(-30)).catch(() => null)).slice(0, 2500)); console.log('LOG A3 A ' + JSON.stringify(await A.evaluate(() => TOPS_TABS.log().filter(x => /push|put|lock|own|cloud|net|away/.test(x[1])).slice(-20)).catch(() => null)).slice(0, 2000)); console.log('LOG A3 cloud ' + JSON.stringify(st.log.slice(-12))); } row(okM, 'A3 competing writes (A: +$100, history A; B: +$300, week+1, history B): the final local and cloud saves hold both', { local: fl, cloud: { bank: cd.bank, wk: cd.week, qa: (cd.qa || []).join(''), sv: st.row.data.sv }, wk0 }); await audit('A3 delay ' + DLY + ' ms', [['A', A], ['B', B]]); }
+      { want, bEnd, A_whenB_open: sA1, B: sB1, cloudAfterB: cloudB, A_putsAfterRelease: late, cloudEnd: st.row.data.career.bank, log: st.log.map(x => x.who + (x.preflight ? ' preflight held' : ' put sv' + x.sv + ' $' + x.bank + (x.base != null ? ' base' + x.base : '') + (x.ok ? ' ok' : ' refused ' + (x.err || '')))).join(', '), guarded: st.row.guarded });
+    { await refresh(); const fl = await finAll(A, B), cd = st.row.data.career; const okM = fl.qa === 'AB' && (cd.qa || []).join('') === 'AB' && cd.week === wk0 + 1 && fl.wk === wk0 + 1 && fl.bank === want; if (!okM || process.env.DBG) { console.log('LOG A3 B ' + JSON.stringify(await B.evaluate(() => TOPS_TABS.log().filter(x => /push|put|lock|own|cloud|net/.test(x[1])).slice(-30)).catch(() => null)).slice(0, 2500)); console.log('LOG A3 A ' + JSON.stringify(await A.evaluate(() => TOPS_TABS.log().filter(x => /push|put|lock|own|cloud|net|away/.test(x[1])).slice(-20)).catch(() => null)).slice(0, 2000)); console.log('LOG A3 cloud ' + JSON.stringify(st.log.slice(-12))); } row(okM, 'A3 competing writes (A: +$100, history A; B: +$300, week+1, history B): the final local and cloud saves hold both', { local: fl, cloud: { bank: cd.bank, wk: cd.week, qa: (cd.qa || []).join(''), sv: st.row.data.sv }, wk0 }); await audit('A3 delay ' + DLY + ' ms', [['A', A], ['B', B]]); }
     await ctx.close(); }
 
   // A4 bfcache-style restore
